@@ -1,0 +1,396 @@
+The Zork Implementation Language
+
+    The Zork Implementation Language, ZIL, is designed as a MUDDLEish
+language which is readily compiled into Z code, using the ZIL compiler
+(ZILCH) and assembler (ZAP).  Before discussing the control structures
+in the language, the basic Z instruction set will be reviewed.
+
+Z Instruction Set
+
+    Z instructions may have one of the following properties: it may
+have side effects only, it may return a value, or it may be a predicate.
+A few predicates also return a value.  Z instructions act on one of
+four classes of operands: integers (+/- 32K), variables, character
+strings, and tables.  The latter are implemented similarly to MUDDLE
+vectors, in that they are random-access structures; however, tables
+do not have an intrinsic length property.  All Z operands are limited
+to those which can be expressed in 16-bits.  
+
+    In the following description, each instruction is followed by
+a few characters describing their properties: S(ide effects), V(alue),
+P(redicate), F(low of control).  Instructions in parentheses are
+compiler pseudo-operations, most of which alter the flow of control.
+All other instructions are from the Z instruction set directly.
+Also following are the number of arguments each operation is allowed,
+expressed as a number or a range of numbers.  No operation may have
+more than 4 arguments.  No called routine may have more than 3 arguments.
+Finally, a description of the operation is listed.
+
+Truth
+
+    In Z, 'false' is represented by a zero.  Anything else is true.
+The expression <COND (.A ...)> is equivalent exactly to <NOT <==? .A 0>>.
+Note that this may cause some errors; be careful testing the results
+of operations which might return an integer or a 'false'.
+
+Variables
+
+    Variables in ZIL are the equivalent of MUDDLE ATOMs.  Variables
+bound in the argumentlist of a routine will generate local references.
+All others will be assumed to be global references.  The compiler will
+list all external (global) variables used in each routine compiled.  At
+the end of compilation, errors will be generated for all external
+variables which are not defined at top level in the ZIL file.
+
+    The forms .FOO and ,FOO are used, as in MUDDLE, to represent local
+and global variables.
+
+Tables
+
+    User-defined tables are random-access VECTOR-like structures which
+may hold any number of legal ZORK objects.  They may be accessed by
+individual byte or by element (2-byte pair).  As any ZORK object can
+be represented in two-bytes, the most common type of table is the two-
+byte table.  Operations are defined which GET and PUT either bytes
+or elements from/into tables.  Please not that byte/element numbers
+start at 0, rather than 1.  For many uses, the 0th element may want
+to contain the table's length, but this is not required if the length
+is known or only known offsets are used.  REST and BACK work on these
+structures although these REST and BACK BYTES!, not elements.  Be
+warned.  Although the Z interpreter has no bounds checking facility,
+ZIL has.  In addition, ZIL will insure that, for example, a GET is not
+pointing at an 'odd' element of a TABLE (i.e. an element's second byte).
+
+Properties
+
+    Object properties are retrieved/stored with GETP and PUTP.  Any
+legal object may be a property.  Attempts to PUTP a non-existent
+property is an error.  Also, it is an error to PUTP a two-byte object
+into a one-byte slot, or vice versa.  Some properties have a length
+of greater than two bytes (room exits, for example).  These may not
+be accessed by GETP, PUTP, but rather must be accessed through GETPT,
+which returns a TABLE with the property value.  The property may be
+examined and altered thereafter with GET(B) and PUT(B).  The instruction
+PTSIZE, when given a property TABLE, returns the length of the property
+value, in bytes.
+
+Routines
+
+    Arbitrary routines may be defined in ZIL using the ROUTINE function.
+The argument syntax is very similar to MUDDLE's: required arguments
+are included as ATOMs, optional arguments follow an "OPTIONAL" statement
+and may include default values (i.e. (C 10)), and auxiliary variables
+follow an "AUX" statement, including default values.  In all cases the
+default value must be a constant!  The Z interpreter does not support
+the concept of optional/required/auxiliary variables: this concept is
+included in the ZIL language to enhance clarity of code.  When a routine
+calls another routine, the arguments are checked for number and an error
+is generated if the wrong number of arguments is passed.  Routines take
+a maximum of three arguments and always return a value.  AGAIN and RETURN
+will work at top level within a routine (unlike MUDDLE).
+
+    MUDDLE-like PROGs and REPEATs exist in ZIL; the binding
+specification is ignored by ZIL and all locals should be bound at top
+level in the routine. RETURN to a repeat causes the REPEAT to terminate;
+the same is true for PROG.  As with MUDDLE,  REPEAT is a PROG with an
+AGAIN at the end.  Note that PROG and REPEAT do not return values!
+
+Values
+
+    Only some Z instructions return values explicitly (these are labelled
+with a 'V' below.  All instructions (including pseudo-ops) may be made
+to return a value, if the value is requested (i.e. a SET).  All instructions
+which are side-effects only return 1 (TRUE).  Instructions which are
+predicates return 1 (TRUE) or 0 (FALSE).  Control-type pseudo-ops return
+values as they would in MUDDLE.
+
+
+ZIL Instructions
+  
+Arithmetic Operators
+
+	+	V	2-n	Adds integers	 
+	-	V	2-n	Subtracts integers
+	*	V	2-n	Multiplies integers
+	/	V	2-n	Divides integers
+	MOD	V	2	Argument 1 MOD Argument 2
+	RANDOM	V	1	Returns a random number between
+				1 and argument, inclusive
+
+	BAND	V	2	<ANDB argument-1 argument-2>
+	BOR	V	2	<ORB argument-1 argument-2>
+	BCOM	V	1	2's complement
+   	BTST	P	2	<N==? <ANDB argument-1 argument-2> 0>
+
+	0?	P	1	<==? argument 0>
+	EQUAL?	P	2-4	<OR <==? argument-1 argument-2>
+				    <==? argument-1 argument-3>
+				    <==? argument-1 argument-4>>
+	 [==? may be used for the two argument case]
+	G?	P	2	<G? argument-1 argument-2>
+	(G=?)	P	2	<G=? argument-1 argument-2>
+	L?	P	2	<L? argument-1 argument-2>
+	(L=?)	P	2	<L=? argument-1 argument-2>
+
+Object Oriented Operations
+
+	MOVE	S	2	Put argument-1 into argument-2
+	REMOVE	S	1	Make argument have no container
+	FSET	S	2	Set flag (argument-2) in argument-1
+	FCLEAR	S	2	Clear flag (argument-2) in argument-1
+	FSET?	P	2	Is flag (argument-2) set in argument-1?
+	GETP	V	2	Return property (argument-2) of argument-1
+	NEXTP	V	2	Return next property of argument-1 starting
+				at property-2.  A value of 0 indicates the
+				last property.  NEXTP given a second argument
+				of 0 will return the first property of the
+				object.  NEXTP is intended for the rare case
+				of mapping through a property table	
+	GETPT	V	2	Return pointer to property (argument-2) of
+				argument-1
+	PUTP	S	3	Set property (argument-2) of argument-1
+				to argument-3
+	IN?	P	2	Is argument-1 contained in argument-2?
+	LOC?	PV	1	Returns location of argument.  
+				Is location not 0? (i.e. is it not contained
+				in another object?)
+	FIRST?	PV	1	Returns the first content of argument
+				Is content not 0? (i.e. is there not one
+				object inside the object?)
+	NEXT?	PV	1	Returns the next sibling of argument
+				(i.e. the next object also contained
+				in object's container)  Is there a
+				next sibling?
+
+Variable and Stack Operations
+
+	SET	S	2	Set a variable (argument-1) to a value
+				(argument-2).
+	(SETG)	S	2	Sets a global variable.  These are
+				not distinguished from SETs by Z; however,
+				this is useful for MUDDLE-like debugging.
+	VALUE	V	1	Returns the VALUE (MUDDLE-style) of its
+				argument.
+
+ Looping Operations
+
+	IGRTR?	SP	2	1) <SET variable <+ variable 1>>
+				2) <G? variable argument-2>
+	DLESS?	SP	2	1) <SET variable <- variable 1>>
+				2) <L? variable argument-2>  
+
+	APPLY	FV	1-4	Call a routine (argument-1) with from 0-3
+				arguments
+	RETURN	F	1	Return argument as the value of a called
+				ROUTINE, PROG, or REPEAT
+	RTRUE	F	0	Return TRUE as the value of a called routine
+	RFALSE	F	0	Return FALSE as the value of a called routine
+
+Table Operations
+
+	GET	V	2	Returns the nth (argument-2) element of
+				argument-1
+	PUT	V	3	Set the nth (argument-2) element of argument-1
+				to argument-3
+	GETB	V	2)	Like NTH and PUT, but return the nth byte
+	PUTB	V	3)	of a table, rather than the nth word of a table
+	SIZEPT	V	1	Returns the size of a property table, which
+				was returned by GETPT.
+	
+	REST	V	2	Rest the table (argument-1) by argument-2
+				BYTES!  To rest a table by one element, the
+				second argument should be 2.
+	BACK	V	2	Inverse of REST.
+
+I/O Operations
+
+	PRINTC	S	1	Prints an integer as its ASCII equivalent
+	PRINTD	S	1	Prints the short description of an object
+	PRINTI	S	1	Prints a string
+	PRINTN	S	1	Prints an integer
+	PRINTR	SF	1	Prints a string, then RTRUE.
+	PRINT	S	1	Print a non-immediate string (i.e. the
+				result of a table lookup)
+	READ	S	2	Dont ask
+
+Compiler Pseudo Operations
+ 
+	AND		1-n	Like MUDDLE's AND
+	OR		1-n	Like MUDDLE's OR
+	COND		1-n	Like MUDDLE's COND
+	NOT		1	Like MUDDLE's NOT
+	PROG		2-n	Like MUDDLE's PROG, but the AUX list is
+				ignored
+	REPEAT		2-n	Like MUDDLE's REPEAT, but the AUX list is
+				ignored
+	ROUTINE		3-n	Like MUDDLE's DEFINE; understands
+				required arguments, optional arguments,
+				and auxiliary variables.  No routine
+				can have more than three arguments
+				maximum. Also a named activation cannot
+				be used.
+
+Pseudo Variables (for ease of use to MUDDLErs)
+
+	T			Truth (1)
+	<>			False (0)
+
+Variable Naming Conventions
+
+	ZIL makes use of 'lexical blocking' in some variable names
+by prefixing <prefix> <question mark> to the name of the variable.
+These prefixes are used to prevent naming conflicts of common words.
+The global values of the prefixed names are used. The prefixes are:
+
+	V?<name> 	The verb <name>
+
+	P?<name>	The property <name>
+
+	Thus, to determine if the current verb (PRSA) is WALK,
+one might say <COND (<==? ,PRSA ,V?WALK> ....)>.
+
+[The following are parser-internal]
+
+	PR?<name>	The preposition <name>
+
+	A?<name>	The adjective <name>
+
+	B?<name>	The buzz-word <name>
+
+	ACT?<name>	The action <name>
+
+	W?<name>	The pointer to the vocabulary entry for <name>
+
+Structure-creating Pseudo-Ops
+
+TABLE
+
+     TABLE creates a user-defined table.  The syntax is
+	<TABLE <element> [<element> ...]>.
+
+ITABLE
+
+     ITABLE creates a user-defined table of a specified length in
+bytes.  Optionally, it makes the length the 0th element of the table.
+
+     <ITABLE <length in bytes> <specifier> <filler>>
+
+     Specifier may be 1) NONE - no length is put in the table 2) BYTE -
+a one-byte entry is added to the table with the length, or 3) WORD -
+a one-word (two-byte) entry is added to the table with the length.
+Filler may be any legal object, defaulting to FALSE (0).
+
+SYNTAX
+
+     SYNTAX creates syntaxes for the parser.  The syntax is:
+
+     <SYNTAX [<optional preposition>
+	      OBJECT
+	      <specifier>
+	      <optional preposition>
+	      OBJECT
+	      <specifier>]
+	     =
+	     <name of routine>
+	     [<name of preact routine>]>
+
+     where the first and second noun clause specifiers are optional
+as is the preact routine.  The bare minimum expression would be, for
+example, <SYNTAX LOOK = LOOK>.  The prepositions should be ATOMs.
+Specifiers are of the following forms:
+
+	1. (FIND <flag name>) - parens included, the 'gwim' flag name
+				where flag name is an ATOM
+	 or
+
+	2. (<where to look> [<where to look> ...]) - parens included, the
+				places to look for the object, if there
+				is ambiguity.  The legal places to look
+				are:
+				  HELD - top-level on WINNER
+				  CARRIED - second-level on WINNER
+				  ON-GROUND - top-level in HERE
+				  IN-ROOM - second-level in HERE
+
+BUZZ
+
+     BUZZ creates buzz-words.  Syntax is <BUZZ <buzz word> [<buzz word> ...]>.
+
+SYNONYM
+
+     SYNONYM is used to equate a number of vocabulary words with another.
+The syntax is <SYNONYM <existing word> <new word> [<new word> ...]>.
+
+OBJECT
+
+     OBJECT is used to create Zork objects/rooms.  The syntax is as follows:
+	
+	<OBJECT <name> [(<property> <value> [<value> ...]) ...]>
+
+     where <name> and <property> are ATOMs.  Property may be a user-defined
+property name or a special property known to ZIL.  The special properties
+and their legal values are:
+
+	Property	Value
+
+	IN		Name of an object, its container
+	FLAGS		Any number of ATOMs, flag names
+	ACTION		ATOM, name of routine associated with object
+	SYNONYM		Any number of ATOMs, names for the object
+	ADJECTIVE	Any number of ATOMs, adjectives for the object
+	PER		ATOM, name of an exit routine.  The following
+			should be used for exit routines.
+			(<direction> PER <routine name>).
+	TO		Used for all unconditional and conditional exits.
+			The following forms are recognized:
+			(<direction> TO <room name>)
+			   - unconditional exit
+			(<direction> TO <room name> IF <flag name>)
+			   - conditional exit
+			(<direction> TO <room name> IF <flag name> ELSE <str>)
+			   - conditional exit with string to print if fails
+			(<direction> TO <room name> IF <object name> IS OPEN)
+			   - door exit
+			If the value of a direction name is a STRING, this
+			is an NEXIT.
+
+    The properties SYNONYM and ADJECTIVE must be defined for all referencable
+objects, even if empty.
+
+PROPDEF
+
+     PROPDEF is used to define defaults for user-defined properties.
+The syntax is <PROPDEF <property name> <default value>>.  The default
+for a user-defined property not given a PROPDEF specification is FALSE
+(0).
+
+-- READ FURTHER AT YOUR OWN RISK --
+
+**NOTE**
+The following stack and variable operations are not useful in writing
+ZIL code and are included only for completeness.  They should be used
+only in extreme circumstances.  Ask me first...
+
+	
+	INC	S	1	Increment a variable (argument)
+	DEC	S	1	Decrement a variable (argument)
+				[The previous two operations should be
+				 done as <SET variable <+ variable 1>>
+				 as it is more MDLishly readable; the two
+				 compile equivalently.]
+	PUSH	S	1	Push argument onto the stack
+	POP	S	1	Pop the top of the stack into a variable
+				(argument)
+	FSTACK	S	0	Flush the top of the stack
+	RSTACK	S	0	Return the top of the stack
+
+Flow of Control Operations
+
+	JUMP	F	1	Jump to a label within the current routine
+				(can only be used with TAG)
+	RSTACK	F	0	Return top of stack as the value of a called
+				routine
+	(TAG)	-	1	Generate a label for JUMP (foo!)
+
+**END OF NOTE**
+	
