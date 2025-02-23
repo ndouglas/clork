@@ -3,60 +3,110 @@
 
 (require '[clojure.pprint :refer [pprint]])
 
-(defn crlf
-  "Print a carriage return and line feed."
-  []
-  (println ""))
+(load "utils")
+(load "verbs")
+(load "initial_game_state")
+(load "flags")
+(load "game_state")
+(load "rooms")
 
-;; <ROUTINE V-VERSION ("AUX" (CNT 17))
-;; 	%<COND (<==? ,ZORK-NUMBER 1>
-;; 		'<TELL "ZORK I: The Great Underground Empire|
-;; Infocom interactive fiction - a fantasy story|
-;; Copyright (c) 1981, 1982, 1983, 1984, 1985, 1986">)
-;; 	       (<==? ,ZORK-NUMBER 2>
-;; 		'<TELL "ZORK II: The Wizard of Frobozz|
-;; Infocom interactive fiction - a fantasy story|
-;; Copyright (c) 1981, 1982, 1983, 1986">)
-;; 	       (<==? ,ZORK-NUMBER 3>
-;; 		'<TELL "ZORK III: The Dungeon Master|
-;; Infocom interactive fiction - a fantasy story|
-;; Copyright 1982, 1983, 1984, 1986">)>
-;; 	<TELL " Infocom, Inc. All rights reserved." CR>
-;; 	<TELL "ZORK is a registered trademark of Infocom, Inc.|
-;; Release ">
-;; 	<PRINTN <BAND <GET 0 1> *3777*>>
-;; 	<TELL " / Serial number ">
-;; 	<REPEAT ()
-;; 		<COND (<G? <SET CNT <+ .CNT 1>> 23>
-;; 		       <RETURN>)
+;; <ROUTINE DESCRIBE-ROOM ("OPTIONAL" (LOOK? <>) "AUX" V? STR AV)
+;; 	 <SET V? <OR .LOOK? ,VERBOSE>>
+;; 	 <COND (<NOT ,LIT>
+;; 		<TELL "It is pitch black.">
+;; 		<COND (<NOT ,SPRAYED?>
+;; 		       <TELL " You are likely to be eaten by a grue.">)>
+;; 		<CRLF>
+;; 		%<COND (<==? ,ZORK-NUMBER 3>
+;; 			'<COND (<EQUAL? ,HERE ,DARK-2>
+;; 		                <TELL
+;; "The ground continues to slope upwards away from the lake. You can barely
+;; detect a dim light from the east." CR>)>)
+;; 		       (T
+;; 			'<NULL-F>)>
+;; 		<RFALSE>)>
+;; 	 <COND (<NOT <FSET? ,HERE ,TOUCHBIT>>
+;; 		<FSET ,HERE ,TOUCHBIT>
+;; 		<SET V? T>)>
+;; 	 %<COND (<==? ,ZORK-NUMBER 1>
+;; 		 '<COND (<FSET? ,HERE ,MAZEBIT>
+;; 		         <FCLEAR ,HERE ,TOUCHBIT>)>)
+;; 		(T
+;; 		 '<NULL-F>)>
+;; 	 <COND (<IN? ,HERE ,ROOMS>
+;; 		;"Was <TELL D ,HERE CR>"
+;; 		<TELL D ,HERE>
+;; 		<COND (<FSET? <SET AV <LOC ,WINNER>> ,VEHBIT>
+;; 		       <TELL ", in the " D .AV>)>
+;; 		<CRLF>)>
+;; 	 <COND (%<COND (<==? ,ZORK-NUMBER 2>
+;; 			'<OR .LOOK? <NOT ,SUPER-BRIEF> <EQUAL? ,HERE ,ZORK3>>)
+;; 		       (ELSE
+;; 			'<OR .LOOK? <NOT ,SUPER-BRIEF>>)>
+;; 		<SET AV <LOC ,WINNER>>
+;; 		;<COND (<FSET? .AV ,VEHBIT>
+;; 		       <TELL "(You are in the " D .AV ".)" CR>)>
+;; 		<COND (<AND .V? <APPLY <GETP ,HERE ,P?ACTION> ,M-LOOK>>
+;; 		       <RTRUE>)
+;; 		      (<AND .V? <SET STR <GETP ,HERE ,P?LDESC>>>
+;; 		       <TELL .STR CR>)
 ;; 		      (T
-;; 		       <PRINTC <GETB 0 .CNT>>)>>
-;; 	<CRLF>>
+;; 		       <APPLY <GETP ,HERE ,P?ACTION> ,M-FLASH>)>
+;;   ------------------------------------------------------------
+;; 		<COND (<AND <NOT <EQUAL? ,HERE .AV>> <FSET? .AV ,VEHBIT>>
+;; 		       <APPLY <GETP .AV ,P?ACTION> ,M-LOOK>)>)>
+;; 	 T>
 
+(defn describe-room
+  "Describes the room."
+  ([game-state] (describe-room game-state false))
+  ([game-state is-verbose]
+    (let [is-verbose (or is-verbose (verbose? game-state))]
+      (if
+        (not (set-here-flag? game-state :lit))
+          (println "It is pitch black. You are likely to be eaten by a grue."))
+      (set-here-flag game-state :touch)
+      (if
+        (set-here-flag? game-state :maze)
+        (unset-here-flag game-state :touch))
+      (def loc (get-winner-loc game-state))
+      (def loc-is-veh (get-in loc [:flags :vehicle] false))
+      (if
+        loc-is-veh
+        (let [vehicle (get-in :desc)]
+          (println (str "(You are in the " vehicle ".)"))
+        )
+      )
+      (def act (:action (get-here game-state)))
+      (cond
+        (and is-verbose (some? act)) (act game-state :look)
+        is-verbose (println (:ldesc (get-here game-state)))
+        (some? act) (act game-state :flash)))
+      (if
+        (and
+          loc-is-veh
+          (not (= (:id loc) (:here game-state))))
+        (act game-state :look)
+      )
+    ))
 
-(defn v-version
-  "Prints information about the current version of the game."
-  []
-  (do
-    (println "ZORK I: The Great Underground Empire")
-    (println "Infocom interactive fiction - a fantasy story")
-    (println "Copyright (c) 1981, 1982, 1983, 1984, 1985, 1986 Infocom, Inc. All rights reserved.")
-    (println "ZORK is a registered trademark of Infocom, Inc.")
-    (println "Release 1 / Serial number 1")
-  ))
+(defn describe-objects
+  "Describes the objects in the room."
+  ([game-state] (describe-objects game-state false))
+  ([game-state look] game-state))
 
-(def initial-game-state {
-  :rooms {},
-  :objects {},
-  :i-candles 40,
-  :i-lantern 200,
-  :here :west-of-house,
-  :it :mailbox,
-  :lit true,
-  :adventurer :adventurer,
-  :winner :adventurer,
-  :player :adventurer,
-})
+(defn v-look
+  "Describes the room and any objects."
+  [game-state]
+  (if (describe-room game-state true)
+    (describe-objects game-state true)))
+
+(defn tell
+  "Tell the player something, and return the game state."
+  [game-state message]
+  (print message)
+  game-state
+)
 
 (defn add-room
   "Add a room to the game state"
@@ -84,156 +134,6 @@
   "Sets 'it' to refer to the passed object"
   [game-state it]
   (assoc game-state :it it))
-
-(defn get-default-flags
-  "Get the default (all-off) flags set."
-  []
-  (let [default-flags {
-    ;; The player can pick up and carry the object.
-    :take false,
-    ;; Tells the parser not to let the player implicitly take an object.
-    :trytake false,
-    ;; The object is a container; things can be put inside it, it can be opened
-    ;; and closed, etc.
-    :cont false,
-    ;; The object is a door.
-    :door false,
-    ;; The object is a door or container, and is open.
-    :open false,
-    ;; The object is a surface, such as a table, desk, countertop, etc.
-    :surface false,
-    ;; Locked and can't be opened without proper equipment.
-    :locked false,
-    ;; The object is wearable (not necessarily being worn).
-    :wear false,
-    ;; The object is currently being worn.
-    :worn false,
-    ;; The object is readable (has a :text property).
-    :read false,
-    ;; The object is capable of being turned on and off.
-    :light false,
-    ;; The room is lit, or the object is providing light.
-    :on false,
-    ;; The object is a source of fire.
-    :flame false,
-    ;; The object is burnable.
-    :burn false,
-    ;; The object is transparent; objects inside it can be seen even if it is
-    ;; closed.
-    :trans false,
-    ;; The room description is describing this object. Should be cleared once
-    ;; taken.
-    :ndesc false,
-    ;; Tells the parser not to find this object; the bit would presumably be
-    ;; cleared at some point.
-    :invisible false,
-    ;; For rooms, player has been to the room at least once. For objects, it
-    ;; has been taken or otherwise disturbed by the player.
-    :touch false,
-    ;; Tells the parser to look as deeply into a container as it can in order
-    ;; to find the referened object.
-    :search false,
-    ;; The object is a vehicle.
-    :vehicle false,
-    ;; The object is a character in the game.
-    :person false,
-    ;; The object is an actor who is a female.
-    :female false,
-    ;; Any verb default which prints an indefinite article before the :desc,
-    ;; use "an" instead of "a".
-    :vowel false,
-    ;; The object's :desc doesn't work with articles, and they should be
-    ;; omitted.
-    :narticle false,
-    ;; The object's :desc is a plural noun or noun phrase.
-    :plural false,
-    ;; Indicates that the room is dry land.
-    :rland false,
-    ;; The room is water rather than dry land.
-    :rwater false,
-    ;; The room is mid-air.
-    :rair false,
-    ;; This bit is used only in the syntax file.
-    :kludge false,
-    ;; This room is outdoors.
-    :outside false,
-    ;; An integral part of another object; can't be taken or dropped.
-    :integral false,
-    ;; The object is a body part.
-    :part false,
-    ;; "Take all" should not take this object.
-    :nall false,
-    ;; Found in vehicles. If the player drops an item, it stays in the vehicle
-    ;; rather than into the room outside.
-    :drop false,
-    ;; Found in vehicles. Tells routines to say "in the vehicle" instead of "on
-    ;; the vehicle."
-    :in false,
-  }]
-  (set (for [[k v] default-flags :when v]
-       k))
-  ))
-
-(defn set-flag
-  "Sets a flag in the set of flags passed to it."
-  [flag-set flag]
-  (conj flag-set flag))
-
-(defn is-flag-set?
-  "Indicates whether a flag is set in the set of flags."
-  [flag-set flag]
-  (contains? flag-set flag)
-)
-
-(defn is-obj-flag-set?
-  "Indicates whether a flag is set in the object's set of flags."
-  [obj flag]
-  (is-flag-set? (get obj :flags) flag)
-)
-
-(defn unset-flag
-  "Unsets a flag in the set of flags passed to it."
-  [flag-set flag]
-  (disj flag-set flag))
-
-(defn flags
-  "Returns a new set of flags with the specified flags set."
-  [& set-flags]
-  (let [flag-set (get-default-flags)]
-    (reduce set-flag flag-set set-flags)
-  ))
-
-(defn here-name
-  "Returns the name of the room where the player currently is."
-  [game-state]
-  (get game-state :here)
-)
-
-(defn here-room
-  "Returns the room where the player currently is."
-  [game-state]
-  (get (get game-state :rooms) (here-name game-state))
-)
-
-;; <ROOM WEST-OF-HOUSE
-;;       (IN ROOMS)
-;;       (DESC "West of House")
-;;       (NORTH TO NORTH-OF-HOUSE)
-;;       (SOUTH TO SOUTH-OF-HOUSE)
-;;       (NE TO NORTH-OF-HOUSE)
-;;       (SE TO SOUTH-OF-HOUSE)
-;;       (WEST TO FOREST-1)
-;;       (EAST "The door is boarded and you can't remove the boards.")
-;;       (SW TO STONE-BARROW IF WON-FLAG)
-;;       (IN TO STONE-BARROW IF WON-FLAG)
-;;       (ACTION WEST-HOUSE)
-;;       (FLAGS RLANDBIT ONBIT SACREDBIT)
-;;       (GLOBAL WHITE-HOUSE BOARD FOREST)>
-
-(def west-of-house {
-  :id :west-of-house,
-  :desc "West of House",
-})
 
 ;; <OBJECT MAILBOX
 ;;	(IN WEST-OF-HOUSE)
@@ -292,20 +192,19 @@
   ;; mailbox.
   (def game-state (this-is-it game-state :mailbox))
 
-  ;; // If we haven't been here before, then show V-VERSION text.
-	;; <COND (<NOT <FSET? ,HERE ,TOUCHBIT>>
-	;;        <V-VERSION>
-	;;        <CRLF>)>
+  ;; If we haven't been here before, then show V-VERSION text.
   (if-not
-    (is-obj-flag-set? (here-room game-state) :touch)
+    (set-here-flag? game-state :touch)
     (do
       (v-version)
       (crlf)))
 
-  ;; Set interrupts, usually with the QUEUE or INT routines
-  ;; Display an opening text/title screen
-  ;; Call V-VERSION to show copyright information, release number, and serial number
+  ;; Set LIT to T, so everything is lit.
+  (def game-state (set-here-flag game-state :lit))
+
   ;; Call V-LOOK to describe the current location
+  (v-look game-state)
+
   ;; Call the MAIN-LOOP
   ;; (pprint game-state)
 )
