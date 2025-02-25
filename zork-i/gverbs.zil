@@ -1649,8 +1649,8 @@ direction." CR>
 		       <DESCRIBE-OBJECTS>)>)>>
 
 <ROUTINE DESCRIBE-ROOM ("OPTIONAL" (LOOK? <>) "AUX" V? STR AV)
-	 <SET V? <OR .LOOK? ,VERBOSE>>
-	 <COND (<NOT ,LIT>
+	<SET V? <OR .LOOK? ,VERBOSE>>
+	<COND (<NOT ,LIT>
 		<TELL "It is pitch black.">
 		<COND (<NOT ,SPRAYED?>
 		       <TELL " You are likely to be eaten by a grue.">)>
