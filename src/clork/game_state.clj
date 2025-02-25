@@ -94,14 +94,12 @@
 (defn get-here
   "Return the current room's object."
   [game-state]
-  (get-thing game-state (:here game-state))
-)
+  (get-thing game-state (:here game-state)))
 
 (defn get-winner
   "Return the WINNER object."
   [game-state]
-  (get-thing game-state (:winner game-state))
-)
+  (get-thing game-state (:winner game-state)))
 
 (defn get-winner-loc
   "Return the location of the winner."
@@ -111,8 +109,7 @@
 (defn get-winner-loc-id
   "Return the location ID of the winner."
   [game-state]
-  (get-thing-loc-id game-state :winner)
-)
+  (get-thing-loc-id game-state :winner))
 
 (defn add-room
   "Add a room to the game state"
