@@ -52,31 +52,31 @@
 
 (defn describe-room
   "Describes the room."
-  ([game-state] (describe-room game-state false))
-  ([game-state is-verbose?]
+  ([game-state] (describe-room game-state (get-winner-loc game-state) false))
+  ([game-state location is-verbose?]
     (let [
       is-verbose? (or is-verbose? (verbose? game-state))
       lit? (set-here-flag? game-state :lit)
       maze? (set-here-flag? game-state :maze)
       is-verbose? (if maze? is-verbose? true)
-      loc (get-winner-loc game-state)
-      vehicle? (get-in loc [:flags :vehicle] false)
+      vehicle? (get-in location [:flags :vehicle] false)
       here (get-here game-state)
       act (:action here)
-    ];;
+    ]
       (if (not lit?) (println "It is pitch black. You are likely to be eaten by a grue."))
       (set-here-flag game-state :touch)
       (if maze? (unset-here-flag game-state :touch))
-      (if vehicle? (println (str "(You are in the " (:desc loc) ".)")))
+      (if vehicle? (println (str "(You are in the " (:desc location) ".)")))
       (cond
         (and is-verbose? (some? act))
           (act game-state :look)
-        (is-verbose?
-          (println (:ldesc (get-here game-state)))
-          (some? act) (act game-state :flash))
-        (if (and vehicle? (not (= (:id loc) (:here game-state))))
-          (act game-state :look))
+        is-verbose?
+          (println (:ldesc here))
+        (some? act)
+          (act game-state :flash)
       )
+      (if (and vehicle? (not (= (:id location) here)))
+        (act game-state :look))
       game-state
     )
   )
@@ -89,6 +89,8 @@
 
 (defn v-look
   "Describes the room and any objects."
-  [game-state]
-  (if (describe-room game-state true)
-    (describe-objects game-state true)))
+  ([game-state] (v-look game-state (get-winner-loc game-state)))
+  ([game-state location]
+    (if (describe-room game-state location true)
+      (describe-objects game-state true))
+    game-state))

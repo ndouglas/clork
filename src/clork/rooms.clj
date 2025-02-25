@@ -45,6 +45,6 @@
     (if
       (:won game-state)
       (print " A secret path leads southwest into the forest."))
-    (crlf)
+    (crlf game-state)
   )
 })

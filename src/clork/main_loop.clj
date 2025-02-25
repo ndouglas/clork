@@ -139,5 +139,10 @@
 (defn main-loop
   "The main loop for the game."
   [game-state]
-
-)
+  (while (nil? (:quit game-state))
+    (print "? ")
+    (flush)
+    (let [input (read-line)]
+      (crlf game-state)
+    ))
+  game-state)

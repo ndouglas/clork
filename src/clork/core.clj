@@ -47,43 +47,31 @@
   [game-state it]
   (assoc game-state :it it))
 
+(defn initial-version
+  "Print out the version information when starting the game"
+  [game-state]
+  (when-not (set-here-flag? game-state :touch)
+    (-> game-state
+      (v-version)
+      (crlf)))
+  game-state)
+
 (defn go
   "The GO routine."
   []
-  ;; Set special global variables
-  (def game-state initial-game-state)
-
-  ;; Add rooms.
-  (def game-state (add-rooms game-state [
-    west-of-house,
-  ]))
-
-  ;; Add objects.
-  (def game-state (add-objects game-state [
-    adventurer,
-    mailbox,
-  ]))
-
-  ;; THIS-IS-IT sets "IT" to refer to the mailbox. So "OPEN IT" will open the
-  ;; mailbox.
-  (def game-state (this-is-it game-state :mailbox))
-
-  ;; If we haven't been here before, then show V-VERSION text.
-  (if-not
-    (set-here-flag? game-state :touch)
-    (do
-      (v-version)
-      (crlf)))
-
-  ;; Set LIT to T, so everything is lit.
-  (def game-state (set-here-flag game-state :lit))
-
-  ;; Call V-LOOK to describe the current location
-  (v-look game-state)
-
-  ;; Call the MAIN-LOOP
-  (main-loop game-state)
-)
+  (-> initial-game-state
+    (add-rooms [
+      west-of-house,
+    ])
+    (add-objects[
+      adventurer,
+      mailbox,
+    ])
+    (this-is-it :mailbox)
+    (initial-version)
+    (set-here-flag :lit)
+    (v-look)
+    (main-loop)))
 
 (defn -main
   "Main function for CLORK."

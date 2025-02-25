@@ -2,5 +2,6 @@
 
 (defn crlf
   "Print a carriage return and line feed."
-  []
-  (println ""))
+  [game-state]
+  (println "")
+  game-state)
