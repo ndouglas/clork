@@ -63,15 +63,15 @@
       here (get-here game-state)
       act (:action here)
     ]
-      (if (not lit?) (println "It is pitch black. You are likely to be eaten by a grue."))
+      (if (not lit?) (tell game-state "It is pitch black. You are likely to be eaten by a grue."))
       (set-here-flag game-state :touch)
       (if maze? (unset-here-flag game-state :touch))
-      (if vehicle? (println (str "(You are in the " (:desc location) ".)")))
+      (if vehicle? (tell game-state (str "(You are in the " (:desc location) ".)")))
       (cond
         (and is-verbose? (some? act))
           (act game-state :look)
         is-verbose?
-          (println (:ldesc here))
+          (tell game-state (:ldesc here))
         (some? act)
           (act game-state :flash)
       )

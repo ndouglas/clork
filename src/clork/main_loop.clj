@@ -140,8 +140,7 @@
   "The main loop for the game."
   [game-state]
   (while (nil? (:quit game-state))
-    (print "? ")
-    (flush)
+    (tell game-state "? ")
     (let [input (read-line)]
       (crlf game-state)
     ))

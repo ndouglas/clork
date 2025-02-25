@@ -9,10 +9,9 @@
 ;;	(CAPACITY 10)
 ;;	(ACTION MAILBOX-F)>
 ;;
-;;
 ;; <ROUTINE MAILBOX-F ()
 ;; 	 <COND (<AND <VERB? TAKE> <EQUAL? ,PRSO ,MAILBOX>>
-;; 		<TELL "It is securely anchored." CR>)>>
+;; 		 <TELL "It is securely anchored." CR>)>>
 
 (def mailbox {
   :id :mailbox,
@@ -25,7 +24,8 @@
   :action (fn [game-state]
     (if
       (and (= (:verb game-state) :take) (= (:prs0 game-state) :mailbox))
-      (println "It is securely anchored.")
+      (tell game-state "It is securely anchored.")
+      game-state
     )
   )
 })

@@ -1,5 +1,21 @@
 (in-ns 'clork.core)
 
+(def initial-game-state {
+  :rooms {}
+  :objects {}
+  :i-candles 40
+  :i-lantern 200
+  :here :west-of-house
+  :it :mailbox
+  :lit false
+  :adventurer :adventurer
+  :winner :adventurer
+  :player :adventurer
+  :verbose false
+  :super-brief false
+  :won false
+})
+
 (defn set-obj-flag
   "Sets a flag on an object."
   [game-state obj-id flag]
@@ -97,3 +113,25 @@
   [game-state]
   (get-thing-loc-id game-state :winner)
 )
+
+(defn add-room
+  "Add a room to the game state"
+  [game-state room]
+  (assoc game-state :rooms
+    (assoc (:rooms game-state) (:id room) room)))
+
+(defn add-rooms
+  "Add each of the list of rooms to the game state"
+  [game-state rooms]
+  (reduce add-room game-state rooms))
+
+(defn add-object
+  "Add an object to the game state"
+  [game-state object]
+  (assoc game-state :objects
+    (assoc (:objects game-state) (:id object) object)))
+
+(defn add-objects
+  "Add each of the list of objects to the game state"
+  [game-state objects]
+  (reduce add-object game-state objects))

@@ -41,10 +41,10 @@
   :action (fn [game-state rarg]
     (if
       (= rarg :look)
-      (print "You are standing in an open field west of a white house, with a boarded front door."))
+      (tell game-state "You are standing in an open field west of a white house, with a boarded front door."))
     (if
       (:won game-state)
-      (print " A secret path leads southwest into the forest."))
+      (tell game-state " A secret path leads southwest into the forest."))
     (crlf game-state)
   )
 })
