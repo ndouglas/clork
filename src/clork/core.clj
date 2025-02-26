@@ -4,13 +4,14 @@
 (require '[clojure.pprint :refer [pprint]])
 
 (load "utils")
+(load "game_state")
 (load "verbs")
 (load "flags")
-(load "game_state")
+(load "parser")
 (load "rooms")
-(load "main_loop")
 (load "objects")
 (load "verbs_look")
+(load "main_loop")
 
 (defn go
   "The GO routine."
@@ -32,4 +33,4 @@
 (defn -main
   "Main function for CLORK."
   [& args]
-  (go initial-game-state))
+  (go (initial-game-state)))

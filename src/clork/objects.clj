@@ -23,9 +23,9 @@
   :capacity 10,
   :action (fn [game-state]
     (if
-      (and (= (:verb game-state) :take) (= (:prs0 game-state) :mailbox))
-      (tell game-state "It is securely anchored.\n")
-      game-state))})
+      (and (= (:verb game-state) :take) (= (:prso game-state) :mailbox))
+      (tell game-state "It is securely anchored.\n"))
+    game-state)})
 
 ;; <OBJECT ADVENTURER
 ;; 	(SYNONYM ADVENTURER)

@@ -1,20 +1,28 @@
 (in-ns 'clork.core)
 
-(def initial-game-state {
-  :rooms {}
-  :objects {}
-  :i-candles 40
-  :i-lantern 200
-  :here :west-of-house
-  :it :mailbox
-  :lit false
-  :adventurer :adventurer
-  :winner :adventurer
-  :player :adventurer
-  :verbose false
-  :super-brief false
-  :won false
-})
+(declare initial-parser-state)
+(defn initial-game-state
+  "Return an initial game state."
+  []
+  {
+    :rooms {}
+    :objects {}
+    :i-candles 40
+    :i-lantern 200
+    ;; <GLOBAL HERE 0>
+    :here :west-of-house
+    :it :mailbox
+    :lit false
+    :adventurer :adventurer
+    ;; <GLOBAL WINNER 0>
+    :winner :adventurer
+    :player :adventurer
+    :verbose false
+    :super-brief false
+    :won false
+    :parser (initial-parser-state)
+  })
+
 
 (defn set-obj-flag
   "Sets a flag on an object."
@@ -60,6 +68,33 @@
   "Indicates whether a flag is set on the adventurer."
   [game-state flag]
   (set-obj-flag? game-state (:adventurer game-state) flag))
+
+(defn set-thing-flag
+  "Sets a flag on a room or object."
+  [game-state thng-id flag]
+  (cond
+    ((contains? (:objects game-state) thng-id) (set-obj-flag game-state thng-id flag))
+    ((contains? (:rooms game-state) thng-id) (set-room-flag game-state thng-id flag))
+    ((= (:player game-state) thng-id) (set-adv-flag game-state flag))
+    (true (throw (Exception. (str "Thing " thng-id " not found!"))))))
+
+(defn unset-thing-flag
+  "Unsets a flag on room or object."
+  [game-state thng-id flag]
+  (cond
+    ((contains? (:objects game-state) thng-id) (unset-obj-flag game-state thng-id flag))
+    ((contains? (:rooms game-state) thng-id) (unset-room-flag game-state thng-id flag))
+    ((= (:player game-state) thng-id) (unset-adv-flag game-state flag))
+    (true (throw (Exception. (str "Thing " thng-id " not found!"))))))
+
+(defn set-thing-flag?
+  "Indicates whether a flag is set on a room or object."
+  [game-state thng-id flag]
+  (cond
+    ((contains? (:objects game-state) thng-id) (set-obj-flag? game-state thng-id flag))
+    ((contains? (:rooms game-state) thng-id) (set-room-flag? game-state thng-id flag))
+    ((= (:player game-state) thng-id) (set-adv-flag? game-state flag))
+    (true (throw (Exception. (str "Thing " thng-id " not found!"))))))
 
 (defn set-here-flag
   "Sets a flag on the current room."
@@ -132,3 +167,28 @@
   "Add each of the list of objects to the game state"
   [game-state objects]
   (reduce add-object game-state objects))
+
+
+
+;;
+;; <ROUTINE META-LOC (OBJ)
+;; 	 <REPEAT ()
+;; 		 <COND (<NOT .OBJ>
+;; 			<RFALSE>)
+;; 		       (<IN? .OBJ ,GLOBAL-OBJECTS>
+;; 			<RETURN ,GLOBAL-OBJECTS>)>
+;; 		 <COND (<IN? .OBJ ,ROOMS>
+;; 			<RETURN .OBJ>)
+;; 		       (T
+;; 			<SET OBJ <LOC .OBJ>>)>>>
+
+(defn meta-location
+  "Return the 'meta-location' of the thing."
+  [game-state thing]
+  (cond
+    ((nil? thing) nil)
+    ((contains? (:objects game-state) thing) :objects)
+    ((contains? (:rooms game-state) thing) :rooms)
+    (true (meta-location game-state (:in thing)))
+  )
+)

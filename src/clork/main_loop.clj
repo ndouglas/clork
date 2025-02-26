@@ -142,6 +142,6 @@
   (while (nil? (:quit game-state))
     (tell game-state "? ")
     (let [input (read-line)]
-      (crlf game-state)
+      (parser game-state input)
     ))
   game-state)
