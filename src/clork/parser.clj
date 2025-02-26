@@ -203,8 +203,9 @@
       (let [
         in-quotes? (get-in game-state [:parser :quote-flag])
         winner-is-player? (== (:winner game-state) (:player game-state))
+        make-winner-player? (and (not in-quotes?) (not winner-is-player?))
       ]
-        (when (and (not in-quotes?) (not winner-is-player?))
+        (when make-winner-player?
           (assoc game-state :winner (:player game-state))
           (assoc game-state :here (meta-location (:player game-state)))
           (let [
