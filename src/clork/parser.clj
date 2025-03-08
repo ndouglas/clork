@@ -77,12 +77,17 @@
 
     ;; <GLOBAL P-LEXV
     ;; 	<ITABLE 59 (LEXV) 0 #BYTE 0 #BYTE 0> ;<ITABLE BYTE 120>>
+    :lexv nil
     ;; <GLOBAL AGAIN-LEXV
     ;; 	<ITABLE 59 (LEXV) 0 #BYTE 0 #BYTE 0> ;<ITABLE BYTE 120>>
+    :again-lexv nil
     ;; <GLOBAL RESERVE-LEXV
     ;; 	<ITABLE 59 (LEXV) 0 #BYTE 0 #BYTE 0> ;<ITABLE BYTE 120>>
+    :reserve-lexv nil
+    ;; The start of the next command.
     ;; <GLOBAL RESERVE-PTR <>>
-    ;;
+    :reserve-ptr 0
+
 
     ;;
     ;; ;"INBUF - Input buffer for READ"
@@ -98,6 +103,7 @@
     ;; ;"Parse-cont variable"
     ;;
     ;; <GLOBAL P-CONT <>>
+    :cont nil
     ;; <GLOBAL P-IT-OBJECT <>>
     ;; ;<GLOBAL LAST-PSEUDO-LOC <>>
     ;;
@@ -147,98 +153,30 @@
     ;; <GLOBAL QUOTE-FLAG <>>
     :quote-flag false
     ;; <GLOBAL P-END-ON-PREP <>>
+
+    :verb nil
+
+    :owinner nil
+    :omerged nil
   })
 
 ;; " Grovel down the input finding the verb, prepositions, and noun clauses.
 ;;    If the input is <direction> or <walk> <direction>, fall out immediately
 ;;    setting PRSA to ,V?WALK and PRSO to <direction>.  Otherwise, perform
 ;;    all required orphaning, syntax checking, and noun clause lookup."
-;; 
+;;
 ;; <ROUTINE PARSER ("AUX" (PTR ,P-LEXSTART) WRD (VAL 0) (VERB <>) (OF-FLAG <>)
 ;; 		       OWINNER OMERGED LEN (DIR <>) (NW 0) (LW 0) (CNT -1))
 
+(declare parser-init parser-set-winner-to-player parser-read-command)
 (defn parser
   "The input parser."
-  [game-state input]
-    ;; 	<REPEAT ()
-    ;; 		<COND (<G? <SET CNT <+ .CNT 1>> ,P-ITBLLEN> <RETURN>)
-    ;; 		      (T
-    ;; 		       <COND (<NOT ,P-OFLAG>
-    ;; 			      <PUT ,P-OTBL .CNT <GET ,P-ITBL .CNT>>)>
-    ;; 		       <PUT ,P-ITBL .CNT 0>)>>
-    ;;
-    ;; I spent quite a bit of time trying to understand why the conditional is
-    ;; nested in the loop rather than outside the loop. I give up, but I am
-    ;; leaving it as-is for the sheer peculiarity, to my eyes at least.
-    (loop [cnt 0]
-      (if (< cnt p-itbllen)
-        (if (not (get-in game-state [:parser :oflag]))
-          (assoc-in game-state [:parser :otbl cnt] (get-in game-state [:parser :itbl cnt])))))
+  [game-state]
+  (-> game-state
+    (parser-init)
+    (parser-set-winner-to-player)
+    (parser-read-command)
 
-    (let [
-        ;; 	<SET OWINNER ,WINNER>
-        owinner (:winner game-state)
-        ;; 	<SET OMERGED ,P-MERGED>
-        omerged (get-in game-state [:parser :omerged])]
-      ;; 	<SETG P-ADVERB <>>
-      (assoc-in game-state [:parser :adverb] false)
-      ;; 	<SETG P-MERGED <>>
-      (assoc-in game-state [:parser :merged] false)
-      ;; 	<SETG P-END-ON-PREP <>>
-      (assoc-in game-state [:parser :end-on-prep] false)
-
-      ;; 	<PUT ,P-PRSO ,P-MATCHLEN 0>
-      ;; 	<PUT ,P-PRSI ,P-MATCHLEN 0>
-      ;; 	<PUT ,P-BUTS ,P-MATCHLEN 0>
-      (assoc game-state :prso nil)
-      (assoc game-state :prsi nil)
-      (assoc game-state :buts nil)
-
-      ;; 	<COND (<AND <NOT ,QUOTE-FLAG> <N==? ,WINNER ,PLAYER>>
-      ;; 	  <SETG WINNER ,PLAYER>
-      ;; 	  <SETG HERE <META-LOC ,PLAYER>>
-      ;; 	  ;<COND (<NOT <FSET? <LOC ,WINNER> ,VEHBIT>>
-      ;; 		  <SETG HERE <LOC ,WINNER>>)>
-      ;; 	  <SETG LIT <LIT? ,HERE>>)>
-      (let [
-        in-quotes? (get-in game-state [:parser :quote-flag])
-        winner-is-player? (== (:winner game-state) (:player game-state))
-        make-winner-player? (and (not in-quotes?) (not winner-is-player?))
-      ]
-        (when make-winner-player?
-          (assoc game-state :winner (:player game-state))
-          (assoc game-state :here (meta-location (:player game-state)))
-          (let [
-            winner-loc (:in (get-thing game-state :winner))
-            winner-in-vehicle? (set-thing-flag? game-state winner-loc :vehicle)
-          ]
-            (cond
-              (not winner-in-vehicle?) (assoc game-state :here winner-loc)))
-          (assoc game-state :lit (set-here-flag? game-state :lit))))
-
-;; 	<COND (,RESERVE-PTR
-;; 	       <SET PTR ,RESERVE-PTR>
-;; 	       <STUFF ,RESERVE-LEXV ,P-LEXV>
-;; 	       <COND (<AND <NOT ,SUPER-BRIEF> <EQUAL? ,PLAYER ,WINNER>>
-;; 		      <CRLF>)>
-;; 	       <SETG RESERVE-PTR <>>
-;; 	       <SETG P-CONT <>>)
-;; 	      (,P-CONT
-;; 	       <SET PTR ,P-CONT>
-;; 	       <COND (<AND <NOT ,SUPER-BRIEF>
-;; 			   <EQUAL? ,PLAYER ,WINNER>
-;; 			   <NOT <VERB? SAY>>>
-;; 		      <CRLF>)>
-;; 	       <SETG P-CONT <>>)
-;; 	      (T
-;; 	       <SETG WINNER ,PLAYER>
-;; 	       <SETG QUOTE-FLAG <>>
-;; 	       <COND (<NOT <FSET? <LOC ,WINNER> ,VEHBIT>>
-;; 		      <SETG HERE <LOC ,WINNER>>)>
-;; 	       <SETG LIT <LIT? ,HERE>>
-;; 	       <COND (<NOT ,SUPER-BRIEF> <CRLF>)>
-;; 	       <TELL ">">
-;; 	       <READ ,P-INBUF ,P-LEXV>)>
 ;; 	<SETG P-LEN <GETB ,P-LEXV ,P-LEXWORDS>>
 ;; 	<COND (<ZERO? ,P-LEN> <TELL "I beg your pardon?" CR> <RFALSE>)>
 ;; 	<COND (<EQUAL? <SET WRD <GET ,P-LEXV .PTR>> ,W?OOPS>
@@ -470,6 +408,160 @@
 
     ))
 
+(defn parser-init-tbl
+  "Copy the input table to the output table and blank the input table."
+  [game-state]
+  ;; 	<REPEAT ()
+  ;; 		<COND (<G? <SET CNT <+ .CNT 1>> ,P-ITBLLEN> <RETURN>)
+  ;; 		      (T
+  ;; 		       <COND (<NOT ,P-OFLAG>
+  ;; 			      <PUT ,P-OTBL .CNT <GET ,P-ITBL .CNT>>)>
+  ;; 		       <PUT ,P-ITBL .CNT 0>)>>
+  ;;
+  ;; I spent quite a bit of time trying to understand why the conditional is
+  ;; nested in the loop rather than outside the loop. I give up, but I am
+  ;; leaving it as-is for the sheer peculiarity, to my eyes at least.
+  (loop [cnt 0]
+    (if (< cnt p-itbllen)
+      (if (not (get-in game-state [:parser :oflag]))
+        (game-state-copy game-state [:parser :itbl cnt] [:parser :otbl cnt])
+        game-state)
+      game-state)))
+
+(defn parser-init
+  "Initialize various parser variables."
+  [game-state]
+  (-> game-state
+    (parser-init-tbl)
+	  ;;  <SET OWINNER ,WINNER>
+    (game-state-copy [:winner] [:parser :owinner])
+	  ;;  <SET OMERGED ,P-MERGED>
+    (game-state-copy [:parser :merged] [:parser :omerged])
+    ;; 	<SETG P-ADVERB <>>
+    (assoc-in [:parser :adverb] false)
+    ;; 	<SETG P-MERGED <>>
+    (assoc-in [:parser :merged] false)
+    ;; 	<SETG P-END-ON-PREP <>>
+    (assoc-in [:parser :end-on-prep] false)
+
+    ;; 	<PUT ,P-PRSO ,P-MATCHLEN 0>
+    (assoc :prso nil)
+    ;; 	<PUT ,P-PRSI ,P-MATCHLEN 0>
+    (assoc :prsi nil)
+    ;; 	<PUT ,P-BUTS ,P-MATCHLEN 0>
+    (assoc :buts nil)))
+
+(declare parser-set-here-to-winner-loc)
+(defn parser-set-winner-to-player
+  "Reset the WINNER to PLAYER when appropriate."
+  [game-state]
+  ;; 	<COND (<AND <NOT ,QUOTE-FLAG> <N==? ,WINNER ,PLAYER>>
+  ;; 	  <SETG WINNER ,PLAYER>
+  ;; 	  <SETG HERE <META-LOC ,PLAYER>>
+  ;; 	  ;<COND (<NOT <FSET? <LOC ,WINNER> ,VEHBIT>>
+  ;; 		  <SETG HERE <LOC ,WINNER>>)>
+  ;; 	  <SETG LIT <LIT? ,HERE>>)>
+  (let [
+    in-quotes? (get-in game-state [:parser :quote-flag])
+    winner-is-player? (= (:winner game-state) (:player game-state))
+    make-winner-player? (and (not in-quotes?) (not winner-is-player?))]
+    (when make-winner-player?
+      (-> game-state
+        (assoc :winner (:player game-state))
+        (assoc :here (meta-location (:player game-state)))
+        (parser-set-here-to-winner-loc)
+        (assoc :lit (set-here-flag? game-state :lit)))
+      game-state)))
+
+(defn parser-set-here-to-winner-loc
+  "Set HERE to the location of WINNER when appropriate."
+  [game-state]
+  ;;  ;<COND (<NOT <FSET? <LOC ,WINNER> ,VEHBIT>>
+  ;; 		<SETG HERE <LOC ,WINNER>>)>
+  (let [
+    winner-loc (:in (get-thing game-state :winner))
+    winner-in-vehicle? (set-thing-flag? game-state winner-loc :vehicle)]
+    (if (not winner-in-vehicle?)
+      (assoc game-state :here winner-loc)
+      game-state)))
+
+(defn parser-restore-reserve
+  "When RESERVE-PTR is set, restore reserved command."
+  [game-state]
+  ;; (,RESERVE-PTR
+  ;; 	 <SET PTR ,RESERVE-PTR>
+  ;; 	 <STUFF ,RESERVE-LEXV ,P-LEXV>
+  ;; 	 <COND (<AND <NOT ,SUPER-BRIEF> <EQUAL? ,PLAYER ,WINNER>>
+  ;; 	   <CRLF>)>
+  ;; 	 <SETG RESERVE-PTR <>>
+  ;; 	 <SETG P-CONT <>>)
+  (let [
+    winner-is-player? (== (:winner game-state) (:player game-state))
+    is-not-super-brief? (not (:super-brief game-state))]
+    (-> game-state
+      ;; <SET PTR ,RESERVE-PTR>
+      (game-state-copy [:parser :reserve-ptr] [:parser :ptr])
+      ;; <STUFF ,RESERVE-LEXV ,P-LEXV>
+      (game-state-copy [:parser :reserve-lexv] [:parser :lexv])
+      ;; <COND (<AND <NOT ,SUPER-BRIEF> <EQUAL? ,PLAYER ,WINNER>>
+      ;; 	 <CRLF>)>
+      (crlf-if (and is-not-super-brief? winner-is-player?))
+      ;; <SETG RESERVE-PTR <>>
+      (assoc-in [:parser :reserve-ptr] nil)
+      ;; <SETG P-CONT <>>)
+      (assoc-in [:parser :cont] nil))))
+
+(defn parser-restore-cont
+  "Handle the CONT flag (multiple commands in a single input string)."
+  [game-state]
+  (let [
+    winner-is-player? (== (:winner game-state) (:player game-state))
+    is-not-super-brief? (not (:super-brief game-state))
+    verb-is-not-say? (not (= :say (get-in game-state [:parser :verb])))]
+    (-> game-state
+      ;; <SET PTR ,P-CONT>
+      (game-state-copy [:parser :reserve-ptr] [:parser :ptr])
+      ;; <COND (<AND <NOT ,SUPER-BRIEF>
+      ;; <EQUAL? ,PLAYER ,WINNER>
+      ;; <NOT <VERB? SAY>>>
+      ;;  <CRLF>)>
+      (crlf-if (and is-not-super-brief? winner-is-player? verb-is-not-say?))
+      ;; <SETG P-CONT <>>)
+      (assoc-in [:parser :cont] nil))))
+
+(defn parser-read-command-input
+  "Read command from a new input string."
+  [game-state]
+  (-> game-state
+    ;; <SETG WINNER ,PLAYER>
+    (game-state-copy [:player] [:winner])
+    ;; <SETG QUOTE-FLAG <>>
+    (assoc-in [:parser :quote-flag] false)
+    ;; <COND (<NOT <FSET? <LOC ,WINNER> ,VEHBIT>>
+    ;;   <SETG HERE <LOC ,WINNER>>)>
+    (parser-set-here-to-winner-loc)
+    ;; <SETG LIT <LIT? ,HERE>>
+    ((fn [gs] (assoc gs :lit (set-here-flag? gs :lit))))
+    ;; <COND (<NOT ,SUPER-BRIEF> <CRLF>)>
+    ((fn [gs] (crlf-if gs (not (:super-brief gs)))))
+    ;; <TELL ">">
+    (tell ">")
+    ;; <READ ,P-INBUF ,P-LEXV>)>
+    (assoc :input (read-line))))
+
+(defn parser-read-command
+  "Read command from appropriate source."
+  [game-state]
+  (cond
+    ;; Restore the reserved command, if appropriate.
+    (:reserve-ptr game-state)
+      (parser-restore-reserve game-state)
+    ;; Handle multiple commands in an input string.
+    (get-in game-state [:parser :cont])
+      (parser-restore-cont game-state)
+    ;; Read command from standard input.
+    true
+      (parser-read-command-input game-state)))
 
 ;; <GLOBAL P-ACT <>>
 ;; <GLOBAL P-WALK-DIR <>>

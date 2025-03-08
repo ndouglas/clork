@@ -73,28 +73,40 @@
   "Sets a flag on a room or object."
   [game-state thng-id flag]
   (cond
-    ((contains? (:objects game-state) thng-id) (set-obj-flag game-state thng-id flag))
-    ((contains? (:rooms game-state) thng-id) (set-room-flag game-state thng-id flag))
-    ((= (:player game-state) thng-id) (set-adv-flag game-state flag))
-    (true (throw (Exception. (str "Thing " thng-id " not found!"))))))
+    (contains? (:objects game-state) thng-id)
+      (set-obj-flag game-state thng-id flag)
+    (contains? (:rooms game-state) thng-id)
+      (set-room-flag game-state thng-id flag)
+    (= (:player game-state) thng-id)
+      (set-adv-flag game-state flag)
+    true
+      (throw (Exception. (str "Thing " thng-id " not found!")))))
 
 (defn unset-thing-flag
   "Unsets a flag on room or object."
   [game-state thng-id flag]
   (cond
-    ((contains? (:objects game-state) thng-id) (unset-obj-flag game-state thng-id flag))
-    ((contains? (:rooms game-state) thng-id) (unset-room-flag game-state thng-id flag))
-    ((= (:player game-state) thng-id) (unset-adv-flag game-state flag))
-    (true (throw (Exception. (str "Thing " thng-id " not found!"))))))
+    (contains? (:objects game-state) thng-id)
+      (unset-obj-flag game-state thng-id flag)
+    (contains? (:rooms game-state) thng-id)
+      (unset-room-flag game-state thng-id flag)
+    (= (:player game-state) thng-id)
+      (unset-adv-flag game-state flag)
+    true
+      (throw (Exception. (str "Thing " thng-id " not found!")))))
 
 (defn set-thing-flag?
   "Indicates whether a flag is set on a room or object."
   [game-state thng-id flag]
   (cond
-    ((contains? (:objects game-state) thng-id) (set-obj-flag? game-state thng-id flag))
-    ((contains? (:rooms game-state) thng-id) (set-room-flag? game-state thng-id flag))
-    ((= (:player game-state) thng-id) (set-adv-flag? game-state flag))
-    (true (throw (Exception. (str "Thing " thng-id " not found!"))))))
+    (contains? (:objects game-state) thng-id)
+      (set-obj-flag? game-state thng-id flag)
+    (contains? (:rooms game-state) thng-id)
+      (set-room-flag? game-state thng-id flag)
+    (= (:player game-state) thng-id)
+      (set-adv-flag? game-state flag)
+    true
+      (throw (Exception. (str "Thing " thng-id " not found!")))))
 
 (defn set-here-flag
   "Sets a flag on the current room."
@@ -146,6 +158,11 @@
   [game-state]
   (get-thing-loc-id game-state :winner))
 
+(defn get-player
+  "Return the PLAYER object."
+  [game-state]
+  (get-thing game-state (:player game-state)))
+
 (defn add-room
   "Add a room to the game state"
   [game-state room]
@@ -168,7 +185,11 @@
   [game-state objects]
   (reduce add-object game-state objects))
 
-
+(defn game-state-copy
+  "Set the value of one key in game-state to the value of another."
+  [game-state source-key dest-key]
+  (assoc-in game-state dest-key (get-in game-state source-key))
+)
 
 ;;
 ;; <ROUTINE META-LOC (OBJ)
@@ -186,9 +207,11 @@
   "Return the 'meta-location' of the thing."
   [game-state thing]
   (cond
-    ((nil? thing) nil)
-    ((contains? (:objects game-state) thing) :objects)
-    ((contains? (:rooms game-state) thing) :rooms)
-    (true (meta-location game-state (:in thing)))
-  )
-)
+    (nil? thing)
+      nil
+    (contains? (:objects game-state) thing)
+      :objects
+    (contains? (:rooms game-state) thing)
+      :rooms
+    true
+      (meta-location game-state (:in thing))))

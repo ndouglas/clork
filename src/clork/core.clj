@@ -20,7 +20,7 @@
     (add-rooms [
       west-of-house,
     ])
-    (add-objects[
+    (add-objects [
       adventurer,
       mailbox,
     ])

@@ -13,6 +13,13 @@
   [game-state]
   (tell game-state "\n"))
 
+(defn crlf-if
+  "Print a carriage return and line feed."
+  [game-state if-cond]
+  (if if-cond
+    (crlf game-state)
+    game-state))
+
 (defn this-is-it
   "Sets 'it' to refer to the passed object"
   [game-state it]

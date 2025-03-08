@@ -140,8 +140,5 @@
   "The main loop for the game."
   [game-state]
   (while (nil? (:quit game-state))
-    (tell game-state "? ")
-    (let [input (read-line)]
-      (parser game-state input)
-    ))
+    (parser game-state))
   game-state)
