@@ -126,12 +126,29 @@
 (defn get-thing
   "Get an object or room based on its ID."
   [game-state id]
-  (get-in game-state [:rooms id] (get-in game-state [:objects :id])))
+  (or (get-in game-state [:rooms id])
+      (get-in game-state [:objects id])))
+
+(defn thing-name
+  "Get the description/name of a thing (object or room)."
+  [game-state id]
+  (or (:desc (get-thing game-state id))
+      (name id)))
 
 (defn get-thing-loc-id
   "Return the ID of the object or room in which the specified id is located."
   [game-state thing-id]
   (:in (get-thing game-state thing-id)))
+
+;; Alias for compatibility with parser code
+(def get-thing-location get-thing-loc-id)
+
+(defn get-contents
+  "Return the IDs of all objects inside the given container."
+  [game-state container-id]
+  (->> (:objects game-state)
+       (filter (fn [[_ obj]] (= (:in obj) container-id)))
+       (map first)))
 
 (defn verbose?
   "Indicate whether we should be operating in verbose mode."
