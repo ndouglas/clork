@@ -1,1580 +1,450 @@
 (in-ns 'clork.core)
 
-;; <SETG SIBREAKS ".,\"">
-(def sibreaks #{"." "," "\""})
+;;;; ============================================================================
+;;;; PARSER - Main Entry Point and Orchestration
+;;;; ============================================================================
+;;;;
+;;;; This is the main parser module that orchestrates the parsing pipeline.
+;;;; The actual implementation is split across these submodules:
+;;;;
+;;;;   parser/state.clj      - Constants, state structure, initialization
+;;;;   parser/input.clj      - Reading input, lexv management
+;;;;   parser/lexer.clj      - Tokenization, word type checking (WT?)
+;;;;   parser/clause.clj     - Noun phrase parsing (CLAUSE routine)
+;;;;   parser/syntax.clj     - Syntax checking, GWIM
+;;;;   parser/objects.clj    - Object resolution (SNARF-OBJECTS, GET-OBJECT)
+;;;;   parser/orphan.clj     - Incomplete command handling
+;;;;   parser/validation.clj - TAKE-CHECK, MANY-CHECK, ACCESSIBLE?
+;;;;   parser/output.clj     - Error messages and prompts
+;;;;
+;;;; ZIL Reference: gparser.zil
+;;;;   The main PARSER routine is lines 109-406. This file implements
+;;;;   the top-level flow; submodules implement the helper routines.
+;;;;
+;;;; Parsing Pipeline:
+;;;;   1. Initialize parser state (parser-init)
+;;;;   2. Read input or restore from buffer (parser-read-command)
+;;;;   3. Tokenize input into lexv (tokenize, lexv-from-input)
+;;;;   4. Handle OOPS/AGAIN special commands
+;;;;   5. Main parsing loop - extract verb, preps, noun clauses
+;;;;   6. Handle directions as immediate WALK commands
+;;;;   7. Merge with orphan state if applicable (orphan-merge)
+;;;;   8. Check syntax against verb patterns (syntax-check)
+;;;;   9. Resolve objects from noun clauses (snarf-objects)
+;;;;   10. Validate object counts (many-check)
+;;;;   11. Auto-take if needed (take-check)
+;;;;   12. Return parsed command for execution
+;;;;
+;;;; ============================================================================
 
-;; <CONSTANT O-PTR 0>	"word pointer to unknown token in P-LEXV"
-;; <CONSTANT O-START 1>	"word pointer to sentence start in P-LEXV"
-;; <CONSTANT O-LENGTH 2>	"byte length of unparsed tokens in P-LEXV"
-;; <CONSTANT O-END 3>	"byte pointer to first free byte in OOPS-INBUF"
+;;; ---------------------------------------------------------------------------
+;;; FORWARD DECLARATIONS
+;;; ---------------------------------------------------------------------------
+;;; Only declare functions defined WITHIN the parser submodules that have
+;;; ordering issues. Do NOT redeclare functions from other modules (flags.clj,
+;;; utils.clj, game_state.clj) - that would shadow the real definitions!
 
-;; ;"Parser variables and temporaries"
-;;
-;; ;"Byte offset to # of entries in LEXV"
-;;
-;; <CONSTANT P-LEXWORDS 1> ;"Word offset to start of LEXV entries"
-;; <CONSTANT P-LEXSTART 1> ;"Number of words per LEXV entry"
-;; <CONSTANT P-LEXELEN 2>
-;; <CONSTANT P-WORDLEN 4> ;"Offset to parts of speech byte"
-;;
-;; <CONSTANT P-PSOFF 4> ;"Offset to first part of speech"
-;; <CONSTANT P-P1OFF 5> ;"First part of speech bit mask in PSOFF byte"
-;; <CONSTANT P-P1BITS 3>
-;;
-;; <CONSTANT P-ITBLLEN 9>
-(def p-itbllen 9)
+(declare lit?)              ; validation.clj - called from input.clj
 
-;; <CONSTANT P-VERB 0>
-;; <CONSTANT P-VERBN 1>
-;; <CONSTANT P-PREP1 2>
-;; <CONSTANT P-PREP1N 3>
-;; <CONSTANT P-PREP2 4>
-;; <CONSTANT P-PREP2N 5>
-;; <CONSTANT P-NC1 6>
-;; <CONSTANT P-NC1L 7>
-;; <CONSTANT P-NC2 8>
-;; <CONSTANT P-NC2L 9>
+;;; ---------------------------------------------------------------------------
+;;; LOAD SUBMODULES
+;;; ---------------------------------------------------------------------------
+;;; Order matters! Later modules may depend on earlier ones.
 
+(load "parser/state")       ; Constants, initial-parser-state, parser-init
+(load "parser/input")       ; parser-read-command, parser-restore-*
+(load "parser/lexer")       ; tokenize, wt?, parse-number
+(load "parser/clause")      ; clause parsing
+(load "parser/syntax")      ; syntax-check, gwim
+(load "parser/objects")     ; snarf-objects, get-object, search-list
+(load "parser/orphan")      ; orphan-merge, orphan
+(load "parser/validation")  ; take-check, many-check, accessible?
+(load "parser/output")      ; error messages, prompts
 
-(defn initial-parser-state
-  "Return an initial parser state."
-  []
-  {
-    ;; <GLOBAL P-TABLE 0>
-    :table 0
-    ;; <GLOBAL P-ONEOBJ 0>
-    :oneobj 0
-    ;; <GLOBAL P-SYNTAX 0>
-    :syntax 0
+;;; ---------------------------------------------------------------------------
+;;; FORWARD DECLARATIONS (LOCAL)
+;;; ---------------------------------------------------------------------------
 
-    ;; <GLOBAL PRSA <>>
-    :prsa nil
-    ;; <GLOBAL PRSI <>>
-    :prsi nil
-    ;; <GLOBAL PRSO <>>
-    :prso nil
+(declare handle-oops handle-again parse-command parse-tokens)
 
-    ;; <GLOBAL P-BUTS <ITABLE NONE 50>>
-    :buts nil
+;;; ---------------------------------------------------------------------------
+;;; MAIN PARSER ENTRY POINT
+;;; ---------------------------------------------------------------------------
 
-    ;; <GLOBAL P-CCTBL <TABLE 0 0 0 0>>
-    ;; ;"pointers used by CLAUSE-COPY (source/destination beginning/end pointers)"
-    ;; <CONSTANT CC-SBPTR 0>
-    ;; <CONSTANT CC-SEPTR 1>
-    ;; <CONSTANT CC-DBPTR 2>
-    ;; <CONSTANT CC-DEPTR 3>
-    :cctbl {
-      :sbptr nil
-      :septr nil
-      :dbptr nil
-      :deptr nil
-    }
-
-    ;; <GLOBAL P-LEN 0>
-    :len 0
-    ;; <GLOBAL P-DIR 0>
-    :dir 0
-
-    ;; <GLOBAL P-LEXV
-    ;; 	<ITABLE 59 (LEXV) 0 #BYTE 0 #BYTE 0> ;<ITABLE BYTE 120>>
-    :lexv nil
-    ;; <GLOBAL AGAIN-LEXV
-    ;; 	<ITABLE 59 (LEXV) 0 #BYTE 0 #BYTE 0> ;<ITABLE BYTE 120>>
-    :again-lexv nil
-    ;; <GLOBAL RESERVE-LEXV
-    ;; 	<ITABLE 59 (LEXV) 0 #BYTE 0 #BYTE 0> ;<ITABLE BYTE 120>>
-    :reserve-lexv nil
-    ;; The start of the next command.
-    ;; <GLOBAL RESERVE-PTR <>>
-    :reserve-ptr 0
-
-
-    ;;
-    ;; ;"INBUF - Input buffer for READ"
-    ;;
-    ;; <GLOBAL P-INBUF
-    ;; 	<ITABLE 120 (BYTE LENGTH) 0>
-    ;; 	;<ITABLE BYTE 60>>
-    ;; <GLOBAL OOPS-INBUF
-    ;; 	<ITABLE 120 (BYTE LENGTH) 0>
-    ;; 	;<ITABLE BYTE 60>>
-    ;; <GLOBAL OOPS-TABLE <TABLE <> <> <> <>>>
-    ;;
-    ;; ;"Parse-cont variable"
-    ;;
-    ;; <GLOBAL P-CONT <>>
-    :cont nil
-    ;; <GLOBAL P-IT-OBJECT <>>
-    ;; ;<GLOBAL LAST-PSEUDO-LOC <>>
-    ;;
-
-    ;; ;"Orphan flag"
-    ;;
-    ;; <GLOBAL P-OFLAG <>>
-    :oflag false
-
-    ;; <GLOBAL P-MERGED <>>
-    :merged false
-
-    ;; <GLOBAL P-ACLAUSE <>>
-    ;; <GLOBAL P-ANAM <>>
-    ;; <GLOBAL P-AADJ <>>
-
-    ;; <GLOBAL P-ITBL <TABLE 0 0 0 0 0 0 0 0 0 0>>
-    :itbl [
-      ;; Word 0 Verb Number (VERB)
-      0
-      ;; Word 1 Verb Table Address (VERBN)
-      0
-      ;; Word 2 Prep Number (PREP1)
-      0
-      ;; Word 3 Addr of Prep (PREP1N)
-      0
-      ;; Word 4 Prep Number (PREP2)
-      0
-      ;; Word 5 Addr of Prep (PREP2N)
-      0
-      ;; Word 6 Start Addr of Direct Clause (NC1)
-      0
-      ;; Word 7 End Addr of Direct Clause (NC1L)
-      0
-      ;; Word 8 Start Addr of Indirect Clause (NC2)
-      0
-      ;; Word 9 End Addr of Indirect Clause (NC2L)
-      0
-    ]
-
-    ;; <GLOBAL P-OTBL <TABLE 0 0 0 0 0 0 0 0 0 0>>
-    ;; <GLOBAL P-VTBL <TABLE 0 0 0 0>>
-    ;; <GLOBAL P-OVTBL <TABLE 0 #BYTE 0 #BYTE 0>>
-    ;;
-    ;; <GLOBAL P-NCN 0>
-
-    ;; <GLOBAL QUOTE-FLAG <>>
-    :quote-flag false
-    ;; <GLOBAL P-END-ON-PREP <>>
-
-    :verb nil
-
-    :owinner nil
-    :omerged nil
-  })
-
-;; " Grovel down the input finding the verb, prepositions, and noun clauses.
-;;    If the input is <direction> or <walk> <direction>, fall out immediately
-;;    setting PRSA to ,V?WALK and PRSO to <direction>.  Otherwise, perform
-;;    all required orphaning, syntax checking, and noun clause lookup."
-;;
-;; <ROUTINE PARSER ("AUX" (PTR ,P-LEXSTART) WRD (VAL 0) (VERB <>) (OF-FLAG <>)
-;; 		       OWINNER OMERGED LEN (DIR <>) (NW 0) (LW 0) (CNT -1))
-
-(declare parser-init parser-set-winner-to-player parser-read-command)
 (defn parser
-  "The input parser."
+  "The main input parser.
+
+   ZIL: PARSER routine, gparser.zil lines 109-406
+
+   This is THE parser - the function that turns player input into
+   structured commands. It's called from the main game loop for each
+   turn.
+
+   The parser is complex because it handles:
+   - Normal commands: 'take lamp', 'go north'
+   - Multi-object: 'take all', 'drop sword and shield'
+   - Multi-command: 'go north then take lamp'
+   - Incomplete commands: 'take' → 'What do you want to take?'
+   - Error correction: 'OOPS lantern' to fix typos
+   - Repetition: 'AGAIN' or 'G' to repeat last command
+   - Pronouns: 'take it', 'examine them'
+   - Disambiguation: 'Which lamp do you mean?'
+
+   Arguments:
+     game-state - current game state
+
+   Returns:
+     Updated game-state with parsed command in:
+       :parser :prsa - the action (verb)
+       :parser :prso - direct object(s)
+       :parser :prsi - indirect object(s)
+
+     Or game-state with :parser :error set if parsing failed."
   [game-state]
-  (-> game-state
-    (parser-init)
-    (parser-set-winner-to-player)
-    (parser-read-command)
 
-;; 	<SETG P-LEN <GETB ,P-LEXV ,P-LEXWORDS>>
-;; 	<COND (<ZERO? ,P-LEN> <TELL "I beg your pardon?" CR> <RFALSE>)>
-;; 	<COND (<EQUAL? <SET WRD <GET ,P-LEXV .PTR>> ,W?OOPS>
-;; 	       <COND (<EQUAL? <GET ,P-LEXV <+ .PTR ,P-LEXELEN>>
-;; 			      ,W?PERIOD ,W?COMMA>
-;; 		      <SET PTR <+ .PTR ,P-LEXELEN>>
-;; 		      <SETG P-LEN <- ,P-LEN 1>>)>
-;; 	       <COND (<NOT <G? ,P-LEN 1>>
-;; 		      <TELL "I can't help your clumsiness." CR>
-;; 		      <RFALSE>)
-;; 		     (<GET ,OOPS-TABLE ,O-PTR>
-;; 		      <COND (<AND <G? ,P-LEN 2>
-;; 				  <EQUAL? <GET ,P-LEXV <+ .PTR ,P-LEXELEN>>
-;; 					  ,W?QUOTE>>
-;; 			     <TELL
-;; "Sorry, you can't correct mistakes in quoted text." CR>
-;; 			     <RFALSE>)
-;; 			    (<G? ,P-LEN 2>
-;; 			     <TELL
-;; "Warning: only the first word after OOPS is used." CR>)>
-;; 		      <PUT ,AGAIN-LEXV <GET ,OOPS-TABLE ,O-PTR>
-;; 			   <GET ,P-LEXV <+ .PTR ,P-LEXELEN>>>
-;; 		      <SETG WINNER .OWINNER> ;"maybe fix oops vs. chars.?"
-;; 		      <INBUF-ADD <GETB ,P-LEXV <+ <* .PTR ,P-LEXELEN> 6>>
-;; 				 <GETB ,P-LEXV <+ <* .PTR ,P-LEXELEN> 7>>
-;; 				 <+ <* <GET ,OOPS-TABLE ,O-PTR> ,P-LEXELEN> 3>>
-;; 		      <STUFF ,AGAIN-LEXV ,P-LEXV>
-;; 		      <SETG P-LEN <GETB ,P-LEXV ,P-LEXWORDS>>
-;; 		      <SET PTR <GET ,OOPS-TABLE ,O-START>>
-;; 		      <INBUF-STUFF ,OOPS-INBUF ,P-INBUF>)
-;; 		     (T
-;; 		      <PUT ,OOPS-TABLE ,O-END <>>
-;; 		      <TELL "There was no word to replace!" CR>
-;; 		      <RFALSE>)>)
-;; 	      (T
-;; 	       <COND (<NOT <EQUAL? .WRD ,W?AGAIN ,W?G>>
-;; 		      <SETG P-NUMBER 0>)>
-;; 	       <PUT ,OOPS-TABLE ,O-END <>>)>
-;; 	<COND (<EQUAL? <GET ,P-LEXV .PTR> ,W?AGAIN ,W?G>
-;; 	       <COND (<ZERO? <GETB ,OOPS-INBUF 1>>
-;; 		      <TELL "Beg pardon?" CR>
-;; 		      <RFALSE>)
-;; 		     (,P-OFLAG
-;; 		      <TELL "It's difficult to repeat fragments." CR>
-;; 		      <RFALSE>)
-;; 		     (<NOT ,P-WON>
-;; 		      <TELL "That would just repeat a mistake." CR>
-;; 		      <RFALSE>)
-;; 		     (<G? ,P-LEN 1>
-;; 		      <COND (<OR <EQUAL? <GET ,P-LEXV <+ .PTR ,P-LEXELEN>>
-;; 					,W?PERIOD ,W?COMMA ,W?THEN>
-;; 				 <EQUAL? <GET ,P-LEXV <+ .PTR ,P-LEXELEN>>
-;; 					,W?AND>>
-;; 			     <SET PTR <+ .PTR <* 2 ,P-LEXELEN>>>
-;; 			     <PUTB ,P-LEXV ,P-LEXWORDS
-;; 				   <- <GETB ,P-LEXV ,P-LEXWORDS> 2>>)
-;; 			    (T
-;; 			     <TELL "I couldn't understand that sentence." CR>
-;; 			     <RFALSE>)>)
-;; 		     (T
-;; 		      <SET PTR <+ .PTR ,P-LEXELEN>>
-;; 		      <PUTB ,P-LEXV ,P-LEXWORDS
-;; 			    <- <GETB ,P-LEXV ,P-LEXWORDS> 1>>)>
-;; 	       <COND (<G? <GETB ,P-LEXV ,P-LEXWORDS> 0>
-;; 		      <STUFF ,P-LEXV ,RESERVE-LEXV>
-;; 		      <SETG RESERVE-PTR .PTR>)
-;; 		     (T
-;; 		      <SETG RESERVE-PTR <>>)>
-;; 	       ;<SETG P-LEN <GETB ,AGAIN-LEXV ,P-LEXWORDS>>
-;; 	       <SETG WINNER .OWINNER>
-;; 	       <SETG P-MERGED .OMERGED>
-;; 	       <INBUF-STUFF ,OOPS-INBUF ,P-INBUF>
-;; 	       <STUFF ,AGAIN-LEXV ,P-LEXV>
-;; 	       <SET CNT -1>
-;; 	       <SET DIR ,AGAIN-DIR>
-;; 	       <REPEAT ()
-;; 		<COND (<IGRTR? CNT ,P-ITBLLEN> <RETURN>)
-;; 		      (T <PUT ,P-ITBL .CNT <GET ,P-OTBL .CNT>>)>>)
-;; 	      (T
-;; 	       <STUFF ,P-LEXV ,AGAIN-LEXV>
-;; 	       <INBUF-STUFF ,P-INBUF ,OOPS-INBUF>
-;; 	       <PUT ,OOPS-TABLE ,O-START .PTR>
-;; 	       <PUT ,OOPS-TABLE ,O-LENGTH <* 4 ,P-LEN>>
-;; 	       <SET LEN
-;; 		    <* 2 <+ .PTR <* ,P-LEXELEN <GETB ,P-LEXV ,P-LEXWORDS>>>>>
-;; 	       <PUT ,OOPS-TABLE ,O-END <+ <GETB ,P-LEXV <- .LEN 1>>
-;; 					  <GETB ,P-LEXV <- .LEN 2>>>>
-;; 	       <SETG RESERVE-PTR <>>
-;; 	       <SET LEN ,P-LEN>
-;; 	       <SETG P-DIR <>>
-;; 	       <SETG P-NCN 0>
-;; 	       <SETG P-GETFLAGS 0>
-;; 	       <REPEAT ()
-;; 		<COND (<L? <SETG P-LEN <- ,P-LEN 1>> 0>
-;; 		       <SETG QUOTE-FLAG <>>
-;; 		       <RETURN>)
-;; 		      (<OR <SET WRD <GET ,P-LEXV .PTR>>
-;; 			   <SET WRD <NUMBER? .PTR>>>
-;; 		       <COND (<ZERO? ,P-LEN> <SET NW 0>)
-;; 			     (T <SET NW <GET ,P-LEXV <+ .PTR ,P-LEXELEN>>>)>
-;; 		       <COND (<AND <EQUAL? .WRD ,W?TO>
-;; 				   <EQUAL? .VERB ,ACT?TELL ;,ACT?ASK>>
-;; 			      <SET WRD ,W?QUOTE>)
-;; 			     (<AND <EQUAL? .WRD ,W?THEN>
-;; 				   <G? ,P-LEN 0>
-;; 				   <NOT .VERB>
-;; 				   <NOT ,QUOTE-FLAG> ;"Last NOT added 7/3">
-;; 			      <COND (<EQUAL? .LW 0 ,W?PERIOD>
-;; 				     <SET WRD ,W?THE>)
-;; 				    (ELSE
-;; 				     <PUT ,P-ITBL ,P-VERB ,ACT?TELL>
-;; 				     <PUT ,P-ITBL ,P-VERBN 0>
-;; 				     <SET WRD ,W?QUOTE>)>)>
-;; 		       <COND (<EQUAL? .WRD ,W?THEN ,W?PERIOD ,W?QUOTE>
-;; 			      <COND (<EQUAL? .WRD ,W?QUOTE>
-;; 				     <COND (,QUOTE-FLAG
-;; 					    <SETG QUOTE-FLAG <>>)
-;; 					   (T <SETG QUOTE-FLAG T>)>)>
-;; 			      <OR <ZERO? ,P-LEN>
-;; 				  <SETG P-CONT <+ .PTR ,P-LEXELEN>>>
-;; 			      <PUTB ,P-LEXV ,P-LEXWORDS ,P-LEN>
-;; 			      <RETURN>)
-;; 			     (<AND <SET VAL
-;; 					<WT? .WRD
-;; 					     ,PS?DIRECTION
-;; 					     ,P1?DIRECTION>>
-;; 				   <EQUAL? .VERB <> ,ACT?WALK>
-;; 				   <OR <EQUAL? .LEN 1>
-;; 				       <AND <EQUAL? .LEN 2>
-;; 					    <EQUAL? .VERB ,ACT?WALK>>
-;; 				       <AND <EQUAL? .NW
-;; 					            ,W?THEN
-;; 					            ,W?PERIOD
-;; 					            ,W?QUOTE>
-;; 					    <NOT <L? .LEN 2>>>
-;; 				       <AND ,QUOTE-FLAG
-;; 					    <EQUAL? .LEN 2>
-;; 					    <EQUAL? .NW ,W?QUOTE>>
-;; 				       <AND <G? .LEN 2>
-;; 					    <EQUAL? .NW ,W?COMMA ,W?AND>>>>
-;; 			      <SET DIR .VAL>
-;; 			      <COND (<EQUAL? .NW ,W?COMMA ,W?AND>
-;; 				     <PUT ,P-LEXV
-;; 					  <+ .PTR ,P-LEXELEN>
-;; 					  ,W?THEN>)>
-;; 			      <COND (<NOT <G? .LEN 2>>
-;; 				     <SETG QUOTE-FLAG <>>
-;; 				     <RETURN>)>)
-;; 			     (<AND <SET VAL <WT? .WRD ,PS?VERB ,P1?VERB>>
-;; 				   <NOT .VERB>>
-;; 			      <SET VERB .VAL>
-;; 			      <PUT ,P-ITBL ,P-VERB .VAL>
-;; 			      <PUT ,P-ITBL ,P-VERBN ,P-VTBL>
-;; 			      <PUT ,P-VTBL 0 .WRD>
-;; 			      <PUTB ,P-VTBL 2 <GETB ,P-LEXV
-;; 						    <SET CNT
-;; 							 <+ <* .PTR 2> 2>>>>
-;; 			      <PUTB ,P-VTBL 3 <GETB ,P-LEXV <+ .CNT 1>>>)
-;; 			     (<OR <SET VAL <WT? .WRD ,PS?PREPOSITION 0>>
-;; 				  <EQUAL? .WRD ,W?ALL ,W?ONE ;,W?BOTH>
-;; 				  <WT? .WRD ,PS?ADJECTIVE>
-;; 				  <WT? .WRD ,PS?OBJECT>>
-;; 			      <COND (<AND <G? ,P-LEN 1>
-;; 					  <EQUAL? .NW ,W?OF>
-;; 					  <ZERO? .VAL>
-;; 					  <NOT <EQUAL? .WRD
-;; 						       ,W?ALL ,W?ONE ,W?A>>
-;; 					  ;<NOT <EQUAL? .WRD ,W?BOTH>>>
-;; 				     <SET OF-FLAG T>)
-;; 				    (<AND <NOT <ZERO? .VAL>>
-;; 				          <OR <ZERO? ,P-LEN>
-;; 					      <EQUAL? .NW ,W?THEN ,W?PERIOD>>>
-;; 				     <SETG P-END-ON-PREP T>
-;; 				     <COND (<L? ,P-NCN 2>
-;; 					    <PUT ,P-ITBL ,P-PREP1 .VAL>
-;; 					    <PUT ,P-ITBL ,P-PREP1N .WRD>)>)
-;; 				    (<EQUAL? ,P-NCN 2>
-;; 				     <TELL
-;; "There were too many nouns in that sentence." CR>
-;; 				     <RFALSE>)
-;; 				    (T
-;; 				     <SETG P-NCN <+ ,P-NCN 1>>
-;; 				     <SETG P-ACT .VERB>
-;; 				     <OR <SET PTR <CLAUSE .PTR .VAL .WRD>>
-;; 					 <RFALSE>>
-;; 				     <COND (<L? .PTR 0>
-;; 					    <SETG QUOTE-FLAG <>>
-;; 					    <RETURN>)>)>)
-;; 			     (<EQUAL? .WRD ,W?OF>
-;; 			      <COND (<OR <NOT .OF-FLAG>
-;; 					 <EQUAL? .NW ,W?PERIOD ,W?THEN>>
-;; 				     <CANT-USE .PTR>
-;; 				     <RFALSE>)
-;; 				    (T
-;; 				     <SET OF-FLAG <>>)>)
-;; 			     (<WT? .WRD ,PS?BUZZ-WORD>)
-;; 			     (<AND <EQUAL? .VERB ,ACT?TELL>
-;; 				   <WT? .WRD ,PS?VERB ,P1?VERB>
-;; 				   <EQUAL? ,WINNER ,PLAYER>>
-;; 			      <TELL
-;; "Please consult your manual for the correct way to talk to other people
-;; or creatures." CR>
-;; 			      <RFALSE>)
-;; 			     (T
-;; 			      <CANT-USE .PTR>
-;; 			      <RFALSE>)>)
-;; 		      (T
-;; 		       <UNKNOWN-WORD .PTR>
-;; 		       <RFALSE>)>
-;; 		<SET LW .WRD>
-;; 		<SET PTR <+ .PTR ,P-LEXELEN>>>)>
-;; 	<PUT ,OOPS-TABLE ,O-PTR <>>
-;; 	<COND (.DIR
-;; 	       <SETG PRSA ,V?WALK>
-;; 	       <SETG PRSO .DIR>
-;; 	       <SETG P-OFLAG <>>
-;; 	       <SETG P-WALK-DIR .DIR>
-;; 	       <SETG AGAIN-DIR .DIR>)
-;; 	      (ELSE
-;; 	       <COND (,P-OFLAG <ORPHAN-MERGE>)>
-;; 	       <SETG P-WALK-DIR <>>
-;; 	       <SETG AGAIN-DIR <>>
-;; 	       <COND (<AND <SYNTAX-CHECK>
-;; 			   <SNARF-OBJECTS>
-;; 			   <MANY-CHECK>
-;; 			   <TAKE-CHECK>>
-;; 		      T)>)>>
+  ;; === Phase 1: Initialize ===
+  (let [gs (-> game-state
+               (parser-init)
+               (parser-set-winner-to-player)
+               (parser-read-command))]
 
+    ;; === Phase 2: Tokenize Input ===
+    (let [gs (if-let [input (:input gs)]
+               (assoc-in gs [:parser :lexv] (lexv-from-input input))
+               gs)
+          token-count (lexv-count gs)]
 
-    ))
+      ;; Empty input?
+      (if (zero? token-count)
+        (do
+          (parser-say gs :beg-pardon)
+          (assoc-in gs [:parser :error] {:type :empty-input}))
 
-(defn parser-init-tbl
-  "Copy the input table to the output table and blank the input table."
+        ;; === Phase 3: Handle Special Commands (OOPS, AGAIN) ===
+        (let [first-word (lexv-word gs 0)
+              gs (assoc-in gs [:parser :len] token-count)]
+
+          (cond
+            ;; OOPS - Error correction
+            (special-word? first-word :oops)
+            (handle-oops gs)
+
+            ;; AGAIN / G - Repeat last command
+            (or (special-word? first-word :again)
+                (special-word? first-word :g))
+            (handle-again gs)
+
+            ;; Normal parsing
+            :else
+            (parse-command gs)))))))
+
+;;; ---------------------------------------------------------------------------
+;;; SPECIAL COMMAND HANDLERS
+;;; ---------------------------------------------------------------------------
+
+(defn handle-oops
+  "Handle the OOPS error correction command.
+
+   OOPS replaces the last unknown word with a new word.
+   'OOPS lantern' fixes a typo in the previous command."
   [game-state]
-  ;; 	<REPEAT ()
-  ;; 		<COND (<G? <SET CNT <+ .CNT 1>> ,P-ITBLLEN> <RETURN>)
-  ;; 		      (T
-  ;; 		       <COND (<NOT ,P-OFLAG>
-  ;; 			      <PUT ,P-OTBL .CNT <GET ,P-ITBL .CNT>>)>
-  ;; 		       <PUT ,P-ITBL .CNT 0>)>>
-  ;;
-  ;; I spent quite a bit of time trying to understand why the conditional is
-  ;; nested in the loop rather than outside the loop. I give up, but I am
-  ;; leaving it as-is for the sheer peculiarity, to my eyes at least.
-  (loop [cnt 0]
-    (if (< cnt p-itbllen)
-      (if (not (get-in game-state [:parser :oflag]))
-        (game-state-copy game-state [:parser :itbl cnt] [:parser :otbl cnt])
-        game-state)
-      game-state)))
+  ;; TODO: Implement OOPS handling
+  ;; For now, just report not implemented
+  (parser-say game-state :oops-nothing)
+  (assoc-in game-state [:parser :error] {:type :oops-failed}))
 
-(defn parser-init
-  "Initialize various parser variables."
+(defn handle-again
+  "Handle the AGAIN/G repeat command.
+
+   Repeats the last successful command."
   [game-state]
-  (-> game-state
-    (parser-init-tbl)
-	  ;;  <SET OWINNER ,WINNER>
-    (game-state-copy [:winner] [:parser :owinner])
-	  ;;  <SET OMERGED ,P-MERGED>
-    (game-state-copy [:parser :merged] [:parser :omerged])
-    ;; 	<SETG P-ADVERB <>>
-    (assoc-in [:parser :adverb] false)
-    ;; 	<SETG P-MERGED <>>
-    (assoc-in [:parser :merged] false)
-    ;; 	<SETG P-END-ON-PREP <>>
-    (assoc-in [:parser :end-on-prep] false)
+  (let [oflag? (get-in game-state [:parser :oflag])
+        won? (get-in game-state [:parser :won])]
+    (cond
+      ;; No previous command
+      (nil? (get-in game-state [:parser :again-lexv]))
+      (do
+        (parser-say game-state :again-no-cmd)
+        (assoc-in game-state [:parser :error] {:type :no-again}))
 
-    ;; 	<PUT ,P-PRSO ,P-MATCHLEN 0>
-    (assoc :prso nil)
-    ;; 	<PUT ,P-PRSI ,P-MATCHLEN 0>
-    (assoc :prsi nil)
-    ;; 	<PUT ,P-BUTS ,P-MATCHLEN 0>
-    (assoc :buts nil)))
+      ;; Can't repeat fragments
+      oflag?
+      (do
+        (parser-say game-state :again-fragment)
+        (assoc-in game-state [:parser :error] {:type :again-fragment}))
 
-(declare parser-set-here-to-winner-loc)
-(defn parser-set-winner-to-player
-  "Reset the WINNER to PLAYER when appropriate."
+      ;; Last command failed
+      (not won?)
+      (do
+        (parser-say game-state :again-mistake)
+        (assoc-in game-state [:parser :error] {:type :again-mistake}))
+
+      ;; OK to repeat
+      :else
+      (let [;; Restore previous lexv
+            gs (-> game-state
+                   (assoc-in [:parser :lexv]
+                             (get-in game-state [:parser :again-lexv]))
+                   ;; Restore saved state
+                   (assoc :winner (get-in game-state [:parser :owinner]))
+                   (assoc-in [:parser :merged]
+                             (get-in game-state [:parser :omerged])))
+            ;; Copy OTBL to ITBL
+            gs (reduce
+                (fn [s i]
+                  (assoc-in s [:parser :itbl i]
+                            (get-in s [:parser :otbl i])))
+                gs
+                (range (inc p-itbllen)))]
+        ;; Now parse with restored state
+        (parse-command gs)))))
+
+;;; ---------------------------------------------------------------------------
+;;; MAIN PARSING LOGIC
+;;; ---------------------------------------------------------------------------
+
+(defn parse-command
+  "Parse a normal command (not OOPS or AGAIN).
+
+   This is the main parsing loop that extracts verbs, prepositions,
+   and noun clauses from the tokenized input."
   [game-state]
-  ;; 	<COND (<AND <NOT ,QUOTE-FLAG> <N==? ,WINNER ,PLAYER>>
-  ;; 	  <SETG WINNER ,PLAYER>
-  ;; 	  <SETG HERE <META-LOC ,PLAYER>>
-  ;; 	  ;<COND (<NOT <FSET? <LOC ,WINNER> ,VEHBIT>>
-  ;; 		  <SETG HERE <LOC ,WINNER>>)>
-  ;; 	  <SETG LIT <LIT? ,HERE>>)>
-  (let [
-    in-quotes? (get-in game-state [:parser :quote-flag])
-    winner-is-player? (= (:winner game-state) (:player game-state))
-    make-winner-player? (and (not in-quotes?) (not winner-is-player?))]
-    (when make-winner-player?
-      (-> game-state
-        (assoc :winner (:player game-state))
-        (assoc :here (meta-location (:player game-state)))
-        (parser-set-here-to-winner-loc)
-        (assoc :lit (set-here-flag? game-state :lit)))
-      game-state)))
 
-(defn parser-set-here-to-winner-loc
-  "Set HERE to the location of WINNER when appropriate."
+  ;; Save lexv for AGAIN
+  (let [gs (-> game-state
+               (assoc-in [:parser :again-lexv]
+                         (get-in game-state [:parser :lexv]))
+               (assoc-in [:parser :dir] nil)
+               (assoc-in [:parser :ncn] 0)
+               (assoc-in [:parser :getflags] 0))]
+
+    ;; === Main Parsing Loop ===
+    ;; Scan through tokens identifying verbs, preps, nouns
+    (let [result (parse-tokens gs)]
+
+      (if (:error result)
+        ;; Parsing failed
+        result
+
+        ;; === Post-Parse Processing ===
+        (let [gs (:game-state result)]
+
+          ;; Direction shortcut?
+          (if-let [dir (get-in gs [:parser :dir])]
+            ;; Direct walk command
+            (-> gs
+                (assoc-in [:parser :prsa] :walk)
+                (assoc-in [:parser :prso] [dir])
+                (assoc-in [:parser :oflag] false)
+                (assoc-in [:parser :walk-dir] dir)
+                (assoc-in [:parser :again-dir] dir))
+
+            ;; Normal command processing
+            (let [;; Try orphan merge if in orphan mode
+                  gs (if (get-in gs [:parser :oflag])
+                       (or (orphan-merge gs) gs)
+                       gs)
+
+                  ;; Clear walk-dir
+                  gs (-> gs
+                         (assoc-in [:parser :walk-dir] nil)
+                         (assoc-in [:parser :again-dir] nil))]
+
+              ;; === Validation Pipeline ===
+              (let [syntax-result (syntax-check gs)]
+                (if (not (:success syntax-result))
+                  ;; Syntax check failed
+                  (do
+                    (when-let [msg (get-in syntax-result [:error :message])]
+                      (println msg))
+                    (assoc-in (:game-state syntax-result)
+                              [:parser :error]
+                              (:error syntax-result)))
+
+                  ;; Continue with object resolution
+                  (let [gs (:game-state syntax-result)
+                        snarf-result (snarf-objects gs)]
+
+                    (if (and (map? snarf-result) (not (:success snarf-result)))
+                      ;; Object resolution failed
+                      (do
+                        (when-let [msg (get-in snarf-result [:error :message])]
+                          (println msg))
+                        (assoc-in (:game-state snarf-result)
+                                  [:parser :error]
+                                  (:error snarf-result)))
+
+                      ;; Continue with validation
+                      (let [gs (if (map? snarf-result)
+                                 (:game-state snarf-result)
+                                 snarf-result)
+                            many-result (many-check gs)]
+
+                        (if (not (:success many-result))
+                          ;; Too many objects
+                          (do
+                            (when-let [msg (get-in many-result [:error :message])]
+                              (println msg))
+                            (assoc-in (:game-state many-result)
+                                      [:parser :error]
+                                      (:error many-result)))
+
+                          ;; Final: take check
+                          (let [gs (:game-state many-result)
+                                take-result (take-check gs)]
+
+                            (if (not (:success take-result))
+                              ;; Take check failed
+                              (do
+                                (when-let [msg (get-in take-result [:error :message])]
+                                  (println msg))
+                                (assoc-in (:game-state take-result)
+                                          [:parser :error]
+                                          (:error take-result)))
+
+                              ;; SUCCESS! Mark as won and return
+                              (-> (:game-state take-result)
+                                  (assoc-in [:parser :won] true)
+                                  (assoc-in [:parser :error] nil)))))))))))))))))
+
+(defn parse-tokens
+  "Parse tokens from lexv, extracting verbs, preps, and noun clauses.
+
+   ZIL: The main REPEAT loop in PARSER, lines 246-364
+
+   Returns {:game-state gs} on success, or {:error ...} on failure."
   [game-state]
-  ;;  ;<COND (<NOT <FSET? <LOC ,WINNER> ,VEHBIT>>
-  ;; 		<SETG HERE <LOC ,WINNER>>)>
-  (let [
-    winner-loc (:in (get-thing game-state :winner))
-    winner-in-vehicle? (set-thing-flag? game-state winner-loc :vehicle)]
-    (if (not winner-in-vehicle?)
-      (assoc game-state :here winner-loc)
-      game-state)))
+  (loop [gs game-state
+         ptr 0
+         verb nil
+         of-flag false
+         last-word nil]
 
-(defn parser-restore-reserve
-  "When RESERVE-PTR is set, restore reserved command."
-  [game-state]
-  ;; (,RESERVE-PTR
-  ;; 	 <SET PTR ,RESERVE-PTR>
-  ;; 	 <STUFF ,RESERVE-LEXV ,P-LEXV>
-  ;; 	 <COND (<AND <NOT ,SUPER-BRIEF> <EQUAL? ,PLAYER ,WINNER>>
-  ;; 	   <CRLF>)>
-  ;; 	 <SETG RESERVE-PTR <>>
-  ;; 	 <SETG P-CONT <>>)
-  (let [
-    winner-is-player? (== (:winner game-state) (:player game-state))
-    is-not-super-brief? (not (:super-brief game-state))]
-    (-> game-state
-      ;; <SET PTR ,RESERVE-PTR>
-      (game-state-copy [:parser :reserve-ptr] [:parser :ptr])
-      ;; <STUFF ,RESERVE-LEXV ,P-LEXV>
-      (game-state-copy [:parser :reserve-lexv] [:parser :lexv])
-      ;; <COND (<AND <NOT ,SUPER-BRIEF> <EQUAL? ,PLAYER ,WINNER>>
-      ;; 	 <CRLF>)>
-      (crlf-if (and is-not-super-brief? winner-is-player?))
-      ;; <SETG RESERVE-PTR <>>
-      (assoc-in [:parser :reserve-ptr] nil)
-      ;; <SETG P-CONT <>>)
-      (assoc-in [:parser :cont] nil))))
+    (let [remaining (get-in gs [:parser :len] 0)]
+      (if (neg? (dec remaining))
+        ;; End of input
+        {:game-state (assoc-in gs [:parser :quote-flag] false)}
 
-(defn parser-restore-cont
-  "Handle the CONT flag (multiple commands in a single input string)."
-  [game-state]
-  (let [
-    winner-is-player? (== (:winner game-state) (:player game-state))
-    is-not-super-brief? (not (:super-brief game-state))
-    verb-is-not-say? (not (= :say (get-in game-state [:parser :verb])))]
-    (-> game-state
-      ;; <SET PTR ,P-CONT>
-      (game-state-copy [:parser :reserve-ptr] [:parser :ptr])
-      ;; <COND (<AND <NOT ,SUPER-BRIEF>
-      ;; <EQUAL? ,PLAYER ,WINNER>
-      ;; <NOT <VERB? SAY>>>
-      ;;  <CRLF>)>
-      (crlf-if (and is-not-super-brief? winner-is-player? verb-is-not-say?))
-      ;; <SETG P-CONT <>>)
-      (assoc-in [:parser :cont] nil))))
+        ;; Get current word
+        (let [word (lexv-word gs ptr)
+              ;; Try to parse as number if not in vocab
+              word (or word
+                       (when-let [num-result (number?-token gs (lexv-get gs ptr))]
+                         (:word num-result)))
+              next-word (when (pos? remaining)
+                          (lexv-word gs (inc ptr)))
+              gs (update-in gs [:parser :len] dec)]
 
-(defn parser-read-command-input
-  "Read command from a new input string."
-  [game-state]
-  (-> game-state
-    ;; <SETG WINNER ,PLAYER>
-    (game-state-copy [:player] [:winner])
-    ;; <SETG QUOTE-FLAG <>>
-    (assoc-in [:parser :quote-flag] false)
-    ;; <COND (<NOT <FSET? <LOC ,WINNER> ,VEHBIT>>
-    ;;   <SETG HERE <LOC ,WINNER>>)>
-    (parser-set-here-to-winner-loc)
-    ;; <SETG LIT <LIT? ,HERE>>
-    ((fn [gs] (assoc gs :lit (set-here-flag? gs :lit))))
-    ;; <COND (<NOT ,SUPER-BRIEF> <CRLF>)>
-    ((fn [gs] (crlf-if gs (not (:super-brief gs)))))
-    ;; <TELL ">">
-    (tell ">")
-    ;; <READ ,P-INBUF ,P-LEXV>)>
-    (assoc :input (read-line))))
+          (cond
+            ;; No word (unknown)
+            (nil? word)
+            (do
+              (unknown-word gs ptr)
+              {:error {:type :unknown-word :ptr ptr}
+               :game-state gs})
 
-(defn parser-read-command
-  "Read command from appropriate source."
-  [game-state]
-  (cond
-    ;; Restore the reserved command, if appropriate.
-    (:reserve-ptr game-state)
-      (parser-restore-reserve game-state)
-    ;; Handle multiple commands in an input string.
-    (get-in game-state [:parser :cont])
-      (parser-restore-cont game-state)
-    ;; Read command from standard input.
-    true
-      (parser-read-command-input game-state)))
+            ;; Sentence terminator
+            (or (special-word? word :then)
+                (special-word? word :period))
+            (let [gs (if (pos? (get-in gs [:parser :len] 0))
+                       (assoc-in gs [:parser :cont] (inc ptr))
+                       gs)]
+              {:game-state gs})
 
-;; <GLOBAL P-ACT <>>
-;; <GLOBAL P-WALK-DIR <>>
-;; <GLOBAL AGAIN-DIR <>>
-;;
-;; ;"For AGAIN purposes, put contents of one LEXV table into another."
-;; <ROUTINE STUFF (SRC DEST "OPTIONAL" (MAX 29) "AUX" (PTR ,P-LEXSTART) (CTR 1)
-;; 						   BPTR)
-;; 	 <PUTB .DEST 0 <GETB .SRC 0>>
-;; 	 <PUTB .DEST 1 <GETB .SRC 1>>
-;; 	 <REPEAT ()
-;; 	  <PUT .DEST .PTR <GET .SRC .PTR>>
-;; 	  <SET BPTR <+ <* .PTR 2> 2>>
-;; 	  <PUTB .DEST .BPTR <GETB .SRC .BPTR>>
-;; 	  <SET BPTR <+ <* .PTR 2> 3>>
-;; 	  <PUTB .DEST .BPTR <GETB .SRC .BPTR>>
-;; 	  <SET PTR <+ .PTR ,P-LEXELEN>>
-;; 	  <COND (<IGRTR? CTR .MAX>
-;; 		 <RETURN>)>>>
-;;
-;; ;"Put contents of one INBUF into another"
-;; <ROUTINE INBUF-STUFF (SRC DEST "AUX" CNT)
-;; 	 <SET CNT <- <GETB .SRC 0> 1>>
-;; 	 <REPEAT ()
-;; 		 <PUTB .DEST .CNT <GETB .SRC .CNT>>
-;; 		 <COND (<DLESS? CNT 0> <RETURN>)>>>
-;;
-;; ;"Put the word in the positions specified from P-INBUF to the end of
-;; OOPS-INBUF, leaving the appropriate pointers in AGAIN-LEXV"
-;; <ROUTINE INBUF-ADD (LEN BEG SLOT "AUX" DBEG (CTR 0) TMP)
-;; 	 <COND (<SET TMP <GET ,OOPS-TABLE ,O-END>>
-;; 		<SET DBEG .TMP>)
-;; 	       (T
-;; 		<SET DBEG <+ <GETB ,AGAIN-LEXV
-;; 				   <SET TMP <GET ,OOPS-TABLE ,O-LENGTH>>>
-;; 			     <GETB ,AGAIN-LEXV <+ .TMP 1>>>>)>
-;; 	 <PUT ,OOPS-TABLE ,O-END <+ .DBEG .LEN>>
-;; 	 <REPEAT ()
-;; 	  <PUTB ,OOPS-INBUF <+ .DBEG .CTR> <GETB ,P-INBUF <+ .BEG .CTR>>>
-;; 	  <SET CTR <+ .CTR 1>>
-;; 	  <COND (<EQUAL? .CTR .LEN> <RETURN>)>>
-;; 	 <PUTB ,AGAIN-LEXV .SLOT .DBEG>
-;; 	 <PUTB ,AGAIN-LEXV <- .SLOT 1> .LEN>>
-;;
-;; ;"Check whether word pointed at by PTR is the correct part of speech.
-;;    The second argument is the part of speech (,PS?<part of speech>).  The
-;;    3rd argument (,P1?<part of speech>), if given, causes the value
-;;    for that part of speech to be returned."
-;; 
-;; <ROUTINE WT? (PTR BIT "OPTIONAL" (B1 5) "AUX" (OFFS ,P-P1OFF) TYP)
-;; 	<COND (<BTST <SET TYP <GETB .PTR ,P-PSOFF>> .BIT>
-;; 	       <COND (<G? .B1 4> <RTRUE>)
-;; 		     (T
-;; 		      <SET TYP <BAND .TYP ,P-P1BITS>>
-;; 		      <COND (<NOT <EQUAL? .TYP .B1>> <SET OFFS <+ .OFFS 1>>)>
-;; 		      <GETB .PTR .OFFS>)>)>>
-;;
-;; ;" Scan through a noun clause, leave a pointer to its starting location"
-;;
-;; <ROUTINE CLAUSE (PTR VAL WRD "AUX" OFF NUM (ANDFLG <>) (FIRST?? T) NW (LW 0))
-;; 	<SET OFF <* <- ,P-NCN 1> 2>>
-;; 	<COND (<NOT <EQUAL? .VAL 0>>
-;; 	       <PUT ,P-ITBL <SET NUM <+ ,P-PREP1 .OFF>> .VAL>
-;; 	       <PUT ,P-ITBL <+ .NUM 1> .WRD>
-;; 	       <SET PTR <+ .PTR ,P-LEXELEN>>)
-;; 	      (T <SETG P-LEN <+ ,P-LEN 1>>)>
-;; 	<COND (<ZERO? ,P-LEN> <SETG P-NCN <- ,P-NCN 1>> <RETURN -1>)>
-;; 	<PUT ,P-ITBL <SET NUM <+ ,P-NC1 .OFF>> <REST ,P-LEXV <* .PTR 2>>>
-;; 	<COND (<EQUAL? <GET ,P-LEXV .PTR> ,W?THE ,W?A ,W?AN>
-;; 	       <PUT ,P-ITBL .NUM <REST <GET ,P-ITBL .NUM> 4>>)>
-;; 	<REPEAT ()
-;; 		<COND (<L? <SETG P-LEN <- ,P-LEN 1>> 0>
-;; 		       <PUT ,P-ITBL <+ .NUM 1> <REST ,P-LEXV <* .PTR 2>>>
-;; 		       <RETURN -1>)>
-;; 		<COND (<OR <SET WRD <GET ,P-LEXV .PTR>>
-;; 			   <SET WRD <NUMBER? .PTR>>>
-;; 		       <COND (<ZERO? ,P-LEN> <SET NW 0>)
-;; 			     (T <SET NW <GET ,P-LEXV <+ .PTR ,P-LEXELEN>>>)>
-;; 		       <COND (<EQUAL? .WRD ,W?AND ,W?COMMA> <SET ANDFLG T>)
-;; 			     (<EQUAL? .WRD ,W?ALL ,W?ONE ;,W?BOTH>
-;; 			      <COND (<EQUAL? .NW ,W?OF>
-;; 				     <SETG P-LEN <- ,P-LEN 1>>
-;; 				     <SET PTR <+ .PTR ,P-LEXELEN>>)>)
-;; 			     (<OR <EQUAL? .WRD ,W?THEN ,W?PERIOD>
-;; 				  <AND <WT? .WRD ,PS?PREPOSITION>
-;; 				       <GET ,P-ITBL ,P-VERB>
-;; 				          ;"ADDED 4/27 FOR TURTLE,UP"
-;; 				       <NOT .FIRST??>>>
-;; 			      <SETG P-LEN <+ ,P-LEN 1>>
-;; 			      <PUT ,P-ITBL
-;; 				   <+ .NUM 1>
-;; 				   <REST ,P-LEXV <* .PTR 2>>>
-;; 			      <RETURN <- .PTR ,P-LEXELEN>>)
-;; 			     (<WT? .WRD ,PS?OBJECT>
-;; 			      <COND (<AND <G? ,P-LEN 0>
-;; 					  <EQUAL? .NW ,W?OF>
-;; 					  <NOT <EQUAL? .WRD ,W?ALL ,W?ONE>>>
-;; 				     T)
-;; 				    (<AND <WT? .WRD
-;; 					       ,PS?ADJECTIVE
-;; 					       ,P1?ADJECTIVE>
-;; 					  <NOT <EQUAL? .NW 0>>
-;; 					  <WT? .NW ,PS?OBJECT>>)
-;; 				    (<AND <NOT .ANDFLG>
-;; 					  <NOT <EQUAL? .NW ,W?BUT ,W?EXCEPT>>
-;; 					  <NOT <EQUAL? .NW ,W?AND ,W?COMMA>>>
-;; 				     <PUT ,P-ITBL
-;; 					  <+ .NUM 1>
-;; 					  <REST ,P-LEXV <* <+ .PTR 2> 2>>>
-;; 				     <RETURN .PTR>)
-;; 				    (T <SET ANDFLG <>>)>)
-;; 			     (<AND <OR ,P-MERGED
-;; 				       ,P-OFLAG
-;; 				       <NOT <EQUAL? <GET ,P-ITBL ,P-VERB> 0>>>
-;; 				   <OR <WT? .WRD ,PS?ADJECTIVE>
-;; 				       <WT? .WRD ,PS?BUZZ-WORD>>>)
-;; 			     (<AND .ANDFLG
-;; 				   <OR <WT? .WRD ,PS?DIRECTION>
-;; 				       <WT? .WRD ,PS?VERB>>>
-;; 			      <SET PTR <- .PTR 4>>
-;; 			      <PUT ,P-LEXV <+ .PTR 2> ,W?THEN>
-;; 			      <SETG P-LEN <+ ,P-LEN 2>>)
-;; 			     (<WT? .WRD ,PS?PREPOSITION> T)
-;; 			     (T
-;; 			      <CANT-USE .PTR>
-;; 			      <RFALSE>)>)
-;; 		      (T <UNKNOWN-WORD .PTR> <RFALSE>)>
-;; 		<SET LW .WRD>
-;; 		<SET FIRST?? <>>
-;; 		<SET PTR <+ .PTR ,P-LEXELEN>>>>
-;;
-;; <ROUTINE NUMBER? (PTR "AUX" CNT BPTR CHR (SUM 0) (TIM <>))
-;; 	 <SET CNT <GETB <REST ,P-LEXV <* .PTR 2>> 2>>
-;; 	 <SET BPTR <GETB <REST ,P-LEXV <* .PTR 2>> 3>>
-;; 	 <REPEAT ()
-;; 		 <COND (<L? <SET CNT <- .CNT 1>> 0> <RETURN>)
-;; 		       (T
-;; 			<SET CHR <GETB ,P-INBUF .BPTR>>
-;; 			<COND (<EQUAL? .CHR 58>
-;; 			       <SET TIM .SUM>
-;; 			       <SET SUM 0>)
-;; 			      (<G? .SUM 10000> <RFALSE>)
-;; 			      (<AND <L? .CHR 58> <G? .CHR 47>>
-;; 			       <SET SUM <+ <* .SUM 10> <- .CHR 48>>>)
-;; 			      (T <RFALSE>)>
-;; 			<SET BPTR <+ .BPTR 1>>)>>
-;; 	 <PUT ,P-LEXV .PTR ,W?INTNUM>
-;; 	 <COND (<G? .SUM 1000> <RFALSE>)
-;; 	       (.TIM
-;; 		<COND (<L? .TIM 8> <SET TIM <+ .TIM 12>>)
-;; 		      (<G? .TIM 23> <RFALSE>)>
-;; 		<SET SUM <+ .SUM <* .TIM 60>>>)>
-;; 	 <SETG P-NUMBER .SUM>
-;; 	 ,W?INTNUM>
-;;
-;; <GLOBAL P-NUMBER 0>
-;;
-;; <GLOBAL P-DIRECTION 0>
-;;
-;; 
-;; ;"New ORPHAN-MERGE for TRAP Retrofix 6/21/84"
-;;
-;; <ROUTINE ORPHAN-MERGE ("AUX" (CNT -1) TEMP VERB BEG END (ADJ <>) WRD)
-;;    <SETG P-OFLAG <>>
-;;    <COND (<OR <EQUAL? <WT? <SET WRD <GET <GET ,P-ITBL ,P-VERBN> 0>>
-;; 			   ,PS?VERB ,P1?VERB>
-;; 		      <GET ,P-OTBL ,P-VERB>>
-;; 	      <NOT <ZERO? <WT? .WRD ,PS?ADJECTIVE>>>>
-;; 	  <SET ADJ T>)
-;; 	 (<AND <NOT <ZERO? <WT? .WRD ,PS?OBJECT ,P1?OBJECT>>>
-;; 	       <EQUAL? ,P-NCN 0>>
-;; 	  <PUT ,P-ITBL ,P-VERB 0>
-;; 	  <PUT ,P-ITBL ,P-VERBN 0>
-;; 	  <PUT ,P-ITBL ,P-NC1 <REST ,P-LEXV 2>>
-;; 	  <PUT ,P-ITBL ,P-NC1L <REST ,P-LEXV 6>>
-;; 	  <SETG P-NCN 1>)>
-;;    <COND (<AND <NOT <ZERO? <SET VERB <GET ,P-ITBL ,P-VERB>>>>
-;; 	       <NOT .ADJ>
-;; 	       <NOT <EQUAL? .VERB <GET ,P-OTBL ,P-VERB>>>>
-;; 	  <RFALSE>)
-;; 	 (<EQUAL? ,P-NCN 2> <RFALSE>)
-;; 	 (<EQUAL? <GET ,P-OTBL ,P-NC1> 1>
-;; 	  <COND (<OR <EQUAL? <SET TEMP <GET ,P-ITBL ,P-PREP1>>
-;; 			  <GET ,P-OTBL ,P-PREP1>>
-;; 		     <ZERO? .TEMP>>
-;; 		 <COND (.ADJ
-;; 			<PUT ,P-OTBL ,P-NC1 <REST ,P-LEXV 2>>
-;; 			<COND (<ZERO? <GET ,P-ITBL ,P-NC1L>>
-;; 			       <PUT ,P-ITBL ,P-NC1L <REST ,P-LEXV 6>>)>
-;; 			<COND (<ZERO? ,P-NCN> <SETG P-NCN 1>)>)
-;; 		       (T
-;; 			<PUT ,P-OTBL ,P-NC1 <GET ,P-ITBL ,P-NC1>>)>
-;; 		 <PUT ,P-OTBL ,P-NC1L <GET ,P-ITBL ,P-NC1L>>)
-;; 		(T <RFALSE>)>)
-;; 	 (<EQUAL? <GET ,P-OTBL ,P-NC2> 1>
-;; 	  <COND (<OR <EQUAL? <SET TEMP <GET ,P-ITBL ,P-PREP1>>
-;; 			  <GET ,P-OTBL ,P-PREP2>>
-;; 		     <ZERO? .TEMP>>
-;; 		 <COND (.ADJ
-;; 			<PUT ,P-ITBL ,P-NC1 <REST ,P-LEXV 2>>
-;; 			<COND (<ZERO? <GET ,P-ITBL ,P-NC1L>>
-;; 			       <PUT ,P-ITBL ,P-NC1L <REST ,P-LEXV 6>>)>)>
-;; 		 <PUT ,P-OTBL ,P-NC2 <GET ,P-ITBL ,P-NC1>>
-;; 		 <PUT ,P-OTBL ,P-NC2L <GET ,P-ITBL ,P-NC1L>>
-;; 		 <SETG P-NCN 2>)
-;; 		(T <RFALSE>)>)
-;; 	 (<NOT <ZERO? ,P-ACLAUSE>>
-;; 	  <COND (<AND <NOT <EQUAL? ,P-NCN 1>> <NOT .ADJ>>
-;; 		 <SETG P-ACLAUSE <>>
-;; 		 <RFALSE>)
-;; 		(T
-;; 		 <SET BEG <GET ,P-ITBL ,P-NC1>>
-;; 		 <COND (.ADJ <SET BEG <REST ,P-LEXV 2>> <SET ADJ <>>)>
-;; 		 <SET END <GET ,P-ITBL ,P-NC1L>>
-;; 		 <REPEAT ()
-;; 			 <SET WRD <GET .BEG 0>>
-;; 			 <COND (<EQUAL? .BEG .END>
-;; 				<COND (.ADJ <ACLAUSE-WIN .ADJ> <RETURN>)
-;; 				      (T <SETG P-ACLAUSE <>> <RFALSE>)>)
-;; 			       (<AND <NOT .ADJ>
-;; 				     <OR <BTST <GETB .WRD ,P-PSOFF>
-;; 					       ,PS?ADJECTIVE>
-;; 					 <EQUAL? .WRD ,W?ALL ,W?ONE>>>
-;; 				<SET ADJ .WRD>)
-;; 			       (<EQUAL? .WRD ,W?ONE>
-;; 				<ACLAUSE-WIN .ADJ>
-;; 				<RETURN>)
-;; 			       (<BTST <GETB .WRD ,P-PSOFF> ,PS?OBJECT>
-;; 				<COND (<EQUAL? .WRD ,P-ANAM>
-;; 				       <ACLAUSE-WIN .ADJ>)
-;; 				      (T
-;; 				       <NCLAUSE-WIN>)>
-;; 				<RETURN>)>
-;; 			 <SET BEG <REST .BEG ,P-WORDLEN>>
-;; 			 <COND (<EQUAL? .END 0>
-;; 				<SET END .BEG>
-;; 				<SETG P-NCN 1>
-;; 				<PUT ,P-ITBL ,P-NC1 <BACK .BEG 4>>
-;; 				<PUT ,P-ITBL ,P-NC1L .BEG>)>>)>)>
-;;    <PUT ,P-VTBL 0 <GET ,P-OVTBL 0>>
-;;    <PUTB ,P-VTBL 2 <GETB ,P-OVTBL 2>>
-;;    <PUTB ,P-VTBL 3 <GETB ,P-OVTBL 3>>
-;;    <PUT ,P-OTBL ,P-VERBN ,P-VTBL>
-;;    <PUTB ,P-VTBL 2 0>
-;;    <REPEAT ()
-;; 	   <COND (<G? <SET CNT <+ .CNT 1>> ,P-ITBLLEN>
-;; 		  <SETG P-MERGED T>
-;; 		  <RTRUE>)
-;; 		 (T <PUT ,P-ITBL .CNT <GET ,P-OTBL .CNT>>)>>
-;;    T>
-;;
-;; ;"New ACLAUSE-WIN for TRAP retrofix 6/21/84"
-;;
-;; <ROUTINE ACLAUSE-WIN (ADJ)
-;; 	<PUT ,P-ITBL ,P-VERB <GET ,P-OTBL ,P-VERB>>
-;; 	<PUT ,P-CCTBL ,CC-SBPTR ,P-ACLAUSE>
-;; 	<PUT ,P-CCTBL ,CC-SEPTR <+ ,P-ACLAUSE 1>>
-;; 	<PUT ,P-CCTBL ,CC-DBPTR ,P-ACLAUSE>
-;; 	<PUT ,P-CCTBL ,CC-DEPTR <+ ,P-ACLAUSE 1>>
-;; 	<CLAUSE-COPY ,P-OTBL ,P-OTBL .ADJ>
-;; 	<AND <NOT <EQUAL? <GET ,P-OTBL ,P-NC2> 0>> <SETG P-NCN 2>>
-;; 	<SETG P-ACLAUSE <>>
-;; 	<RTRUE>>
-;;
-;; <ROUTINE NCLAUSE-WIN ()
-;;         <PUT ,P-CCTBL ,CC-SBPTR ,P-NC1>
-;; 	<PUT ,P-CCTBL ,CC-SEPTR ,P-NC1L>
-;; 	<PUT ,P-CCTBL ,CC-DBPTR ,P-ACLAUSE>
-;; 	<PUT ,P-CCTBL ,CC-DEPTR <+ ,P-ACLAUSE 1>>
-;; 	<CLAUSE-COPY ,P-ITBL ,P-OTBL>
-;; 	<AND <NOT <EQUAL? <GET ,P-OTBL ,P-NC2> 0>> <SETG P-NCN 2>>
-;; 	<SETG P-ACLAUSE <>>
-;; 	<RTRUE>>
-;;
-;; ;"Print undefined word in input.
-;;    PTR points to the unknown word in P-LEXV"
-;; 
-;; <ROUTINE WORD-PRINT (CNT BUF)
-;; 	 <REPEAT ()
-;; 		 <COND (<DLESS? CNT 0> <RETURN>)
-;; 		       (ELSE
-;; 			<PRINTC <GETB ,P-INBUF .BUF>>
-;; 			<SET BUF <+ .BUF 1>>)>>>
-;;
-;; <ROUTINE UNKNOWN-WORD (PTR "AUX" BUF)
-;; 	<PUT ,OOPS-TABLE ,O-PTR .PTR>
-;; 	<COND (<VERB? SAY>
-;; 	       <TELL "Nothing happens." CR>
-;; 	       <RFALSE>)>
-;; 	<TELL "I don't know the word \"">
-;; 	<WORD-PRINT <GETB <REST ,P-LEXV <SET BUF <* .PTR 2>>> 2>
-;; 		    <GETB <REST ,P-LEXV .BUF> 3>>
-;; 	<TELL "\"." CR>
-;; 	<SETG QUOTE-FLAG <>>
-;; 	<SETG P-OFLAG <>>>
-;;
-;; <ROUTINE CANT-USE (PTR "AUX" BUF)
-;; 	<COND (<VERB? SAY>
-;; 	       <TELL "Nothing happens." CR>
-;; 	       <RFALSE>)>
-;; 	<TELL "You used the word \"">
-;; 	<WORD-PRINT <GETB <REST ,P-LEXV <SET BUF <* .PTR 2>>> 2>
-;; 		    <GETB <REST ,P-LEXV .BUF> 3>>
-;; 	<TELL "\" in a way that I don't understand." CR>
-;; 	<SETG QUOTE-FLAG <>>
-;; 	<SETG P-OFLAG <>>>
-;;
-;; ;" Perform syntax matching operations, using P-ITBL as the source of
-;;    the verb and adjectives for this input.  Returns false if no
-;;    syntax matches, and does it's own orphaning.  If return is true,
-;;    the syntax is saved in P-SYNTAX."
-;;
-;; <GLOBAL P-SLOCBITS 0>
-;;
-;; <CONSTANT P-SYNLEN 8>
-;;
-;; <CONSTANT P-SBITS 0>
-;; <CONSTANT P-SPREP1 1>
-;; <CONSTANT P-SPREP2 2>
-;; <CONSTANT P-SFWIM1 3>
-;; <CONSTANT P-SFWIM2 4>
-;; <CONSTANT P-SLOC1 5>
-;; <CONSTANT P-SLOC2 6>
-;; <CONSTANT P-SACTION 7>
-;; <CONSTANT P-SONUMS 3>
-;;
-;; <ROUTINE SYNTAX-CHECK ("AUX" SYN LEN NUM OBJ
-;; 		       	    (DRIVE1 <>) (DRIVE2 <>) PREP VERB TMP)
-;; 	<COND (<ZERO? <SET VERB <GET ,P-ITBL ,P-VERB>>>
-;; 	       <TELL "There was no verb in that sentence!" CR>
-;; 	       <RFALSE>)>
-;; 	<SET SYN <GET ,VERBS <- 255 .VERB>>>
-;; 	<SET LEN <GETB .SYN 0>>
-;; 	<SET SYN <REST .SYN>>
-;; 	<REPEAT ()
-;; 		<SET NUM <BAND <GETB .SYN ,P-SBITS> ,P-SONUMS>>
-;; 		<COND (<G? ,P-NCN .NUM> T)
-;; 		      (<AND <NOT <L? .NUM 1>>
-;; 			    <ZERO? ,P-NCN>
-;; 			    <OR <ZERO? <SET PREP <GET ,P-ITBL ,P-PREP1>>>
-;; 				<EQUAL? .PREP <GETB .SYN ,P-SPREP1>>>>
-;; 		       <SET DRIVE1 .SYN>)
-;; 		      (<EQUAL? <GETB .SYN ,P-SPREP1> <GET ,P-ITBL ,P-PREP1>>
-;; 		       <COND (<AND <EQUAL? .NUM 2> <EQUAL? ,P-NCN 1>>
-;; 			      <SET DRIVE2 .SYN>)
-;; 			     (<EQUAL? <GETB .SYN ,P-SPREP2>
-;; 				   <GET ,P-ITBL ,P-PREP2>>
-;; 			      <SYNTAX-FOUND .SYN>
-;; 			      <RTRUE>)>)>
-;; 		<COND (<DLESS? LEN 1>
-;; 		       <COND (<OR .DRIVE1 .DRIVE2> <RETURN>)
-;; 			     (T
-;; 			      <TELL
-;; "That sentence isn't one I recognize." CR>
-;; 			      <RFALSE>)>)
-;; 		      (T <SET SYN <REST .SYN ,P-SYNLEN>>)>>
-;; 	<COND (<AND .DRIVE1
-;; 		    <SET OBJ
-;; 			 <GWIM <GETB .DRIVE1 ,P-SFWIM1>
-;; 			       <GETB .DRIVE1 ,P-SLOC1>
-;; 			       <GETB .DRIVE1 ,P-SPREP1>>>>
-;; 	       <PUT ,P-PRSO ,P-MATCHLEN 1>
-;; 	       <PUT ,P-PRSO 1 .OBJ>
-;; 	       <SYNTAX-FOUND .DRIVE1>)
-;; 	      (<AND .DRIVE2
-;; 		    <SET OBJ
-;; 			 <GWIM <GETB .DRIVE2 ,P-SFWIM2>
-;; 			       <GETB .DRIVE2 ,P-SLOC2>
-;; 			       <GETB .DRIVE2 ,P-SPREP2>>>>
-;; 	       <PUT ,P-PRSI ,P-MATCHLEN 1>
-;; 	       <PUT ,P-PRSI 1 .OBJ>
-;; 	       <SYNTAX-FOUND .DRIVE2>)
-;; 	      (<EQUAL? .VERB ,ACT?FIND>
-;; 	       <TELL "That question can't be answered." CR>
-;; 	       <RFALSE>)
-;; 	      (<NOT <EQUAL? ,WINNER ,PLAYER>>
-;; 	       <CANT-ORPHAN>)
-;; 	      (T
-;; 	       <ORPHAN .DRIVE1 .DRIVE2>
-;; 	       <TELL "What do you want to ">
-;; 	       <SET TMP <GET ,P-OTBL ,P-VERBN>>
-;; 	       <COND (<EQUAL? .TMP 0> <TELL "tell">)
-;; 		     (<ZERO? <GETB ,P-VTBL 2>>
-;; 		      <PRINTB <GET .TMP 0>>)
-;; 		     (T
-;; 		      <WORD-PRINT <GETB .TMP 2> <GETB .TMP 3>>
-;; 		      <PUTB ,P-VTBL 2 0>)>
-;; 	       <COND (.DRIVE2
-;; 		      <TELL " ">
-;; 		      <THING-PRINT T T>)>
-;; 	       <SETG P-OFLAG T>
-;; 	       <PREP-PRINT <COND (.DRIVE1 <GETB .DRIVE1 ,P-SPREP1>)
-;; 				 (T <GETB .DRIVE2 ,P-SPREP2>)>>
-;; 	       <TELL "?" CR>
-;; 	       <RFALSE>)>>
-;;
-;; <ROUTINE CANT-ORPHAN ()
-;; 	 <TELL "\"I don't understand! What are you referring to?\"" CR>
-;; 	 <RFALSE>>
-;;
-;; 
-;; <ROUTINE ORPHAN (D1 D2 "AUX" (CNT -1))
-;; 	<COND (<NOT ,P-MERGED>
-;; 	       <PUT ,P-OCLAUSE ,P-MATCHLEN 0>)>
-;; 	<PUT ,P-OVTBL 0 <GET ,P-VTBL 0>>
-;; 	<PUTB ,P-OVTBL 2 <GETB ,P-VTBL 2>>
-;; 	<PUTB ,P-OVTBL 3 <GETB ,P-VTBL 3>>
-;; 	<REPEAT ()
-;; 		<COND (<IGRTR? CNT ,P-ITBLLEN> <RETURN>)
-;; 		      (T <PUT ,P-OTBL .CNT <GET ,P-ITBL .CNT>>)>>
-;; 	<COND (<EQUAL? ,P-NCN 2>
-;; 	       <PUT ,P-CCTBL ,CC-SBPTR ,P-NC2>
-;; 	       <PUT ,P-CCTBL ,CC-SEPTR ,P-NC2L>
-;; 	       <PUT ,P-CCTBL ,CC-DBPTR ,P-NC2>
-;; 	       <PUT ,P-CCTBL ,CC-DEPTR ,P-NC2L>
-;; 	       <CLAUSE-COPY ,P-ITBL ,P-OTBL>)>
-;; 	<COND (<NOT <L? ,P-NCN 1>>
-;; 	       <PUT ,P-CCTBL ,CC-SBPTR ,P-NC1>
-;; 	       <PUT ,P-CCTBL ,CC-SEPTR ,P-NC1L>
-;; 	       <PUT ,P-CCTBL ,CC-DBPTR ,P-NC1>
-;; 	       <PUT ,P-CCTBL ,CC-DEPTR ,P-NC1L>
-;; 	       <CLAUSE-COPY ,P-ITBL ,P-OTBL>)>
-;; 	<COND (.D1
-;; 	       <PUT ,P-OTBL ,P-PREP1 <GETB .D1 ,P-SPREP1>>
-;; 	       <PUT ,P-OTBL ,P-NC1 1>)
-;; 	      (.D2
-;; 	       <PUT ,P-OTBL ,P-PREP2 <GETB .D2 ,P-SPREP2>>
-;; 	       <PUT ,P-OTBL ,P-NC2 1>)>>
-;;
-;; <ROUTINE THING-PRINT (PRSO? "OPTIONAL" (THE? <>) "AUX" BEG END)
-;; 	 <COND (.PRSO?
-;; 		<SET BEG <GET ,P-ITBL ,P-NC1>>
-;; 		<SET END <GET ,P-ITBL ,P-NC1L>>)
-;; 	       (ELSE
-;; 		<SET BEG <GET ,P-ITBL ,P-NC2>>
-;; 		<SET END <GET ,P-ITBL ,P-NC2L>>)>
-;; 	 <BUFFER-PRINT .BEG .END .THE?>>
-;;
-;; <ROUTINE BUFFER-PRINT (BEG END CP
-;; 		       "AUX" (NOSP T) WRD (FIRST?? T) (PN <>) (Q? <>))
-;; 	 <REPEAT ()
-;; 		<COND (<EQUAL? .BEG .END> <RETURN>)
-;; 		      (T
-;; 		       <SET WRD <GET .BEG 0>>
-;; 		       <COND ;(<EQUAL? .WRD ,W?$BUZZ> T)
-;; 			     (<EQUAL? .WRD ,W?COMMA>
-;; 			      <TELL ", ">)
-;; 			     (.NOSP <SET NOSP <>>)
-;; 			     (ELSE <TELL " ">)>
-;; 		       <COND (<EQUAL? .WRD ,W?PERIOD ,W?COMMA>
-;; 			      <SET NOSP T>)
-;; 			     (<EQUAL? .WRD ,W?ME>
-;; 			      <PRINTD ,ME>
-;; 			      <SET PN T>)
-;; 			     (<EQUAL? .WRD ,W?INTNUM>
-;; 			      <PRINTN ,P-NUMBER>
-;; 			      <SET PN T>)
-;; 			     (T
-;; 			      <COND (<AND .FIRST?? <NOT .PN> .CP>
-;; 				     <TELL "the ">)>
-;; 			      <COND (<OR ,P-OFLAG ,P-MERGED> <PRINTB .WRD>)
-;; 				    (<AND <EQUAL? .WRD ,W?IT>
-;; 					  <ACCESSIBLE? ,P-IT-OBJECT>>
-;; 				     <PRINTD ,P-IT-OBJECT>)
-;; 				    (T
-;; 				     <WORD-PRINT <GETB .BEG 2>
-;; 						 <GETB .BEG 3>>)>
-;; 			      <SET FIRST?? <>>)>)>
-;; 		<SET BEG <REST .BEG ,P-WORDLEN>>>>
-;;
-;; <ROUTINE PREP-PRINT (PREP "AUX" WRD)
-;; 	<COND (<NOT <ZERO? .PREP>>
-;; 	       <TELL " ">
-;; 	       <COND ;(<EQUAL? .PREP ,PR?THROUGH>
-;; 		      <TELL "through">)
-;; 		     (T
-;; 		      <SET WRD <PREP-FIND .PREP>>
-;; 		      <PRINTB .WRD>)>)>>
-;;
-;; <ROUTINE CLAUSE-COPY (SRC DEST "OPTIONAL" (INSRT <>) "AUX" BEG END)
-;; 	<SET BEG <GET .SRC <GET ,P-CCTBL ,CC-SBPTR>>>
-;; 	<SET END <GET .SRC <GET ,P-CCTBL ,CC-SEPTR>>>
-;; 	<PUT .DEST
-;; 	     <GET ,P-CCTBL ,CC-DBPTR>
-;; 	     <REST ,P-OCLAUSE
-;; 		   <+ <* <GET ,P-OCLAUSE ,P-MATCHLEN> ,P-LEXELEN> 2>>>
-;; 	<REPEAT ()
-;; 		<COND (<EQUAL? .BEG .END>
-;; 		       <PUT .DEST
-;; 			    <GET ,P-CCTBL ,CC-DEPTR>
-;; 			    <REST ,P-OCLAUSE
-;; 				  <+ <* <GET ,P-OCLAUSE ,P-MATCHLEN> ,P-LEXELEN>
-;; 				     2>>>
-;; 		       <RETURN>)
-;; 		      (T
-;; 		       <COND (<AND .INSRT <EQUAL? ,P-ANAM <GET .BEG 0>>>
-;; 			      <CLAUSE-ADD .INSRT>)>
-;; 		       <CLAUSE-ADD <GET .BEG 0>>)>
-;; 		<SET BEG <REST .BEG ,P-WORDLEN>>>>
-;;
-;; 
-;; <ROUTINE CLAUSE-ADD (WRD "AUX" PTR)
-;; 	<SET PTR <+ <GET ,P-OCLAUSE ,P-MATCHLEN> 2>>
-;; 	<PUT ,P-OCLAUSE <- .PTR 1> .WRD>
-;; 	<PUT ,P-OCLAUSE .PTR 0>
-;; 	<PUT ,P-OCLAUSE ,P-MATCHLEN .PTR>>
-;;
-;; <ROUTINE PREP-FIND (PREP "AUX" (CNT 0) SIZE)
-;; 	<SET SIZE <* <GET ,PREPOSITIONS 0> 2>>
-;; 	<REPEAT ()
-;; 		<COND (<IGRTR? CNT .SIZE> <RFALSE>)
-;; 		      (<EQUAL? <GET ,PREPOSITIONS .CNT> .PREP>
-;; 		       <RETURN <GET ,PREPOSITIONS <- .CNT 1>>>)>>>
-;;
-;; <ROUTINE SYNTAX-FOUND (SYN)
-;; 	<SETG P-SYNTAX .SYN>
-;; 	<SETG PRSA <GETB .SYN ,P-SACTION>>>
-;;
-;; <GLOBAL P-GWIMBIT 0>
-;;
-;; <ROUTINE GWIM (GBIT LBIT PREP "AUX" OBJ)
-;; 	<COND (<EQUAL? .GBIT ,RMUNGBIT>
-;; 	       <RETURN ,ROOMS>)>
-;; 	<SETG P-GWIMBIT .GBIT>
-;; 	<SETG P-SLOCBITS .LBIT>
-;; 	<PUT ,P-MERGE ,P-MATCHLEN 0>
-;; 	<COND (<GET-OBJECT ,P-MERGE <>>
-;; 	       <SETG P-GWIMBIT 0>
-;; 	       <COND (<EQUAL? <GET ,P-MERGE ,P-MATCHLEN> 1>
-;; 		      <SET OBJ <GET ,P-MERGE 1>>
-;; 		      <TELL "(">
-;; 		      <COND (<AND <NOT <ZERO? .PREP>>
-;; 				  <NOT ,P-END-ON-PREP>>
-;; 			     <PRINTB <SET PREP <PREP-FIND .PREP>>>
-;; 			     <COND (<EQUAL? .PREP ,W?OUT>
-;; 				    <TELL " of">)>
-;; 			     <TELL " ">
-;; 			     <COND (<EQUAL? .OBJ ,HANDS>
-;; 				    <TELL "your hands">)
-;; 				   (T
-;; 				    <TELL "the " D .OBJ>)>
-;; 			     <TELL ")" CR>)
-;; 			    (ELSE
-;; 			     <TELL D .OBJ ")" CR>)>
-;; 		      .OBJ)>)
-;; 	      (T <SETG P-GWIMBIT 0> <RFALSE>)>>
-;;
-;; <ROUTINE SNARF-OBJECTS ("AUX" OPTR IPTR L)
-;; 	 <PUT ,P-BUTS ,P-MATCHLEN 0>
-;; 	 <COND (<NOT <EQUAL? <SET IPTR <GET ,P-ITBL ,P-NC2>> 0>>
-;; 		<SETG P-SLOCBITS <GETB ,P-SYNTAX ,P-SLOC2>>
-;; 		<OR <SNARFEM .IPTR <GET ,P-ITBL ,P-NC2L> ,P-PRSI> <RFALSE>>)>
-;; 	 <COND (<NOT <EQUAL? <SET OPTR <GET ,P-ITBL ,P-NC1>> 0>>
-;; 		<SETG P-SLOCBITS <GETB ,P-SYNTAX ,P-SLOC1>>
-;; 		<OR <SNARFEM .OPTR <GET ,P-ITBL ,P-NC1L> ,P-PRSO> <RFALSE>>)>
-;; 	 <COND (<NOT <ZERO? <GET ,P-BUTS ,P-MATCHLEN>>>
-;; 		<SET L <GET ,P-PRSO ,P-MATCHLEN>>
-;; 		<COND (.OPTR <SETG P-PRSO <BUT-MERGE ,P-PRSO>>)>
-;; 		<COND (<AND .IPTR
-;; 			    <OR <NOT .OPTR>
-;; 				<EQUAL? .L <GET ,P-PRSO ,P-MATCHLEN>>>>
-;; 		       <SETG P-PRSI <BUT-MERGE ,P-PRSI>>)>)>
-;; 	 <RTRUE>>
-;; 
-;; <ROUTINE BUT-MERGE (TBL "AUX" LEN BUTLEN (CNT 1) (MATCHES 0) OBJ NTBL)
-;; 	<SET LEN <GET .TBL ,P-MATCHLEN>>
-;; 	<PUT ,P-MERGE ,P-MATCHLEN 0>
-;; 	<REPEAT ()
-;; 		<COND (<DLESS? LEN 0> <RETURN>)
-;; 		      (<ZMEMQ <SET OBJ <GET .TBL .CNT>> ,P-BUTS>)
-;; 		      (T
-;; 		       <PUT ,P-MERGE <+ .MATCHES 1> .OBJ>
-;; 		       <SET MATCHES <+ .MATCHES 1>>)>
-;; 		<SET CNT <+ .CNT 1>>>
-;; 	<PUT ,P-MERGE ,P-MATCHLEN .MATCHES>
-;; 	<SET NTBL ,P-MERGE>
-;; 	<SETG P-MERGE .TBL>
-;; 	.NTBL>
-;;
-;; <GLOBAL P-NAM <>>
-;; <GLOBAL P-ADJ <>>
-;; <GLOBAL P-ADVERB <>>
-;; <GLOBAL P-ADJN <>>
-;; <GLOBAL P-PRSO <ITABLE NONE 50>>
-;; <GLOBAL P-PRSI <ITABLE NONE 50>>
-;; <GLOBAL P-BUTS <ITABLE NONE 50>>
-;; <GLOBAL P-MERGE <ITABLE NONE 50>>
-;; <GLOBAL P-OCLAUSE <ITABLE NONE 100>>
-;; <GLOBAL P-MATCHLEN 0>
-;; <GLOBAL P-GETFLAGS 0>
-;; <CONSTANT P-ALL 1>
-;; <CONSTANT P-ONE 2>
-;; <CONSTANT P-INHIBIT 4>
-;; 
-;;
-;; <GLOBAL P-AND <>>
-;;
-;; <ROUTINE SNARFEM (PTR EPTR TBL "AUX" (BUT <>) LEN WV WRD NW (WAS-ALL <>))
-;;    <SETG P-AND <>>
-;;    <COND (<EQUAL? ,P-GETFLAGS ,P-ALL>
-;; 	  <SET WAS-ALL T>)>
-;;    <SETG P-GETFLAGS 0>
-;;    <PUT .TBL ,P-MATCHLEN 0>
-;;    <SET WRD <GET .PTR 0>>
-;;    <REPEAT ()
-;; 	   <COND (<EQUAL? .PTR .EPTR>
-;; 		  <SET WV <GET-OBJECT <OR .BUT .TBL>>>
-;; 		  <COND (.WAS-ALL <SETG P-GETFLAGS ,P-ALL>)>
-;; 		  <RETURN .WV>)
-;; 		 (T
-;; 		  <COND (<==? .EPTR <REST .PTR ,P-WORDLEN>>
-;; 			 <SET NW 0>)
-;; 			(T <SET NW <GET .PTR ,P-LEXELEN>>)>
-;; 		  <COND (<EQUAL? .WRD ,W?ALL ;,W?BOTH>
-;; 			 <SETG P-GETFLAGS ,P-ALL>
-;; 			 <COND (<EQUAL? .NW ,W?OF>
-;; 				<SET PTR <REST .PTR ,P-WORDLEN>>)>)
-;; 			(<EQUAL? .WRD ,W?BUT ,W?EXCEPT>
-;; 			 <OR <GET-OBJECT <OR .BUT .TBL>> <RFALSE>>
-;; 			 <SET BUT ,P-BUTS>
-;; 			 <PUT .BUT ,P-MATCHLEN 0>)
-;; 			(<EQUAL? .WRD ,W?A ,W?ONE>
-;; 			 <COND (<NOT ,P-ADJ>
-;; 				<SETG P-GETFLAGS ,P-ONE>
-;; 				<COND (<EQUAL? .NW ,W?OF>
-;; 				       <SET PTR <REST .PTR ,P-WORDLEN>>)>)
-;; 			       (T
-;; 				<SETG P-NAM ,P-ONEOBJ>
-;; 				<OR <GET-OBJECT <OR .BUT .TBL>> <RFALSE>>
-;; 				<AND <ZERO? .NW> <RTRUE>>)>)
-;; 			(<AND <EQUAL? .WRD ,W?AND ,W?COMMA>
-;; 			      <NOT <EQUAL? .NW ,W?AND ,W?COMMA>>>
-;; 			 <SETG P-AND T>
-;; 			 <OR <GET-OBJECT <OR .BUT .TBL>> <RFALSE>>
-;; 			 T)
-;; 			(<WT? .WRD ,PS?BUZZ-WORD>)
-;; 			(<EQUAL? .WRD ,W?AND ,W?COMMA>)
-;; 			(<EQUAL? .WRD ,W?OF>
-;; 			 <COND (<ZERO? ,P-GETFLAGS>
-;; 				<SETG P-GETFLAGS ,P-INHIBIT>)>)
-;; 			(<AND <SET WV <WT? .WRD ,PS?ADJECTIVE ,P1?ADJECTIVE>>
-;; 			      <NOT ,P-ADJ>>
-;; 			 <SETG P-ADJ .WV>
-;; 			 <SETG P-ADJN .WRD>)
-;; 			(<WT? .WRD ,PS?OBJECT ,P1?OBJECT>
-;; 			 <SETG P-NAM .WRD>
-;; 			 <SETG P-ONEOBJ .WRD>)>)>
-;; 	   <COND (<NOT <EQUAL? .PTR .EPTR>>
-;; 		  <SET PTR <REST .PTR ,P-WORDLEN>>
-;; 		  <SET WRD .NW>)>>>
-;;
-;; <CONSTANT SH 128>
-;; <CONSTANT SC 64>
-;; <CONSTANT SIR 32>
-;; <CONSTANT SOG 16>
-;; <CONSTANT STAKE 8>
-;; <CONSTANT SMANY 4>
-;; <CONSTANT SHAVE 2>
-;;
-;; <ROUTINE GET-OBJECT (TBL
-;; 		     "OPTIONAL" (VRB T)
-;; 		     "AUX" BITS LEN XBITS TLEN (GCHECK <>) (OLEN 0) OBJ)
-;; 	 <SET XBITS ,P-SLOCBITS>
-;; 	 <SET TLEN <GET .TBL ,P-MATCHLEN>>
-;; 	 <COND (<BTST ,P-GETFLAGS ,P-INHIBIT> <RTRUE>)>
-;; 	 <COND (<AND <NOT ,P-NAM> ,P-ADJ>
-;; 		<COND (<WT? ,P-ADJN ,PS?OBJECT ,P1?OBJECT>
-;; 		       <SETG P-NAM ,P-ADJN>
-;; 		       <SETG P-ADJ <>>)
-;; 		      %<COND (<==? ,ZORK-NUMBER 3>
-;; 			      '(<SET BITS
-;; 				     <WT? ,P-ADJN
-;; 					  ,PS?DIRECTION ,P1?DIRECTION>>
-;; 				<SETG P-ADJ <>>
-;; 				<PUT .TBL ,P-MATCHLEN 1>
-;; 				<PUT .TBL 1 ,INTDIR>
-;; 				<SETG P-DIRECTION .BITS>
-;; 				<RTRUE>))
-;; 			     (ELSE '(<NULL-F> T))>>)>
-;; 	 <COND (<AND <NOT ,P-NAM>
-;; 		     <NOT ,P-ADJ>
-;; 		     <NOT <EQUAL? ,P-GETFLAGS ,P-ALL>>
-;; 		     <ZERO? ,P-GWIMBIT>>
-;; 		<COND (.VRB
-;; 		       <TELL
-;; "There seems to be a noun missing in that sentence!" CR>)>
-;; 		<RFALSE>)>
-;; 	 <COND (<OR <NOT <EQUAL? ,P-GETFLAGS ,P-ALL>> <ZERO? ,P-SLOCBITS>>
-;; 		<SETG P-SLOCBITS -1>)>
-;; 	 <SETG P-TABLE .TBL>
-;; 	 <PROG ()
-;; 	       <COND (.GCHECK <GLOBAL-CHECK .TBL>)
-;; 		     (T
-;; 		      <COND (,LIT
-;; 			     <FCLEAR ,PLAYER ,TRANSBIT>
-;; 			     <DO-SL ,HERE ,SOG ,SIR>
-;; 			     <FSET ,PLAYER ,TRANSBIT>)>
-;; 		      <DO-SL ,PLAYER ,SH ,SC>)>
-;; 	       <SET LEN <- <GET .TBL ,P-MATCHLEN> .TLEN>>
-;; 	       <COND (<BTST ,P-GETFLAGS ,P-ALL>)
-;; 		     (<AND <BTST ,P-GETFLAGS ,P-ONE>
-;; 			   <NOT <ZERO? .LEN>>>
-;; 		      <COND (<NOT <EQUAL? .LEN 1>>
-;; 			     <PUT .TBL 1 <GET .TBL <RANDOM .LEN>>>
-;; 			     <TELL "(How about the ">
-;; 			     <PRINTD <GET .TBL 1>>
-;; 			     <TELL "?)" CR>)>
-;; 		      <PUT .TBL ,P-MATCHLEN 1>)
-;; 		     (<OR <G? .LEN 1>
-;; 			  <AND <ZERO? .LEN> <NOT <EQUAL? ,P-SLOCBITS -1>>>>
-;; 		      <COND (<EQUAL? ,P-SLOCBITS -1>
-;; 			     <SETG P-SLOCBITS .XBITS>
-;; 			     <SET OLEN .LEN>
-;; 			     <PUT .TBL
-;; 				  ,P-MATCHLEN
-;; 				  <- <GET .TBL ,P-MATCHLEN> .LEN>>
-;; 			     <AGAIN>)
-;; 			    (T
-;; 			     <COND (<ZERO? .LEN> <SET LEN .OLEN>)>
-;; 			     <COND (<NOT <EQUAL? ,WINNER ,PLAYER>>
-;; 				    <CANT-ORPHAN>
-;; 				    <RFALSE>)
-;; 				   (<AND .VRB ,P-NAM>
-;; 				    <WHICH-PRINT .TLEN .LEN .TBL>
-;; 				    <SETG P-ACLAUSE
-;; 					  <COND (<EQUAL? .TBL ,P-PRSO> ,P-NC1)
-;; 						(T ,P-NC2)>>
-;; 				    <SETG P-AADJ ,P-ADJ>
-;; 				    <SETG P-ANAM ,P-NAM>
-;; 				    <ORPHAN <> <>>
-;; 				    <SETG P-OFLAG T>)
-;; 				   (.VRB
-;; 				    <TELL
-;; "There seems to be a noun missing in that sentence!" CR>)>
-;; 			     <SETG P-NAM <>>
-;; 			     <SETG P-ADJ <>>
-;; 			     <RFALSE>)>)>
-;; 	       <COND (<AND <ZERO? .LEN> .GCHECK>
-;; 		      <COND (.VRB
-;; 			     ;"next added 1/2/85 by JW"
-;; 			     <SETG P-SLOCBITS .XBITS>
-;; 			     <COND (<OR ,LIT <VERB? TELL ;WHERE ;WHAT ;WHO>>
-;; 				    ;"Changed 6/10/83 - MARC"
-;; 				    <OBJ-FOUND ,NOT-HERE-OBJECT .TBL>
-;; 				    <SETG P-XNAM ,P-NAM>
-;; 				    <SETG P-XADJ ,P-ADJ>
-;; 				    <SETG P-XADJN ,P-ADJN>
-;; 				    <SETG P-NAM <>>
-;; 				    <SETG P-ADJ <>>
-;; 				    <SETG P-ADJN <>>
-;; 				    <RTRUE>)
-;; 				   (T <TELL "It's too dark to see!" CR>)>)>
-;; 		      <SETG P-NAM <>>
-;; 		      <SETG P-ADJ <>>
-;; 		      <RFALSE>)
-;; 		     (<ZERO? .LEN> <SET GCHECK T> <AGAIN>)>
-;; 	       <SETG P-SLOCBITS .XBITS>
-;; 	       <SETG P-NAM <>>
-;; 	       <SETG P-ADJ <>>
-;; 	       <RTRUE>>>
-;;
-;; <GLOBAL P-XNAM <>>
-;; <GLOBAL P-XADJ <>>
-;; <GLOBAL P-XADJN <>>
-;;
-;; <ROUTINE WHICH-PRINT (TLEN LEN TBL "AUX" OBJ RLEN)
-;; 	 <SET RLEN .LEN>
-;; 	 <TELL "Which ">
-;;          <COND (<OR ,P-OFLAG ,P-MERGED ,P-AND>
-;; 		<PRINTB <COND (,P-NAM ,P-NAM)
-;; 			      (,P-ADJ ,P-ADJN)
-;; 			      (ELSE ,W?ONE)>>)
-;; 	       (ELSE
-;; 		<THING-PRINT <EQUAL? .TBL ,P-PRSO>>)>
-;; 	 <TELL " do you mean, ">
-;; 	 <REPEAT ()
-;; 		 <SET TLEN <+ .TLEN 1>>
-;; 		 <SET OBJ <GET .TBL .TLEN>>
-;; 		 <TELL "the " D .OBJ>
-;; 		 <COND (<EQUAL? .LEN 2>
-;; 		        <COND (<NOT <EQUAL? .RLEN 2>> <TELL ",">)>
-;; 		        <TELL " or ">)
-;; 		       (<G? .LEN 2> <TELL ", ">)>
-;; 		 <COND (<L? <SET LEN <- .LEN 1>> 1>
-;; 		        <TELL "?" CR>
-;; 		        <RETURN>)>>>
-;;
-;; 
-;; <ROUTINE GLOBAL-CHECK (TBL "AUX" LEN RMG RMGL (CNT 0) OBJ OBITS FOO)
-;; 	<SET LEN <GET .TBL ,P-MATCHLEN>>
-;; 	<SET OBITS ,P-SLOCBITS>
-;; 	<COND (<SET RMG <GETPT ,HERE ,P?GLOBAL>>
-;; 	       <SET RMGL <- <PTSIZE .RMG> 1>>
-;; 	       <REPEAT ()
-;; 		       <COND (<THIS-IT? <SET OBJ <GETB .RMG .CNT>> .TBL>
-;; 			      <OBJ-FOUND .OBJ .TBL>)>
-;; 		       <COND (<IGRTR? CNT .RMGL> <RETURN>)>>)>
-;; 	<COND (<SET RMG <GETPT ,HERE ,P?PSEUDO>>
-;; 	       <SET RMGL <- </ <PTSIZE .RMG> 4> 1>>
-;; 	       <SET CNT 0>
-;; 	       <REPEAT ()
-;; 		       <COND (<EQUAL? ,P-NAM <GET .RMG <* .CNT 2>>>
-;; 			      <PUTP ,PSEUDO-OBJECT
-;; 				    ,P?ACTION
-;; 				    <GET .RMG <+ <* .CNT 2> 1>>>
-;; 			      <SET FOO
-;; 				   <BACK <GETPT ,PSEUDO-OBJECT ,P?ACTION> 5>>
-;; 			      <PUT .FOO 0 <GET ,P-NAM 0>>
-;; 			      <PUT .FOO 1 <GET ,P-NAM 1>>
-;; 			      <OBJ-FOUND ,PSEUDO-OBJECT .TBL>
-;; 			      <RETURN>)
-;; 		             (<IGRTR? CNT .RMGL> <RETURN>)>>)>
-;; 	<COND (<EQUAL? <GET .TBL ,P-MATCHLEN> .LEN>
-;; 	       <SETG P-SLOCBITS -1>
-;; 	       <SETG P-TABLE .TBL>
-;; 	       <DO-SL ,GLOBAL-OBJECTS 1 1>
-;; 	       <SETG P-SLOCBITS .OBITS>
-;; 	       <COND (<AND <ZERO? <GET .TBL ,P-MATCHLEN>>
-;; 			   <EQUAL? ,PRSA ,V?LOOK-INSIDE ,V?SEARCH ,V?EXAMINE>>
-;; 		      <DO-SL ,ROOMS 1 1>)>)>>
-;;
-;; <ROUTINE DO-SL (OBJ BIT1 BIT2 "AUX" BTS)
-;; 	<COND (<BTST ,P-SLOCBITS <+ .BIT1 .BIT2>>
-;; 	       <SEARCH-LIST .OBJ ,P-TABLE ,P-SRCALL>)
-;; 	      (T
-;; 	       <COND (<BTST ,P-SLOCBITS .BIT1>
-;; 		      <SEARCH-LIST .OBJ ,P-TABLE ,P-SRCTOP>)
-;; 		     (<BTST ,P-SLOCBITS .BIT2>
-;; 		      <SEARCH-LIST .OBJ ,P-TABLE ,P-SRCBOT>)
-;; 		     (T <RTRUE>)>)>>
-;;
-;; <CONSTANT P-SRCBOT 2>
-;; <CONSTANT P-SRCTOP 0>
-;; <CONSTANT P-SRCALL 1>
-;;
-;; <ROUTINE SEARCH-LIST (OBJ TBL LVL "AUX" FLS NOBJ)
-;; 	<COND (<SET OBJ <FIRST? .OBJ>>
-;; 	       <REPEAT ()
-;; 		       <COND (<AND <NOT <EQUAL? .LVL ,P-SRCBOT>>
-;; 				   <GETPT .OBJ ,P?SYNONYM>
-;; 				   <THIS-IT? .OBJ .TBL>>
-;; 			      <OBJ-FOUND .OBJ .TBL>)>
-;; 		       <COND (<AND <OR <NOT <EQUAL? .LVL ,P-SRCTOP>>
-;; 				       <FSET? .OBJ ,SEARCHBIT>
-;; 				       <FSET? .OBJ ,SURFACEBIT>>
-;; 				   <SET NOBJ <FIRST? .OBJ>>
-;; 				   <OR <FSET? .OBJ ,OPENBIT>
-;; 				       <FSET? .OBJ ,TRANSBIT>>>
-;; 			      <SET FLS
-;; 				   <SEARCH-LIST .OBJ
-;; 						.TBL
-;; 						<COND (<FSET? .OBJ ,SURFACEBIT>
-;; 						       ,P-SRCALL)
-;; 						      (<FSET? .OBJ ,SEARCHBIT>
-;; 						       ,P-SRCALL)
-;; 						      (T ,P-SRCTOP)>>>)>
-;; 		       <COND (<SET OBJ <NEXT? .OBJ>>) (T <RETURN>)>>)>>
-;;
-;; <ROUTINE OBJ-FOUND (OBJ TBL "AUX" PTR)
-;; 	<SET PTR <GET .TBL ,P-MATCHLEN>>
-;; 	<PUT .TBL <+ .PTR 1> .OBJ>
-;; 	<PUT .TBL ,P-MATCHLEN <+ .PTR 1>>>
-;;
-;; <ROUTINE TAKE-CHECK ()
-;; 	<AND <ITAKE-CHECK ,P-PRSO <GETB ,P-SYNTAX ,P-SLOC1>>
-;; 	     <ITAKE-CHECK ,P-PRSI <GETB ,P-SYNTAX ,P-SLOC2>>>>
-;; 
-;; <ROUTINE ITAKE-CHECK (TBL IBITS "AUX" PTR OBJ TAKEN)
-;; 	 #DECL ((TBL) TABLE (IBITS PTR) FIX (OBJ) OBJECT
-;; 		(TAKEN) <OR FALSE FIX ATOM>)
-;; 	 <COND (<AND <SET PTR <GET .TBL ,P-MATCHLEN>>
-;; 		     <OR <BTST .IBITS ,SHAVE>
-;; 			 <BTST .IBITS ,STAKE>>>
-;; 		<REPEAT ()
-;; 			<COND (<L? <SET PTR <- .PTR 1>> 0> <RETURN>)
-;; 			      (T
-;; 			       <SET OBJ <GET .TBL <+ .PTR 1>>>
-;; 			       <COND (<EQUAL? .OBJ ,IT>
-;; 				      <COND (<NOT <ACCESSIBLE? ,P-IT-OBJECT>>
-;; 					     <TELL
-;; "I don't see what you're referring to." CR>
-;; 					     <RFALSE>)
-;; 					    (T
-;; 					     <SET OBJ ,P-IT-OBJECT>)>)>
-;; 			       <COND (<AND <NOT <HELD? .OBJ>>
-;; 					   <NOT <EQUAL? .OBJ ,HANDS ,ME>>>
-;; 				      <SETG PRSO .OBJ>
-;; 				      <COND (<FSET? .OBJ ,TRYTAKEBIT>
-;; 					     <SET TAKEN T>)
-;; 					    (<NOT <EQUAL? ,WINNER ,ADVENTURER>>
-;; 					     <SET TAKEN <>>)
-;; 					    (<AND <BTST .IBITS ,STAKE>
-;; 						  <EQUAL? <ITAKE <>> T>>
-;; 					     <SET TAKEN <>>)
-;; 					    (T <SET TAKEN T>)>
-;; 				      <COND (<AND .TAKEN
-;; 						  <BTST .IBITS ,SHAVE>
-;; 						  <EQUAL? ,WINNER
-;; 							  ,ADVENTURER>>
-;; 					     <COND (<EQUAL? .OBJ
-;; 							    ,NOT-HERE-OBJECT>
-;; 						    <TELL
-;; "You don't have that!" CR>
-;; 						    <RFALSE>)>
-;; 					     <TELL "You don't have the ">
-;; 					     <PRINTD .OBJ>
-;; 					     <TELL "." CR>
-;; 					     <RFALSE>)
-;; 					    (<AND <NOT .TAKEN>
-;; 						  <EQUAL? ,WINNER ,ADVENTURER>>
-;; 					     <TELL "(Taken)" CR>)>)>)>>)
-;; 	       (T)>>
-;;
-;; <ROUTINE MANY-CHECK ("AUX" (LOSS <>) TMP)
-;; 	<COND (<AND <G? <GET ,P-PRSO ,P-MATCHLEN> 1>
-;; 		    <NOT <BTST <GETB ,P-SYNTAX ,P-SLOC1> ,SMANY>>>
-;; 	       <SET LOSS 1>)
-;; 	      (<AND <G? <GET ,P-PRSI ,P-MATCHLEN> 1>
-;; 		    <NOT <BTST <GETB ,P-SYNTAX ,P-SLOC2> ,SMANY>>>
-;; 	       <SET LOSS 2>)>
-;; 	<COND (.LOSS
-;; 	       <TELL "You can't use multiple ">
-;; 	       <COND (<EQUAL? .LOSS 2> <TELL "in">)>
-;; 	       <TELL "direct objects with \"">
-;; 	       <SET TMP <GET ,P-ITBL ,P-VERBN>>
-;; 	       <COND (<ZERO? .TMP> <TELL "tell">)
-;; 		     (<OR ,P-OFLAG ,P-MERGED>
-;; 		      <PRINTB <GET .TMP 0>>)
-;; 		     (T
-;; 		      <WORD-PRINT <GETB .TMP 2> <GETB .TMP 3>>)>
-;; 	       <TELL "\"." CR>
-;; 	       <RFALSE>)
-;; 	      (T)>>
-;;
-;; <ROUTINE ZMEMQ (ITM TBL "OPTIONAL" (SIZE -1) "AUX" (CNT 1))
-;; 	<COND (<NOT .TBL> <RFALSE>)>
-;; 	<COND (<NOT <L? .SIZE 0>> <SET CNT 0>)
-;; 	      (ELSE <SET SIZE <GET .TBL 0>>)>
-;; 	<REPEAT ()
-;; 		<COND (<EQUAL? .ITM <GET .TBL .CNT>>
-;; 		       <RETURN <REST .TBL <* .CNT 2>>>)
-;; 		      (<IGRTR? CNT .SIZE> <RFALSE>)>>>
-;; 
-;; <ROUTINE ZMEMQB (ITM TBL SIZE "AUX" (CNT 0))
-;; 	<REPEAT ()
-;; 		<COND (<EQUAL? .ITM <GETB .TBL .CNT>>
-;; 		       <RTRUE>)
-;; 		      (<IGRTR? CNT .SIZE>
-;; 		       <RFALSE>)>>>
-;;
-;; <GLOBAL ALWAYS-LIT <>>
-;;
-;; <ROUTINE LIT? (RM "OPTIONAL" (RMBIT T) "AUX" OHERE (LIT <>))
-;; 	<COND (<AND ,ALWAYS-LIT <EQUAL? ,WINNER ,PLAYER>>
-;; 	       <RTRUE>)>
-;; 	<SETG P-GWIMBIT ,ONBIT>
-;; 	<SET OHERE ,HERE>
-;; 	<SETG HERE .RM>
-;; 	<COND (<AND .RMBIT
-;; 		    <FSET? .RM ,ONBIT>>
-;; 	       <SET LIT T>)
-;; 	      (T
-;; 	       <PUT ,P-MERGE ,P-MATCHLEN 0>
-;; 	       <SETG P-TABLE ,P-MERGE>
-;; 	       <SETG P-SLOCBITS -1>
-;; 	       <COND (<EQUAL? .OHERE .RM>
-;; 		      <DO-SL ,WINNER 1 1>
-;; 		      <COND (<AND <NOT <EQUAL? ,WINNER ,PLAYER>>
-;; 				  <IN? ,PLAYER .RM>>
-;; 			     <DO-SL ,PLAYER 1 1>)>)>
-;; 	       <DO-SL .RM 1 1>
-;; 	       <COND (<G? <GET ,P-TABLE ,P-MATCHLEN> 0> <SET LIT T>)>)>
-;; 	<SETG HERE .OHERE>
-;; 	<SETG P-GWIMBIT 0>
-;; 	.LIT>
-;;
-;; <ROUTINE THIS-IT? (OBJ TBL "AUX" SYNS)
-;;  <COND (<FSET? .OBJ ,INVISIBLE> <RFALSE>)
-;;        (<AND ,P-NAM
-;; 	     <NOT <ZMEMQ ,P-NAM
-;; 			 <SET SYNS <GETPT .OBJ ,P?SYNONYM>>
-;; 			 <- </ <PTSIZE .SYNS> 2> 1>>>>
-;; 	<RFALSE>)
-;;        (<AND ,P-ADJ
-;; 	     <OR <NOT <SET SYNS <GETPT .OBJ ,P?ADJECTIVE>>>
-;; 		 <NOT <ZMEMQB ,P-ADJ .SYNS <- <PTSIZE .SYNS> 1>>>>>
-;; 	<RFALSE>)
-;;        (<AND <NOT <ZERO? ,P-GWIMBIT>> <NOT <FSET? .OBJ ,P-GWIMBIT>>>
-;; 	<RFALSE>)>
-;;  <RTRUE>>
-;;
-;; <ROUTINE ACCESSIBLE? (OBJ "AUX" (L <LOC .OBJ>)) ;"can player TOUCH object?"
-;; 	 ;"revised 5/2/84 by SEM and SWG"
-;; 	 <COND (<FSET? .OBJ ,INVISIBLE>
-;; 		<RFALSE>)
-;; 	       ;(<EQUAL? .OBJ ,PSEUDO-OBJECT>
-;; 		<COND (<EQUAL? ,LAST-PSEUDO-LOC ,HERE>
-;; 		       <RTRUE>)
-;; 		      (T
-;; 		       <RFALSE>)>)
-;; 	       (<NOT .L>
-;; 		<RFALSE>)
-;; 	       (<EQUAL? .L ,GLOBAL-OBJECTS>
-;; 		<RTRUE>)
-;; 	       (<AND <EQUAL? .L ,LOCAL-GLOBALS>
-;; 		     <GLOBAL-IN? .OBJ ,HERE>>
-;; 		<RTRUE>)
-;; 	       (<NOT <EQUAL? <META-LOC .OBJ> ,HERE <LOC ,WINNER>>>
-;; 		<RFALSE>)
-;; 	       (<EQUAL? .L ,WINNER ,HERE <LOC ,WINNER>>
-;; 		<RTRUE>)
-;; 	       (<AND <FSET? .L ,OPENBIT>
-;; 		     <ACCESSIBLE? .L>>
-;; 		<RTRUE>)
-;; 	       (T
-;; 		<RFALSE>)>>
+            ;; Quote toggle (for SAY command)
+            (special-word? word :quote)
+            (let [gs (update-in gs [:parser :quote-flag] not)
+                  gs (if (pos? (get-in gs [:parser :len] 0))
+                       (assoc-in gs [:parser :cont] (inc ptr))
+                       gs)]
+              {:game-state gs})
+
+            ;; Direction word (potential shortcut)
+            (and (wt? word :direction true)
+                 (or (nil? verb) (= verb :walk))
+                 (or (= (get-in gs [:parser :len]) 0)  ; Last word
+                     (special-word? next-word :then)
+                     (special-word? next-word :period)))
+            (let [dir (wt? word :direction true)]
+              {:game-state (assoc-in gs [:parser :dir] dir)})
+
+            ;; Verb word
+            (and (wt? word :verb true)
+                 (nil? verb))
+            (let [verb-val (wt? word :verb true)
+                  gs (-> gs
+                         (assoc-in [:parser :itbl (:verb itbl-indices)] verb-val)
+                         (assoc-in [:parser :itbl (:verbn itbl-indices)] word)
+                         (assoc-in [:parser :vtbl 0] word))]
+              (recur gs (inc ptr) verb-val of-flag word))
+
+            ;; Preposition, adjective, object, or "all"/"one"
+            (or (wt? word :preposition)
+                (special-word? word :all)
+                (special-word? word :one)
+                (wt? word :adjective)
+                (wt? word :object))
+            (let [prep-val (wt? word :preposition true)]
+              (cond
+                ;; "X of Y" pattern
+                (and (pos? (get-in gs [:parser :len] 0))
+                     (special-word? next-word :of)
+                     (nil? prep-val)
+                     (not (special-word? word :all))
+                     (not (special-word? word :one)))
+                (recur gs (inc ptr) verb true word)
+
+                ;; Preposition at end of sentence
+                (and prep-val
+                     (or (zero? (get-in gs [:parser :len] 0))
+                         (special-word? next-word :then)
+                         (special-word? next-word :period)))
+                (let [ncn (get-in gs [:parser :ncn] 0)
+                      gs (-> gs
+                             (assoc-in [:parser :end-on-prep] true)
+                             (cond-> (< ncn 2)
+                               (-> (assoc-in [:parser :itbl (:prep1 itbl-indices)] prep-val)
+                                   (assoc-in [:parser :itbl (:prep1n itbl-indices)] word))))]
+                  (recur gs (inc ptr) verb of-flag word))
+
+                ;; Too many noun clauses
+                (= (get-in gs [:parser :ncn] 0) 2)
+                (do
+                  (parser-say gs :too-many-nouns)
+                  {:error {:type :too-many-nouns}
+                   :game-state gs})
+
+                ;; Start a noun clause
+                :else
+                (let [gs (-> gs
+                             (update-in [:parser :ncn] inc)
+                             (assoc-in [:parser :act] verb))
+                      clause-result (clause gs ptr prep-val word)]
+                  (if (:error clause-result)
+                    clause-result
+                    (let [new-ptr (:ptr clause-result)
+                          gs (:game-state clause-result)]
+                      (if (neg? new-ptr)
+                        {:game-state gs}
+                        (recur gs (inc new-ptr) verb of-flag word)))))))
+
+            ;; OF word
+            (special-word? word :of)
+            (if (or (not of-flag)
+                    (special-word? next-word :period)
+                    (special-word? next-word :then))
+              (do
+                (cant-use gs ptr)
+                {:error {:type :bad-of} :game-state gs})
+              (recur gs (inc ptr) verb false word))
+
+            ;; Buzz word (the, a, an) - skip
+            (wt? word :buzz-word)
+            (recur gs (inc ptr) verb of-flag word)
+
+            ;; Unknown usage
+            :else
+            (do
+              (cant-use gs ptr)
+              {:error {:type :cant-use :ptr ptr}
+               :game-state gs})))))))
