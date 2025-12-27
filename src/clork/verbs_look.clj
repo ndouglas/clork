@@ -1,16 +1,7 @@
 (ns clork.verbs-look
   "Look command implementation."
   (:require [clork.utils :as utils]
-            [clork.game-state :as game-state]))
-
-;; Aliases for functions used in this module
-(def tell utils/tell)
-(def get-here game-state/get-here)
-(def get-winner-loc game-state/get-winner-loc)
-(def verbose? game-state/verbose?)
-(def set-here-flag game-state/set-here-flag)
-(def set-here-flag? game-state/set-here-flag?)
-(def unset-here-flag game-state/unset-here-flag)
+            [clork.game-state :as gs]))
 
 ;;  <ROUTINE DESCRIBE-ROOM ("OPTIONAL" (LOOK? <>) "AUX" V? STR AV)
 ;;    <SET V? <OR .LOOK? ,VERBOSE>>
@@ -64,32 +55,32 @@
 
 (defn describe-room
   "Describes the room."
-  ([game-state] (describe-room game-state (get-winner-loc game-state) false))
+  ([game-state] (describe-room game-state (gs/get-winner-loc game-state) false))
   ([game-state location is-verbose?]
-   (let [is-verbose? (or is-verbose? (verbose? game-state))
-         lit? (set-here-flag? game-state :lit)
-         maze? (set-here-flag? game-state :maze)
+   (let [is-verbose? (or is-verbose? (gs/verbose? game-state))
+         lit? (gs/set-here-flag? game-state :lit)
+         maze? (gs/set-here-flag? game-state :maze)
          is-verbose? (if maze? is-verbose? true)
          vehicle? (get-in location [:flags :vehicle] false)
-         here (get-here game-state)
+         here (gs/get-here game-state)
          act (:action here)]
      (if (not lit?)
        ;; Dark room - tell them and return
-       (tell game-state "It is pitch black. You are likely to be eaten by a grue.")
+       (utils/tell game-state "It is pitch black. You are likely to be eaten by a grue.")
        ;; Lit room - describe it, threading state through each operation
-       (let [gs (-> game-state
-                    (set-here-flag :touch)
-                    (cond-> maze? (unset-here-flag :touch))
-                    (cond-> vehicle? (tell (str "(You are in the " (:desc location) ".)"))))
-             gs (cond
-                  (and is-verbose? (some? act)) (act gs :look)
-                  is-verbose? (tell gs (:ldesc here))
-                  (some? act) (act gs :flash)
-                  :else gs)
-             gs (if (and vehicle? (some? act) (not= (:id location) (:id here)))
-                  (act gs :look)
-                  gs)]
-         gs)))))
+       (let [state (-> game-state
+                       (gs/set-here-flag :touch)
+                       (cond-> maze? (gs/unset-here-flag :touch))
+                       (cond-> vehicle? (utils/tell (str "(You are in the " (:desc location) ".)"))))
+             state (cond
+                     (and is-verbose? (some? act)) (act state :look)
+                     is-verbose? (utils/tell state (:ldesc here))
+                     (some? act) (act state :flash)
+                     :else state)
+             state (if (and vehicle? (some? act) (not= (:id location) (:id here)))
+                     (act state :look)
+                     state)]
+         state)))))
 
 (defn describe-objects
   "Describes the objects in the room."
@@ -98,7 +89,7 @@
 
 (defn v-look
   "Describes the room and any objects."
-  ([game-state] (v-look game-state (get-winner-loc game-state)))
+  ([game-state] (v-look game-state (gs/get-winner-loc game-state)))
   ([game-state location]
    (-> game-state
        (describe-room location true)

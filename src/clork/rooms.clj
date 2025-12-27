@@ -2,9 +2,6 @@
   "Room definitions for Clork."
   (:require [clork.utils :as utils]))
 
-(def tell utils/tell)
-(def crlf utils/crlf)
-
 ;; <ROOM WEST-OF-HOUSE
 ;;       (IN ROOMS)
 ;;       (DESC "West of House")
@@ -40,16 +37,13 @@
 ;; " A secret path leads southwest into the forest.">)>
 ;; 		<CRLF>)>>
 
-(def west-of-house {
-  :id :west-of-house,
-  :desc "West of House",
-  :action (fn [game-state rarg]
-    (if
-      (= rarg :look)
-      (tell game-state "You are standing in an open field west of a white house, with a boarded front door."))
-    (if
-      (:won game-state)
-      (tell game-state " A secret path leads southwest into the forest."))
-    (crlf game-state)
-  )
-})
+(def west-of-house
+  {:id :west-of-house
+   :desc "West of House"
+   :action (fn [game-state rarg]
+             (-> game-state
+                 (cond-> (= rarg :look)
+                   (utils/tell "You are standing in an open field west of a white house, with a boarded front door."))
+                 (cond-> (:won game-state)
+                   (utils/tell " A secret path leads southwest into the forest."))
+                 (utils/crlf)))})

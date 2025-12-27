@@ -3,9 +3,6 @@
   (:require [clork.utils :as utils]
             [clork.flags :as flags]))
 
-(def tell utils/tell)
-(def flags flags/flags)
-
 ;; <OBJECT MAILBOX
 ;;	(IN WEST-OF-HOUSE)
 ;;	(SYNONYM MAILBOX BOX)
@@ -19,18 +16,18 @@
 ;; 	 <COND (<AND <VERB? TAKE> <EQUAL? ,PRSO ,MAILBOX>>
 ;; 		 <TELL "It is securely anchored." CR>)>>
 
-(def mailbox {
-  :id :mailbox,
-  :in :west-of-house,
-  :synonym ["mailbox" "box"],
-  :adjective "small",
-  :desc "small mailbox",
-  :flags (flags :cont, :trytake),
-  :capacity 10,
-  :action (fn [game-state]
-    (if (and (= (:verb game-state) :take) (= (:prso game-state) :mailbox))
-      (tell game-state "It is securely anchored.\n")
-      game-state))})
+(def mailbox
+  {:id :mailbox
+   :in :west-of-house
+   :synonym ["mailbox" "box"]
+   :adjective "small"
+   :desc "small mailbox"
+   :flags (flags/flags :cont :trytake)
+   :capacity 10
+   :action (fn [game-state]
+             (if (and (= (:verb game-state) :take) (= (:prso game-state) :mailbox))
+               (utils/tell game-state "It is securely anchored.\n")
+               game-state))})
 
 ;; <OBJECT ADVENTURER
 ;; 	(SYNONYM ADVENTURER)
@@ -39,9 +36,9 @@
 ;; 	(STRENGTH 0)
 ;; 	(ACTION 0)>
 
-(def adventurer {
-  :id :adventurer,
-  :synonym ["adventurer"],
-  :desc "cretin",
-  :flags (flags :ndesc :invisible :sacred :actor),
-  :strength 0})
+(def adventurer
+  {:id :adventurer
+   :synonym ["adventurer"]
+   :desc "cretin"
+   :flags (flags/flags :ndesc :invisible :sacred :actor)
+   :strength 0})
