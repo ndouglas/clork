@@ -3,6 +3,8 @@
   (:require [clojure.test :refer :all]
             [clork.parser :as parser]
             [clork.parser.state :as parser-state]
+            [clork.parser.objects :as parser-objects]
+            [clork.verb-defs :as verb-defs]
             [clork.game-state :as gs]))
 
 ;;;; ============================================================================
@@ -418,3 +420,127 @@
   (testing "inbuf-stuff returns source unchanged (immutable copy)"
     (let [source "test input"]
       (is (= source (parser/inbuf-stuff source))))))
+
+;;; ---------------------------------------------------------------------------
+;;; OBJECT VOCABULARY TESTS
+;;; ---------------------------------------------------------------------------
+
+(deftest build-object-vocabulary-test
+  (testing "build-object-vocabulary creates entries for synonyms"
+    (let [objects [{:id :mailbox :synonym ["mailbox" "box"]}]
+          vocab (verb-defs/build-object-vocabulary objects)]
+      (is (contains? vocab "mailbox"))
+      (is (contains? vocab "box"))
+      (is (contains? (:parts-of-speech (get vocab "mailbox")) :object))
+      (is (= "mailbox" (:object-value (get vocab "mailbox"))))))
+
+  (testing "build-object-vocabulary handles adjective as string"
+    (let [objects [{:id :lamp :synonym ["lamp"] :adjective "brass"}]
+          vocab (verb-defs/build-object-vocabulary objects)]
+      (is (contains? vocab "brass"))
+      (is (contains? (:parts-of-speech (get vocab "brass")) :adjective))
+      (is (= "brass" (:adj-value (get vocab "brass"))))))
+
+  (testing "build-object-vocabulary handles adjective as vector"
+    (let [objects [{:id :sword :synonym ["sword"] :adjective ["rusty" "old"]}]
+          vocab (verb-defs/build-object-vocabulary objects)]
+      (is (contains? vocab "rusty"))
+      (is (contains? vocab "old"))
+      (is (contains? (:parts-of-speech (get vocab "rusty")) :adjective))))
+
+  (testing "build-object-vocabulary handles objects without synonyms"
+    (let [objects [{:id :thing}]
+          vocab (verb-defs/build-object-vocabulary objects)]
+      (is (empty? vocab))))
+
+  (testing "build-object-vocabulary normalizes to lowercase"
+    (let [objects [{:id :lamp :synonym ["LAMP"] :adjective "BRASS"}]
+          vocab (verb-defs/build-object-vocabulary objects)]
+      (is (contains? vocab "lamp"))
+      (is (contains? vocab "brass"))
+      (is (not (contains? vocab "LAMP")))))
+
+  (testing "build-object-vocabulary merges parts-of-speech for same word"
+    (let [objects [{:id :light :synonym ["light"]}
+                   {:id :sword :synonym ["sword"] :adjective ["light"]}]
+          vocab (verb-defs/build-object-vocabulary objects)]
+      (is (contains? (:parts-of-speech (get vocab "light")) :object))
+      (is (contains? (:parts-of-speech (get vocab "light")) :adjective)))))
+
+(deftest this-it?-test
+  (testing "this-it? matches object by synonym"
+    (let [game-state {:objects {:mailbox {:id :mailbox
+                                          :synonym ["mailbox" "box"]}}
+                      :rooms {}
+                      :parser {:nam "mailbox"}}]
+      (is (parser-objects/this-it? game-state :mailbox))))
+
+  (testing "this-it? matches object by alternate synonym"
+    (let [game-state {:objects {:mailbox {:id :mailbox
+                                          :synonym ["mailbox" "box"]}}
+                      :rooms {}
+                      :parser {:nam "box"}}]
+      (is (parser-objects/this-it? game-state :mailbox))))
+
+  (testing "this-it? rejects non-matching name"
+    (let [game-state {:objects {:mailbox {:id :mailbox
+                                          :synonym ["mailbox" "box"]}}
+                      :rooms {}
+                      :parser {:nam "lamp"}}]
+      (is (not (parser-objects/this-it? game-state :mailbox)))))
+
+  (testing "this-it? matches adjective"
+    (let [game-state {:objects {:mailbox {:id :mailbox
+                                          :synonym ["mailbox"]
+                                          :adjective "small"}}
+                      :rooms {}
+                      :parser {:nam "mailbox" :adj "small"}}]
+      (is (parser-objects/this-it? game-state :mailbox))))
+
+  (testing "this-it? rejects wrong adjective"
+    (let [game-state {:objects {:mailbox {:id :mailbox
+                                          :synonym ["mailbox"]
+                                          :adjective "small"}}
+                      :rooms {}
+                      :parser {:nam "mailbox" :adj "large"}}]
+      (is (not (parser-objects/this-it? game-state :mailbox)))))
+
+  (testing "this-it? is case-insensitive"
+    (let [game-state {:objects {:mailbox {:id :mailbox
+                                          :synonym ["MAILBOX"]
+                                          :adjective "SMALL"}}
+                      :rooms {}
+                      :parser {:nam "mailbox" :adj "small"}}]
+      (is (parser-objects/this-it? game-state :mailbox))))
+
+  (testing "this-it? rejects invisible objects"
+    (let [game-state {:objects {:mailbox {:id :mailbox
+                                          :synonym ["mailbox"]
+                                          :invisible true}}
+                      :rooms {}
+                      :parser {:nam "mailbox"}}]
+      (is (not (parser-objects/this-it? game-state :mailbox)))))
+
+  (testing "this-it? matches when no criteria specified"
+    (let [game-state {:objects {:mailbox {:id :mailbox
+                                          :synonym ["mailbox"]}}
+                      :rooms {}
+                      :parser {}}]
+      (is (parser-objects/this-it? game-state :mailbox)))))
+
+(deftest register-object-vocabulary!-test
+  (testing "register-object-vocabulary! makes object words recognizable via wt?"
+    ;; Save original vocabulary
+    (let [original-vocab verb-defs/*verb-vocabulary*]
+      (try
+        ;; Register test objects
+        (verb-defs/register-object-vocabulary!
+         {:test-lamp {:id :test-lamp :synonym ["testlamp"] :adjective "testbrass"}})
+        ;; Check that wt? now recognizes the words
+        (is (parser/wt? "testlamp" :object))
+        (is (parser/wt? "testbrass" :adjective))
+        (is (= "testlamp" (parser/wt? "testlamp" :object true)))
+        (is (= "testbrass" (parser/wt? "testbrass" :adjective true)))
+        (finally
+          ;; Restore original vocabulary
+          (alter-var-root #'verb-defs/*verb-vocabulary* (constantly original-vocab)))))))

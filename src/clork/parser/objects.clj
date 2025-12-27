@@ -109,7 +109,17 @@
   (let [obj (game-state/get-thing game-state obj-id)
         nam (get-in game-state [:parser :nam])
         adj (get-in game-state [:parser :adj])
-        gwimbit (get-in game-state [:parser :gwimbit])]
+        gwimbit (get-in game-state [:parser :gwimbit])
+        ;; Object synonyms are stored as :synonym (vector of strings)
+        synonyms (set (map clojure.string/lower-case (or (:synonym obj) [])))
+        ;; Object adjectives can be string or vector
+        adjectives (let [a (:adjective obj)]
+                     (set (map clojure.string/lower-case
+                               (cond
+                                 (nil? a) []
+                                 (string? a) [a]
+                                 (sequential? a) a
+                                 :else []))))]
 
     (and
      ;; Not invisible
@@ -117,11 +127,11 @@
 
      ;; Name matches (if specified)
      (or (nil? nam)
-         (contains? (set (:synonyms obj)) nam))
+         (contains? synonyms (clojure.string/lower-case (str nam))))
 
      ;; Adjective matches (if specified)
      (or (nil? adj)
-         (contains? (set (:adjectives obj)) adj))
+         (contains? adjectives (clojure.string/lower-case (str adj))))
 
      ;; GWIM flag matches (if specified)
      (or (nil? gwimbit)

@@ -74,18 +74,19 @@
 ;;;   - :synonyms - other words this is equivalent to
 
 ;; The vocabulary is built from verb-definitions in verb_defs.clj
-;; Future: will also include object vocabulary, direction vocabulary, etc.
+;; Object vocabulary is merged in at runtime via register-object-vocabulary!
 
-(def vocabulary
-  "The game's vocabulary. Maps lowercase word strings to property maps.
+(defn vocabulary
+  "Get the game's vocabulary. Maps lowercase word strings to property maps.
 
-   This is derived from *verb-vocabulary* (from verb_defs.clj).
-   Future versions will merge with object and direction vocabularies.
+   This returns the current value of *verb-vocabulary* (from verb_defs.clj),
+   which includes both verb and object vocabulary after initialization.
 
    Example entry:
    \"lamp\" {:parts-of-speech #{:object :adjective}
             :object-value :brass-lantern
             :adj-value :lamp-adj}"
+  []
   verb-defs/*verb-vocabulary*)
 
 ;;; ---------------------------------------------------------------------------
@@ -217,7 +218,7 @@
   ([word part-of-speech]
    (word-type? word part-of-speech false))
   ([word part-of-speech return-value?]
-   (when-let [vocab-entry (get vocabulary (str/lower-case (str word)))]
+   (when-let [vocab-entry (get (vocabulary) (str/lower-case (str word)))]
      (let [has-pos? (contains? (:parts-of-speech vocab-entry) part-of-speech)]
        (if return-value?
          ;; Return the value for this part of speech

@@ -6,6 +6,7 @@
             [clork.rooms :as rooms]
             [clork.objects :as objects]
             [clork.verbs-look :as verbs-look]
+            [clork.verb-defs :as verb-defs]
             [clork.main-loop :as main-loop]
             [clork.readline :as readline]
             [clork.script :as script]
@@ -29,17 +30,20 @@
   ([game-state]
    (go game-state nil))
   ([game-state config]
-   (-> game-state
-       (assoc :script-config config)
-       (game-state/add-rooms [rooms/west-of-house])
-       (game-state/add-objects [objects/adventurer,
-                                objects/mailbox,
-                                objects/leaflet])
-       (utils/this-is-it :mailbox)
-       (initial-version)
-       (game-state/set-here-flag :lit)
-       (verbs-look/v-look)
-       (main-loop/main-loop))))
+   (let [gs (-> game-state
+                (assoc :script-config config)
+                (game-state/add-rooms [rooms/west-of-house])
+                (game-state/add-objects [objects/adventurer,
+                                         objects/mailbox,
+                                         objects/leaflet]))]
+     ;; Register object vocabulary for parser
+     (verb-defs/register-object-vocabulary! (:objects gs))
+     (-> gs
+         (utils/this-is-it :mailbox)
+         (initial-version)
+         (game-state/set-here-flag :lit)
+         (verbs-look/v-look)
+         (main-loop/main-loop)))))
 
 (defn print-usage
   "Print usage information."

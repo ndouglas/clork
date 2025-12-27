@@ -178,6 +178,82 @@
   (build-verb-handlers verb-definitions))
 
 ;;; ---------------------------------------------------------------------------
+;;; OBJECT VOCABULARY
+;;; ---------------------------------------------------------------------------
+
+(defn build-object-vocabulary
+  "Build vocabulary entries from object definitions.
+
+   Takes a sequence of objects (maps with :synonym and :adjective keys)
+   and returns a vocabulary map where:
+   - Each synonym word maps to {:parts-of-speech #{:object} :object-value word}
+   - Each adjective word maps to {:parts-of-speech #{:adjective} :adj-value word}
+
+   Words that appear as both synonym and adjective get merged parts-of-speech."
+  [objects]
+  (reduce
+   (fn [vocab obj]
+     (let [;; Process synonyms - can be vector of strings
+           synonyms (or (:synonym obj) [])
+           vocab-with-synonyms
+           (reduce (fn [v word]
+                     (let [word-lower (clojure.string/lower-case word)
+                           existing (get v word-lower)
+                           new-entry (if existing
+                                       (-> existing
+                                           (update :parts-of-speech conj :object)
+                                           (assoc :object-value word-lower))
+                                       {:parts-of-speech #{:object}
+                                        :object-value word-lower})]
+                       (assoc v word-lower new-entry)))
+                   vocab
+                   synonyms)
+
+           ;; Process adjectives - can be string or vector of strings
+           adjectives (let [adj (:adjective obj)]
+                        (cond
+                          (nil? adj) []
+                          (string? adj) [adj]
+                          (sequential? adj) adj
+                          :else []))]
+       (reduce (fn [v word]
+                 (let [word-lower (clojure.string/lower-case word)
+                       existing (get v word-lower)
+                       new-entry (if existing
+                                   (-> existing
+                                       (update :parts-of-speech conj :adjective)
+                                       (assoc :adj-value word-lower))
+                                   {:parts-of-speech #{:adjective}
+                                    :adj-value word-lower})]
+                   (assoc v word-lower new-entry)))
+               vocab-with-synonyms
+               adjectives)))
+   {}
+   objects))
+
+(defn register-object-vocabulary!
+  "Register object vocabulary by merging it with the verb vocabulary.
+
+   Call this after objects are added to the game state. Pass in the
+   objects collection (values from game-state :objects).
+
+   This updates the *verb-vocabulary* dynamic var in place, merging
+   object words with existing verb definitions."
+  [objects]
+  (let [obj-vocab (build-object-vocabulary (vals objects))]
+    (alter-var-root #'*verb-vocabulary*
+                    (fn [current]
+                      (merge-with
+                       (fn [existing new]
+                         ;; Merge parts-of-speech and keep all values
+                         (-> existing
+                             (update :parts-of-speech into (:parts-of-speech new))
+                             (cond-> (:object-value new) (assoc :object-value (:object-value new)))
+                             (cond-> (:adj-value new) (assoc :adj-value (:adj-value new)))))
+                       current
+                       obj-vocab)))))
+
+;;; ---------------------------------------------------------------------------
 ;;; VERB DISPATCH
 ;;; ---------------------------------------------------------------------------
 
