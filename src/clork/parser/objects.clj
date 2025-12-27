@@ -514,6 +514,28 @@
                      but-mode?
                      match-table))
 
+            ;; IT pronoun - resolve to the object stored in game state :it
+            (lexer/special-word? word :it)
+            (let [it-obj (:it gs)]
+              (if it-obj
+                ;; Store the it-object for later use and add to match table
+                (let [updated-gs (assoc-in gs [:parser :it-object] it-obj)
+                      updated-table (obj-found match-table it-obj)]
+                  ;; If we're at the end of the clause, return success
+                  (if (>= (inc current-ptr) end-ptr)
+                    {:success true
+                     :game-state (assoc-in updated-gs [:parser match-table-key] updated-table)
+                     :matches updated-table}
+                    (recur updated-gs
+                           (inc current-ptr)
+                           but-mode?
+                           updated-table)))
+                ;; No IT referent - error
+                {:success false
+                 :game-state gs
+                 :error {:type :no-it-referent
+                         :message "I don't see what you're referring to."}}))
+
             ;; Adjective - store it
             (and (lexer/wt? word :adjective true)
                  (nil? (get-in gs [:parser :adj])))

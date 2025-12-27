@@ -548,10 +548,11 @@
                          (assoc-in [:parser :vtbl 0] word))]
               (recur gs (inc ptr) verb-val of-flag word))
 
-            ;; Preposition, adjective, object, or "all"/"one"
+            ;; Preposition, adjective, object, "all"/"one", or "it" pronoun
             (or (lexer/wt? word :preposition)
                 (lexer/special-word? word :all)
                 (lexer/special-word? word :one)
+                (lexer/special-word? word :it)
                 (lexer/wt? word :adjective)
                 (lexer/wt? word :object))
             (let [prep-val (lexer/wt? word :preposition true)]

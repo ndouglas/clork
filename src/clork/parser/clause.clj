@@ -192,6 +192,22 @@
                           (lexer/wt? current-word :buzz-word))
                       {:action :continue}
 
+                      ;; IT pronoun - treat like an object word
+                      ;; The actual resolution happens in snarfem
+                      (lexer/special-word? current-word :it)
+                      (cond
+                        ;; End of object reference (no AND, not followed by BUT)
+                        (and (not and-flag)
+                             (not (lexer/special-word? next-word :but))
+                             (not (lexer/special-word? next-word :except))
+                             (not (lexer/special-word? next-word :and))
+                             (not (lexer/special-word? next-word :comma)))
+                        {:action :end-clause-here}
+
+                        :else
+                        {:action :continue
+                         :and-flag false})
+
                       ;; Unknown word in context
                       :else
                       {:action :error

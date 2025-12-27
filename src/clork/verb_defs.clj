@@ -278,6 +278,8 @@
    ZIL: PERFORM routine in gmain.zil
 
    Looks up the action in *verb-handlers* and calls the handler function.
+   After successful execution with a direct object, updates :it to refer
+   to that object for pronoun resolution.
    Returns the updated game-state."
   [game-state]
   (let [action (get-in game-state [:parser :prsa])
@@ -286,7 +288,12 @@
         ;; Trace verb dispatch if enabled
         gs (trace/trace-verb game-state action prso prsi)]
     (if-let [handler (get *verb-handlers* action)]
-      (handler gs)
+      (let [result-gs (handler gs)]
+        ;; Update :it to refer to the direct object (if any) for "it" pronoun
+        ;; Use the first object from prso (it's a vector)
+        (if-let [obj (first prso)]
+          (utils/this-is-it result-gs obj)
+          result-gs))
       (do
         (utils/tell gs (str "I don't know how to do that. [" action "]\n"))
         gs))))

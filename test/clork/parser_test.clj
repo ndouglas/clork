@@ -632,4 +632,48 @@
 
   (testing "get-prsi-all returns nil when prsi is nil"
     (let [game-state {:parser {:prsi nil}}]
-      (is (nil? (parser-state/get-prsi-all game-state)))))))
+      (is (nil? (parser-state/get-prsi-all game-state))))))
+
+;;; ---------------------------------------------------------------------------
+;;; IT PRONOUN RESOLUTION TESTS
+;;; ---------------------------------------------------------------------------
+
+(deftest it-pronoun-snarfem-test
+  (testing "snarfem resolves 'it' to object stored in :it"
+    (let [game-state (-> (gs/initial-game-state)
+                         (assoc :it :mailbox)
+                         (assoc-in [:parser :lexv]
+                                   {:tokens [{:word "it"}] :count 1})
+                         (assoc-in [:parser :itbl] (vec (repeat 10 0))))]
+      (let [result (parser-objects/snarfem game-state 0 1 :prso)]
+        (is (:success result))
+        (is (= [:mailbox] (:matches result))))))
+
+  (testing "snarfem returns error when :it is nil"
+    (let [game-state (-> (gs/initial-game-state)
+                         (assoc :it nil)
+                         (assoc-in [:parser :lexv]
+                                   {:tokens [{:word "it"}] :count 1})
+                         (assoc-in [:parser :itbl] (vec (repeat 10 0))))]
+      (let [result (parser-objects/snarfem game-state 0 1 :prso)]
+        (is (not (:success result)))
+        (is (= :no-it-referent (get-in result [:error :type])))))))
+
+(deftest it-pronoun-update-after-verb-test
+  (testing "perform updates :it after successful verb with object"
+    ;; Set up a minimal game state with a verb handler
+    (let [initial-state (-> (gs/initial-game-state)
+                            (assoc :it :mailbox)
+                            (assoc-in [:parser :prsa] :look)
+                            (assoc-in [:parser :prso] [:leaflet]))]
+      ;; After perform, :it should be updated to :leaflet
+      (let [result-state (verb-defs/perform initial-state)]
+        (is (= :leaflet (:it result-state))))))
+
+  (testing "perform preserves :it when verb has no object"
+    (let [initial-state (-> (gs/initial-game-state)
+                            (assoc :it :mailbox)
+                            (assoc-in [:parser :prsa] :look)
+                            (assoc-in [:parser :prso] nil))]
+      (let [result-state (verb-defs/perform initial-state)]
+        (is (= :mailbox (:it result-state))))))))
