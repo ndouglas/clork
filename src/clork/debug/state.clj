@@ -81,6 +81,45 @@
 ;;; $debug here
 ;;; ---------------------------------------------------------------------------
 
+(defn- format-flags-detailed
+  "Format flags showing both direct keys and :flags set."
+  [game-state thing-id thing]
+  (let [;; Direct flag keys (set by set-flag)
+        direct-flags (filter #(and (keyword? %)
+                                   (true? (get thing %)))
+                             (keys thing))
+        ;; :flags set (from definitions)
+        flags-set (or (:flags thing) #{})
+        ;; Combine for display
+        direct-str (if (empty? direct-flags)
+                     "none"
+                     (str/join ", " (map format-keyword (sort direct-flags))))
+        set-str (if (empty? flags-set)
+                  "none"
+                  (str/join ", " (map format-keyword (sort flags-set))))]
+    (str "direct: {" direct-str "}, :flags: #{" set-str "}")))
+
+(defn- format-lit-status
+  "Format lighting status showing why room is/isn't lit."
+  [game-state room-id]
+  (let [has-lit-key (gs/flag? game-state :rooms room-id :lit)
+        has-on-key (gs/flag? game-state :rooms room-id :on)
+        room (gs/get-thing game-state room-id)
+        flags-set (or (:flags room) #{})
+        has-lit-flag (contains? flags-set :lit)
+        has-on-flag (contains? flags-set :on)
+        is-lit (or has-lit-key has-on-key has-lit-flag has-on-flag)]
+    (str (if is-lit "YES" "NO")
+         " ("
+         (str/join ", "
+                   (filter some?
+                           [(when has-lit-key ":lit key")
+                            (when has-on-key ":on key")
+                            (when has-lit-flag ":lit in :flags")
+                            (when has-on-flag ":on in :flags")
+                            (when (not is-lit) "no light source")]))
+         ")")))
+
 (defn cmd-debug-here
   "Show current room in detail."
   [game-state _args]
@@ -90,7 +129,8 @@
     (-> game-state
         (utils/tell (str "Current Room: " here-id "\n"))
         (tell-line "Description" (:desc room "?"))
-        (tell-line "Flags" (format-flags room))
+        (tell-line "Flags" (format-flags-detailed game-state here-id room))
+        (tell-line "Lit?" (format-lit-status game-state here-id))
         (tell-line "Contents" (if (empty? contents)
                                 "empty"
                                 (str/join ", " (map format-keyword contents))))
@@ -125,7 +165,7 @@
             (tell-line "Location" (or (:in obj) "nowhere"))
             (tell-line "Synonyms" (str/join ", " (or (:synonym obj) [])))
             (tell-line "Adjective" (or (:adjective obj) "none"))
-            (tell-line "Flags" (format-flags obj))
+            (tell-line "Flags" (format-flags-detailed game-state obj-id obj))
             ;; Contents if container
             ((fn [gs]
                (let [contents (gs/get-contents gs obj-id)]
