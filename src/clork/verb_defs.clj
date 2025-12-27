@@ -86,7 +86,13 @@
 
    :inventory  {:words   ["inventory" "i"]
                 :syntax  {:num-objects 0}
-                :handler verbs/v-inventory}})
+                :handler verbs/v-inventory}
+
+   ;; === Manipulation Verbs ===
+   :open       {:words   ["open"]
+                :syntax  {:num-objects 1
+                          :loc1 #{:held :in-room :on-ground :carried}}
+                :handler verbs/v-open}})
 
 ;;; ---------------------------------------------------------------------------
 ;;; BUILDER FUNCTIONS

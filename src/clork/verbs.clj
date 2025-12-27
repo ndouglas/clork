@@ -335,3 +335,107 @@
           (utils/tell "\n")
           (assoc :quit true))
       (utils/tell gs "\nOk."))))
+
+;;; ---------------------------------------------------------------------------
+;;; OPEN COMMAND
+;;; ---------------------------------------------------------------------------
+;;; ZIL: V-OPEN in gverbs.zil
+
+(defn- openable?
+  "Returns true if the object can be opened (is a container or door)."
+  [obj]
+  (let [flags (or (:flags obj) #{})]
+    (or (contains? flags :cont)
+        (contains? flags :door))))
+
+(defn- already-open?
+  "Returns true if the object is already open."
+  [obj]
+  (contains? (or (:flags obj) #{}) :open))
+
+(defn- add-flag
+  "Add a flag to an object's flag set in game-state."
+  [game-state obj-id flag]
+  (let [current-flags (get-in game-state [:objects obj-id :flags] #{})]
+    (assoc-in game-state [:objects obj-id :flags] (conj current-flags flag))))
+
+(defn- container?
+  "Returns true if the object is a container."
+  [obj]
+  (contains? (or (:flags obj) #{}) :cont))
+
+(defn- transparent?
+  "Returns true if the object is transparent."
+  [obj]
+  (contains? (or (:flags obj) #{}) :trans))
+
+(defn- describe-contents
+  "Describe the contents of a container that was just opened."
+  [game-state obj-id]
+  (let [contents (gs/get-contents game-state obj-id)
+        visible (remove (fn [id]
+                          (let [obj (gs/get-thing game-state id)
+                                flags (or (:flags obj) #{})]
+                            (contains? flags :invisible)))
+                        contents)]
+    (if (empty? visible)
+      ""
+      (let [descriptions (map (fn [id]
+                                (let [obj (gs/get-thing game-state id)]
+                                  (str "a " (:desc obj))))
+                              visible)]
+        (clojure.string/join ", " descriptions)))))
+
+(defn v-open
+  "Open a container or door.
+
+   ZIL: V-OPEN in gverbs.zil
+     <ROUTINE V-OPEN ()
+       <COND (<FSET? ,PRSO ,CONTBIT>
+              <COND (<FSET? ,PRSO ,OPENBIT>
+                     <TELL \"It is already open.\" CR>)
+                    (T
+                     <FSET ,PRSO ,OPENBIT>
+                     <FSET ,PRSO ,TOUCHBIT>
+                     ...)>)
+             (<FSET? ,PRSO ,DOORBIT>
+              <COND (<FSET? ,PRSO ,OPENBIT>
+                     <TELL \"It is already open.\" CR>)
+                    (T
+                     <FSET ,PRSO ,OPENBIT>
+                     <TELL \"The \" D ,PRSO \" opens.\" CR>)>)
+             (T
+              <TELL \"You must tell me how to do that to a \" D ,PRSO \".\" CR>)>>"
+  [game-state]
+  (let [prso (get-in game-state [:parser :prso])
+        obj (gs/get-thing game-state prso)
+        desc (:desc obj)]
+    (cond
+      ;; Not openable
+      (not (openable? obj))
+      (utils/tell game-state (str "You must tell me how to do that to a " desc "."))
+
+      ;; Already open
+      (already-open? obj)
+      (utils/tell game-state "It is already open.")
+
+      ;; Container
+      (container? obj)
+      (let [state (-> game-state
+                      (add-flag prso :open)
+                      (add-flag prso :touch))
+            contents (gs/get-contents state prso)
+            visible (remove (fn [id]
+                              (let [o (gs/get-thing state id)
+                                    flags (or (:flags o) #{})]
+                                (contains? flags :invisible)))
+                            contents)]
+        (if (or (empty? visible) (transparent? obj))
+          (utils/tell state "Opened.")
+          (let [content-desc (describe-contents state prso)]
+            (utils/tell state (str "Opening the " desc " reveals " content-desc ".")))))
+
+      ;; Door
+      :else
+      (let [state (add-flag game-state prso :open)]
+        (utils/tell state (str "The " desc " opens."))))))

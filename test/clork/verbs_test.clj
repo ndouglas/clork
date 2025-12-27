@@ -461,3 +461,108 @@
   (testing "l is a synonym for look"
     (is (= true (parser/wt? "l" :verb)))
     (is (= :look (parser/wt? "l" :verb true)))))
+
+;;; ---------------------------------------------------------------------------
+;;; OPEN VERB TESTS
+;;; ---------------------------------------------------------------------------
+
+(deftest v-open-container-empty-test
+  (testing "v-open on empty container sets :open flag and shows 'Opened.'"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :chest
+                                 :in :west-of-house
+                                 :desc "wooden chest"
+                                 :flags #{:cont}})
+                 (assoc-in [:parser :prso] :chest))
+          [output result] (with-captured-output (verbs/v-open gs))]
+      (is (= "Opened." output))
+      (is (contains? (get-in result [:objects :chest :flags]) :open))
+      (is (contains? (get-in result [:objects :chest :flags]) :touch)))))
+
+(deftest v-open-container-with-items-test
+  (testing "v-open on container with items reveals contents"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :chest
+                                 :in :west-of-house
+                                 :desc "wooden chest"
+                                 :flags #{:cont}})
+                 (gs/add-object {:id :gold-coin
+                                 :in :chest
+                                 :desc "gold coin"})
+                 (assoc-in [:parser :prso] :chest))
+          [output result] (with-captured-output (verbs/v-open gs))]
+      (is (clojure.string/includes? output "Opening the wooden chest reveals"))
+      (is (clojure.string/includes? output "gold coin"))
+      (is (contains? (get-in result [:objects :chest :flags]) :open)))))
+
+(deftest v-open-door-test
+  (testing "v-open on door sets :open flag and shows 'The [door] opens.'"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :front-door
+                                 :in :west-of-house
+                                 :desc "front door"
+                                 :flags #{:door}})
+                 (assoc-in [:parser :prso] :front-door))
+          [output result] (with-captured-output (verbs/v-open gs))]
+      (is (= "The front door opens." output))
+      (is (contains? (get-in result [:objects :front-door :flags]) :open)))))
+
+(deftest v-open-already-open-container-test
+  (testing "v-open on already-open container shows 'It is already open.'"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :chest
+                                 :in :west-of-house
+                                 :desc "wooden chest"
+                                 :flags #{:cont :open}})
+                 (assoc-in [:parser :prso] :chest))
+          [output _] (with-captured-output (verbs/v-open gs))]
+      (is (= "It is already open." output)))))
+
+(deftest v-open-already-open-door-test
+  (testing "v-open on already-open door shows 'It is already open.'"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :front-door
+                                 :in :west-of-house
+                                 :desc "front door"
+                                 :flags #{:door :open}})
+                 (assoc-in [:parser :prso] :front-door))
+          [output _] (with-captured-output (verbs/v-open gs))]
+      (is (= "It is already open." output)))))
+
+(deftest v-open-not-openable-test
+  (testing "v-open on non-openable object shows error message"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :rock
+                                 :in :west-of-house
+                                 :desc "rock"
+                                 :flags #{}})
+                 (assoc-in [:parser :prso] :rock))
+          [output _] (with-captured-output (verbs/v-open gs))]
+      (is (= "You must tell me how to do that to a rock." output)))))
+
+(deftest v-open-transparent-container-test
+  (testing "v-open on transparent empty container shows 'Opened.'"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :glass-box
+                                 :in :west-of-house
+                                 :desc "glass box"
+                                 :flags #{:cont :trans}})
+                 (assoc-in [:parser :prso] :glass-box))
+          [output result] (with-captured-output (verbs/v-open gs))]
+      (is (= "Opened." output))
+      (is (contains? (get-in result [:objects :glass-box :flags]) :open)))))
+
+(deftest open-vocabulary-test
+  (testing "open is registered in vocabulary as a verb"
+    (is (= true (parser/wt? "open" :verb)))
+    (is (= :open (parser/wt? "open" :verb true)))))
+
+(deftest ^:pending open-parsing-test
+  ;; Pending: requires object vocabulary registration to be implemented
+  ;; When object synonyms are added to the global vocabulary, this test should pass
+  (testing "parsing 'open mailbox' sets prsa to :open and prso to :mailbox"
+    (let [gs (make-test-state)
+          [_ result] (with-captured-output (parse-test-input gs "open mailbox"))]
+      (is (nil? (get-in result [:parser :error])))
+      (is (= :open (get-in result [:parser :prsa])))
+      (is (= :mailbox (get-in result [:parser :prso]))))))
