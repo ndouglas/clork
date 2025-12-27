@@ -8,6 +8,7 @@
 (def crlf utils/crlf)
 (def parser-fn parser/parser)
 (def perform verb-defs/perform)
+(def get-parser-error parser/get-parser-error)
 
 ;; <ROUTINE MAIN-LOOP-1 ("AUX" ICNT OCNT NUM CNT OBJ TBL V PTBL OBJ1 TMP O I)
 ;;      <SET CNT 0>
@@ -156,7 +157,7 @@
    3. Returns the updated game-state"
   [game-state]
   (let [gs (parser-fn game-state)]
-    (if (get-in gs [:parser :error])
+    (if (get-parser-error gs)
       ;; Parsing failed - error already displayed by parser
       gs
       ;; Parsing succeeded - perform the action

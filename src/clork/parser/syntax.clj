@@ -114,9 +114,9 @@
 
    Returns true if the pattern could match this input."
   [game-state syntax]
-  (let [ncn (get-in game-state [:parser :ncn] 0)
-        prep1 (get-in game-state [:parser :itbl (:prep1 itbl-indices)])
-        prep2 (get-in game-state [:parser :itbl (:prep2 itbl-indices)])]
+  (let [ncn (get-ncn game-state)
+        prep1 (get-itbl game-state :prep1)
+        prep2 (get-itbl game-state :prep2)]
     (and
      ;; Number of noun clauses must match or be handleable
      (<= ncn (:num-objects syntax))
@@ -151,14 +151,14 @@
 
    Returns: parser result (use parser-success/parser-error helpers)"
   [game-state]
-  (let [verb (get-in game-state [:parser :itbl (:verb itbl-indices)])]
+  (let [verb (get-itbl game-state :verb)]
     (if (nil? verb)
       ;; No verb found
       (parser-error game-state :no-verb "There was no verb in that sentence!")
 
       ;; Find matching syntaxes
       (let [matches (find-matching-syntax game-state verb)
-            ncn (get-in game-state [:parser :ncn] 0)
+            ncn (get-ncn game-state)
             ;; Separate exact matches from those needing GWIM
             exact-matches (filter #(= (:num-objects %) ncn) matches)
             gwim-matches (filter #(> (:num-objects %) ncn) matches)]
@@ -187,7 +187,7 @@
   [game-state syntax]
   (parser-success (-> game-state
                       (assoc-in [:parser :syntax] syntax)
-                      (assoc-in [:parser :prsa] (:action syntax)))))
+                      (set-prsa (:action syntax)))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; GWIM - Get What I Mean
@@ -254,7 +254,7 @@
    and tries to infer the missing object. Uses the first pattern
    where GWIM succeeds."
   [game-state patterns]
-  (let [ncn (get-in game-state [:parser :ncn] 0)]
+  (let [ncn (get-ncn game-state)]
     (loop [remaining patterns]
       (if (empty? remaining)
         ;; No pattern worked with GWIM
@@ -291,10 +291,8 @@
                   obj (:object gwim-result)
                   gs-with-obj
                   (if missing-first?
-                    (-> gs
-                        (assoc-in [:parser :prso] [obj]))
-                    (-> gs
-                        (assoc-in [:parser :prsi] [obj])))]
+                    (set-prso gs [obj])
+                    (set-prsi gs [obj]))]
               (syntax-found gs-with-obj pattern))
 
             ;; GWIM failed - try next pattern

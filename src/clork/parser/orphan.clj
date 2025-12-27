@@ -90,7 +90,7 @@
            gs gs]
       (if (> cnt p-itbllen)
         ;; Done copying, now handle clause data
-        (let [ncn (get-in gs [:parser :ncn] 0)
+        (let [ncn (get-ncn gs)
 
               ;; If we have 2 noun clauses, copy NC2
               gs (if (= ncn 2)
@@ -106,23 +106,20 @@
               gs (cond
                    drive1
                    (-> gs
-                       (assoc-in [:parser :otbl (:prep1 itbl-indices)]
-                                 (:prep1 drive1))
-                       (assoc-in [:parser :otbl (:nc1 itbl-indices)] 1))
+                       (set-otbl (:prep1 itbl-indices) (:prep1 drive1))
+                       (set-otbl (:nc1 itbl-indices) 1))
 
                    drive2
                    (-> gs
-                       (assoc-in [:parser :otbl (:prep2 itbl-indices)]
-                                 (:prep2 drive2))
-                       (assoc-in [:parser :otbl (:nc2 itbl-indices)] 1))
+                       (set-otbl (:prep2 itbl-indices) (:prep2 drive2))
+                       (set-otbl (:nc2 itbl-indices) 1))
 
                    :else gs)]
           gs)
 
         ;; Copy this slot
         (recur (inc cnt)
-               (assoc-in gs [:parser :otbl cnt]
-                         (get-in gs [:parser :itbl cnt])))))))
+               (set-otbl gs cnt (get-itbl gs cnt)))))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; ORPHAN-MERGE - Combine Previous and Current Parse
@@ -151,8 +148,8 @@
 
         ;; Get the first word of new input to check if it's a verb or adjective
         first-word (lexv-word gs 0)
-        verb-from-itbl (get-in gs [:parser :itbl (:verb itbl-indices)])
-        verb-from-otbl (get-in gs [:parser :otbl (:verb itbl-indices)])
+        verb-from-itbl (get-itbl gs :verb)
+        verb-from-otbl (get-otbl gs :verb)
 
         ;; Check if first word is a verb matching the old verb
         ;; or is an adjective
@@ -167,7 +164,7 @@
             adj? first-is-adjective?
 
             ;; Get current noun clause count
-            ncn (get-in gs [:parser :ncn] 0)]
+            ncn (get-ncn gs)]
 
         (cond
           ;; New verb doesn't match old (and it's not an adjective)
@@ -181,11 +178,11 @@
           nil
 
           ;; NC1 in OTBL is marked as needing fill (value = 1)
-          (= (get-in gs [:parser :otbl (:nc1 itbl-indices)]) 1)
+          (= (get-otbl gs :nc1) 1)
           (merge-to-nc1 gs adj?)
 
           ;; NC2 in OTBL is marked as needing fill
-          (= (get-in gs [:parser :otbl (:nc2 itbl-indices)]) 1)
+          (= (get-otbl gs :nc2) 1)
           (merge-to-nc2 gs adj?)
 
           ;; Check for aclause (orphaned adjective clause)
@@ -197,13 +194,13 @@
 
       ;; New input starts with object word but no verb
       (and (wt? first-word :object true)
-           (zero? (get-in gs [:parser :ncn] 0)))
+           (zero? (get-ncn gs)))
       ;; Treat as noun clause to fill orphan
       (let [gs (-> gs
-                   (assoc-in [:parser :itbl (:verb itbl-indices)] 0)
-                   (assoc-in [:parser :itbl (:verbn itbl-indices)] 0)
-                   (assoc-in [:parser :itbl (:nc1 itbl-indices)] 0)  ; Will be set by clause copy
-                   (assoc-in [:parser :ncn] 1))]
+                   (set-itbl :verb 0)
+                   (set-itbl :verbn 0)
+                   (set-itbl :nc1 0)  ; Will be set by clause copy
+                   (set-ncn 1))]
         (merge-to-nc1 gs false))
 
       ;; Can't merge - different verb or incompatible structure
@@ -215,22 +212,19 @@
    Helper for orphan-merge when filling the first object slot."
   [game-state adj?]
   (let [;; Check preposition compatibility
-        prep-from-itbl (get-in game-state [:parser :itbl (:prep1 itbl-indices)])
-        prep-from-otbl (get-in game-state [:parser :otbl (:prep1 itbl-indices)])]
+        prep-from-itbl (get-itbl game-state :prep1)
+        prep-from-otbl (get-otbl game-state :prep1)]
 
     (if (or (= prep-from-itbl prep-from-otbl)
             (nil? prep-from-itbl))
       ;; Compatible - do the merge
       (let [gs (if adj?
                  ;; Adjective merge: set NC1 from lexv start
-                 (assoc-in game-state [:parser :otbl (:nc1 itbl-indices)]
-                           0)  ; Start of lexv
+                 (set-otbl game-state :nc1 0)  ; Start of lexv
                  ;; Normal merge: copy NC1 from ITBL
-                 (assoc-in game-state [:parser :otbl (:nc1 itbl-indices)]
-                           (get-in game-state [:parser :itbl (:nc1 itbl-indices)])))
+                 (set-otbl game-state :nc1 (get-itbl game-state :nc1)))
 
-            gs (assoc-in gs [:parser :otbl (:nc1l itbl-indices)]
-                         (get-in gs [:parser :itbl (:nc1l itbl-indices)]))]
+            gs (set-otbl gs :nc1l (get-itbl gs :nc1l))]
 
         ;; Copy OTBL back to ITBL and set merged flag
         (finalize-merge gs))
@@ -243,22 +237,20 @@
 
    Helper for orphan-merge when filling the second object slot."
   [game-state adj?]
-  (let [prep-from-itbl (get-in game-state [:parser :itbl (:prep1 itbl-indices)])
-        prep-from-otbl (get-in game-state [:parser :otbl (:prep2 itbl-indices)])]
+  (let [prep-from-itbl (get-itbl game-state :prep1)
+        prep-from-otbl (get-otbl game-state :prep2)]
 
     (if (or (= prep-from-itbl prep-from-otbl)
             (nil? prep-from-itbl))
       ;; Compatible - merge NC1 from ITBL into NC2 slot of OTBL
       (let [gs (if adj?
-                 (assoc-in game-state [:parser :itbl (:nc1 itbl-indices)] 0)
+                 (set-itbl game-state :nc1 0)
                  game-state)
 
             gs (-> gs
-                   (assoc-in [:parser :otbl (:nc2 itbl-indices)]
-                             (get-in gs [:parser :itbl (:nc1 itbl-indices)]))
-                   (assoc-in [:parser :otbl (:nc2l itbl-indices)]
-                             (get-in gs [:parser :itbl (:nc1l itbl-indices)]))
-                   (assoc-in [:parser :ncn] 2))]
+                   (set-otbl :nc2 (get-itbl gs :nc1))
+                   (set-otbl :nc2l (get-itbl gs :nc1l))
+                   (set-ncn 2))]
 
         (finalize-merge gs))
       nil)))
@@ -290,8 +282,7 @@
                          (get-in game-state [:parser :ovtbl 2]))
                (assoc-in [:parser :vtbl 3]
                          (get-in game-state [:parser :ovtbl 3]))
-               (assoc-in [:parser :otbl (:verbn itbl-indices)]
-                         (get-in game-state [:parser :vtbl]))
+               (set-otbl :verbn (get-in game-state [:parser :vtbl]))
                (assoc-in [:parser :vtbl 2] 0))]
 
     ;; Copy all of OTBL to ITBL
@@ -300,8 +291,7 @@
       (if (> cnt p-itbllen)
         (assoc-in gs [:parser :merged] true)
         (recur (inc cnt)
-               (assoc-in gs [:parser :itbl cnt]
-                         (get-in gs [:parser :otbl cnt])))))))
+               (set-itbl gs cnt (get-otbl gs cnt)))))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; CLAUSE WIN FUNCTIONS
@@ -315,9 +305,7 @@
    When player responds to 'which X?' with 'the rusty one', this
    applies the adjective to the orphaned clause."
   [game-state adj]
-  (let [gs (-> game-state
-               (assoc-in [:parser :itbl (:verb itbl-indices)]
-                         (get-in game-state [:parser :otbl (:verb itbl-indices)])))]
+  (let [gs (set-itbl game-state :verb (get-otbl game-state :verb))]
     ;; Set up clause copy pointers
     (let [aclause (get-in gs [:parser :aclause])
           gs (-> gs
@@ -329,8 +317,8 @@
       (let [gs (clause-copy-with-adj gs :otbl :otbl adj)]
         (-> gs
             ;; Update NCN if NC2 was filled
-            (cond-> (not (zero? (get-in gs [:parser :otbl (:nc2 itbl-indices)])))
-              (assoc-in [:parser :ncn] 2))
+            (cond-> (not (zero? (get-otbl gs :nc2)))
+              (set-ncn 2))
             ;; Clear aclause
             (assoc-in [:parser :aclause] nil))))))
 
@@ -350,8 +338,8 @@
                          (inc (get-in game-state [:parser :aclause]))))]
     (let [gs (clause-copy gs :itbl :otbl)]
       (-> gs
-          (cond-> (not (zero? (get-in gs [:parser :otbl (:nc2 itbl-indices)])))
-            (assoc-in [:parser :ncn] 2))
+          (cond-> (not (zero? (get-otbl gs :nc2)))
+            (set-ncn 2))
           (assoc-in [:parser :aclause] nil)))))
 
 ;;; ---------------------------------------------------------------------------

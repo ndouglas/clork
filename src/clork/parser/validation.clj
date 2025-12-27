@@ -229,8 +229,8 @@
      {:success false, :game-state gs, :error ...} - too many objects"
   [game-state]
   (let [syntax (get-in game-state [:parser :syntax])
-        prso (get-in game-state [:parser :prso] [])
-        prsi (get-in game-state [:parser :prsi] [])
+        prso (or (get-prso game-state) [])
+        prsi (or (get-prsi game-state) [])
         loc1 (:loc1 syntax)
         loc2 (:loc2 syntax)
 

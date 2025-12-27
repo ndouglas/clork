@@ -160,7 +160,7 @@
    Looks up the action in *verb-handlers* and calls the handler function.
    Returns the updated game-state."
   [game-state]
-  (let [action (get-in game-state [:parser :prsa])]
+  (let [action (get-in game-state [:parser :prsa])]  ; Used here directly for simplicity
     (if-let [handler (get *verb-handlers* action)]
       (handler game-state)
       (do

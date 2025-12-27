@@ -56,6 +56,29 @@
 (def parser-error parser-state/parser-error)
 (def parser-result? parser-state/parser-result?)
 
+;; Re-export state accessor functions
+(def get-itbl parser-state/get-itbl)
+(def set-itbl parser-state/set-itbl)
+(def get-otbl parser-state/get-otbl)
+(def set-otbl parser-state/set-otbl)
+(def clear-itbl parser-state/clear-itbl)
+(def get-ncn parser-state/get-ncn)
+(def set-ncn parser-state/set-ncn)
+(def inc-ncn parser-state/inc-ncn)
+(def dec-ncn parser-state/dec-ncn)
+(def get-len parser-state/get-len)
+(def set-len parser-state/set-len)
+(def inc-len parser-state/inc-len)
+(def dec-len parser-state/dec-len)
+(def get-parser-error parser-state/get-parser-error)
+(def set-parser-error parser-state/set-parser-error)
+(def get-prsa parser-state/get-prsa)
+(def set-prsa parser-state/set-prsa)
+(def get-prso parser-state/get-prso)
+(def set-prso parser-state/set-prso)
+(def get-prsi parser-state/get-prsi)
+(def set-prsi parser-state/set-prsi)
+
 ;; Aliases for external module functions used throughout parser
 (def tell utils/tell)
 (def crlf utils/crlf)
@@ -159,11 +182,11 @@
       (if (zero? token-count)
         (do
           (parser-say gs :beg-pardon)
-          (assoc-in gs [:parser :error] {:type :empty-input}))
+          (set-parser-error gs {:type :empty-input}))
 
         ;; === Phase 3: Handle Special Commands (OOPS, AGAIN) ===
         (let [first-word (lexv-word gs 0)
-              gs (assoc-in gs [:parser :len] token-count)]
+              gs (set-len gs token-count)]
 
           (cond
             ;; OOPS - Error correction
@@ -192,7 +215,7 @@
   ;; TODO: Implement OOPS handling
   ;; For now, just report not implemented
   (parser-say game-state :oops-nothing)
-  (assoc-in game-state [:parser :error] {:type :oops-failed}))
+  (set-parser-error game-state {:type :oops-failed}))
 
 (defn handle-again
   "Handle the AGAIN/G repeat command.
@@ -206,19 +229,19 @@
       (nil? (get-in game-state [:parser :again-lexv]))
       (do
         (parser-say game-state :again-no-cmd)
-        (assoc-in game-state [:parser :error] {:type :no-again}))
+        (set-parser-error game-state {:type :no-again}))
 
       ;; Can't repeat fragments
       oflag?
       (do
         (parser-say game-state :again-fragment)
-        (assoc-in game-state [:parser :error] {:type :again-fragment}))
+        (set-parser-error game-state {:type :again-fragment}))
 
       ;; Last command failed
       (not won?)
       (do
         (parser-say game-state :again-mistake)
-        (assoc-in game-state [:parser :error] {:type :again-mistake}))
+        (set-parser-error game-state {:type :again-mistake}))
 
       ;; OK to repeat
       :else
@@ -233,8 +256,7 @@
             ;; Copy OTBL to ITBL
             gs (reduce
                 (fn [s i]
-                  (assoc-in s [:parser :itbl i]
-                            (get-in s [:parser :otbl i])))
+                  (set-itbl s i (get-otbl s i)))
                 gs
                 (range (inc p-itbllen)))]
         ;; Now parse with restored state
@@ -256,7 +278,7 @@
                (assoc-in [:parser :again-lexv]
                          (get-in game-state [:parser :lexv]))
                (assoc-in [:parser :dir] nil)
-               (assoc-in [:parser :ncn] 0)
+               (set-ncn 0)
                (assoc-in [:parser :getflags] 0))]
 
     ;; === Main Parsing Loop ===
@@ -265,7 +287,7 @@
 
       (if (:error result)
         ;; Parsing failed - return game-state with error set
-        (assoc-in (:game-state result) [:parser :error] (:error result))
+        (set-parser-error (:game-state result) (:error result))
 
         ;; === Post-Parse Processing ===
         (let [gs (:game-state result)]
@@ -274,8 +296,8 @@
           (if-let [dir (get-in gs [:parser :dir])]
             ;; Direct walk command
             (-> gs
-                (assoc-in [:parser :prsa] :walk)
-                (assoc-in [:parser :prso] [dir])
+                (set-prsa :walk)
+                (set-prso [dir])
                 (assoc-in [:parser :oflag] false)
                 (assoc-in [:parser :walk-dir] dir)
                 (assoc-in [:parser :again-dir] dir))
@@ -298,9 +320,8 @@
                   (do
                     (when-let [msg (get-in syntax-result [:error :message])]
                       (println msg))
-                    (assoc-in (:game-state syntax-result)
-                              [:parser :error]
-                              (:error syntax-result)))
+                    (set-parser-error (:game-state syntax-result)
+                                      (:error syntax-result)))
 
                   ;; Continue with object resolution
                   (let [gs (:game-state syntax-result)
@@ -311,9 +332,8 @@
                       (do
                         (when-let [msg (get-in snarf-result [:error :message])]
                           (println msg))
-                        (assoc-in (:game-state snarf-result)
-                                  [:parser :error]
-                                  (:error snarf-result)))
+                        (set-parser-error (:game-state snarf-result)
+                                          (:error snarf-result)))
 
                       ;; Continue with validation
                       (let [gs (if (parser-result? snarf-result)
@@ -326,9 +346,8 @@
                           (do
                             (when-let [msg (get-in many-result [:error :message])]
                               (println msg))
-                            (assoc-in (:game-state many-result)
-                                      [:parser :error]
-                                      (:error many-result)))
+                            (set-parser-error (:game-state many-result)
+                                              (:error many-result)))
 
                           ;; Final: take check
                           (let [gs (:game-state many-result)
@@ -339,14 +358,13 @@
                               (do
                                 (when-let [msg (get-in take-result [:error :message])]
                                   (println msg))
-                                (assoc-in (:game-state take-result)
-                                          [:parser :error]
-                                          (:error take-result)))
+                                (set-parser-error (:game-state take-result)
+                                                  (:error take-result)))
 
                               ;; SUCCESS! Mark as won and return
                               (-> (:game-state take-result)
                                   (assoc-in [:parser :won] true)
-                                  (assoc-in [:parser :error] nil)))))))))))))))))
+                                  (set-parser-error nil)))))))))))))))))
 
 (defn parse-tokens
   "Parse tokens from lexv, extracting verbs, preps, and noun clauses.
@@ -361,7 +379,7 @@
          of-flag false
          last-word nil]
 
-    (let [remaining (get-in gs [:parser :len] 0)]
+    (let [remaining (get-len gs)]
       (if (neg? (dec remaining))
         ;; End of input
         {:game-state (assoc-in gs [:parser :quote-flag] false)}
@@ -374,7 +392,7 @@
                          (:word num-result)))
               next-word (when (pos? remaining)
                           (lexv-word gs (inc ptr)))
-              gs (update-in gs [:parser :len] dec)]
+              gs (dec-len gs)]
 
           (cond
             ;; No word (unknown)
@@ -387,7 +405,7 @@
             ;; Sentence terminator
             (or (special-word? word :then)
                 (special-word? word :period))
-            (let [gs (if (pos? (get-in gs [:parser :len] 0))
+            (let [gs (if (pos? (get-len gs))
                        (assoc-in gs [:parser :cont] (inc ptr))
                        gs)]
               {:game-state gs})
@@ -395,7 +413,7 @@
             ;; Quote toggle (for SAY command)
             (special-word? word :quote)
             (let [gs (update-in gs [:parser :quote-flag] not)
-                  gs (if (pos? (get-in gs [:parser :len] 0))
+                  gs (if (pos? (get-len gs))
                        (assoc-in gs [:parser :cont] (inc ptr))
                        gs)]
               {:game-state gs})
@@ -403,7 +421,7 @@
             ;; Direction word (potential shortcut)
             (and (wt? word :direction true)
                  (or (nil? verb) (= verb :walk))
-                 (or (= (get-in gs [:parser :len]) 0)  ; Last word
+                 (or (zero? (get-len gs))  ; Last word
                      (special-word? next-word :then)
                      (special-word? next-word :period)))
             (let [dir (wt? word :direction true)]
@@ -414,8 +432,8 @@
                  (nil? verb))
             (let [verb-val (wt? word :verb true)
                   gs (-> gs
-                         (assoc-in [:parser :itbl (:verb itbl-indices)] verb-val)
-                         (assoc-in [:parser :itbl (:verbn itbl-indices)] word)
+                         (set-itbl :verb verb-val)
+                         (set-itbl :verbn word)
                          (assoc-in [:parser :vtbl 0] word))]
               (recur gs (inc ptr) verb-val of-flag word))
 
@@ -428,7 +446,7 @@
             (let [prep-val (wt? word :preposition true)]
               (cond
                 ;; "X of Y" pattern
-                (and (pos? (get-in gs [:parser :len] 0))
+                (and (pos? (get-len gs))
                      (special-word? next-word :of)
                      (nil? prep-val)
                      (not (special-word? word :all))
@@ -437,19 +455,19 @@
 
                 ;; Preposition at end of sentence
                 (and prep-val
-                     (or (zero? (get-in gs [:parser :len] 0))
+                     (or (zero? (get-len gs))
                          (special-word? next-word :then)
                          (special-word? next-word :period)))
-                (let [ncn (get-in gs [:parser :ncn] 0)
+                (let [ncn (get-ncn gs)
                       gs (-> gs
                              (assoc-in [:parser :end-on-prep] true)
                              (cond-> (< ncn 2)
-                               (-> (assoc-in [:parser :itbl (:prep1 itbl-indices)] prep-val)
-                                   (assoc-in [:parser :itbl (:prep1n itbl-indices)] word))))]
+                               (-> (set-itbl :prep1 prep-val)
+                                   (set-itbl :prep1n word))))]
                   (recur gs (inc ptr) verb of-flag word))
 
                 ;; Too many noun clauses
-                (= (get-in gs [:parser :ncn] 0) 2)
+                (= (get-ncn gs) 2)
                 (do
                   (parser-say gs :too-many-nouns)
                   {:error {:type :too-many-nouns}
@@ -458,7 +476,7 @@
                 ;; Start a noun clause
                 :else
                 (let [gs (-> gs
-                             (update-in [:parser :ncn] inc)
+                             (inc-ncn)
                              (assoc-in [:parser :act] verb))
                       clause-result (clause gs ptr prep-val word)]
                   (if (:error clause-result)

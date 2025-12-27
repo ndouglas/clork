@@ -71,7 +71,7 @@
   ;; Calculate offset for storing results:
   ;; First clause (P-NCN=1) uses NC1/NC1L
   ;; Second clause (P-NCN=2) uses NC2/NC2L
-  (let [ncn (get-in game-state [:parser :ncn] 0)
+  (let [ncn (get-ncn game-state)
         off (* (dec ncn) 2)  ; 0 for first clause, 2 for second
 
         ;; If we have a preposition, store it
@@ -79,27 +79,27 @@
         (if (not (zero? (or val 0)))
           (-> game-state
               ;; Store prep value at PREP1 or PREP2
-              (assoc-in [:parser :itbl (+ (:prep1 itbl-indices) off)] val)
+              (set-itbl (+ (:prep1 itbl-indices) off) val)
               ;; Store prep word at PREP1N or PREP2N
-              (assoc-in [:parser :itbl (+ (:prep1n itbl-indices) off)] wrd)
+              (set-itbl (+ (:prep1n itbl-indices) off) wrd)
               ;; Advance past the preposition
               (update-in [:parser :ptr] inc))
           ;; No prep, restore P-LEN since we didn't consume a word
-          (update-in game-state [:parser :len] inc))
+          (inc-len game-state))
 
         ;; Check if we're at end of input
-        p-len (get-in gs-with-prep [:parser :len] 0)]
+        p-len (get-len gs-with-prep)]
 
     (if (zero? p-len)
       ;; Empty clause (e.g., "take" with no object)
-      {:game-state (update-in gs-with-prep [:parser :ncn] dec)
+      {:game-state (dec-ncn gs-with-prep)
        :ptr -1}
 
       ;; Start parsing the clause
       ;; Store the starting position
       (let [clause-start ptr
             nc-slot (+ (:nc1 itbl-indices) off)
-            gs-with-start (assoc-in gs-with-prep [:parser :itbl nc-slot] clause-start)]
+            gs-with-start (set-itbl gs-with-prep nc-slot clause-start)]
 
         ;; Skip leading articles (the, a, an)
         ;; ZIL: <COND (<EQUAL? <GET ,P-LEXV .PTR> ,W?THE ,W?A ,W?AN> ...)>
@@ -109,13 +109,13 @@
                first? true      ; Is this the first word?
                last-word nil]   ; Previous word
 
-          (let [remaining (get-in gs [:parser :len] 0)]
+          (let [remaining (get-len gs)]
             (if (neg? (dec remaining))
               ;; End of input - store end position and return
               (let [end-slot (+ (:nc1l itbl-indices) off)
                     gs-final (-> gs
-                                 (assoc-in [:parser :itbl end-slot] current-ptr)
-                                 (assoc-in [:parser :len] remaining))]
+                                 (set-itbl end-slot current-ptr)
+                                 (set-len remaining))]
                 {:game-state gs-final
                  :ptr -1})
 
@@ -125,7 +125,7 @@
                                 (lexv-word gs (inc current-ptr)))
 
                     ;; Check word type
-                    gs-decremented (update-in gs [:parser :len] dec)
+                    gs-decremented (dec-len gs)
 
                     ;; Handle the word
                     result
@@ -152,7 +152,7 @@
                       ;; Preposition - might end clause if not first word
                       (wt? current-word :preposition)
                       (if (and (not first?)
-                               (get-in gs [:parser :itbl (:verb itbl-indices)]))
+                               (get-itbl gs :verb))
                         {:action :end-clause-backup}  ; Back up and let main loop handle
                         {:action :continue})
 
@@ -204,7 +204,7 @@
                          current-word)
 
                   :skip-next
-                  (recur (update-in gs-decremented [:parser :len] dec)
+                  (recur (dec-len gs-decremented)
                          (+ current-ptr 2)
                          and-flag
                          false
@@ -213,22 +213,20 @@
                   :end-clause
                   (let [end-slot (+ (:nc1l itbl-indices) off)]
                     {:game-state (-> gs
-                                     (assoc-in [:parser :itbl end-slot] current-ptr)
-                                     (update-in [:parser :len] inc))  ; Restore for main loop
+                                     (set-itbl end-slot current-ptr)
+                                     (inc-len))  ; Restore for main loop
                      :ptr (dec current-ptr)})
 
                   :end-clause-backup
                   (let [end-slot (+ (:nc1l itbl-indices) off)]
                     {:game-state (-> gs
-                                     (assoc-in [:parser :itbl end-slot] current-ptr)
-                                     (update-in [:parser :len] inc))
+                                     (set-itbl end-slot current-ptr)
+                                     (inc-len))
                      :ptr (dec current-ptr)})
 
                   :end-clause-here
                   (let [end-slot (+ (:nc1l itbl-indices) off)]
-                    {:game-state (assoc-in gs-decremented
-                                           [:parser :itbl end-slot]
-                                           (inc current-ptr))
+                    {:game-state (set-itbl gs-decremented end-slot (inc current-ptr))
                      :ptr current-ptr})
 
                   :error

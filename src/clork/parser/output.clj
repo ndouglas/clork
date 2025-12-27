@@ -49,7 +49,7 @@
                (assoc-in [:parser :oflag] false))]
 
     ;; Special case: if we're in SAY mode, just say nothing happens
-    (if (= (get-in gs [:parser :prsa]) :say)
+    (if (= (get-prsa gs) :say)
       (tell gs "Nothing happens.\n")
       (tell gs (str "I don't know the word \"" word "\".\n")))))
 
@@ -68,7 +68,7 @@
                (assoc-in [:parser :quote-flag] false)
                (assoc-in [:parser :oflag] false))]
 
-    (if (= (get-in gs [:parser :prsa]) :say)
+    (if (= (get-prsa gs) :say)
       (tell gs "Nothing happens.\n")
       (tell gs (str "You used the word \"" word
                     "\" in a way that I don't understand.\n")))))

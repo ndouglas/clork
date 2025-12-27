@@ -520,10 +520,10 @@
 
    Returns: {:success bool, :game-state gs} or {:success false, :error ...}"
   [game-state]
-  (let [nc1 (get-in game-state [:parser :itbl (:nc1 itbl-indices)])
-        nc1l (get-in game-state [:parser :itbl (:nc1l itbl-indices)])
-        nc2 (get-in game-state [:parser :itbl (:nc2 itbl-indices)])
-        nc2l (get-in game-state [:parser :itbl (:nc2l itbl-indices)])]
+  (let [nc1 (get-itbl game-state :nc1)
+        nc1l (get-itbl game-state :nc1l)
+        nc2 (get-itbl game-state :nc2)
+        nc2l (get-itbl game-state :nc2l)]
 
     ;; Clear buts table
     (let [gs (assoc-in game-state [:parser :buts] [])
