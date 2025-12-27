@@ -136,9 +136,29 @@
 ;; 			  QUIT RESTART SCORE SCRIPT UNSCRIPT RESTORE> T)
 ;; 		  (T <SET V <CLOCKER>>)>)>>
 
+(defn main-loop-once
+  "Execute one iteration of the main loop.
+
+   ZIL: MAIN-LOOP-1 in gmain.zil
+
+   This function:
+   1. Calls the parser to get a command
+   2. If parsing succeeded, calls perform to execute the action
+   3. Returns the updated game-state"
+  [game-state]
+  (let [gs (parser game-state)]
+    (if (get-in gs [:parser :error])
+      ;; Parsing failed - error already displayed by parser
+      gs
+      ;; Parsing succeeded - perform the action
+      (-> gs
+          (perform)
+          (crlf)))))
+
 (defn main-loop
   "The main loop for the game."
   [game-state]
-  (while (nil? (:quit game-state))
-    (parser game-state))
-  game-state)
+  (loop [gs game-state]
+    (if (:quit gs)
+      gs
+      (recur (main-loop-once gs)))))

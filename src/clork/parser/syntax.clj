@@ -98,7 +98,10 @@
    :take [{:num-objects 1, :prep1 nil, ...}]
    :put  [{:num-objects 2, :prep1 nil, :prep2 :in, ...}
           {:num-objects 2, :prep1 nil, :prep2 :on, ...}]"
-  {})
+  {:verbose [(make-syntax 0 nil nil nil nil nil nil :verbose)]
+   :brief [(make-syntax 0 nil nil nil nil nil nil :brief)]
+   :super-brief [(make-syntax 0 nil nil nil nil nil nil :super-brief)]
+   :version [(make-syntax 0 nil nil nil nil nil nil :version)]})
 
 ;;; ---------------------------------------------------------------------------
 ;;; SYNTAX CHECKING

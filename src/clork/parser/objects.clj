@@ -537,8 +537,8 @@
                 (reduced result)))  ; Early exit on error
             gs)]
 
-      (if (map? gs-after-nc2)  ; Check if it's an error result
-        gs-after-nc2
+      (if (reduced? gs-after-nc2)  ; Check if it's an error result
+        @gs-after-nc2  ; Unwrap the Reduced to get the error
         ;; Process direct object (NC1)
         (if (and nc1 (not (zero? nc1)))
           (snarfem gs-after-nc2 nc1 nc1l :prso)

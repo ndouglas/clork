@@ -80,7 +80,16 @@
    \"lamp\" {:parts-of-speech #{:object :adjective}
             :object-value :brass-lantern
             :adj-value :lamp-adj}"
-  {})
+  {"verbose" {:parts-of-speech #{:verb}
+              :verb-value :verbose}
+   "brief" {:parts-of-speech #{:verb}
+            :verb-value :brief}
+   "superbrief" {:parts-of-speech #{:verb}
+                 :verb-value :super-brief}
+   "super-brief" {:parts-of-speech #{:verb}
+                  :verb-value :super-brief}
+   "version" {:parts-of-speech #{:verb}
+              :verb-value :version}})
 
 ;;; ---------------------------------------------------------------------------
 ;;; SPECIAL WORDS
