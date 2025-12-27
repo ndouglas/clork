@@ -95,35 +95,34 @@
 
 ;; Polymorphic functions that auto-detect entity type
 
+(defn- resolve-thing
+  "Resolve entity-type and actual-id for a thing, or throw if not found.
+   Returns a map with :entity-type and :actual-id keys."
+  [game-state thing-id]
+  (if-let [entity-type (resolve-entity-type game-state thing-id)]
+    {:entity-type entity-type
+     :actual-id (if (= (:player game-state) thing-id)
+                  (:adventurer game-state)
+                  thing-id)}
+    (throw (Exception. (str "Thing " thing-id " not found!")))))
+
 (defn set-thing-flag
   "Sets a flag on a room or object."
   [game-state thing-id flag]
-  (if-let [entity-type (resolve-entity-type game-state thing-id)]
-    (let [actual-id (if (= (:player game-state) thing-id)
-                      (:adventurer game-state)
-                      thing-id)]
-      (set-flag game-state entity-type actual-id flag))
-    (throw (Exception. (str "Thing " thing-id " not found!")))))
+  (let [{:keys [entity-type actual-id]} (resolve-thing game-state thing-id)]
+    (set-flag game-state entity-type actual-id flag)))
 
 (defn unset-thing-flag
   "Unsets a flag on room or object."
   [game-state thing-id flag]
-  (if-let [entity-type (resolve-entity-type game-state thing-id)]
-    (let [actual-id (if (= (:player game-state) thing-id)
-                      (:adventurer game-state)
-                      thing-id)]
-      (unset-flag game-state entity-type actual-id flag))
-    (throw (Exception. (str "Thing " thing-id " not found!")))))
+  (let [{:keys [entity-type actual-id]} (resolve-thing game-state thing-id)]
+    (unset-flag game-state entity-type actual-id flag)))
 
 (defn set-thing-flag?
   "Indicates whether a flag is set on a room or object."
   [game-state thing-id flag]
-  (if-let [entity-type (resolve-entity-type game-state thing-id)]
-    (let [actual-id (if (= (:player game-state) thing-id)
-                      (:adventurer game-state)
-                      thing-id)]
-      (flag? game-state entity-type actual-id flag))
-    (throw (Exception. (str "Thing " thing-id " not found!")))))
+  (let [{:keys [entity-type actual-id]} (resolve-thing game-state thing-id)]
+    (flag? game-state entity-type actual-id flag)))
 
 ;; Current room convenience functions
 
