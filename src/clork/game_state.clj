@@ -1,4 +1,6 @@
-(in-ns 'clork.core)
+(ns clork.game-state
+  "Game state management and flag operations."
+  (:require [clork.parser.state :as parser-state]))
 
 ;;; ---------------------------------------------------------------------------
 ;;; PARSER CONSTANTS
@@ -30,7 +32,6 @@
 ;;; GAME STATE
 ;;; ---------------------------------------------------------------------------
 
-(declare initial-parser-state)
 (defn initial-game-state
   "Return an initial game state."
   []
@@ -50,7 +51,7 @@
     :verbose false
     :super-brief false
     :won false
-    :parser (initial-parser-state)
+    :parser (parser-state/initial-parser-state)
   })
 
 

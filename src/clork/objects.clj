@@ -1,4 +1,10 @@
-(in-ns 'clork.core)
+(ns clork.objects
+  "Object definitions for Clork."
+  (:require [clork.utils :as utils]
+            [clork.flags :as flags]))
+
+(def tell utils/tell)
+(def flags flags/flags)
 
 ;; <OBJECT MAILBOX
 ;;	(IN WEST-OF-HOUSE)

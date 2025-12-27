@@ -1,4 +1,13 @@
-(in-ns 'clork.core)
+(ns clork.main-loop
+  "Main game loop."
+  (:require [clork.utils :as utils]
+            [clork.parser :as parser]
+            [clork.verb-defs :as verb-defs]))
+
+;; Aliases for functions used in this module
+(def crlf utils/crlf)
+(def parser-fn parser/parser)
+(def perform verb-defs/perform)
 
 ;; <ROUTINE MAIN-LOOP-1 ("AUX" ICNT OCNT NUM CNT OBJ TBL V PTBL OBJ1 TMP O I)
 ;;      <SET CNT 0>
@@ -146,7 +155,7 @@
    2. If parsing succeeded, calls perform to execute the action
    3. Returns the updated game-state"
   [game-state]
-  (let [gs (parser game-state)]
+  (let [gs (parser-fn game-state)]
     (if (get-in gs [:parser :error])
       ;; Parsing failed - error already displayed by parser
       gs

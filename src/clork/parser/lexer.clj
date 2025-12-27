@@ -1,4 +1,4 @@
-(in-ns 'clork.core)
+(in-ns 'clork.parser)
 
 ;;;; ============================================================================
 ;;;; PARSER LEXER - Tokenization and Word Type Checking

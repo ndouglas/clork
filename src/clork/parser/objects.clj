@@ -1,4 +1,4 @@
-(in-ns 'clork.core)
+(in-ns 'clork.parser)
 
 ;;;; ============================================================================
 ;;;; PARSER OBJECTS - Object Matching and Resolution

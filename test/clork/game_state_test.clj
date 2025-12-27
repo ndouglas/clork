@@ -1,4 +1,7 @@
-(in-ns 'clork.core-test)
+(ns clork.game-state-test
+  "Game state tests for Clork."
+  (:require [clojure.test :refer :all]
+            [clork.core :refer :all]))
 
 ;; Generic flag functions
 

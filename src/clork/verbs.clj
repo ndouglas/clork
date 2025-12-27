@@ -1,4 +1,6 @@
-(in-ns 'clork.core)
+(ns clork.verbs
+  "Verb handler functions."
+  (:require [clork.utils :as utils]))
 
 ;;; ---------------------------------------------------------------------------
 ;;; VERB HANDLERS
@@ -15,12 +17,12 @@
    ZIL: V-VERSION in gverbs.zil"
   [game-state]
   (-> game-state
-      (tell "ZORK I: The Great Underground Empire\n")
-      (tell "Infocom interactive fiction - a fantasy story\n")
-      (tell "Copyright (c) 1981, 1982, 1983, 1984, 1985, 1986 Infocom, Inc. All rights reserved.\n")
-      (tell "ZORK is a registered trademark of Infocom, Inc.\n")
-      (tell "Release 1 / Serial number 1\n")
-      (tell "Clojure port by Nathan Douglas\n")))
+      (utils/tell "ZORK I: The Great Underground Empire\n")
+      (utils/tell "Infocom interactive fiction - a fantasy story\n")
+      (utils/tell "Copyright (c) 1981, 1982, 1983, 1984, 1985, 1986 Infocom, Inc. All rights reserved.\n")
+      (utils/tell "ZORK is a registered trademark of Infocom, Inc.\n")
+      (utils/tell "Release 1 / Serial number 1\n")
+      (utils/tell "Clojure port by Nathan Douglas\n")))
 
 (defn v-verbose
   "Turns on verbose mode - always describe rooms fully.
@@ -34,7 +36,7 @@
   (-> game-state
       (assoc :verbose true)
       (assoc :super-brief false)
-      (tell "Maximum verbosity.")))
+      (utils/tell "Maximum verbosity.")))
 
 (defn v-brief
   "Turns on brief mode - describe rooms only on first visit.
@@ -48,7 +50,7 @@
   (-> game-state
       (assoc :verbose false)
       (assoc :super-brief false)
-      (tell "Brief descriptions.")))
+      (utils/tell "Brief descriptions.")))
 
 (defn v-super-brief
   "Turns on super-brief mode - never describe rooms automatically.
@@ -60,27 +62,4 @@
   [game-state]
   (-> game-state
       (assoc :super-brief true)
-      (tell "Superbrief descriptions.")))
-
-;;; ---------------------------------------------------------------------------
-;;; VERB DISPATCH
-;;; ---------------------------------------------------------------------------
-;;; Handler dispatch uses *verb-handlers* from verb_defs.clj
-;;; Forward declaration allows perform to reference it before it's defined.
-
-(declare ^:dynamic *verb-handlers*)
-
-(defn perform
-  "Execute a verb action.
-
-   ZIL: PERFORM routine in gmain.zil
-
-   Looks up the action in *verb-handlers* (from verb_defs.clj) and calls
-   the handler function. Returns the updated game-state."
-  [game-state]
-  (let [action (get-in game-state [:parser :prsa])]
-    (if-let [handler (get *verb-handlers* action)]
-      (handler game-state)
-      (do
-        (tell game-state (str "I don't know how to do that. [" action "]\n"))
-        game-state))))
+      (utils/tell "Superbrief descriptions.")))

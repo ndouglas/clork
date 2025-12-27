@@ -1,12 +1,12 @@
-(in-ns 'clork.core)
+(ns clork.utils
+  "Output utilities for Clork.")
 
 (defn tell
   "Tell the player something, and return the game state."
   [game-state message]
   (print message)
   (flush)
-  game-state
-)
+  game-state)
 
 (defn crlf
   "Print a carriage return and line feed."
@@ -14,7 +14,7 @@
   (tell game-state "\n"))
 
 (defn crlf-if
-  "Print a carriage return and line feed."
+  "Print a carriage return and line feed if condition is true."
   [game-state if-cond]
   (if if-cond
     (crlf game-state)
@@ -24,13 +24,3 @@
   "Sets 'it' to refer to the passed object"
   [game-state it]
   (assoc game-state :it it))
-
-(declare set-here-flag? v-version)
-(defn initial-version
-  "Print out the version information when starting the game"
-  [game-state]
-  (if (set-here-flag? game-state :touch)
-    game-state
-    (-> game-state
-      (v-version)
-      (crlf))))

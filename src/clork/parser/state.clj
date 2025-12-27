@@ -1,4 +1,6 @@
-(in-ns 'clork.core)
+(ns clork.parser.state
+  "Parser state structure, constants, and initialization.
+   This is a separate namespace to avoid circular dependencies.")
 
 ;;;; ============================================================================
 ;;;; PARSER STATE - Constants, Tables, and Initialization

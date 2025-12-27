@@ -1,4 +1,7 @@
-(in-ns 'clork.core-test)
+(ns clork.utils-test
+  "Test utilities and helpers for Clork tests."
+  (:require [clojure.test :refer :all]
+            [clork.core :refer :all]))
 
 ;;; ---------------------------------------------------------------------------
 ;;; TEST HELPERS

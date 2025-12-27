@@ -1,4 +1,8 @@
-(in-ns 'clork.core-test)
+(ns clork.verbs-test
+  "Verb handler tests for Clork."
+  (:require [clojure.test :refer :all]
+            [clork.core :refer :all]
+            [clork.utils-test :refer [with-captured-output make-test-state parse-test-input]]))
 
 ;;; ---------------------------------------------------------------------------
 ;;; VERB HANDLER TESTS

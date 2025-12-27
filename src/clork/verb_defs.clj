@@ -1,4 +1,8 @@
-(in-ns 'clork.core)
+(ns clork.verb-defs
+  "Verb definitions - single source of truth for vocabulary, syntax, and handlers."
+  (:require [clork.utils :as utils]
+            [clork.game-state :as game-state]
+            [clork.verbs :as verbs]))
 
 ;;;; ============================================================================
 ;;;; VERB DEFINITIONS - Single Source of Truth
@@ -47,19 +51,19 @@
   {;; === Meta/System Verbs ===
    :verbose    {:words   ["verbose"]
                 :syntax  {:num-objects 0}
-                :handler v-verbose}
+                :handler verbs/v-verbose}
 
    :brief      {:words   ["brief"]
                 :syntax  {:num-objects 0}
-                :handler v-brief}
+                :handler verbs/v-brief}
 
    :super-brief {:words   ["superbrief" "super-brief"]
                  :syntax  {:num-objects 0}
-                 :handler v-super-brief}
+                 :handler verbs/v-super-brief}
 
    :version    {:words   ["version"]
                 :syntax  {:num-objects 0}
-                :handler v-version}})
+                :handler verbs/v-version}})
 
 ;;; ---------------------------------------------------------------------------
 ;;; BUILDER FUNCTIONS
@@ -70,7 +74,7 @@
   [loc-set]
   (when loc-set
     (reduce (fn [acc loc]
-              (bit-or acc (get search-bits loc 0)))
+              (bit-or acc (get game-state/search-bits loc 0)))
             0
             loc-set)))
 
@@ -143,3 +147,22 @@
 (def ^:dynamic *verb-handlers*
   "Handler functions for each verb action."
   (build-verb-handlers verb-definitions))
+
+;;; ---------------------------------------------------------------------------
+;;; VERB DISPATCH
+;;; ---------------------------------------------------------------------------
+
+(defn perform
+  "Execute a verb action.
+
+   ZIL: PERFORM routine in gmain.zil
+
+   Looks up the action in *verb-handlers* and calls the handler function.
+   Returns the updated game-state."
+  [game-state]
+  (let [action (get-in game-state [:parser :prsa])]
+    (if-let [handler (get *verb-handlers* action)]
+      (handler game-state)
+      (do
+        (utils/tell game-state (str "I don't know how to do that. [" action "]\n"))
+        game-state))))

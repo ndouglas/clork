@@ -1,4 +1,9 @@
-(in-ns 'clork.core)
+(ns clork.parser
+  "Main parser module - orchestrates the parsing pipeline."
+  (:require [clork.utils :as utils]
+            [clork.game-state :as game-state]
+            [clork.verb-defs :as verb-defs]
+            [clork.parser.state :as parser-state]))
 
 ;;;; ============================================================================
 ;;;; PARSER - Main Entry Point and Orchestration
@@ -7,7 +12,7 @@
 ;;;; This is the main parser module that orchestrates the parsing pipeline.
 ;;;; The actual implementation is split across these submodules:
 ;;;;
-;;;;   parser/state.clj      - Constants, state structure, initialization
+;;;;   parser/state.clj      - Constants, state structure, initialization (separate ns)
 ;;;;   parser/input.clj      - Reading input, lexv management
 ;;;;   parser/lexer.clj      - Tokenization, word type checking (WT?)
 ;;;;   parser/clause.clj     - Noun phrase parsing (CLAUSE routine)
@@ -37,12 +42,48 @@
 ;;;;
 ;;;; ============================================================================
 
+;; Re-export parser.state functions for convenience
+(def sibreaks parser-state/sibreaks)
+(def p-itbllen parser-state/p-itbllen)
+(def itbl-indices parser-state/itbl-indices)
+(def syntax-offsets parser-state/syntax-offsets)
+(def p-synlen parser-state/p-synlen)
+(def p-sonums parser-state/p-sonums)
+(def initial-parser-state parser-state/initial-parser-state)
+(def parser-init-tbl parser-state/parser-init-tbl)
+(def parser-init parser-state/parser-init)
+(def parser-success parser-state/parser-success)
+(def parser-error parser-state/parser-error)
+(def parser-result? parser-state/parser-result?)
+
+;; Aliases for external module functions used throughout parser
+(def tell utils/tell)
+(def crlf utils/crlf)
+(def crlf-if utils/crlf-if)
+(def thing-name game-state/thing-name)
+(def get-thing game-state/get-thing)
+(def get-contents game-state/get-contents)
+(def flag? game-state/flag?)
+(def set-flag game-state/set-flag)
+(def unset-flag game-state/unset-flag)
+(def set-thing-flag? game-state/set-thing-flag?)
+(def set-here-flag? game-state/set-here-flag?)
+(def get-thing-loc-id game-state/get-thing-loc-id)
+(def get-thing-location game-state/get-thing-location)
+(def get-here game-state/get-here)
+(def get-winner game-state/get-winner)
+(def verbose? game-state/verbose?)
+(def search-bits game-state/search-bits)
+(def getflags game-state/getflags)
+(def meta-location game-state/meta-location)
+(def ^:dynamic *verb-vocabulary* verb-defs/*verb-vocabulary*)
+(def ^:dynamic *verb-syntaxes* verb-defs/*verb-syntaxes*)
+
 ;;; ---------------------------------------------------------------------------
 ;;; FORWARD DECLARATIONS
 ;;; ---------------------------------------------------------------------------
 ;;; Only declare functions defined WITHIN the parser submodules that have
-;;; ordering issues. Do NOT redeclare functions from other modules (flags.clj,
-;;; utils.clj, game_state.clj) - that would shadow the real definitions!
+;;; ordering issues. Do NOT redeclare functions from other modules!
 
 (declare lit?)              ; validation.clj - called from input.clj
 
@@ -50,8 +91,8 @@
 ;;; LOAD SUBMODULES
 ;;; ---------------------------------------------------------------------------
 ;;; Order matters! Later modules may depend on earlier ones.
+;;; parser/state is now a separate namespace (clork.parser.state)
 
-(load "parser/state")       ; Constants, initial-parser-state, parser-init
 (load "parser/input")       ; parser-read-command, parser-restore-*
 (load "parser/lexer")       ; tokenize, wt?, parse-number
 (load "parser/clause")      ; clause parsing

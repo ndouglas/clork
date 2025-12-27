@@ -1,4 +1,7 @@
-(in-ns 'clork.core-test)
+(ns clork.parser-test
+  "Parser tests for Clork."
+  (:require [clojure.test :refer :all]
+            [clork.core :refer :all]))
 
 ;;;; ============================================================================
 ;;;; PARSER TESTS

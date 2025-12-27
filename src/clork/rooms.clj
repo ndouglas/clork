@@ -1,4 +1,9 @@
-(in-ns 'clork.core)
+(ns clork.rooms
+  "Room definitions for Clork."
+  (:require [clork.utils :as utils]))
+
+(def tell utils/tell)
+(def crlf utils/crlf)
 
 ;; <ROOM WEST-OF-HOUSE
 ;;       (IN ROOMS)

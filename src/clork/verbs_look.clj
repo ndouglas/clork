@@ -1,4 +1,16 @@
-(in-ns 'clork.core)
+(ns clork.verbs-look
+  "Look command implementation."
+  (:require [clork.utils :as utils]
+            [clork.game-state :as game-state]))
+
+;; Aliases for functions used in this module
+(def tell utils/tell)
+(def get-here game-state/get-here)
+(def get-winner-loc game-state/get-winner-loc)
+(def verbose? game-state/verbose?)
+(def set-here-flag game-state/set-here-flag)
+(def set-here-flag? game-state/set-here-flag?)
+(def unset-here-flag game-state/unset-here-flag)
 
 ;;  <ROUTINE DESCRIBE-ROOM ("OPTIONAL" (LOOK? <>) "AUX" V? STR AV)
 ;;    <SET V? <OR .LOOK? ,VERBOSE>>

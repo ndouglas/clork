@@ -1,4 +1,5 @@
-(in-ns 'clork.core)
+(ns clork.flags
+  "Flag system for objects and rooms in Clork.")
 
 (defn get-default-flags
   "Get the default (all-off) flags set."
