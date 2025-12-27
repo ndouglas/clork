@@ -526,7 +526,28 @@
                                           :synonym ["mailbox"]}}
                       :rooms {}
                       :parser {}}]
-      (is (parser-objects/this-it? game-state :mailbox)))))
+      (is (parser-objects/this-it? game-state :mailbox))))
+
+  (testing "this-it? treats gwimbit=0 as 'don't filter by flag'"
+    (let [game-state {:objects {:mailbox {:id :mailbox
+                                          :synonym ["mailbox"]}}
+                      :rooms {}
+                      :parser {:nam "mailbox" :gwimbit 0}}]
+      (is (parser-objects/this-it? game-state :mailbox))))
+
+  (testing "this-it? filters by gwimbit keyword when set"
+    (let [game-state {:objects {:mailbox {:id :mailbox
+                                          :synonym ["mailbox"]
+                                          :flags #{:on}}}
+                      :rooms {}
+                      :parser {:nam "mailbox" :gwimbit :on}}]
+      (is (parser-objects/this-it? game-state :mailbox)))
+    (let [game-state {:objects {:mailbox {:id :mailbox
+                                          :synonym ["mailbox"]
+                                          :flags #{}}}
+                      :rooms {}
+                      :parser {:nam "mailbox" :gwimbit :on}}]
+      (is (not (parser-objects/this-it? game-state :mailbox))))))
 
 (deftest register-object-vocabulary!-test
   (testing "register-object-vocabulary! makes object words recognizable via wt?"
@@ -543,4 +564,72 @@
         (is (= "testbrass" (parser/wt? "testbrass" :adjective true)))
         (finally
           ;; Restore original vocabulary
-          (alter-var-root #'verb-defs/*verb-vocabulary* (constantly original-vocab)))))))
+          (alter-var-root #'verb-defs/*verb-vocabulary* (constantly original-vocab))))))
+
+;;; ---------------------------------------------------------------------------
+;;; PRSO/PRSI ACCESS TESTS
+;;; ---------------------------------------------------------------------------
+
+(deftest get-prso-test
+  (testing "get-prso returns first element when prso is a vector"
+    (let [game-state {:parser {:prso [:mailbox :lamp]}}]
+      (is (= :mailbox (parser-state/get-prso game-state)))))
+
+  (testing "get-prso returns single element from single-item vector"
+    (let [game-state {:parser {:prso [:mailbox]}}]
+      (is (= :mailbox (parser-state/get-prso game-state)))))
+
+  (testing "get-prso returns scalar value when prso is not a vector"
+    (let [game-state {:parser {:prso :mailbox}}]
+      (is (= :mailbox (parser-state/get-prso game-state)))))
+
+  (testing "get-prso returns nil when prso is nil"
+    (let [game-state {:parser {:prso nil}}]
+      (is (nil? (parser-state/get-prso game-state)))))
+
+  (testing "get-prso returns nil when prso is empty vector"
+    (let [game-state {:parser {:prso []}}]
+      (is (nil? (parser-state/get-prso game-state))))))
+
+(deftest get-prso-all-test
+  (testing "get-prso-all returns full vector when prso is a vector"
+    (let [game-state {:parser {:prso [:mailbox :lamp :sword]}}]
+      (is (= [:mailbox :lamp :sword] (parser-state/get-prso-all game-state)))))
+
+  (testing "get-prso-all wraps scalar in vector"
+    (let [game-state {:parser {:prso :mailbox}}]
+      (is (= [:mailbox] (parser-state/get-prso-all game-state)))))
+
+  (testing "get-prso-all returns nil when prso is nil"
+    (let [game-state {:parser {:prso nil}}]
+      (is (nil? (parser-state/get-prso-all game-state)))))
+
+  (testing "get-prso-all returns empty vector for empty vector"
+    (let [game-state {:parser {:prso []}}]
+      (is (= [] (parser-state/get-prso-all game-state))))))
+
+(deftest get-prsi-test
+  (testing "get-prsi returns first element when prsi is a vector"
+    (let [game-state {:parser {:prsi [:chest :bag]}}]
+      (is (= :chest (parser-state/get-prsi game-state)))))
+
+  (testing "get-prsi returns scalar value when prsi is not a vector"
+    (let [game-state {:parser {:prsi :chest}}]
+      (is (= :chest (parser-state/get-prsi game-state)))))
+
+  (testing "get-prsi returns nil when prsi is nil"
+    (let [game-state {:parser {:prsi nil}}]
+      (is (nil? (parser-state/get-prsi game-state))))))
+
+(deftest get-prsi-all-test
+  (testing "get-prsi-all returns full vector when prsi is a vector"
+    (let [game-state {:parser {:prsi [:chest :bag]}}]
+      (is (= [:chest :bag] (parser-state/get-prsi-all game-state)))))
+
+  (testing "get-prsi-all wraps scalar in vector"
+    (let [game-state {:parser {:prsi :chest}}]
+      (is (= [:chest] (parser-state/get-prsi-all game-state)))))
+
+  (testing "get-prsi-all returns nil when prsi is nil"
+    (let [game-state {:parser {:prsi nil}}]
+      (is (nil? (parser-state/get-prsi-all game-state)))))))

@@ -26,12 +26,20 @@
              (gs/unset-flag game-state :rooms :room1 :lit))))))
 
 (deftest flag?-test
-  (testing "flag? returns true when flag is set"
+  (testing "flag? returns true when flag is set as direct key"
     (is (gs/flag? {:objects {:obj1 {:takeable true}}} :objects :obj1 :takeable))
     (is (gs/flag? {:rooms {:room1 {:lit true}}} :rooms :room1 :lit)))
+  (testing "flag? returns true when flag is in :flags set"
+    (is (gs/flag? {:objects {:obj1 {:flags #{:takeable :cont}}}} :objects :obj1 :takeable))
+    (is (gs/flag? {:objects {:obj1 {:flags #{:takeable :cont}}}} :objects :obj1 :cont))
+    (is (gs/flag? {:rooms {:room1 {:flags #{:lit :on}}}} :rooms :room1 :lit)))
+  (testing "flag? returns true when flag is set both ways (direct key takes precedence)"
+    (is (gs/flag? {:objects {:obj1 {:takeable true :flags #{:cont}}}} :objects :obj1 :takeable))
+    (is (gs/flag? {:objects {:obj1 {:takeable true :flags #{:cont}}}} :objects :obj1 :cont)))
   (testing "flag? returns false when flag is not set"
     (is (not (gs/flag? {:objects {:obj1 {:takeable false}}} :objects :obj1 :takeable)))
-    (is (not (gs/flag? {:objects {:obj1 {}}} :objects :obj1 :takeable)))))
+    (is (not (gs/flag? {:objects {:obj1 {}}} :objects :obj1 :takeable)))
+    (is (not (gs/flag? {:objects {:obj1 {:flags #{:cont}}}} :objects :obj1 :takeable)))))
 
 ;; Polymorphic thing-flag functions
 
