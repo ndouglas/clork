@@ -52,6 +52,20 @@
     :super-brief false
     :won false
     :parser (parser-state/initial-parser-state)
+    ;; Debug system state
+    :turn-number 0
+    ;; Undo system state
+    :undo-stack []
+    :redo-stack []
+    :undo-limit 100
+    ;; Trace system state
+    :trace {:verbs false
+            :parser false
+            :actions false
+            :daemons false}
+    ;; Daemon system state
+    :daemons {}
+    :daemon-history []
   })
 
 

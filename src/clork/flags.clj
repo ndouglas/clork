@@ -1,6 +1,44 @@
 (ns clork.flags
   "Flag system for objects and rooms in Clork.")
 
+;; Map of all known flag names to their descriptions
+(def flag-names
+  {:take      "Player can pick up the object"
+   :trytake   "Parser won't implicitly take object"
+   :cont      "Object is a container"
+   :door      "Object is a door"
+   :open      "Door/container is open"
+   :surface   "Object is a surface (table, desk)"
+   :locked    "Locked, needs equipment to open"
+   :wear      "Object is wearable"
+   :worn      "Object is being worn"
+   :read      "Object is readable (has :text)"
+   :light     "Object can provide light"
+   :on        "Light source is turned on"
+   :flame     "Object is a source of fire"
+   :burn      "Object is burnable"
+   :trans     "Transparent container"
+   :ndesc     "Room description includes this object"
+   :invisible "Parser ignores this object"
+   :touch     "Room visited / object disturbed"
+   :search    "Search deeply in container"
+   :vehicle   "Object is a vehicle"
+   :person    "Object is a character"
+   :female    "Character is female"
+   :vowel     "Use 'an' instead of 'a'"
+   :narticle  "Omit articles"
+   :plural    "Description is plural"
+   :rland     "Room is dry land"
+   :rwater    "Room is water"
+   :rair      "Room is mid-air"
+   :kludge    "Syntax file flag"
+   :outside   "Room is outdoors"
+   :integral  "Part of another object"
+   :part      "Object is a body part"
+   :nall      "Take all ignores this"
+   :drop      "Dropped items stay in vehicle"
+   :in        "Say 'in the vehicle' not 'on'"})
+
 (defn get-default-flags
   "Get the default (all-off) flags set."
   []

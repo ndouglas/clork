@@ -6,7 +6,8 @@
             [clork.rooms :as rooms]
             [clork.objects :as objects]
             [clork.verbs-look :as verbs-look]
-            [clork.main-loop :as main-loop]))
+            [clork.main-loop :as main-loop]
+            [clork.readline :as readline]))
 
 ;; Re-export the essential API for creating and running games
 (def initial-game-state game-state/initial-game-state)
@@ -40,4 +41,8 @@
 (defn -main
   "Main function for CLORK."
   [& args]
-  (go (initial-game-state)))
+  (readline/init!)
+  (try
+    (go (initial-game-state))
+    (finally
+      (readline/shutdown!))))

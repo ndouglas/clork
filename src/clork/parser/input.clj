@@ -23,7 +23,8 @@
    - P-CONT: Pointer to next command in a 'then' chain"
   (:require [clork.utils :as utils]
             [clork.game-state :as game-state]
-            [clork.parser.validation :as validation]))
+            [clork.parser.validation :as validation]
+            [clork.readline :as readline]))
 
 ;;; ---------------------------------------------------------------------------
 ;;; INPUT SOURCE SELECTION
@@ -128,7 +129,8 @@
       (utils/tell ">")
       ;; <READ ,P-INBUF ,P-LEXV>
       ;; Read input and store in :input (will be tokenized by lexer)
-      ((fn [gs] (assoc gs :input (read-line))))))
+      ;; Uses JLine for history support and tab completion
+      ((fn [gs] (assoc gs :input (readline/read-input ""))))))
 
 (defn parser-set-here-to-winner-loc
   "Update HERE to the winner's location, unless they're in a vehicle.

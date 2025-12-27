@@ -2,7 +2,18 @@
   "Main game loop."
   (:require [clork.utils :as utils]
             [clork.parser :as parser]
-            [clork.verb-defs :as verb-defs]))
+            [clork.parser.input :as parser-input]
+            [clork.verb-defs :as verb-defs]
+            [clork.debug :as debug]
+            [clork.undo :as undo]
+            [clork.readline :as readline]
+            [clork.daemon :as daemon]))
+
+;; Atom to track current game state for tab completion
+(def ^:private current-state-atom (atom nil))
+
+;; Wire up tab completion to access current game state
+(readline/set-game-state-source! (fn [] @current-state-atom))
 
 ;; <ROUTINE MAIN-LOOP-1 ("AUX" ICNT OCNT NUM CNT OBJ TBL V PTBL OBJ1 TMP O I)
 ;;      <SET CNT 0>
@@ -140,24 +151,57 @@
 ;; 			  QUIT RESTART SCORE SCRIPT UNSCRIPT RESTORE> T)
 ;; 		  (T <SET V <CLOCKER>>)>)>>
 
+(defn- read-input-phase
+  "Read input from player, handling reserve/cont buffers.
+   Returns game-state with :input populated."
+  [game-state]
+  (-> game-state
+      (parser/parser-init)
+      (parser-input/parser-set-winner-to-player)
+      (parser-input/parser-read-command)))
+
 (defn main-loop-once
   "Execute one iteration of the main loop.
 
    ZIL: MAIN-LOOP-1 in gmain.zil
 
    This function:
-   1. Calls the parser to get a command
-   2. If parsing succeeded, calls perform to execute the action
-   3. Returns the updated game-state"
+   1. Reads input from the player
+   2. Pushes state to undo stack (for non-debug commands)
+   3. Checks for $ debug commands (intercepted early)
+   4. If normal command, calls the parser
+   5. If parsing succeeded, calls perform to execute the action
+   6. Returns the updated game-state"
   [game-state]
-  (let [gs (parser/parser game-state)]
-    (if (parser/get-parser-error gs)
-      ;; Parsing failed - error already displayed by parser
-      gs
-      ;; Parsing succeeded - perform the action
-      (-> gs
-          (verb-defs/perform)
-          (utils/crlf)))))
+  ;; Update state atom for tab completion before reading input
+  (reset! current-state-atom game-state)
+  ;; Phase 1: Read input
+  (let [gs (read-input-phase game-state)
+        input (:input gs)]
+    ;; Handle EOF (nil input)
+    (if (nil? input)
+      (assoc gs :quit true)
+      ;; Phase 2: Check for $ debug command
+      (if (debug/debug-command? input)
+        ;; Handle debug command - bypass normal parser
+        ;; Don't push to undo stack for debug commands
+        (-> gs
+            (debug/dispatch input)
+            (utils/crlf)
+            (update :turn-number inc))
+        ;; Phase 3: Normal parsing
+        ;; Push to undo stack BEFORE modifying state
+        (let [gs (undo/push-undo gs input)
+              gs (parser/parser-from-input gs)]
+          (if (parser/get-parser-error gs)
+            ;; Parsing failed - error already displayed by parser
+            gs
+            ;; Parsing succeeded - perform the action, then run daemons
+            (-> gs
+                (verb-defs/perform)
+                (daemon/clocker)
+                (utils/crlf)
+                (update :turn-number inc))))))))
 
 (defn main-loop
   "The main loop for the game."

@@ -1,0 +1,187 @@
+(ns clork.debug.manipulation
+  "State manipulation debug commands (wizard mode).
+
+   Commands:
+   - $goto <room>      - Teleport to any room
+   - $purloin <obj>    - Take any object (bypass checks)
+   - $move <obj> <dest> - Move object to location
+   - $flag <id> <flag> - Set a flag on object/room
+   - $unflag <id> <flag> - Clear a flag
+   - $frotz <obj>      - Make object give light"
+  (:require [clork.utils :as utils]
+            [clork.game-state :as gs]
+            [clork.flags :as flags]
+            [clojure.string :as str]))
+
+;;; ---------------------------------------------------------------------------
+;;; HELPERS
+;;; ---------------------------------------------------------------------------
+
+(defn- parse-keyword
+  "Parse a string to a keyword."
+  [s]
+  (when s
+    (if (str/starts-with? s ":")
+      (keyword (subs s 1))
+      (keyword s))))
+
+(defn- tell-action
+  "Output an action message in wizard style."
+  [game-state msg]
+  (utils/tell game-state (str "*" msg "*\n")))
+
+;;; ---------------------------------------------------------------------------
+;;; $goto <room>
+;;; ---------------------------------------------------------------------------
+
+(defn cmd-goto
+  "Teleport to any room."
+  [game-state args]
+  (if (empty? args)
+    (-> game-state
+        (utils/tell "Usage: $goto <room-id>\n")
+        (utils/tell "Rooms: ")
+        (utils/tell (str/join ", " (sort (map name (keys (:rooms game-state))))))
+        (utils/tell "\n"))
+    (let [room-id (parse-keyword (first args))
+          room (get-in game-state [:rooms room-id])]
+      (if room
+        (-> game-state
+            (assoc :here room-id)
+            (tell-action (str "Teleported to " room-id " (" (:desc room) ")")))
+        (utils/tell game-state (str "Unknown room: " room-id "\n"))))))
+
+;;; ---------------------------------------------------------------------------
+;;; $purloin <obj>
+;;; ---------------------------------------------------------------------------
+
+(defn cmd-purloin
+  "Take any object, bypassing all accessibility checks."
+  [game-state args]
+  (if (empty? args)
+    (-> game-state
+        (utils/tell "Usage: $purloin <object-id>\n")
+        (utils/tell "Objects: ")
+        (utils/tell (str/join ", " (sort (map name (keys (:objects game-state))))))
+        (utils/tell "\n"))
+    (let [obj-id (parse-keyword (first args))
+          obj (get-in game-state [:objects obj-id])
+          winner (:winner game-state)]
+      (if obj
+        (-> game-state
+            (assoc-in [:objects obj-id :in] winner)
+            (tell-action (str "Purloined " obj-id " (" (:desc obj) ")")))
+        (utils/tell game-state (str "Unknown object: " obj-id "\n"))))))
+
+;;; ---------------------------------------------------------------------------
+;;; $move <obj> <dest>
+;;; ---------------------------------------------------------------------------
+
+(defn cmd-move
+  "Move an object to any location."
+  [game-state args]
+  (cond
+    (< (count args) 2)
+    (utils/tell game-state "Usage: $move <object-id> <destination-id>\n")
+
+    :else
+    (let [obj-id (parse-keyword (first args))
+          dest-id (parse-keyword (second args))
+          obj (get-in game-state [:objects obj-id])
+          dest (gs/get-thing game-state dest-id)]
+      (cond
+        (nil? obj)
+        (utils/tell game-state (str "Unknown object: " obj-id "\n"))
+
+        (nil? dest)
+        (utils/tell game-state (str "Unknown destination: " dest-id "\n"))
+
+        :else
+        (-> game-state
+            (assoc-in [:objects obj-id :in] dest-id)
+            (tell-action (str "Moved " obj-id " to " dest-id)))))))
+
+;;; ---------------------------------------------------------------------------
+;;; $flag <id> <flag>
+;;; ---------------------------------------------------------------------------
+
+(defn cmd-flag
+  "Set a flag on an object or room."
+  [game-state args]
+  (cond
+    (< (count args) 2)
+    (-> game-state
+        (utils/tell "Usage: $flag <thing-id> <flag-name>\n")
+        (utils/tell "Known flags: ")
+        (utils/tell (str/join ", " (sort (map name (keys flags/flag-names)))))
+        (utils/tell "\n"))
+
+    :else
+    (let [thing-id (parse-keyword (first args))
+          flag-name (parse-keyword (second args))
+          thing (gs/get-thing game-state thing-id)]
+      (cond
+        (nil? thing)
+        (utils/tell game-state (str "Unknown thing: " thing-id "\n"))
+
+        (nil? (get flags/flag-names flag-name))
+        (utils/tell game-state (str "Unknown flag: " flag-name "\n"))
+
+        :else
+        (-> game-state
+            (gs/set-thing-flag thing-id flag-name)
+            (tell-action (str "Set " flag-name " on " thing-id)))))))
+
+;;; ---------------------------------------------------------------------------
+;;; $unflag <id> <flag>
+;;; ---------------------------------------------------------------------------
+
+(defn cmd-unflag
+  "Clear a flag on an object or room."
+  [game-state args]
+  (cond
+    (< (count args) 2)
+    (-> game-state
+        (utils/tell "Usage: $unflag <thing-id> <flag-name>\n")
+        (utils/tell "Known flags: ")
+        (utils/tell (str/join ", " (sort (map name (keys flags/flag-names)))))
+        (utils/tell "\n"))
+
+    :else
+    (let [thing-id (parse-keyword (first args))
+          flag-name (parse-keyword (second args))
+          thing (gs/get-thing game-state thing-id)]
+      (cond
+        (nil? thing)
+        (utils/tell game-state (str "Unknown thing: " thing-id "\n"))
+
+        (nil? (get flags/flag-names flag-name))
+        (utils/tell game-state (str "Unknown flag: " flag-name "\n"))
+
+        :else
+        (-> game-state
+            (gs/unset-thing-flag thing-id flag-name)
+            (tell-action (str "Cleared " flag-name " on " thing-id)))))))
+
+;;; ---------------------------------------------------------------------------
+;;; $frotz <obj>
+;;; ---------------------------------------------------------------------------
+
+(defn cmd-frotz
+  "Make an object give light. Classic Infocom wizard command."
+  [game-state args]
+  (if (empty? args)
+    (utils/tell game-state "Usage: $frotz <object-id>\n")
+    (let [obj-id (parse-keyword (first args))
+          obj (get-in game-state [:objects obj-id])]
+      (if obj
+        (-> game-state
+            (gs/set-thing-flag obj-id :light)
+            (gs/set-thing-flag obj-id :on)
+            (tell-action (str "Frotzing " obj-id " - it now glows!")))
+        (utils/tell game-state (str "Unknown object: " obj-id "\n"))))))
+
+;;; ---------------------------------------------------------------------------
+;;; COMMAND REGISTRATION
+;;; ---------------------------------------------------------------------------
+;;; These are registered directly in debug.clj as top-level $ commands.

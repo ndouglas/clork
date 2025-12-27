@@ -3,7 +3,8 @@
   (:require [clork.utils :as utils]
             [clork.game-state :as game-state]
             [clork.verbs :as verbs]
-            [clork.verbs-look :as verbs-look]))
+            [clork.verbs-look :as verbs-look]
+            [clork.debug.trace :as trace]))
 
 ;;;; ============================================================================
 ;;;; VERB DEFINITIONS - Single Source of Truth
@@ -170,9 +171,13 @@
    Looks up the action in *verb-handlers* and calls the handler function.
    Returns the updated game-state."
   [game-state]
-  (let [action (get-in game-state [:parser :prsa])]  ; Used here directly for simplicity
+  (let [action (get-in game-state [:parser :prsa])
+        prso (get-in game-state [:parser :prso])
+        prsi (get-in game-state [:parser :prsi])
+        ;; Trace verb dispatch if enabled
+        gs (trace/trace-verb game-state action prso prsi)]
     (if-let [handler (get *verb-handlers* action)]
-      (handler game-state)
+      (handler gs)
       (do
-        (utils/tell game-state (str "I don't know how to do that. [" action "]\n"))
-        game-state))))
+        (utils/tell gs (str "I don't know how to do that. [" action "]\n"))
+        gs))))

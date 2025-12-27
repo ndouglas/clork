@@ -269,6 +269,50 @@
             :else
             (parse-command gs)))))))
 
+(defn parser-from-input
+  "Parse a command from game-state that already has :input populated.
+
+   This is used by the main loop when input has been read separately
+   (e.g., to check for $ debug commands before parsing).
+
+   Arguments:
+     game-state - game state with :input already set
+
+   Returns:
+     Same as parser - updated game-state with parsed command or error."
+  [game-state]
+  ;; Skip the input reading phase - just tokenize and parse
+  (let [gs game-state]
+    ;; === Tokenize Input ===
+    (let [gs (if-let [input (:input gs)]
+               (assoc-in gs [:parser :lexv] (lexer/lexv-from-input input))
+               gs)
+          token-count (lexer/lexv-count gs)]
+
+      ;; Empty input?
+      (if (zero? token-count)
+        (do
+          (output/parser-say gs :beg-pardon)
+          (set-parser-error gs {:type :empty-input}))
+
+        ;; === Handle Special Commands (OOPS, AGAIN) ===
+        (let [first-word (lexer/lexv-word gs 0)
+              gs (set-len gs token-count)]
+
+          (cond
+            ;; OOPS - Error correction
+            (lexer/special-word? first-word :oops)
+            (handle-oops gs)
+
+            ;; AGAIN / G - Repeat last command
+            (or (lexer/special-word? first-word :again)
+                (lexer/special-word? first-word :g))
+            (handle-again gs)
+
+            ;; Normal parsing
+            :else
+            (parse-command gs)))))))
+
 ;;; ---------------------------------------------------------------------------
 ;;; SPECIAL COMMAND HANDLERS
 ;;; ---------------------------------------------------------------------------
