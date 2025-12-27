@@ -76,10 +76,10 @@
 ;;; ---------------------------------------------------------------------------
 
 (defn- predict-timeline
-  "Predict daemon activity for next n turns."
+  "Predict daemon activity for next n moves."
   [game-state n]
   (let [daemons (:daemons game-state)
-        current-turn (:turn-number game-state 0)]
+        current-turn (:moves game-state 0)]
     (->> daemons
          (filter (fn [[_ d]] (and (:enabled d) (:handler d))))
          (mapcat (fn [[id d]]
@@ -102,10 +102,10 @@
          (take (* n 3))))) ; Limit output
 
 (defn- cmd-daemon-timeline
-  "Show predicted daemon activity for next n turns."
+  "Show predicted daemon activity for next n moves."
   [game-state n]
   (let [timeline (predict-timeline game-state n)
-        current-turn (:turn-number game-state 0)]
+        current-turn (:moves game-state 0)]
     (if (empty? timeline)
       (utils/tell game-state "No daemon activity predicted.\n")
       (reduce (fn [gs {:keys [turn daemon type]}]

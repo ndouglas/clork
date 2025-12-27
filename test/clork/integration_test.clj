@@ -59,7 +59,8 @@
 
 (deftest max-turns-test
   (testing "max turns causes exit"
-    (let [script "look\nlook\nlook\nlook\nlook\nlook\nlook\nlook\nlook\nlook\n"
+    ;; Use game actions (open) since meta-verbs like look don't count as moves
+    (let [script "open mailbox\nopen mailbox\nopen mailbox\nopen mailbox\nopen mailbox\n"
           result (run-script script :max-turns 3)]
       (is (= 4 (:exit-code result)) "Should exit with max-turns code")
       (is (true? (:max-turns-exceeded (:game-state result)))
@@ -99,3 +100,33 @@
           "Beta milestone should pass when game is fully winnable")
       (is (true? (:won (:game-state result)))
           "Player should have won the game"))))
+
+(deftest move-counting-test
+  (testing "game actions increment move count"
+    ;; open, read, drop are game actions that should count as moves
+    (let [script "open mailbox\nread leaflet\ndrop leaflet\n$quit\n"
+          result (run-script script :strict true)]
+      (is (= 3 (:moves (:game-state result)))
+          "open, read, and drop should each count as a move")))
+
+  (testing "meta-verbs don't increment move count"
+    ;; Only system verbs like score, verbose, brief don't count
+    ;; Note: look and inventory DO count as moves (thief can attack while you look!)
+    (let [script "score\nverbose\nbrief\nsuperbrief\n$quit\n"
+          result (run-script script :strict true)]
+      (is (= 0 (:moves (:game-state result)))
+          "Meta-verbs should not count as moves")))
+
+  (testing "look and inventory count as moves"
+    ;; Unlike score/verbose, look and inventory run daemons and count as moves
+    (let [script "look\ninventory\n$quit\n"
+          result (run-script script :strict true)]
+      (is (= 2 (:moves (:game-state result)))
+          "look and inventory should count as moves")))
+
+  (testing "mixed commands count correctly"
+    ;; look, open, inventory count; score doesn't
+    (let [script "look\nopen mailbox\nscore\ninventory\n$quit\n"
+          result (run-script script :strict true)]
+      (is (= 3 (:moves (:game-state result)))
+          "look, open, and inventory should count as moves"))))

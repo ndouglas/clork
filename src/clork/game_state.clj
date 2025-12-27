@@ -57,8 +57,6 @@
    :score-max 350
    :moves 0
    :parser (parser-state/initial-parser-state)
-    ;; Debug system state
-   :turn-number 0
     ;; Undo system state
    :undo-stack []
    :redo-stack []

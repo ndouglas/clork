@@ -59,7 +59,7 @@
   (let [here-id (:here game-state)
         here (gs/get-thing game-state here-id)
         winner-id (:winner game-state)
-        turn (:turn-number game-state 0)
+        moves (:moves game-state 0)
         lit? (:lit game-state)
         verbose? (:verbose game-state)
         super-brief? (:super-brief game-state)
@@ -67,7 +67,7 @@
         room-count (count (:rooms game-state))]
     (-> game-state
         (utils/tell "Game State:\n")
-        (tell-line "Turn" turn)
+        (tell-line "Moves" moves)
         (tell-line "Location" (str here-id " (" (:desc here "?") ")"))
         (tell-line "Player" (:player game-state))
         (tell-line "Winner" winner-id)

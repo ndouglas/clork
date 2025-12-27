@@ -27,7 +27,7 @@
   [game-state input]
   {:state (clean-state-for-snapshot game-state)
    :input input
-   :turn (:turn-number game-state 0)})
+   :turn (:moves game-state 0)})
 
 ;;; ---------------------------------------------------------------------------
 ;;; UNDO OPERATIONS

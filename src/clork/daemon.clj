@@ -175,7 +175,7 @@
   "Record daemon execution for debugging."
   [game-state daemon-id result-type]
   (update game-state :daemon-history conj
-          {:turn (:turn-number game-state 0)
+          {:turn (:moves game-state 0)
            :daemon daemon-id
            :event result-type
            :timestamp (System/currentTimeMillis)}))

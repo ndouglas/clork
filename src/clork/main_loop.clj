@@ -9,6 +9,29 @@
             [clork.readline :as readline]
             [clork.daemon :as daemon]))
 
+;;; ---------------------------------------------------------------------------
+;;; MOVE COUNTING
+;;; ---------------------------------------------------------------------------
+;;; ZIL: Meta-verbs don't count as moves. See gmain.zil line ~150:
+;;;   <COND (<VERB? TELL BRIEF SUPER-BRIEF VERBOSE SAVE VERSION
+;;;                 QUIT RESTART SCORE SCRIPT UNSCRIPT RESTORE> T)
+;;;         (T <SET V <CLOCKER>>)>>
+
+(def ^:private meta-verbs
+  "Verbs that don't count as moves (meta/system commands).
+   ZIL: TELL BRIEF SUPER-BRIEF VERBOSE SAVE VERSION QUIT RESTART SCORE SCRIPT UNSCRIPT RESTORE
+   Note: LOOK and INVENTORY are NOT meta-verbs - they count as moves and run daemons."
+  #{:verbose :brief :super-brief :version :diagnose :score :quit})
+
+(defn- increment-moves-if-needed
+  "Increment the move counter if the action is not a meta-verb.
+   ZIL: MOVES global is only incremented for 'real' game actions."
+  [game-state]
+  (let [action (get-in game-state [:parser :prsa])]
+    (if (contains? meta-verbs action)
+      game-state
+      (update game-state :moves (fnil inc 0)))))
+
 ;; Atom to track current game state for tab completion
 (def ^:private current-state-atom (atom nil))
 
@@ -200,10 +223,10 @@
       (if (debug/debug-command? input)
         ;; Handle debug command - bypass normal parser
         ;; Don't push to undo stack for debug commands
+        ;; Debug commands don't count as moves
         (-> gs
             (debug/dispatch input)
-            (utils/crlf)
-            (update :turn-number inc))
+            (utils/crlf))
         ;; Phase 3: Normal parsing
         ;; Push to undo stack BEFORE modifying state
         (let [gs (undo/push-undo gs input)
@@ -214,15 +237,15 @@
             ;; Parsing succeeded - perform the action, then run daemons
             (-> gs
                 (verb-defs/perform)
+                (increment-moves-if-needed)
                 (daemon/clocker)
-                (utils/crlf)
-                (update :turn-number inc))))))))
+                (utils/crlf))))))))
 
 (defn- max-turns-exceeded?
   "Check if max turns has been exceeded (for script mode)."
   [game-state]
   (when-let [max-turns (get-in game-state [:script-config :max-turns])]
-    (>= (:turn-number game-state 0) max-turns)))
+    (>= (:moves game-state 0) max-turns)))
 
 (defn main-loop
   "The main loop for the game."
