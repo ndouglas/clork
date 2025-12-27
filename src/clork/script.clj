@@ -65,8 +65,8 @@
         (case arg
           ("--strict" "-s")
           (recur rest-args (assoc config :strict true
-                                         :fail-on-death true
-                                         :fail-on-parser-error true))
+                                  :fail-on-death true
+                                  :fail-on-parser-error true))
 
           "--fail-on-death"
           (recur rest-args (assoc config :fail-on-death true))

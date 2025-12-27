@@ -1,0 +1,72 @@
+name: Milestone Progress
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  check-milestones:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Install Leiningen
+        uses: DeLaGuardo/setup-clojure@12.5
+        with:
+          lein: 2.11.2
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-lein-${{ hashFiles('project.clj') }}
+          restore-keys: |
+            ${{ runner.os }}-lein-
+
+      - name: Check Alpha Milestone
+        id: alpha
+        continue-on-error: true
+        run: |
+          lein run -- --strict --seed 12345 -i test/scripts/alpha-milestone.txt
+          echo "status=pass" >> $GITHUB_OUTPUT
+
+      - name: Check Beta Milestone
+        id: beta
+        continue-on-error: true
+        run: |
+          lein run -- --strict --seed 12345 -i test/scripts/beta-milestone.txt
+          echo "status=pass" >> $GITHUB_OUTPUT
+
+      - name: Generate Progress Report
+        run: |
+          echo "# Clork Milestone Progress" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Milestone | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ steps.alpha.outcome }}" == "success" ]; then
+            echo "| Alpha (Basic Playability) | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Alpha (Basic Playability) | ❌ Fail |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ steps.beta.outcome }}" == "success" ]; then
+            echo "| Beta (Full Game) | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Beta (Full Game) | ❌ Fail |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## What Each Milestone Means" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Alpha**: Basic adventure gameplay works (movement, take/drop, combat)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Beta**: Complete game can be won from start to finish" >> $GITHUB_STEP_SUMMARY
