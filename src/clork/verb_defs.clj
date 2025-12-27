@@ -69,7 +69,11 @@
    ;; === Observation Verbs ===
    :look       {:words   ["look" "l"]
                 :syntax  {:num-objects 0}
-                :handler verbs-look/v-look}})
+                :handler verbs-look/v-look}
+
+   :inventory  {:words   ["inventory" "i"]
+                :syntax  {:num-objects 0}
+                :handler verbs/v-inventory}})
 
 ;;; ---------------------------------------------------------------------------
 ;;; BUILDER FUNCTIONS

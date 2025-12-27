@@ -84,3 +84,48 @@
                  (assoc-in [:parser :prsa] :brief))
           [output result] (with-captured-output (verb-defs/perform gs))]
       (is (= "Brief descriptions." output)))))
+
+;;; ---------------------------------------------------------------------------
+;;; INVENTORY VERB TESTS
+;;; ---------------------------------------------------------------------------
+
+(deftest v-inventory-empty-test
+  (testing "v-inventory with empty inventory shows 'You are empty-handed.'"
+    (let [gs (make-test-state)
+          [output _] (with-captured-output (verbs/v-inventory gs))]
+      (is (= "You are empty-handed." output)))))
+
+(deftest v-inventory-with-items-test
+  (testing "v-inventory with items shows 'You are carrying:' and lists items"
+    (let [gs (-> (make-test-state)
+                 ;; Add a lamp to the player's inventory
+                 (gs/add-object {:id :brass-lantern
+                                 :in :adventurer
+                                 :desc "brass lantern"})
+                 (gs/add-object {:id :leaflet
+                                 :in :adventurer
+                                 :desc "leaflet"}))
+          [output _] (with-captured-output (verbs/v-inventory gs))]
+      (is (clojure.string/includes? output "You are carrying:"))
+      (is (clojure.string/includes? output "brass lantern"))
+      (is (clojure.string/includes? output "leaflet")))))
+
+(deftest inventory-vocabulary-test
+  (testing "inventory is registered in vocabulary as a verb"
+    (is (= true (parser/wt? "inventory" :verb)))
+    (is (= :inventory (parser/wt? "inventory" :verb true))))
+  (testing "i is a synonym for inventory"
+    (is (= true (parser/wt? "i" :verb)))
+    (is (= :inventory (parser/wt? "i" :verb true)))))
+
+(deftest inventory-parsing-test
+  (testing "parsing 'inventory' sets prsa to :inventory"
+    (let [gs (make-test-state)
+          [_ result] (with-captured-output (parse-test-input gs "inventory"))]
+      (is (nil? (get-in result [:parser :error])))
+      (is (= :inventory (get-in result [:parser :prsa])))))
+  (testing "parsing 'i' sets prsa to :inventory"
+    (let [gs (make-test-state)
+          [_ result] (with-captured-output (parse-test-input gs "i"))]
+      (is (nil? (get-in result [:parser :error])))
+      (is (= :inventory (get-in result [:parser :prsa]))))))

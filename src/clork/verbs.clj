@@ -1,6 +1,7 @@
 (ns clork.verbs
   "Verb handler functions."
-  (:require [clork.utils :as utils]))
+  (:require [clork.utils :as utils]
+            [clork.game-state :as gs]))
 
 ;;; ---------------------------------------------------------------------------
 ;;; VERB HANDLERS
@@ -63,3 +64,21 @@
   (-> game-state
       (assoc :super-brief true)
       (utils/tell "Superbrief descriptions.")))
+
+(defn v-inventory
+  "Prints the player's inventory.
+
+   ZIL: V-INVENTORY in gverbs.zil
+     <ROUTINE V-INVENTORY ()
+       <COND (<FIRST? ,WINNER> <PRINT-CONT ,WINNER>)
+             (T <TELL \"You are empty-handed.\" CR>)>>"
+  [game-state]
+  (let [winner-id (:winner game-state)
+        contents (gs/get-contents game-state winner-id)]
+    (if (empty? contents)
+      (utils/tell game-state "You are empty-handed.")
+      (reduce (fn [state obj-id]
+                (let [obj-name (gs/thing-name state obj-id)]
+                  (utils/tell state (str "  A " obj-name "\n"))))
+              (utils/tell game-state "You are carrying:\n")
+              contents))))
