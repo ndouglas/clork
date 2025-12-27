@@ -4,6 +4,7 @@
             [clork.parser :as parser]
             [clork.parser.state :as parser-state]
             [clork.parser.objects :as parser-objects]
+            [clork.parser.validation :as validation]
             [clork.verb-defs :as verb-defs]
             [clork.game-state :as gs]))
 
@@ -676,4 +677,84 @@
                             (assoc-in [:parser :prsa] :look)
                             (assoc-in [:parser :prso] nil))]
       (let [result-state (verb-defs/perform initial-state)]
-        (is (= :mailbox (:it result-state))))))))
+        (is (= :mailbox (:it result-state)))))))
+
+;;; ---------------------------------------------------------------------------
+;;; AUTO-TAKE (ITAKE) TESTS
+;;; ---------------------------------------------------------------------------
+
+(deftest itake-takeable-object-test
+  (testing "itake moves takeable object to player inventory"
+    (let [gs (-> (gs/initial-game-state)
+                 (gs/add-room {:id :west-of-house :desc "West of House"})
+                 (gs/add-object {:id :leaflet
+                                 :in :west-of-house
+                                 :desc "leaflet"
+                                 :flags #{:take}}))
+          result (validation/itake gs :leaflet)]
+      ;; Should return updated game-state, not true
+      (is (map? result))
+      ;; Object should now be in player's inventory
+      (is (= :adventurer (get-in result [:objects :leaflet :in])))
+      ;; Object should have :touch flag set (using set-thing-flag?)
+      (is (gs/set-thing-flag? result :leaflet :touch)))))
+
+(deftest itake-non-takeable-object-test
+  (testing "itake returns true for non-takeable object"
+    (let [gs (-> (gs/initial-game-state)
+                 (gs/add-room {:id :west-of-house :desc "West of House"})
+                 (gs/add-object {:id :mailbox
+                                 :in :west-of-house
+                                 :desc "mailbox"
+                                 :flags #{}}))]
+      ;; Should return true (failure) for non-takeable
+      (is (= true (validation/itake gs :mailbox))))))
+
+(deftest itake-check-auto-takes-object-test
+  (testing "itake-check auto-takes object when syntax has :take flag"
+    (let [gs (-> (gs/initial-game-state)
+                 (gs/add-room {:id :west-of-house :desc "West of House"})
+                 (gs/add-object {:id :leaflet
+                                 :in :west-of-house
+                                 :desc "leaflet"
+                                 :flags #{:take :read}})
+                 (assoc-in [:parser :prso] [:leaflet]))
+          ;; Simulate syntax with :take in loc bits
+          take-bits (:take gs/search-bits)
+          result (validation/itake-check gs :prso take-bits)]
+      ;; Should succeed
+      (is (:success result))
+      ;; Object should be in inventory in returned game-state
+      (is (= :adventurer (get-in (:game-state result) [:objects :leaflet :in]))))))
+
+(deftest itake-check-already-held-test
+  (testing "itake-check succeeds without taking if already held"
+    (let [gs (-> (gs/initial-game-state)
+                 (gs/add-room {:id :west-of-house :desc "West of House"})
+                 (gs/add-object {:id :leaflet
+                                 :in :adventurer  ; Already in inventory
+                                 :desc "leaflet"
+                                 :flags #{:take :read}})
+                 (assoc-in [:parser :prso] [:leaflet]))
+          take-bits (:take gs/search-bits)
+          result (validation/itake-check gs :prso take-bits)]
+      ;; Should succeed
+      (is (:success result))
+      ;; Object should still be in inventory
+      (is (= :adventurer (get-in (:game-state result) [:objects :leaflet :in]))))))
+
+(deftest itake-check-non-takeable-fails-silently-test
+  (testing "itake-check fails silently for non-takeable object"
+    (let [gs (-> (gs/initial-game-state)
+                 (gs/add-room {:id :west-of-house :desc "West of House"})
+                 (gs/add-object {:id :mailbox
+                                 :in :west-of-house
+                                 :desc "mailbox"
+                                 :flags #{}})  ; No :take flag
+                 (assoc-in [:parser :prso] [:mailbox]))
+          take-bits (:take gs/search-bits)
+          result (validation/itake-check gs :prso take-bits)]
+      ;; Should still succeed (silent failure for non-takeable)
+      (is (:success result))
+      ;; Object should NOT be moved
+      (is (= :west-of-house (get-in (:game-state result) [:objects :mailbox :in])))))))

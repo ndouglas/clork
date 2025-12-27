@@ -107,7 +107,17 @@
    :open       {:words   ["open"]
                 :syntax  {:num-objects 1
                           :loc1 #{:held :in-room :on-ground :carried}}
-                :handler verbs/v-open}})
+                :handler verbs/v-open}
+
+   :examine    {:words   ["examine" "x" "describe" "what" "whats"]
+                :syntax  {:num-objects 1
+                          :loc1 #{:held :carried :in-room :on-ground :many}}
+                :handler verbs/v-examine}
+
+   :look-inside {:words   ["search"]
+                 :syntax  {:num-objects 1
+                           :loc1 #{:held :carried :in-room :on-ground}}
+                 :handler verbs/v-look-inside}})
 
 ;;; ---------------------------------------------------------------------------
 ;;; BUILDER FUNCTIONS

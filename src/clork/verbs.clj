@@ -555,6 +555,115 @@
         (utils/tell state "Dropped.")))))
 
 ;;; ---------------------------------------------------------------------------
+;;; LOOK-INSIDE COMMAND
+;;; ---------------------------------------------------------------------------
+;;; ZIL: V-LOOK-INSIDE in gverbs.zil
+
+(defn v-look-inside
+  "Look inside an object (container or door).
+
+   ZIL: V-LOOK-INSIDE in gverbs.zil (line 881)
+     <ROUTINE V-LOOK-INSIDE ()
+       <COND (<FSET? ,PRSO ,DOORBIT>
+              <COND (<FSET? ,PRSO ,OPENBIT>
+                     <TELL \"The \" D ,PRSO \" is open, but I can't tell what's beyond it.\">)
+                    (T
+                     <TELL \"The \" D ,PRSO \" is closed.\">)>
+              <CRLF>)
+             (<FSET? ,PRSO ,CONTBIT>
+              <COND (<FSET? ,PRSO ,ACTORBIT>
+                     <TELL \"There is nothing special to be seen.\" CR>)
+                    (<SEE-INSIDE? ,PRSO>
+                     <COND (<AND <FIRST? ,PRSO> <PRINT-CONT ,PRSO>>
+                            <RTRUE>)
+                           (T
+                            <TELL \"The \" D ,PRSO \" is empty.\" CR>)>)
+                    (T
+                     <TELL \"The \" D ,PRSO \" is closed.\" CR>)>)
+             (T
+              <TELL \"You can't look inside a \" D ,PRSO \".\" CR>)>>"
+  [game-state]
+  (let [prso (parser-state/get-prso game-state)
+        obj (gs/get-thing game-state prso)
+        desc (:desc obj)
+        flags (or (:flags obj) #{})]
+    (cond
+      ;; Door
+      (contains? flags :door)
+      (if (contains? flags :open)
+        (utils/tell game-state (str "The " desc " is open, but I can't tell what's beyond it."))
+        (utils/tell game-state (str "The " desc " is closed.")))
+
+      ;; Container
+      (contains? flags :cont)
+      (cond
+        ;; Actor (NPC holding things) - special message
+        (contains? flags :actor)
+        (utils/tell game-state "There is nothing special to be seen.")
+
+        ;; Can see inside (open or transparent)
+        (or (contains? flags :open) (contains? flags :trans))
+        (let [contents (gs/get-contents game-state prso)
+              visible (remove (fn [id]
+                                (let [o (gs/get-thing game-state id)
+                                      oflags (or (:flags o) #{})]
+                                  (contains? oflags :invisible)))
+                              contents)]
+          (if (empty? visible)
+            (utils/tell game-state (str "The " desc " is empty."))
+            ;; Print contents
+            (let [content-strs (map (fn [id]
+                                      (let [o (gs/get-thing game-state id)]
+                                        (str "  A " (:desc o))))
+                                    visible)]
+              (-> game-state
+                  (utils/tell (str "The " desc " contains:\n"))
+                  (utils/tell (clojure.string/join "\n" content-strs))))))
+
+        ;; Closed container
+        :else
+        (utils/tell game-state (str "The " desc " is closed.")))
+
+      ;; Not a container or door
+      :else
+      (utils/tell game-state (str "You can't look inside a " desc ".")))))
+
+;;; ---------------------------------------------------------------------------
+;;; EXAMINE COMMAND
+;;; ---------------------------------------------------------------------------
+;;; ZIL: V-EXAMINE in gverbs.zil
+
+(defn v-examine
+  "Examine an object to learn more about it.
+
+   ZIL: V-EXAMINE in gverbs.zil (line 639)
+     <ROUTINE V-EXAMINE ()
+       <COND (<GETP ,PRSO ,P?TEXT>
+              <TELL <GETP ,PRSO ,P?TEXT> CR>)
+             (<OR <FSET? ,PRSO ,CONTBIT>
+                  <FSET? ,PRSO ,DOORBIT>>
+              <V-LOOK-INSIDE>)
+             (T
+              <TELL \"There's nothing special about the \" D ,PRSO \".\" CR>)>>"
+  [game-state]
+  (let [prso (parser-state/get-prso game-state)
+        obj (gs/get-thing game-state prso)
+        desc (:desc obj)
+        flags (or (:flags obj) #{})]
+    (cond
+      ;; Has text property - show it
+      (:text obj)
+      (utils/tell game-state (:text obj))
+
+      ;; Container or door - look inside
+      (or (contains? flags :cont) (contains? flags :door))
+      (v-look-inside game-state)
+
+      ;; Default - nothing special
+      :else
+      (utils/tell game-state (str "There's nothing special about the " desc ".")))))
+
+;;; ---------------------------------------------------------------------------
 ;;; OPEN COMMAND
 ;;; ---------------------------------------------------------------------------
 ;;; ZIL: V-OPEN in gverbs.zil

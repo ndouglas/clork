@@ -354,12 +354,12 @@
              can-take?
              (let [take-result (itake game-state obj-id)]
                (if (= take-result true)
-                 ;; Take failed silently (handled by itake)
+                 ;; Take failed silently (object not takeable)
                  (parser-state/parser-success game-state)
-                 ;; Take succeeded, print "(Taken)"
+                 ;; Take succeeded - take-result is updated game-state
                  (do
                    (println "(Taken)")
-                   (parser-state/parser-success game-state))))
+                   (parser-state/parser-success take-result))))
 
              ;; Must HAVE but don't - error
              need-have?
@@ -410,14 +410,18 @@
    The full ITAKE is in the verb handlers. This is a simplified version
    for auto-take during parsing.
 
-   Returns true if take failed (object can't be taken),
-   false if take succeeded."
+   Returns:
+     game-state - if take succeeded (object moved to inventory)
+     true - if take failed (object can't be taken)"
   [game-state obj-id]
-  ;; TODO: Implement actual take logic
-  ;; For now, just check if it's takeable
   (if (game-state/set-thing-flag? game-state obj-id :take)
-    false  ; Would succeed
-    true)) ; Would fail
+    ;; Object is takeable - move it to player's inventory
+    (let [winner (:winner game-state)]
+      (-> game-state
+          (assoc-in [:objects obj-id :in] winner)
+          (game-state/set-thing-flag obj-id :touch)))
+    ;; Not takeable
+    true))
 
 ;;; ---------------------------------------------------------------------------
 ;;; HELPERS

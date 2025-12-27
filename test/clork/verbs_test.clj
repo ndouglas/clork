@@ -566,3 +566,158 @@
       (is (nil? (get-in result [:parser :error])))
       (is (= :open (get-in result [:parser :prsa])))
       (is (= :mailbox (get-in result [:parser :prso]))))))
+
+;;; ---------------------------------------------------------------------------
+;;; EXAMINE VERB TESTS
+;;; ---------------------------------------------------------------------------
+
+(deftest v-examine-with-text-test
+  (testing "v-examine shows object's text property when present"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :leaflet
+                                 :in :west-of-house
+                                 :desc "leaflet"
+                                 :text "WELCOME TO ZORK!"})
+                 (assoc-in [:parser :prso] :leaflet))
+          [output _] (with-captured-output (verbs/v-examine gs))]
+      (is (= "WELCOME TO ZORK!" output)))))
+
+(deftest v-examine-container-open-with-contents-test
+  (testing "v-examine on open container with contents shows contents"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :chest
+                                 :in :west-of-house
+                                 :desc "wooden chest"
+                                 :flags #{:cont :open}})
+                 (gs/add-object {:id :gold-coin
+                                 :in :chest
+                                 :desc "gold coin"})
+                 (assoc-in [:parser :prso] :chest))
+          [output _] (with-captured-output (verbs/v-examine gs))]
+      (is (clojure.string/includes? output "wooden chest contains"))
+      (is (clojure.string/includes? output "gold coin")))))
+
+(deftest v-examine-container-open-empty-test
+  (testing "v-examine on open empty container shows 'empty'"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :chest
+                                 :in :west-of-house
+                                 :desc "wooden chest"
+                                 :flags #{:cont :open}})
+                 (assoc-in [:parser :prso] :chest))
+          [output _] (with-captured-output (verbs/v-examine gs))]
+      (is (= "The wooden chest is empty." output)))))
+
+(deftest v-examine-container-closed-test
+  (testing "v-examine on closed container shows 'closed'"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :chest
+                                 :in :west-of-house
+                                 :desc "wooden chest"
+                                 :flags #{:cont}})
+                 (assoc-in [:parser :prso] :chest))
+          [output _] (with-captured-output (verbs/v-examine gs))]
+      (is (= "The wooden chest is closed." output)))))
+
+(deftest v-examine-container-transparent-test
+  (testing "v-examine on transparent container shows contents"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :glass-box
+                                 :in :west-of-house
+                                 :desc "glass box"
+                                 :flags #{:cont :trans}})
+                 (gs/add-object {:id :diamond
+                                 :in :glass-box
+                                 :desc "diamond"})
+                 (assoc-in [:parser :prso] :glass-box))
+          [output _] (with-captured-output (verbs/v-examine gs))]
+      (is (clojure.string/includes? output "glass box contains"))
+      (is (clojure.string/includes? output "diamond")))))
+
+(deftest v-examine-door-open-test
+  (testing "v-examine on open door shows appropriate message"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :front-door
+                                 :in :west-of-house
+                                 :desc "front door"
+                                 :flags #{:door :open}})
+                 (assoc-in [:parser :prso] :front-door))
+          [output _] (with-captured-output (verbs/v-examine gs))]
+      (is (= "The front door is open, but I can't tell what's beyond it." output)))))
+
+(deftest v-examine-door-closed-test
+  (testing "v-examine on closed door shows 'closed'"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :front-door
+                                 :in :west-of-house
+                                 :desc "front door"
+                                 :flags #{:door}})
+                 (assoc-in [:parser :prso] :front-door))
+          [output _] (with-captured-output (verbs/v-examine gs))]
+      (is (= "The front door is closed." output)))))
+
+(deftest v-examine-nothing-special-test
+  (testing "v-examine on plain object shows 'nothing special'"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :rock
+                                 :in :west-of-house
+                                 :desc "rock"})
+                 (assoc-in [:parser :prso] :rock))
+          [output _] (with-captured-output (verbs/v-examine gs))]
+      (is (= "There's nothing special about the rock." output)))))
+
+(deftest examine-vocabulary-test
+  (testing "examine is registered in vocabulary as a verb"
+    (is (= true (parser/wt? "examine" :verb)))
+    (is (= :examine (parser/wt? "examine" :verb true))))
+  (testing "x is a synonym for examine"
+    (is (= true (parser/wt? "x" :verb)))
+    (is (= :examine (parser/wt? "x" :verb true))))
+  (testing "describe is a synonym for examine"
+    (is (= true (parser/wt? "describe" :verb)))
+    (is (= :examine (parser/wt? "describe" :verb true)))))
+
+;;; ---------------------------------------------------------------------------
+;;; LOOK-INSIDE VERB TESTS
+;;; ---------------------------------------------------------------------------
+
+(deftest v-look-inside-container-with-contents-test
+  (testing "v-look-inside on open container shows contents"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :chest
+                                 :in :west-of-house
+                                 :desc "wooden chest"
+                                 :flags #{:cont :open}})
+                 (gs/add-object {:id :gold-coin
+                                 :in :chest
+                                 :desc "gold coin"})
+                 (assoc-in [:parser :prso] :chest))
+          [output _] (with-captured-output (verbs/v-look-inside gs))]
+      (is (clojure.string/includes? output "wooden chest contains"))
+      (is (clojure.string/includes? output "gold coin")))))
+
+(deftest v-look-inside-not-container-test
+  (testing "v-look-inside on non-container shows error"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :rock
+                                 :in :west-of-house
+                                 :desc "rock"})
+                 (assoc-in [:parser :prso] :rock))
+          [output _] (with-captured-output (verbs/v-look-inside gs))]
+      (is (= "You can't look inside a rock." output)))))
+
+(deftest v-look-inside-actor-test
+  (testing "v-look-inside on actor shows special message"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :troll
+                                 :in :west-of-house
+                                 :desc "troll"
+                                 :flags #{:cont :actor}})
+                 (assoc-in [:parser :prso] :troll))
+          [output _] (with-captured-output (verbs/v-look-inside gs))]
+      (is (= "There is nothing special to be seen." output)))))
+
+(deftest look-inside-vocabulary-test
+  (testing "search is registered in vocabulary as a verb"
+    (is (= true (parser/wt? "search" :verb)))
+    (is (= :look-inside (parser/wt? "search" :verb true)))))
