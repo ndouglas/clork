@@ -88,24 +88,41 @@
 ;;; ---------------------------------------------------------------------------
 ;;; ZIL: STRENGTH-MAX = 7, STRENGTH-MIN = 2
 ;;; Base fight strength is calculated from score, ranging from 2 to 7.
-;;; For now, we use a fixed base of 4 since scoring isn't implemented.
 
-(def ^:private base-fight-strength
-  "Base fighting strength (before wounds). ZIL calculates this from score."
-  4)
+(def ^:private strength-max
+  "Maximum base fighting strength. ZIL: STRENGTH-MAX = 7"
+  7)
+
+(def ^:private strength-min
+  "Minimum base fighting strength. ZIL: STRENGTH-MIN = 2"
+  2)
 
 (defn- fight-strength
   "Calculate the player's current fighting ability.
 
    ZIL: FIGHT-STRENGTH routine in 1actions.zil
-   Returns base strength (4) plus wound modifier (negative when wounded).
+     S = STRENGTH-MIN + (SCORE / (SCORE-MAX / (STRENGTH-MAX - STRENGTH-MIN)))
+
+   At 0 points: base = 2
+   At 350 points: base = 7
+
+   If adjust? is true (default), adds wound modifier.
    If adjust? is false, returns just the base (for survivability display)."
   ([game-state] (fight-strength game-state true))
   ([game-state adjust?]
-   (let [wound-modifier (get-in game-state [:objects (:winner game-state) :strength] 0)]
+   (let [score (get game-state :score 0)
+         score-max (get game-state :score-max 350)
+         ;; Calculate base strength from score
+         ;; S = STRENGTH-MIN + (SCORE / (SCORE-MAX / (STRENGTH-MAX - STRENGTH-MIN)))
+         ;; = 2 + (SCORE / (350 / 5)) = 2 + (SCORE / 70)
+         divisor (/ score-max (- strength-max strength-min))
+         base-strength (+ strength-min (int (/ score divisor)))
+         ;; Clamp to valid range
+         base-strength (min strength-max (max strength-min base-strength))
+         wound-modifier (get-in game-state [:objects (:winner game-state) :strength] 0)]
      (if adjust?
-       (+ base-fight-strength wound-modifier)
-       base-fight-strength))))
+       (+ base-strength wound-modifier)
+       base-strength))))
 
 (defn- wound-description
   "Return the description of wounds based on wound level.
@@ -178,3 +195,93 @@
                     (utils/tell (if (= deaths 1) "once" "twice"))
                     (utils/tell "."))
                 gs)))))
+
+;;; ---------------------------------------------------------------------------
+;;; SCORING SYSTEM
+;;; ---------------------------------------------------------------------------
+;;; ZIL: V-SCORE, SCORE-UPD, SCORE-OBJ in gverbs.zil and 1actions.zil
+
+(defn- player-rank
+  "Return the player's rank based on their score.
+
+   ZIL: Rank thresholds from V-SCORE:
+     350 = Master Adventurer
+     >330 = Wizard
+     >300 = Master
+     >200 = Adventurer
+     >100 = Junior Adventurer
+     >50 = Novice Adventurer
+     >25 = Amateur Adventurer
+     else = Beginner"
+  [score]
+  (cond
+    (= score 350)  "Master Adventurer"
+    (> score 330)  "Wizard"
+    (> score 300)  "Master"
+    (> score 200)  "Adventurer"
+    (> score 100)  "Junior Adventurer"
+    (> score 50)   "Novice Adventurer"
+    (> score 25)   "Amateur Adventurer"
+    :else          "Beginner"))
+
+(defn v-score
+  "Prints the player's current score and rank.
+
+   ZIL: V-SCORE in 1actions.zil
+     <ROUTINE V-SCORE (\"OPTIONAL\" (ASK? T))
+       <TELL \"Your score is \">
+       <TELL N ,SCORE>
+       <TELL \" (total of 350 points), in \">
+       <TELL N ,MOVES>
+       ...>"
+  [game-state]
+  (let [score (get game-state :score 0)
+        score-max (get game-state :score-max 350)
+        moves (get game-state :moves 0)
+        rank (player-rank score)]
+    (-> game-state
+        (utils/tell (str "Your score is " score " (total of " score-max " points), in "))
+        (utils/tell (str moves (if (= moves 1) " move." " moves.")))
+        (utils/tell (str "\nThis gives you the rank of " rank ".")))))
+
+(defn score-upd
+  "Update the player's score by a given amount.
+
+   ZIL: SCORE-UPD in gverbs.zil
+     <ROUTINE SCORE-UPD (NUM)
+       <SETG BASE-SCORE <+ ,BASE-SCORE .NUM>>
+       <SETG SCORE <+ ,SCORE .NUM>>
+       ...>
+
+   Returns the updated game-state."
+  [game-state amount]
+  (let [new-base-score (+ (get game-state :base-score 0) amount)
+        new-score (+ (get game-state :score 0) amount)
+        ;; Check for winning condition (score reaches max)
+        score-max (get game-state :score-max 350)
+        won? (and (= new-score score-max)
+                  (not (:won game-state)))]
+    (cond-> game-state
+      true (assoc :base-score new-base-score)
+      true (assoc :score new-score)
+      won? (assoc :won true)
+      won? (utils/tell "\nAn almost inaudible voice whispers in your ear, \"Look to your treasures for the final secret.\""))))
+
+(defn score-obj
+  "Score an object's treasure value (if any) and set its value to 0.
+
+   ZIL: SCORE-OBJ in gverbs.zil
+     <ROUTINE SCORE-OBJ (OBJ \"AUX\" TEMP)
+       <COND (<G? <SET TEMP <GETP .OBJ ,P?VALUE>> 0>
+              <SCORE-UPD .TEMP>
+              <PUTP .OBJ ,P?VALUE 0>)>>
+
+   Objects can only be scored once - after scoring, their :value is set to 0.
+   Returns the updated game-state."
+  [game-state obj-id]
+  (let [value (get-in game-state [:objects obj-id :value] 0)]
+    (if (pos? value)
+      (-> game-state
+          (score-upd value)
+          (assoc-in [:objects obj-id :value] 0))
+      game-state)))

@@ -35,7 +35,7 @@ These are out-of-game commands that don't advance time.
 | [x] | INVENTORY/I | V-INVENTORY | Show carried items |
 | [x] | VERSION | V-VERSION | Show game version |
 | [x] | DIAGNOSE | V-DIAGNOSE | Show player health |
-| [ ] | SCORE | V-SCORE | Show current score |
+| [x] | SCORE | V-SCORE | Show current score |
 | [ ] | QUIT/Q | V-QUIT | Quit game |
 | [ ] | RESTART | V-RESTART | Restart game |
 | [ ] | RESTORE | V-RESTORE | Load saved game |
@@ -668,8 +668,8 @@ These are out-of-game commands that don't advance time.
 | [ ] | NO-GO-TELL | Blocked movement |
 | [ ] | ITAKE | Internal take |
 | [ ] | IDROP | Internal drop |
-| [ ] | SCORE-OBJ | Score object |
-| [ ] | SCORE-UPD | Update score |
+| [x] | SCORE-OBJ | Score object |
+| [x] | SCORE-UPD | Update score |
 | [ ] | WEIGHT | Calculate weight |
 | [ ] | HELD? | Check if held |
 | [ ] | SEE-INSIDE? | Can see inside |
@@ -746,9 +746,9 @@ These are out-of-game commands that don't advance time.
 | [x] | HERE | Current room |
 | [x] | WINNER | Current actor |
 | [x] | PLAYER | Player object |
-| [ ] | SCORE | Current score |
-| [ ] | SCORE-MAX | Maximum score |
-| [ ] | MOVES | Turn counter |
+| [x] | SCORE | Current score |
+| [x] | SCORE-MAX | Maximum score |
+| [x] | MOVES | Turn counter |
 | [x] | DEATHS | Death counter |
 | [x] | VERBOSE | Verbose mode |
 | [x] | SUPER-BRIEF | Super-brief mode |

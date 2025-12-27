@@ -51,6 +51,11 @@
    :super-brief false
    :won false
    :deaths 0
+   ;; Scoring system - ZIL: SCORE, BASE-SCORE, SCORE-MAX, MOVES
+   :score 0
+   :base-score 0
+   :score-max 350
+   :moves 0
    :parser (parser-state/initial-parser-state)
     ;; Debug system state
    :turn-number 0

@@ -179,3 +179,104 @@
           [_ result] (with-captured-output (parse-test-input gs "diagnose"))]
       (is (nil? (get-in result [:parser :error])))
       (is (= :diagnose (get-in result [:parser :prsa]))))))
+
+;;; ---------------------------------------------------------------------------
+;;; SCORE VERB TESTS
+;;; ---------------------------------------------------------------------------
+
+(deftest v-score-initial-test
+  (testing "v-score shows initial score of 0 and rank of Beginner"
+    (let [gs (make-test-state)
+          [output _] (with-captured-output (verbs/v-score gs))]
+      (is (clojure.string/includes? output "Your score is 0"))
+      (is (clojure.string/includes? output "total of 350 points"))
+      (is (clojure.string/includes? output "0 moves"))
+      (is (clojure.string/includes? output "Beginner")))))
+
+(deftest v-score-with-points-test
+  (testing "v-score shows score and appropriate rank"
+    (let [gs (-> (make-test-state)
+                 (assoc :score 150)
+                 (assoc :moves 42))
+          [output _] (with-captured-output (verbs/v-score gs))]
+      (is (clojure.string/includes? output "Your score is 150"))
+      (is (clojure.string/includes? output "42 moves"))
+      (is (clojure.string/includes? output "Junior Adventurer")))))
+
+(deftest v-score-ranks-test
+  (testing "v-score shows correct ranks at different score levels"
+    ;; Beginner (0-25)
+    (let [[output _] (with-captured-output (verbs/v-score (assoc (make-test-state) :score 10)))]
+      (is (clojure.string/includes? output "Beginner")))
+    ;; Amateur Adventurer (26-50)
+    (let [[output _] (with-captured-output (verbs/v-score (assoc (make-test-state) :score 30)))]
+      (is (clojure.string/includes? output "Amateur Adventurer")))
+    ;; Novice Adventurer (51-100)
+    (let [[output _] (with-captured-output (verbs/v-score (assoc (make-test-state) :score 75)))]
+      (is (clojure.string/includes? output "Novice Adventurer")))
+    ;; Junior Adventurer (101-200)
+    (let [[output _] (with-captured-output (verbs/v-score (assoc (make-test-state) :score 150)))]
+      (is (clojure.string/includes? output "Junior Adventurer")))
+    ;; Adventurer (201-300)
+    (let [[output _] (with-captured-output (verbs/v-score (assoc (make-test-state) :score 250)))]
+      (is (clojure.string/includes? output "Adventurer")))
+    ;; Master (301-330)
+    (let [[output _] (with-captured-output (verbs/v-score (assoc (make-test-state) :score 320)))]
+      (is (clojure.string/includes? output "Master")))
+    ;; Wizard (331-349)
+    (let [[output _] (with-captured-output (verbs/v-score (assoc (make-test-state) :score 340)))]
+      (is (clojure.string/includes? output "Wizard")))
+    ;; Master Adventurer (350)
+    (let [[output _] (with-captured-output (verbs/v-score (assoc (make-test-state) :score 350)))]
+      (is (clojure.string/includes? output "Master Adventurer")))))
+
+(deftest v-score-move-singular-test
+  (testing "v-score uses singular 'move' for 1 move"
+    (let [gs (-> (make-test-state)
+                 (assoc :moves 1))
+          [output _] (with-captured-output (verbs/v-score gs))]
+      (is (clojure.string/includes? output "1 move.")))))
+
+(deftest score-upd-test
+  (testing "score-upd adds to both score and base-score"
+    (let [gs (-> (make-test-state)
+                 (verbs/score-upd 10))]
+      (is (= 10 (:score gs)))
+      (is (= 10 (:base-score gs)))))
+  (testing "score-upd can subtract points"
+    (let [gs (-> (make-test-state)
+                 (assoc :score 50 :base-score 50)
+                 (verbs/score-upd -10))]
+      (is (= 40 (:score gs)))
+      (is (= 40 (:base-score gs))))))
+
+(deftest score-obj-test
+  (testing "score-obj scores an object's value and sets it to 0"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :diamond :value 10})
+                 (verbs/score-obj :diamond))]
+      (is (= 10 (:score gs)))
+      (is (= 0 (get-in gs [:objects :diamond :value])))))
+  (testing "score-obj does nothing if object has no value"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :rock :value 0})
+                 (verbs/score-obj :rock))]
+      (is (= 0 (:score gs)))))
+  (testing "score-obj only scores object once"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :diamond :value 10})
+                 (verbs/score-obj :diamond)
+                 (verbs/score-obj :diamond))]
+      (is (= 10 (:score gs))))))
+
+(deftest score-vocabulary-test
+  (testing "score is registered in vocabulary as a verb"
+    (is (= true (parser/wt? "score" :verb)))
+    (is (= :score (parser/wt? "score" :verb true)))))
+
+(deftest score-parsing-test
+  (testing "parsing 'score' sets prsa to :score"
+    (let [gs (make-test-state)
+          [_ result] (with-captured-output (parse-test-input gs "score"))]
+      (is (nil? (get-in result [:parser :error])))
+      (is (= :score (get-in result [:parser :prsa]))))))
