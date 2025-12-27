@@ -285,3 +285,53 @@
           (score-upd value)
           (assoc-in [:objects obj-id :value] 0))
       game-state)))
+
+;;; ---------------------------------------------------------------------------
+;;; QUIT COMMAND
+;;; ---------------------------------------------------------------------------
+;;; ZIL: V-QUIT in gverbs.zil
+
+(defn- yes?
+  "Check if response is affirmative (Y, YES, y, yes).
+
+   ZIL: YES? built-in routine"
+  [response]
+  (when response
+    (let [r (clojure.string/lower-case (clojure.string/trim response))]
+      (or (= r "y") (= r "yes")))))
+
+;; Dynamic var to allow testing without actual readline
+(def ^:dynamic *read-input-fn*
+  "Function used to read user input. Can be rebound for testing."
+  nil)
+
+(defn- read-quit-confirmation
+  "Read confirmation from user. Returns the response string."
+  []
+  (if *read-input-fn*
+    (*read-input-fn*)
+    ;; Use readline if available, otherwise standard input
+    (do
+      (print "Do you wish to leave the game? (Y is affirmative): ")
+      (flush)
+      (read-line))))
+
+(defn v-quit
+  "Quit the game after showing score and asking for confirmation.
+
+   ZIL: V-QUIT in gverbs.zil
+     <ROUTINE V-QUIT (\"AUX\" SCOR)
+       <V-SCORE>
+       <TELL \"Do you wish to leave the game? (Y is affirmative): \">
+       <COND (<YES?>
+              <QUIT>)
+             (ELSE <TELL \"Ok.\" CR>)>>"
+  [game-state]
+  ;; First show the score (like ZIL does)
+  (let [gs (v-score game-state)
+        response (read-quit-confirmation)]
+    (if (yes? response)
+      (-> gs
+          (utils/tell "\n")
+          (assoc :quit true))
+      (utils/tell gs "\nOk."))))

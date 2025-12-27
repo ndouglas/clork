@@ -36,7 +36,7 @@ These are out-of-game commands that don't advance time.
 | [x] | VERSION | V-VERSION | Show game version |
 | [x] | DIAGNOSE | V-DIAGNOSE | Show player health |
 | [x] | SCORE | V-SCORE | Show current score |
-| [ ] | QUIT/Q | V-QUIT | Quit game |
+| [x] | QUIT/Q | V-QUIT | Quit game |
 | [ ] | RESTART | V-RESTART | Restart game |
 | [ ] | RESTORE | V-RESTORE | Load saved game |
 | [ ] | SAVE | V-SAVE | Save game |

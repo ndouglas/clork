@@ -75,6 +75,10 @@
                 :syntax  {:num-objects 0}
                 :handler verbs/v-score}
 
+   :quit       {:words   ["quit" "q"]
+                :syntax  {:num-objects 0}
+                :handler verbs/v-quit}
+
    ;; === Observation Verbs ===
    :look       {:words   ["look" "l"]
                 :syntax  {:num-objects 0}

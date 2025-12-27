@@ -280,3 +280,66 @@
           [_ result] (with-captured-output (parse-test-input gs "score"))]
       (is (nil? (get-in result [:parser :error])))
       (is (= :score (get-in result [:parser :prsa]))))))
+
+;;; ---------------------------------------------------------------------------
+;;; QUIT VERB TESTS
+;;; ---------------------------------------------------------------------------
+
+(deftest v-quit-confirmed-test
+  (testing "v-quit with 'y' response sets :quit to true"
+    (binding [verbs/*read-input-fn* (constantly "y")]
+      (let [gs (make-test-state)
+            [output result] (with-captured-output (verbs/v-quit gs))]
+        (is (true? (:quit result)))
+        ;; Should show score first
+        (is (clojure.string/includes? output "Your score is"))))))
+
+(deftest v-quit-confirmed-yes-test
+  (testing "v-quit with 'yes' response sets :quit to true"
+    (binding [verbs/*read-input-fn* (constantly "yes")]
+      (let [gs (make-test-state)
+            [_ result] (with-captured-output (verbs/v-quit gs))]
+        (is (true? (:quit result)))))))
+
+(deftest v-quit-confirmed-uppercase-test
+  (testing "v-quit with 'Y' response (uppercase) sets :quit to true"
+    (binding [verbs/*read-input-fn* (constantly "Y")]
+      (let [gs (make-test-state)
+            [_ result] (with-captured-output (verbs/v-quit gs))]
+        (is (true? (:quit result)))))))
+
+(deftest v-quit-declined-test
+  (testing "v-quit with 'n' response does not set :quit"
+    (binding [verbs/*read-input-fn* (constantly "n")]
+      (let [gs (make-test-state)
+            [output result] (with-captured-output (verbs/v-quit gs))]
+        (is (nil? (:quit result)))
+        (is (clojure.string/includes? output "Ok."))))))
+
+(deftest v-quit-declined-empty-test
+  (testing "v-quit with empty response does not set :quit"
+    (binding [verbs/*read-input-fn* (constantly "")]
+      (let [gs (make-test-state)
+            [output result] (with-captured-output (verbs/v-quit gs))]
+        (is (nil? (:quit result)))
+        (is (clojure.string/includes? output "Ok."))))))
+
+(deftest quit-vocabulary-test
+  (testing "quit is registered in vocabulary as a verb"
+    (is (= true (parser/wt? "quit" :verb)))
+    (is (= :quit (parser/wt? "quit" :verb true))))
+  (testing "q is a synonym for quit"
+    (is (= true (parser/wt? "q" :verb)))
+    (is (= :quit (parser/wt? "q" :verb true)))))
+
+(deftest quit-parsing-test
+  (testing "parsing 'quit' sets prsa to :quit"
+    (let [gs (make-test-state)
+          [_ result] (with-captured-output (parse-test-input gs "quit"))]
+      (is (nil? (get-in result [:parser :error])))
+      (is (= :quit (get-in result [:parser :prsa])))))
+  (testing "parsing 'q' sets prsa to :quit"
+    (let [gs (make-test-state)
+          [_ result] (with-captured-output (parse-test-input gs "q"))]
+      (is (nil? (get-in result [:parser :error])))
+      (is (= :quit (get-in result [:parser :prsa]))))))
