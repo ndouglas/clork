@@ -62,7 +62,7 @@ These are out-of-game commands that don't advance time.
 |--------|------|---------|-------------|
 | [x] | LOOK/L | V-LOOK | Look around room |
 | [ ] | EXAMINE/DESCRIBE | V-EXAMINE | Examine object closely |
-| [ ] | TAKE/GET/GRAB | V-TAKE | Pick up object |
+| [x] | TAKE/GET/GRAB | V-TAKE | Pick up object |
 | [ ] | DROP | V-DROP | Drop object |
 | [ ] | PUT/INSERT | V-PUT | Put object in container |
 | [ ] | PUT ON | V-PUT-ON | Put object on surface |

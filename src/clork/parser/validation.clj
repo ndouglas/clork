@@ -18,6 +18,14 @@
             [clork.parser.state :as parser-state]
             [clork.parser.objects :as objects]))
 
+(defn- bit-set?
+  "Check if a bit mask is set in a value.
+
+   Unlike bit-test which takes a bit position, this takes a bit mask (value).
+   Example: (bit-set? 52 4) checks if bit value 4 is set in 52."
+  [value mask]
+  (pos? (bit-and (or value 0) mask)))
+
 ;;;; ============================================================================
 ;;;; PARSER VALIDATION - Pre-Action Checks
 ;;;; ============================================================================
@@ -240,9 +248,9 @@
 
         ;; Check if SMANY bit is set
         allows-many-direct? (and loc1
-                                 (bit-test loc1 (:many game-state/search-bits)))
+                                 (bit-set? loc1 (:many game-state/search-bits)))
         allows-many-indirect? (and loc2
-                                   (bit-test loc2 (:many game-state/search-bits)))
+                                   (bit-set? loc2 (:many game-state/search-bits)))
 
         loss (cond
                ;; Multiple direct objects but not allowed
@@ -307,8 +315,8 @@
           (empty? (get-in game-state [:parser match-table] [])))
     (parser-state/parser-success game-state)
 
-    (let [need-have? (bit-test ibits (:have game-state/search-bits))
-          can-take? (bit-test ibits (:take game-state/search-bits))
+    (let [need-have? (bit-set? ibits (:have game-state/search-bits))
+          can-take? (bit-set? ibits (:take game-state/search-bits))
           objects (get-in game-state [:parser match-table] [])]
 
       (reduce

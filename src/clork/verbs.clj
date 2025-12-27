@@ -387,6 +387,96 @@
                               visible)]
         (clojure.string/join ", " descriptions)))))
 
+;;; ---------------------------------------------------------------------------
+;;; TAKE COMMAND
+;;; ---------------------------------------------------------------------------
+;;; ZIL: V-TAKE and ITAKE in gverbs.zil, PRE-TAKE for preconditions
+
+(def ^:private yuks
+  "Humorous responses for trying to take non-takeable objects.
+   ZIL: YUKS global in gverbs.zil"
+  ["A valiant attempt."
+   "You can't be serious."
+   "An interesting idea..."
+   "What a concept!"])
+
+(defn- takeable?
+  "Returns true if the object has the :take flag."
+  [obj]
+  (contains? (or (:flags obj) #{}) :take))
+
+(defn- in-closed-container?
+  "Returns true if the object is inside a closed container."
+  [game-state obj-id]
+  (let [loc-id (gs/get-thing-loc-id game-state obj-id)
+        loc (gs/get-thing game-state loc-id)
+        loc-flags (or (:flags loc) #{})]
+    (and (contains? loc-flags :cont)
+         (not (contains? loc-flags :open)))))
+
+(defn- move-to-inventory
+  "Move an object to the winner's (player's) inventory."
+  [game-state obj-id]
+  (let [winner (:winner game-state)]
+    (assoc-in game-state [:objects obj-id :in] winner)))
+
+(defn- already-holding?
+  "Returns true if the player is already holding the object."
+  [game-state obj-id]
+  (let [winner (:winner game-state)
+        obj-loc (gs/get-thing-loc-id game-state obj-id)]
+    (= obj-loc winner)))
+
+(defn v-take
+  "Take an object and add it to inventory.
+
+   ZIL: V-TAKE in gverbs.zil (line 1398)
+     <ROUTINE V-TAKE ()
+       <COND (<EQUAL? <ITAKE> T>
+              <COND (<FSET? ,PRSO ,WEARBIT>
+                     <TELL \"You are now wearing the \" D ,PRSO \".\" CR>)
+                    (T
+                     <TELL \"Taken.\" CR>)>)>>
+
+   PRE-TAKE checks (line 1369):
+   - Already holding: \"You already have that!\"
+   - In closed container: \"You can't reach something that's inside a closed container.\"
+
+   ITAKE checks (line 1916):
+   - Not takeable (no TAKEBIT): pick from YUKS
+   - In closed container: fail silently
+   - Too heavy: \"Your load is too heavy\"
+   - Too many items: \"You're holding too many things already!\"
+   - Success: move to inventory, set TOUCHBIT"
+  [game-state]
+  (let [prso (parser-state/get-prso game-state)
+        obj (gs/get-thing game-state prso)
+        desc (:desc obj)]
+    (cond
+      ;; Already holding it
+      (already-holding? game-state prso)
+      (utils/tell game-state "You already have that!")
+
+      ;; In a closed container - can't reach it
+      (in-closed-container? game-state prso)
+      (utils/tell game-state "You can't reach something that's inside a closed container.")
+
+      ;; Not takeable - respond with humor
+      (not (takeable? obj))
+      (utils/tell game-state (rand-nth yuks))
+
+      ;; Success - take the object
+      :else
+      (let [state (-> game-state
+                      (move-to-inventory prso)
+                      (add-flag prso :touch))]
+        (utils/tell state "Taken.")))))
+
+;;; ---------------------------------------------------------------------------
+;;; OPEN COMMAND
+;;; ---------------------------------------------------------------------------
+;;; ZIL: V-OPEN in gverbs.zil
+
 (defn v-open
   "Open a container or door.
 

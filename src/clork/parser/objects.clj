@@ -25,6 +25,14 @@
             [clork.parser.lexer :as lexer]
             [clork.random :as random]))
 
+(defn- bit-set?
+  "Check if a bit mask is set in a value.
+
+   Unlike bit-test which takes a bit position, this takes a bit mask (value).
+   Example: (bit-set? 52 4) checks if bit value 4 is set in 52."
+  [value mask]
+  (pos? (bit-and (or value 0) mask)))
+
 ;;;; ============================================================================
 ;;;; PARSER OBJECTS - Object Matching and Resolution
 ;;;; ============================================================================
@@ -212,18 +220,18 @@
    search-list appropriately."
   [game-state container match-table bit1 bit2]
   (let [slocbits (get-in game-state [:parser :slocbits] 0)
-        both-set? (and (bit-test slocbits bit1) (bit-test slocbits bit2))]
+        both-set? (and (bit-set? slocbits bit1) (bit-set? slocbits bit2))]
     (cond
       ;; Both bits set - search all levels
       both-set?
       (search-list game-state container match-table :all)
 
       ;; Only bit1 - top level only
-      (bit-test slocbits bit1)
+      (bit-set? slocbits bit1)
       (search-list game-state container match-table :top)
 
       ;; Only bit2 - bottom level only
-      (bit-test slocbits bit2)
+      (bit-set? slocbits bit2)
       (search-list game-state container match-table :bottom)
 
       ;; Neither - no search
@@ -266,7 +274,7 @@
 
      (cond
        ;; Inhibit flag set - skip search
-       (bit-test gflags (:inhibit game-state/getflags))
+       (bit-set? gflags (:inhibit game-state/getflags))
        {:success true :matches match-table :game-state game-state}
 
        ;; Adjective with no noun - check if adjective is also a noun
@@ -289,7 +297,7 @@
 
        ;; No noun and no adjective and not "all" mode
        (and (nil? nam) (nil? adj)
-            (not (bit-test gflags (:all game-state/getflags)))
+            (not (bit-set? gflags (:all game-state/getflags)))
             (nil? (get-in game-state [:parser :gwimbit])))
        (if verbose?
          {:success false
@@ -301,7 +309,7 @@
        ;; Normal search
        :else
        (let [;; Set slocbits for full search if not in "all" mode
-             gs (if (or (not (bit-test gflags (:all game-state/getflags)))
+             gs (if (or (not (bit-set? gflags (:all game-state/getflags)))
                         (zero? (get-in game-state [:parser :slocbits] 0)))
                   (assoc-in game-state [:parser :slocbits] -1)
                   game-state)
@@ -324,11 +332,11 @@
 
          (cond
            ;; "all" mode - just return what we found
-           (bit-test gflags (:all game-state/getflags))
+           (bit-set? gflags (:all game-state/getflags))
            {:success true :matches matches-after-room :game-state gs}
 
            ;; "one" mode - pick randomly if multiple
-           (and (bit-test gflags (:one game-state/getflags))
+           (and (bit-set? gflags (:one game-state/getflags))
                 (pos? match-count))
            (let [picked (random/rand-nth* matches-after-room)]
              {:success true :matches [picked] :game-state gs})

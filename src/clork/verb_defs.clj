@@ -89,6 +89,11 @@
                 :handler verbs/v-inventory}
 
    ;; === Manipulation Verbs ===
+   :take       {:words   ["take" "get" "hold" "carry" "remove" "grab" "catch"]
+                :syntax  {:num-objects 1
+                          :loc1 #{:in-room :on-ground :many}}
+                :handler verbs/v-take}
+
    :open       {:words   ["open"]
                 :syntax  {:num-objects 1
                           :loc1 #{:held :in-room :on-ground :carried}}
