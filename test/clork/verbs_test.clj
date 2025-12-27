@@ -2,6 +2,7 @@
   "Verb handler tests for Clork."
   (:require [clojure.test :refer :all]
             [clork.verbs :as verbs]
+            [clork.verbs-look :as verbs-look]
             [clork.verb-defs :as verb-defs]
             [clork.parser :as parser]
             [clork.game-state :as gs]
@@ -343,3 +344,120 @@
           [_ result] (with-captured-output (parse-test-input gs "q"))]
       (is (nil? (get-in result [:parser :error])))
       (is (= :quit (get-in result [:parser :prsa]))))))
+
+;;; ---------------------------------------------------------------------------
+;;; LOOK / DESCRIBE-OBJECTS VERB TESTS
+;;; ---------------------------------------------------------------------------
+
+(deftest see-inside-test
+  (testing "see-inside? returns true for open containers"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :box
+                                 :desc "box"
+                                 :flags #{:cont :open}}))]
+      (is (true? (verbs-look/see-inside? gs :box)))))
+  (testing "see-inside? returns true for transparent containers"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :glass-box
+                                 :desc "glass box"
+                                 :flags #{:cont :trans}}))]
+      (is (true? (verbs-look/see-inside? gs :glass-box)))))
+  (testing "see-inside? returns false for closed opaque containers"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :chest
+                                 :desc "chest"
+                                 :flags #{:cont}}))]
+      (is (false? (verbs-look/see-inside? gs :chest)))))
+  (testing "see-inside? returns false for invisible objects"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :invisible-box
+                                 :desc "invisible box"
+                                 :flags #{:cont :open :invisible}}))]
+      (is (false? (verbs-look/see-inside? gs :invisible-box))))))
+
+(deftest describe-objects-basic-test
+  (testing "describe-objects shows objects in lit room"
+    (let [gs (-> (make-test-state)
+                 (gs/set-flag :rooms :west-of-house :lit)
+                 (gs/add-object {:id :lamp
+                                 :in :west-of-house
+                                 :desc "brass lamp"}))
+          [output _] (with-captured-output (verbs-look/describe-objects gs true))]
+      (is (clojure.string/includes? output "brass lamp")))))
+
+(deftest describe-objects-dark-test
+  (testing "describe-objects in dark shows bat message"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :lamp
+                                 :in :west-of-house
+                                 :desc "brass lamp"}))
+          [output _] (with-captured-output (verbs-look/describe-objects gs true))]
+      (is (clojure.string/includes? output "Only bats can see in the dark")))))
+
+(deftest describe-objects-with-fdesc-test
+  (testing "describe-objects uses fdesc for untouched objects"
+    (let [gs (-> (make-test-state)
+                 (gs/set-flag :rooms :west-of-house :lit)
+                 (gs/add-object {:id :lamp
+                                 :in :west-of-house
+                                 :desc "brass lamp"
+                                 :fdesc "A brass lamp sits on the ground."}))
+          [output _] (with-captured-output (verbs-look/describe-objects gs true))]
+      (is (clojure.string/includes? output "A brass lamp sits on the ground.")))))
+
+(deftest describe-objects-touched-test
+  (testing "describe-objects uses generic description for touched objects without ldesc"
+    (let [gs (-> (make-test-state)
+                 (gs/set-flag :rooms :west-of-house :lit)
+                 (gs/add-object {:id :lamp
+                                 :in :west-of-house
+                                 :desc "brass lamp"
+                                 :flags #{:touch}
+                                 :fdesc "A brass lamp sits on the ground."}))
+          [output _] (with-captured-output (verbs-look/describe-objects gs true))]
+      (is (clojure.string/includes? output "There is a brass lamp here")))))
+
+(deftest describe-objects-container-test
+  (testing "describe-objects shows contents of open containers"
+    (let [gs (-> (make-test-state)
+                 (gs/set-flag :rooms :west-of-house :lit)
+                 (gs/add-object {:id :box
+                                 :in :west-of-house
+                                 :desc "wooden box"
+                                 :flags #{:cont :open :touch}})
+                 (gs/add-object {:id :coin
+                                 :in :box
+                                 :desc "gold coin"}))
+          [output _] (with-captured-output (verbs-look/describe-objects gs true))]
+      (is (clojure.string/includes? output "gold coin"))
+      (is (clojure.string/includes? output "wooden box contains")))))
+
+(deftest describe-objects-invisible-test
+  (testing "describe-objects skips invisible objects"
+    (let [gs (-> (make-test-state)
+                 (gs/set-flag :rooms :west-of-house :lit)
+                 (gs/add-object {:id :hidden
+                                 :in :west-of-house
+                                 :desc "hidden thing"
+                                 :flags #{:invisible}}))
+          [output _] (with-captured-output (verbs-look/describe-objects gs true))]
+      (is (not (clojure.string/includes? output "hidden thing"))))))
+
+(deftest describe-object-lighting-test
+  (testing "describe-object shows (providing light) for lit objects"
+    (let [gs (-> (make-test-state)
+                 (gs/set-flag :rooms :west-of-house :lit)
+                 (gs/add-object {:id :lamp
+                                 :in :west-of-house
+                                 :desc "brass lamp"
+                                 :flags #{:on :touch}}))
+          [output _] (with-captured-output (verbs-look/describe-objects gs true))]
+      (is (clojure.string/includes? output "(providing light)")))))
+
+(deftest look-vocabulary-test
+  (testing "look is registered in vocabulary as a verb"
+    (is (= true (parser/wt? "look" :verb)))
+    (is (= :look (parser/wt? "look" :verb true))))
+  (testing "l is a synonym for look"
+    (is (= true (parser/wt? "l" :verb)))
+    (is (= :look (parser/wt? "l" :verb true)))))
