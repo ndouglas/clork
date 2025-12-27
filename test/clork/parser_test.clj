@@ -571,190 +571,190 @@
 ;;; PRSO/PRSI ACCESS TESTS
 ;;; ---------------------------------------------------------------------------
 
-(deftest get-prso-test
-  (testing "get-prso returns first element when prso is a vector"
-    (let [game-state {:parser {:prso [:mailbox :lamp]}}]
-      (is (= :mailbox (parser-state/get-prso game-state)))))
+  (deftest get-prso-test
+    (testing "get-prso returns first element when prso is a vector"
+      (let [game-state {:parser {:prso [:mailbox :lamp]}}]
+        (is (= :mailbox (parser-state/get-prso game-state)))))
 
-  (testing "get-prso returns single element from single-item vector"
-    (let [game-state {:parser {:prso [:mailbox]}}]
-      (is (= :mailbox (parser-state/get-prso game-state)))))
+    (testing "get-prso returns single element from single-item vector"
+      (let [game-state {:parser {:prso [:mailbox]}}]
+        (is (= :mailbox (parser-state/get-prso game-state)))))
 
-  (testing "get-prso returns scalar value when prso is not a vector"
-    (let [game-state {:parser {:prso :mailbox}}]
-      (is (= :mailbox (parser-state/get-prso game-state)))))
+    (testing "get-prso returns scalar value when prso is not a vector"
+      (let [game-state {:parser {:prso :mailbox}}]
+        (is (= :mailbox (parser-state/get-prso game-state)))))
 
-  (testing "get-prso returns nil when prso is nil"
-    (let [game-state {:parser {:prso nil}}]
-      (is (nil? (parser-state/get-prso game-state)))))
+    (testing "get-prso returns nil when prso is nil"
+      (let [game-state {:parser {:prso nil}}]
+        (is (nil? (parser-state/get-prso game-state)))))
 
-  (testing "get-prso returns nil when prso is empty vector"
-    (let [game-state {:parser {:prso []}}]
-      (is (nil? (parser-state/get-prso game-state))))))
+    (testing "get-prso returns nil when prso is empty vector"
+      (let [game-state {:parser {:prso []}}]
+        (is (nil? (parser-state/get-prso game-state))))))
 
-(deftest get-prso-all-test
-  (testing "get-prso-all returns full vector when prso is a vector"
-    (let [game-state {:parser {:prso [:mailbox :lamp :sword]}}]
-      (is (= [:mailbox :lamp :sword] (parser-state/get-prso-all game-state)))))
+  (deftest get-prso-all-test
+    (testing "get-prso-all returns full vector when prso is a vector"
+      (let [game-state {:parser {:prso [:mailbox :lamp :sword]}}]
+        (is (= [:mailbox :lamp :sword] (parser-state/get-prso-all game-state)))))
 
-  (testing "get-prso-all wraps scalar in vector"
-    (let [game-state {:parser {:prso :mailbox}}]
-      (is (= [:mailbox] (parser-state/get-prso-all game-state)))))
+    (testing "get-prso-all wraps scalar in vector"
+      (let [game-state {:parser {:prso :mailbox}}]
+        (is (= [:mailbox] (parser-state/get-prso-all game-state)))))
 
-  (testing "get-prso-all returns nil when prso is nil"
-    (let [game-state {:parser {:prso nil}}]
-      (is (nil? (parser-state/get-prso-all game-state)))))
+    (testing "get-prso-all returns nil when prso is nil"
+      (let [game-state {:parser {:prso nil}}]
+        (is (nil? (parser-state/get-prso-all game-state)))))
 
-  (testing "get-prso-all returns empty vector for empty vector"
-    (let [game-state {:parser {:prso []}}]
-      (is (= [] (parser-state/get-prso-all game-state))))))
+    (testing "get-prso-all returns empty vector for empty vector"
+      (let [game-state {:parser {:prso []}}]
+        (is (= [] (parser-state/get-prso-all game-state))))))
 
-(deftest get-prsi-test
-  (testing "get-prsi returns first element when prsi is a vector"
-    (let [game-state {:parser {:prsi [:chest :bag]}}]
-      (is (= :chest (parser-state/get-prsi game-state)))))
+  (deftest get-prsi-test
+    (testing "get-prsi returns first element when prsi is a vector"
+      (let [game-state {:parser {:prsi [:chest :bag]}}]
+        (is (= :chest (parser-state/get-prsi game-state)))))
 
-  (testing "get-prsi returns scalar value when prsi is not a vector"
-    (let [game-state {:parser {:prsi :chest}}]
-      (is (= :chest (parser-state/get-prsi game-state)))))
+    (testing "get-prsi returns scalar value when prsi is not a vector"
+      (let [game-state {:parser {:prsi :chest}}]
+        (is (= :chest (parser-state/get-prsi game-state)))))
 
-  (testing "get-prsi returns nil when prsi is nil"
-    (let [game-state {:parser {:prsi nil}}]
-      (is (nil? (parser-state/get-prsi game-state))))))
+    (testing "get-prsi returns nil when prsi is nil"
+      (let [game-state {:parser {:prsi nil}}]
+        (is (nil? (parser-state/get-prsi game-state))))))
 
-(deftest get-prsi-all-test
-  (testing "get-prsi-all returns full vector when prsi is a vector"
-    (let [game-state {:parser {:prsi [:chest :bag]}}]
-      (is (= [:chest :bag] (parser-state/get-prsi-all game-state)))))
+  (deftest get-prsi-all-test
+    (testing "get-prsi-all returns full vector when prsi is a vector"
+      (let [game-state {:parser {:prsi [:chest :bag]}}]
+        (is (= [:chest :bag] (parser-state/get-prsi-all game-state)))))
 
-  (testing "get-prsi-all wraps scalar in vector"
-    (let [game-state {:parser {:prsi :chest}}]
-      (is (= [:chest] (parser-state/get-prsi-all game-state)))))
+    (testing "get-prsi-all wraps scalar in vector"
+      (let [game-state {:parser {:prsi :chest}}]
+        (is (= [:chest] (parser-state/get-prsi-all game-state)))))
 
-  (testing "get-prsi-all returns nil when prsi is nil"
-    (let [game-state {:parser {:prsi nil}}]
-      (is (nil? (parser-state/get-prsi-all game-state))))))
+    (testing "get-prsi-all returns nil when prsi is nil"
+      (let [game-state {:parser {:prsi nil}}]
+        (is (nil? (parser-state/get-prsi-all game-state))))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; IT PRONOUN RESOLUTION TESTS
 ;;; ---------------------------------------------------------------------------
 
-(deftest it-pronoun-snarfem-test
-  (testing "snarfem resolves 'it' to object stored in :it"
-    (let [game-state (-> (gs/initial-game-state)
-                         (assoc :it :mailbox)
-                         (assoc-in [:parser :lexv]
-                                   {:tokens [{:word "it"}] :count 1})
-                         (assoc-in [:parser :itbl] (vec (repeat 10 0))))]
-      (let [result (parser-objects/snarfem game-state 0 1 :prso)]
-        (is (:success result))
-        (is (= [:mailbox] (:matches result))))))
+  (deftest it-pronoun-snarfem-test
+    (testing "snarfem resolves 'it' to object stored in :it"
+      (let [game-state (-> (gs/initial-game-state)
+                           (assoc :it :mailbox)
+                           (assoc-in [:parser :lexv]
+                                     {:tokens [{:word "it"}] :count 1})
+                           (assoc-in [:parser :itbl] (vec (repeat 10 0))))]
+        (let [result (parser-objects/snarfem game-state 0 1 :prso)]
+          (is (:success result))
+          (is (= [:mailbox] (:matches result))))))
 
-  (testing "snarfem returns error when :it is nil"
-    (let [game-state (-> (gs/initial-game-state)
-                         (assoc :it nil)
-                         (assoc-in [:parser :lexv]
-                                   {:tokens [{:word "it"}] :count 1})
-                         (assoc-in [:parser :itbl] (vec (repeat 10 0))))]
-      (let [result (parser-objects/snarfem game-state 0 1 :prso)]
-        (is (not (:success result)))
-        (is (= :no-it-referent (get-in result [:error :type])))))))
+    (testing "snarfem returns error when :it is nil"
+      (let [game-state (-> (gs/initial-game-state)
+                           (assoc :it nil)
+                           (assoc-in [:parser :lexv]
+                                     {:tokens [{:word "it"}] :count 1})
+                           (assoc-in [:parser :itbl] (vec (repeat 10 0))))]
+        (let [result (parser-objects/snarfem game-state 0 1 :prso)]
+          (is (not (:success result)))
+          (is (= :no-it-referent (get-in result [:error :type])))))))
 
-(deftest it-pronoun-update-after-verb-test
-  (testing "perform updates :it after successful verb with object"
+  (deftest it-pronoun-update-after-verb-test
+    (testing "perform updates :it after successful verb with object"
     ;; Set up a minimal game state with a verb handler
-    (let [initial-state (-> (gs/initial-game-state)
-                            (assoc :it :mailbox)
-                            (assoc-in [:parser :prsa] :look)
-                            (assoc-in [:parser :prso] [:leaflet]))]
+      (let [initial-state (-> (gs/initial-game-state)
+                              (assoc :it :mailbox)
+                              (assoc-in [:parser :prsa] :look)
+                              (assoc-in [:parser :prso] [:leaflet]))]
       ;; After perform, :it should be updated to :leaflet
-      (let [result-state (verb-defs/perform initial-state)]
-        (is (= :leaflet (:it result-state))))))
+        (let [result-state (verb-defs/perform initial-state)]
+          (is (= :leaflet (:it result-state))))))
 
-  (testing "perform preserves :it when verb has no object"
-    (let [initial-state (-> (gs/initial-game-state)
-                            (assoc :it :mailbox)
-                            (assoc-in [:parser :prsa] :look)
-                            (assoc-in [:parser :prso] nil))]
-      (let [result-state (verb-defs/perform initial-state)]
-        (is (= :mailbox (:it result-state)))))))
+    (testing "perform preserves :it when verb has no object"
+      (let [initial-state (-> (gs/initial-game-state)
+                              (assoc :it :mailbox)
+                              (assoc-in [:parser :prsa] :look)
+                              (assoc-in [:parser :prso] nil))]
+        (let [result-state (verb-defs/perform initial-state)]
+          (is (= :mailbox (:it result-state)))))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; AUTO-TAKE (ITAKE) TESTS
 ;;; ---------------------------------------------------------------------------
 
-(deftest itake-takeable-object-test
-  (testing "itake moves takeable object to player inventory"
-    (let [gs (-> (gs/initial-game-state)
-                 (gs/add-room {:id :west-of-house :desc "West of House"})
-                 (gs/add-object {:id :leaflet
-                                 :in :west-of-house
-                                 :desc "leaflet"
-                                 :flags #{:take}}))
-          result (validation/itake gs :leaflet)]
+  (deftest itake-takeable-object-test
+    (testing "itake moves takeable object to player inventory"
+      (let [gs (-> (gs/initial-game-state)
+                   (gs/add-room {:id :west-of-house :desc "West of House"})
+                   (gs/add-object {:id :leaflet
+                                   :in :west-of-house
+                                   :desc "leaflet"
+                                   :flags #{:take}}))
+            result (validation/itake gs :leaflet)]
       ;; Should return updated game-state, not true
-      (is (map? result))
+        (is (map? result))
       ;; Object should now be in player's inventory
-      (is (= :adventurer (get-in result [:objects :leaflet :in])))
+        (is (= :adventurer (get-in result [:objects :leaflet :in])))
       ;; Object should have :touch flag set (using set-thing-flag?)
-      (is (gs/set-thing-flag? result :leaflet :touch)))))
+        (is (gs/set-thing-flag? result :leaflet :touch)))))
 
-(deftest itake-non-takeable-object-test
-  (testing "itake returns true for non-takeable object"
-    (let [gs (-> (gs/initial-game-state)
-                 (gs/add-room {:id :west-of-house :desc "West of House"})
-                 (gs/add-object {:id :mailbox
-                                 :in :west-of-house
-                                 :desc "mailbox"
-                                 :flags #{}}))]
+  (deftest itake-non-takeable-object-test
+    (testing "itake returns true for non-takeable object"
+      (let [gs (-> (gs/initial-game-state)
+                   (gs/add-room {:id :west-of-house :desc "West of House"})
+                   (gs/add-object {:id :mailbox
+                                   :in :west-of-house
+                                   :desc "mailbox"
+                                   :flags #{}}))]
       ;; Should return true (failure) for non-takeable
-      (is (= true (validation/itake gs :mailbox))))))
+        (is (= true (validation/itake gs :mailbox))))))
 
-(deftest itake-check-auto-takes-object-test
-  (testing "itake-check auto-takes object when syntax has :take flag"
-    (let [gs (-> (gs/initial-game-state)
-                 (gs/add-room {:id :west-of-house :desc "West of House"})
-                 (gs/add-object {:id :leaflet
-                                 :in :west-of-house
-                                 :desc "leaflet"
-                                 :flags #{:take :read}})
-                 (assoc-in [:parser :prso] [:leaflet]))
+  (deftest itake-check-auto-takes-object-test
+    (testing "itake-check auto-takes object when syntax has :take flag"
+      (let [gs (-> (gs/initial-game-state)
+                   (gs/add-room {:id :west-of-house :desc "West of House"})
+                   (gs/add-object {:id :leaflet
+                                   :in :west-of-house
+                                   :desc "leaflet"
+                                   :flags #{:take :read}})
+                   (assoc-in [:parser :prso] [:leaflet]))
           ;; Simulate syntax with :take in loc bits
-          take-bits (:take gs/search-bits)
-          result (validation/itake-check gs :prso take-bits)]
+            take-bits (:take gs/search-bits)
+            result (validation/itake-check gs :prso take-bits)]
       ;; Should succeed
-      (is (:success result))
+        (is (:success result))
       ;; Object should be in inventory in returned game-state
-      (is (= :adventurer (get-in (:game-state result) [:objects :leaflet :in]))))))
+        (is (= :adventurer (get-in (:game-state result) [:objects :leaflet :in]))))))
 
-(deftest itake-check-already-held-test
-  (testing "itake-check succeeds without taking if already held"
-    (let [gs (-> (gs/initial-game-state)
-                 (gs/add-room {:id :west-of-house :desc "West of House"})
-                 (gs/add-object {:id :leaflet
-                                 :in :adventurer  ; Already in inventory
-                                 :desc "leaflet"
-                                 :flags #{:take :read}})
-                 (assoc-in [:parser :prso] [:leaflet]))
-          take-bits (:take gs/search-bits)
-          result (validation/itake-check gs :prso take-bits)]
+  (deftest itake-check-already-held-test
+    (testing "itake-check succeeds without taking if already held"
+      (let [gs (-> (gs/initial-game-state)
+                   (gs/add-room {:id :west-of-house :desc "West of House"})
+                   (gs/add-object {:id :leaflet
+                                   :in :adventurer  ; Already in inventory
+                                   :desc "leaflet"
+                                   :flags #{:take :read}})
+                   (assoc-in [:parser :prso] [:leaflet]))
+            take-bits (:take gs/search-bits)
+            result (validation/itake-check gs :prso take-bits)]
       ;; Should succeed
-      (is (:success result))
+        (is (:success result))
       ;; Object should still be in inventory
-      (is (= :adventurer (get-in (:game-state result) [:objects :leaflet :in]))))))
+        (is (= :adventurer (get-in (:game-state result) [:objects :leaflet :in]))))))
 
-(deftest itake-check-non-takeable-fails-silently-test
-  (testing "itake-check fails silently for non-takeable object"
-    (let [gs (-> (gs/initial-game-state)
-                 (gs/add-room {:id :west-of-house :desc "West of House"})
-                 (gs/add-object {:id :mailbox
-                                 :in :west-of-house
-                                 :desc "mailbox"
-                                 :flags #{}})  ; No :take flag
-                 (assoc-in [:parser :prso] [:mailbox]))
-          take-bits (:take gs/search-bits)
-          result (validation/itake-check gs :prso take-bits)]
+  (deftest itake-check-non-takeable-fails-silently-test
+    (testing "itake-check fails silently for non-takeable object"
+      (let [gs (-> (gs/initial-game-state)
+                   (gs/add-room {:id :west-of-house :desc "West of House"})
+                   (gs/add-object {:id :mailbox
+                                   :in :west-of-house
+                                   :desc "mailbox"
+                                   :flags #{}})  ; No :take flag
+                   (assoc-in [:parser :prso] [:mailbox]))
+            take-bits (:take gs/search-bits)
+            result (validation/itake-check gs :prso take-bits)]
       ;; Should still succeed (silent failure for non-takeable)
-      (is (:success result))
+        (is (:success result))
       ;; Object should NOT be moved
-      (is (= :west-of-house (get-in (:game-state result) [:objects :mailbox :in])))))))
+        (is (= :west-of-house (get-in (:game-state result) [:objects :mailbox :in])))))))
