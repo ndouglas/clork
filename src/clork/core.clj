@@ -9,6 +9,7 @@
             [clork.main-loop :as main-loop]
             [clork.readline :as readline]
             [clork.script :as script]
+            [clork.random :as random]
             [clojure.java.io :as io]))
 
 ;; Re-export the essential API for creating and running games
@@ -51,6 +52,7 @@
   (println "  --max-turns N, -m N    Limit game to N turns")
   (println "  --quiet, -q            Suppress game output (for CI)")
   (println "  --input FILE, -i FILE  Read commands from FILE")
+  (println "  --seed N               Set random seed for reproducibility")
   (println "  --help, -h             Show this help message")
   (println "")
   (println "Exit codes:")
@@ -76,6 +78,11 @@
     ;; Handle config parse errors
     (when (:error config)
       (System/exit (:error script/exit-codes)))
+
+    ;; Initialize random number generator (with seed if specified)
+    (if-let [seed (:seed config)]
+      (random/init! seed)
+      (random/init!))
 
     ;; Set up input redirection if --input FILE specified
     (let [input-reader (when-let [file (:input-file config)]

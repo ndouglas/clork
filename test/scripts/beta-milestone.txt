@@ -1,0 +1,445 @@
+; Clork Beta Milestone Test - Complete Game Walkthrough
+; Based on Zork I walkthrough from web.mit.edu transcript
+; This represents our target for "beta" release - full game completion
+;
+; When this script passes with --strict and sets :won true,
+; the game is feature-complete!
+
+; === PART 1: Above Ground ===
+
+; West of House - starting location
+open mailbox
+read leaflet
+drop leaflet
+
+; Navigate to the house
+go south
+go east
+open window
+enter house
+
+; Kitchen
+go west
+take lamp
+move rug
+open trap door
+
+; === PART 2: The Cellar and Troll ===
+
+turn on lamp
+go down
+go south
+go east
+take painting
+go north
+go up chimney
+
+; Attic
+go up
+take knife
+take rope
+
+; Living Room - store first treasure
+go down
+go west
+open case
+put painting inside case
+drop knife
+take sword
+
+; Back underground to fight troll
+open trap door
+go down
+go north
+
+; Troll fight (may need multiple attempts due to combat randomness)
+kill troll with sword
+kill troll with sword
+kill troll with sword
+kill troll with sword
+kill troll with sword
+drop sword
+
+; === PART 3: The Maze and Temple ===
+
+go east
+go east
+go southeast
+go east
+
+; Dome Room
+tie rope to railing
+go down
+
+; Torch Room
+go south
+go east
+take coffin
+go west
+go south
+
+; Temple
+pray
+
+; Dark areas
+turn off lamp
+go south
+go north
+
+; Egyptian Room
+go east
+go down
+go down
+go north
+drop coffin
+open coffin
+take sceptre
+wave sceptre
+take gold
+take coffin
+
+; Return to house
+go southwest
+go up
+go up
+go northwest
+go west
+enter house
+open bag
+take garlic
+
+; Store treasures
+go west
+put coffin in case
+put gold in case
+put sceptre in case
+
+; === PART 4: The Dam and Maintenance Room ===
+
+open trap door
+turn on lamp
+go down
+go north
+go east
+go north
+go east
+go north
+go west
+take matches
+go north
+take wrench
+take screwdriver
+push yellow button
+go south
+go south
+turn bolt with wrench
+drop wrench
+
+; === PART 5: The Loud Room and Caves ===
+
+go south
+go down
+go east
+go west
+go south
+take candles
+take book
+
+; === PART 6: Entrance to Hades ===
+
+go down
+go down
+ring bell
+light match
+light candles with match
+read book
+drop book
+go south
+take skull
+
+; === PART 7: Mirror Room and Coal Mine ===
+
+go north
+go up
+go north
+rub mirror
+go north
+go west
+go north
+go west
+go north
+go east
+go north
+go east
+go south
+inventory
+go north
+go east
+
+; Shaft Room - prepare basket
+put torch in basket
+put screwdriver in basket
+turn on lamp
+
+; Navigate to coal mine
+go north
+go down
+go east
+go northeast
+go southeast
+go southwest
+go down
+go up
+go up
+go north
+go east
+go south
+go east
+go south
+go north
+go up
+go up
+go down
+
+; Get coal
+go west
+drop all
+go west
+take coal
+take screwdriver
+take torch
+
+; === PART 8: Machine Room ===
+
+go south
+go up
+go up
+go north
+go east
+go south
+go southwest
+go down
+open lid
+put coal in machine
+close lid
+turn switch with screwdriver
+drop screwdriver
+open lid
+take diamond
+
+; === PART 9: Return and Drafty Room ===
+
+go north
+put torch in basket
+put diamond in basket
+
+; Get equipment for water areas
+go east
+take skull
+take lamp
+take garlic
+
+; Navigate to Drafty Room
+go east
+go up
+go up
+go north
+go east
+go south
+go north
+go up
+go up
+go east
+go south
+go north
+go up
+go north
+
+; Jade Room
+take jade
+
+; === PART 10: Shaft Room - Retrieve Items ===
+
+go south
+go east
+go south
+raise basket
+look in basket
+take diamond
+take torch
+turn off lamp
+
+; === PART 11: Reservoir and Boat ===
+
+go west
+go south
+go east
+go north
+go northeast
+go north
+take pump
+take pump
+go north
+take trident
+go south
+go south
+go east
+go east
+inflate plastic with pump
+drop pump
+
+; Boat journey
+go inside boat
+launch
+wait
+wait
+wait
+
+; Beach
+take buoy
+go east
+leave boat
+take shovel
+drop garlic
+take shovel
+
+; === PART 12: Sandy Beach - Dig for Treasure ===
+
+go northeast
+dig
+dig sand
+dig sand
+dig sand
+take scarab
+drop shovel
+
+; === PART 13: Buoy and Rainbow ===
+
+go southwest
+open buoy
+take emerald
+take garlic
+go south
+go south
+cross rainbow
+turn off lamp
+
+; Return to house
+go southwest
+go up
+go up
+go northwest
+go west
+enter house
+
+; Store treasures
+go west
+put emerald in case
+put scarab in case
+put trident in case
+put jewels in case
+
+; === PART 14: Tree and Egg ===
+
+go east
+go east
+go north
+go north
+climb tree
+take egg
+climb down
+go south
+go east
+enter house
+
+; === PART 15: Bank and Thief ===
+
+go west
+turn on lamp
+go down
+go north
+go west
+go south
+go east
+go up
+take coins
+take key
+go southwest
+go east
+go south
+go southeast
+
+; Meet Ulysses (thief)
+Ulysses
+give egg to thief
+
+; Get stolen goods
+go down
+go east
+go east
+put coins in case
+take knife
+go west
+go west
+go up
+
+; Kill thief
+kill thief with knife
+kill thief with knife
+kill thief with knife
+take all
+drop stiletto
+take chalice
+
+; === PART 16: Grating and Songbird ===
+
+go down
+go northwest
+go south
+go west
+go up
+go down
+go northeast
+unlock grate
+open grate
+go up
+go south
+climb tree
+wind up canary
+go down
+take bauble
+go south
+go north
+go east
+enter house
+
+; Store final treasures
+go west
+put bauble in case
+put chalice in case
+take canary from egg
+put canary in case
+put egg in case
+put bracelet in case
+put skull in case
+
+; === PART 17: Loud Room - Final Treasure ===
+
+go down
+go north
+go east
+go east
+echo
+take bar
+go west
+go west
+go west
+go south
+go up
+
+; Final treasure - should trigger victory!
+put bar in case
+
+; Verify victory
+score
+$quit

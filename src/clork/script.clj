@@ -36,7 +36,8 @@
    :strict             false   ; Exit non-zero on ANY error (death or parser)
    :max-turns          nil     ; Maximum turns before forced exit (nil = unlimited)
    :quiet              false   ; Suppress game output
-   :input-file         nil})   ; File to read commands from (nil = stdin)
+   :input-file         nil     ; File to read commands from (nil = stdin)
+   :seed               nil})   ; Random seed for reproducibility (nil = random)
 
 (defn parse-args
   "Parse command-line arguments into a script config map.
@@ -47,7 +48,8 @@
      --fail-on-parser-error Exit non-zero on parser errors
      --max-turns N          Limit to N turns
      --quiet, -q            Suppress game output
-     --input FILE, -i FILE  Read commands from FILE"
+     --input FILE, -i FILE  Read commands from FILE
+     --seed N               Set random seed for reproducibility"
   [args]
   (loop [args args
          config default-config]
@@ -89,6 +91,14 @@
             (do (binding [*out* *err*]
                   (println "Error: --input requires a filename"))
                 (assoc config :error "Missing argument for --input")))
+
+          "--seed"
+          (if-let [n (first rest-args)]
+            (recur (rest rest-args)
+                   (assoc config :seed (Long/parseLong n)))
+            (do (binding [*out* *err*]
+                  (println "Error: --seed requires a number"))
+                (assoc config :error "Missing argument for --seed")))
 
           ;; Unknown argument - could be game-specific, ignore for now
           (recur rest-args config))))))

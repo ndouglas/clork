@@ -1,0 +1,80 @@
+; Clork Alpha Milestone Test
+; Based on early Zork I walkthrough from web.mit.edu transcript
+; This represents our target for "alpha" release - basic adventure gameplay
+;
+; Expected to fail until these verbs are implemented:
+;   Movement: GO/WALK, ENTER, UP, DOWN
+;   Objects: TAKE/GET, DROP, OPEN, CLOSE, READ, PUT
+;   Other: MOVE, TURN ON/OFF, KILL
+;
+; When this script passes with --strict, we have basic playability!
+
+; === West of House (starting location) ===
+look
+inventory
+
+; Open the mailbox and read the leaflet
+open mailbox
+take leaflet
+read leaflet
+drop leaflet
+
+; === Navigate to the house ===
+go south
+go east
+open window
+enter
+
+; === Inside the house: Kitchen ===
+go west
+take lamp
+take bottle
+
+; === Living Room ===
+move rug
+open trap door
+
+; === Prepare to go underground ===
+turn on lamp
+go down
+
+; === Cellar ===
+go south
+
+; === East of Chasm ===
+go east
+take painting
+
+; === Gallery ===
+go north
+
+; === Studio ===
+go up chimney
+
+; === Kitchen (back up) ===
+go up
+
+; === Attic ===
+take knife
+take rope
+
+; === Back to Living Room ===
+go down
+go west
+
+; === Store treasure ===
+open case
+put painting in case
+drop knife
+take sword
+
+; === Back underground ===
+open trap door
+go down
+go north
+
+; If we made it here, we're at the Troll Room
+; This is a good stopping point for beta
+look
+score
+$quit

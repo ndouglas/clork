@@ -1,0 +1,17 @@
+; Clork Smoke Test - Tests currently implemented verbs
+; This script should exit with code 0 (no errors)
+
+look
+verbose
+look
+brief
+look
+superbrief
+look
+verbose
+inventory
+i
+diagnose
+score
+version
+$quit

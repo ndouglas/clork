@@ -22,7 +22,8 @@
    - Lines 945-958: BUT-MERGE routine"
   (:require [clork.game-state :as game-state]
             [clork.parser.state :as parser-state]
-            [clork.parser.lexer :as lexer]))
+            [clork.parser.lexer :as lexer]
+            [clork.random :as random]))
 
 ;;;; ============================================================================
 ;;;; PARSER OBJECTS - Object Matching and Resolution
@@ -315,7 +316,7 @@
            ;; "one" mode - pick randomly if multiple
            (and (bit-test gflags (:one game-state/getflags))
                 (pos? match-count))
-           (let [picked (rand-nth matches-after-room)]
+           (let [picked (random/rand-nth* matches-after-room)]
              {:success true :matches [picked] :game-state gs})
 
            ;; Multiple matches - ambiguous

@@ -11,6 +11,7 @@
       (is (false? (:fail-on-parser-error config)))
       (is (nil? (:max-turns config)))
       (is (nil? (:input-file config)))
+      (is (nil? (:seed config)))
       (is (false? (:quiet config)))))
 
   (testing "--strict enables all failure checks"
@@ -68,7 +69,17 @@
       (is (true? (:script-mode? config)))
       (is (true? (:fail-on-death config)))
       (is (= 10 (:max-turns config)))
-      (is (true? (:quiet config))))))
+      (is (true? (:quiet config)))))
+
+  (testing "--seed sets random seed"
+    (let [config (script/parse-args ["--seed" "12345"])]
+      (is (= 12345 (:seed config)))))
+
+  (testing "combining --seed with other flags"
+    (let [config (script/parse-args ["--strict" "--seed" "42" "-i" "test.txt"])]
+      (is (true? (:strict config)))
+      (is (= 42 (:seed config)))
+      (is (= "test.txt" (:input-file config))))))
 
 (deftest determine-exit-code-test
   (testing "success with no errors"

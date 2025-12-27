@@ -151,14 +151,29 @@
 ;; 			  QUIT RESTART SCORE SCRIPT UNSCRIPT RESTORE> T)
 ;; 		  (T <SET V <CLOCKER>>)>)>>
 
+(defn- skip-input-line?
+  "Check if a line should be skipped (comment or blank).
+   Comments start with ; or # after trimming whitespace."
+  [s]
+  (when s
+    (let [trimmed (clojure.string/trim s)]
+      (or (empty? trimmed)
+          (clojure.string/starts-with? trimmed ";")
+          (clojure.string/starts-with? trimmed "#")))))
+
 (defn- read-input-phase
   "Read input from player, handling reserve/cont buffers.
-   Returns game-state with :input populated."
+   Returns game-state with :input populated.
+   Comments (lines starting with ; or #) and blank lines are skipped."
   [game-state]
-  (-> game-state
-      (parser/parser-init)
-      (parser-input/parser-set-winner-to-player)
-      (parser-input/parser-read-command)))
+  (loop [gs (-> game-state
+                (parser/parser-init)
+                (parser-input/parser-set-winner-to-player)
+                (parser-input/parser-read-command))]
+    (if (skip-input-line? (:input gs))
+      ;; Skip comment/blank, read next line
+      (recur (parser-input/parser-read-command gs))
+      gs)))
 
 (defn main-loop-once
   "Execute one iteration of the main loop.
