@@ -3,7 +3,15 @@
   (:require [clork.utils :as utils]
             [clork.game-state :as game-state]
             [clork.verb-defs :as verb-defs]
-            [clork.parser.state :as parser-state]))
+            [clork.parser.state :as parser-state]
+            [clork.parser.input :as input]
+            [clork.parser.lexer :as lexer]
+            [clork.parser.clause :as clause]
+            [clork.parser.syntax :as syntax]
+            [clork.parser.objects :as objects]
+            [clork.parser.orphan :as orphan]
+            [clork.parser.validation :as validation]
+            [clork.parser.output :as output]))
 
 ;;;; ============================================================================
 ;;;; PARSER - Main Entry Point and Orchestration
@@ -102,28 +110,80 @@
 (def ^:dynamic *verb-vocabulary* verb-defs/*verb-vocabulary*)
 (def ^:dynamic *verb-syntaxes* verb-defs/*verb-syntaxes*)
 
-;;; ---------------------------------------------------------------------------
-;;; FORWARD DECLARATIONS
-;;; ---------------------------------------------------------------------------
-;;; Only declare functions defined WITHIN the parser submodules that have
-;;; ordering issues. Do NOT redeclare functions from other modules!
+;; Re-export input functions
+(def parser-set-winner-to-player input/parser-set-winner-to-player)
+(def parser-read-command input/parser-read-command)
+(def parser-read-command-input input/parser-read-command-input)
+(def parser-restore-reserve input/parser-restore-reserve)
+(def parser-restore-cont input/parser-restore-cont)
+(def parser-set-here-to-winner-loc input/parser-set-here-to-winner-loc)
+(def stuff input/stuff)
+(def inbuf-stuff input/inbuf-stuff)
 
-(declare lit?)              ; validation.clj - called from input.clj
+;; Re-export lexer functions
+(def tokenize lexer/tokenize)
+(def lexv-from-input lexer/lexv-from-input)
+(def lexv-count lexer/lexv-count)
+(def lexv-word lexer/lexv-word)
+(def lexv-get lexer/lexv-get)
+(def wt? lexer/wt?)
+(def special-word? lexer/special-word?)
+(def number?-token lexer/number?-token)
+(def parse-number lexer/parse-number)
+(def parts-of-speech lexer/parts-of-speech)
 
-;;; ---------------------------------------------------------------------------
-;;; LOAD SUBMODULES
-;;; ---------------------------------------------------------------------------
-;;; Order matters! Later modules may depend on earlier ones.
-;;; parser/state is now a separate namespace (clork.parser.state)
+;; Re-export clause functions
+(def clause clause/clause)
+(def skip-articles clause/skip-articles)
+(def clause-terminator? clause/clause-terminator?)
+(def in-object-list? clause/in-object-list?)
 
-(load "parser/input")       ; parser-read-command, parser-restore-*
-(load "parser/lexer")       ; tokenize, wt?, parse-number
-(load "parser/clause")      ; clause parsing
-(load "parser/syntax")      ; syntax-check, gwim
-(load "parser/objects")     ; snarf-objects, get-object, search-list
-(load "parser/orphan")      ; orphan-merge, orphan
-(load "parser/validation")  ; take-check, many-check, accessible?
-(load "parser/output")      ; error messages, prompts
+;; Re-export syntax functions
+(def syntax-check syntax/syntax-check)
+(def syntax-found syntax/syntax-found)
+(def gwim syntax/gwim)
+(def make-syntax syntax/make-syntax)
+(def verb-syntaxes syntax/verb-syntaxes)
+(def syntax-matches? syntax/syntax-matches?)
+(def find-matching-syntax syntax/find-matching-syntax)
+(def try-gwim syntax/try-gwim)
+(def get-verb-syntaxes syntax/get-verb-syntaxes)
+
+;; Re-export objects functions
+(def snarf-objects objects/snarf-objects)
+(def get-object objects/get-object)
+(def search-list objects/search-list)
+(def obj-found objects/obj-found)
+(def match-table-count objects/match-table-count)
+(def this-it? objects/this-it?)
+(def do-sl objects/do-sl)
+(def global-check objects/global-check)
+(def snarfem objects/snarfem)
+(def but-merge objects/but-merge)
+
+;; Re-export orphan functions
+(def orphan orphan/orphan)
+(def orphan-merge orphan/orphan-merge)
+
+;; Re-export validation functions
+(def take-check validation/take-check)
+(def many-check validation/many-check)
+(def accessible? validation/accessible?)
+(def lit? validation/lit?)
+(def meta-loc validation/meta-loc)
+(def held? validation/held?)
+(def itake-check validation/itake-check)
+(def itake validation/itake)
+(def room-has-global? validation/room-has-global?)
+(def room? validation/room?)
+
+;; Re-export output functions
+(def unknown-word output/unknown-word)
+(def cant-use output/cant-use)
+(def parser-say output/parser-say)
+(def which-print output/which-print)
+(def thing-print output/thing-print)
+(def buffer-print output/buffer-print)
 
 ;;; ---------------------------------------------------------------------------
 ;;; FORWARD DECLARATIONS (LOCAL)
@@ -169,33 +229,33 @@
   ;; === Phase 1: Initialize ===
   (let [gs (-> game-state
                (parser-init)
-               (parser-set-winner-to-player)
-               (parser-read-command))]
+               (input/parser-set-winner-to-player)
+               (input/parser-read-command))]
 
     ;; === Phase 2: Tokenize Input ===
     (let [gs (if-let [input (:input gs)]
-               (assoc-in gs [:parser :lexv] (lexv-from-input input))
+               (assoc-in gs [:parser :lexv] (lexer/lexv-from-input input))
                gs)
-          token-count (lexv-count gs)]
+          token-count (lexer/lexv-count gs)]
 
       ;; Empty input?
       (if (zero? token-count)
         (do
-          (parser-say gs :beg-pardon)
+          (output/parser-say gs :beg-pardon)
           (set-parser-error gs {:type :empty-input}))
 
         ;; === Phase 3: Handle Special Commands (OOPS, AGAIN) ===
-        (let [first-word (lexv-word gs 0)
+        (let [first-word (lexer/lexv-word gs 0)
               gs (set-len gs token-count)]
 
           (cond
             ;; OOPS - Error correction
-            (special-word? first-word :oops)
+            (lexer/special-word? first-word :oops)
             (handle-oops gs)
 
             ;; AGAIN / G - Repeat last command
-            (or (special-word? first-word :again)
-                (special-word? first-word :g))
+            (or (lexer/special-word? first-word :again)
+                (lexer/special-word? first-word :g))
             (handle-again gs)
 
             ;; Normal parsing
@@ -214,7 +274,7 @@
   [game-state]
   ;; TODO: Implement OOPS handling
   ;; For now, just report not implemented
-  (parser-say game-state :oops-nothing)
+  (output/parser-say game-state :oops-nothing)
   (set-parser-error game-state {:type :oops-failed}))
 
 (defn handle-again
@@ -228,19 +288,19 @@
       ;; No previous command
       (nil? (get-in game-state [:parser :again-lexv]))
       (do
-        (parser-say game-state :again-no-cmd)
+        (output/parser-say game-state :again-no-cmd)
         (set-parser-error game-state {:type :no-again}))
 
       ;; Can't repeat fragments
       oflag?
       (do
-        (parser-say game-state :again-fragment)
+        (output/parser-say game-state :again-fragment)
         (set-parser-error game-state {:type :again-fragment}))
 
       ;; Last command failed
       (not won?)
       (do
-        (parser-say game-state :again-mistake)
+        (output/parser-say game-state :again-mistake)
         (set-parser-error game-state {:type :again-mistake}))
 
       ;; OK to repeat
@@ -305,7 +365,7 @@
             ;; Normal command processing
             (let [;; Try orphan merge if in orphan mode
                   gs (if (get-in gs [:parser :oflag])
-                       (or (orphan-merge gs) gs)
+                       (or (orphan/orphan-merge gs) gs)
                        gs)
 
                   ;; Clear walk-dir
@@ -314,7 +374,7 @@
                          (assoc-in [:parser :again-dir] nil))]
 
               ;; === Validation Pipeline ===
-              (let [syntax-result (syntax-check gs)]
+              (let [syntax-result (syntax/syntax-check gs)]
                 (if (not (:success syntax-result))
                   ;; Syntax check failed
                   (do
@@ -325,7 +385,7 @@
 
                   ;; Continue with object resolution
                   (let [gs (:game-state syntax-result)
-                        snarf-result (snarf-objects gs)]
+                        snarf-result (objects/snarf-objects gs)]
 
                     (if (and (parser-result? snarf-result) (not (:success snarf-result)))
                       ;; Object resolution failed
@@ -339,7 +399,7 @@
                       (let [gs (if (parser-result? snarf-result)
                                  (:game-state snarf-result)
                                  snarf-result)
-                            many-result (many-check gs)]
+                            many-result (validation/many-check gs)]
 
                         (if (not (:success many-result))
                           ;; Too many objects
@@ -351,7 +411,7 @@
 
                           ;; Final: take check
                           (let [gs (:game-state many-result)
-                                take-result (take-check gs)]
+                                take-result (validation/take-check gs)]
 
                             (if (not (:success take-result))
                               ;; Take check failed
@@ -385,33 +445,33 @@
         {:game-state (assoc-in gs [:parser :quote-flag] false)}
 
         ;; Get current word
-        (let [word (lexv-word gs ptr)
+        (let [word (lexer/lexv-word gs ptr)
               ;; Try to parse as number if not in vocab
               word (or word
-                       (when-let [num-result (number?-token gs (lexv-get gs ptr))]
+                       (when-let [num-result (lexer/number?-token gs (lexer/lexv-get gs ptr))]
                          (:word num-result)))
               next-word (when (pos? remaining)
-                          (lexv-word gs (inc ptr)))
+                          (lexer/lexv-word gs (inc ptr)))
               gs (dec-len gs)]
 
           (cond
             ;; No word (unknown)
             (nil? word)
             (do
-              (unknown-word gs ptr)
+              (output/unknown-word gs ptr)
               {:error {:type :unknown-word :ptr ptr}
                :game-state gs})
 
             ;; Sentence terminator
-            (or (special-word? word :then)
-                (special-word? word :period))
+            (or (lexer/special-word? word :then)
+                (lexer/special-word? word :period))
             (let [gs (if (pos? (get-len gs))
                        (assoc-in gs [:parser :cont] (inc ptr))
                        gs)]
               {:game-state gs})
 
             ;; Quote toggle (for SAY command)
-            (special-word? word :quote)
+            (lexer/special-word? word :quote)
             (let [gs (update-in gs [:parser :quote-flag] not)
                   gs (if (pos? (get-len gs))
                        (assoc-in gs [:parser :cont] (inc ptr))
@@ -419,18 +479,18 @@
               {:game-state gs})
 
             ;; Direction word (potential shortcut)
-            (and (wt? word :direction true)
+            (and (lexer/wt? word :direction true)
                  (or (nil? verb) (= verb :walk))
                  (or (zero? (get-len gs))  ; Last word
-                     (special-word? next-word :then)
-                     (special-word? next-word :period)))
-            (let [dir (wt? word :direction true)]
+                     (lexer/special-word? next-word :then)
+                     (lexer/special-word? next-word :period)))
+            (let [dir (lexer/wt? word :direction true)]
               {:game-state (assoc-in gs [:parser :dir] dir)})
 
             ;; Verb word
-            (and (wt? word :verb true)
+            (and (lexer/wt? word :verb true)
                  (nil? verb))
-            (let [verb-val (wt? word :verb true)
+            (let [verb-val (lexer/wt? word :verb true)
                   gs (-> gs
                          (set-itbl :verb verb-val)
                          (set-itbl :verbn word)
@@ -438,26 +498,26 @@
               (recur gs (inc ptr) verb-val of-flag word))
 
             ;; Preposition, adjective, object, or "all"/"one"
-            (or (wt? word :preposition)
-                (special-word? word :all)
-                (special-word? word :one)
-                (wt? word :adjective)
-                (wt? word :object))
-            (let [prep-val (wt? word :preposition true)]
+            (or (lexer/wt? word :preposition)
+                (lexer/special-word? word :all)
+                (lexer/special-word? word :one)
+                (lexer/wt? word :adjective)
+                (lexer/wt? word :object))
+            (let [prep-val (lexer/wt? word :preposition true)]
               (cond
                 ;; "X of Y" pattern
                 (and (pos? (get-len gs))
-                     (special-word? next-word :of)
+                     (lexer/special-word? next-word :of)
                      (nil? prep-val)
-                     (not (special-word? word :all))
-                     (not (special-word? word :one)))
+                     (not (lexer/special-word? word :all))
+                     (not (lexer/special-word? word :one)))
                 (recur gs (inc ptr) verb true word)
 
                 ;; Preposition at end of sentence
                 (and prep-val
                      (or (zero? (get-len gs))
-                         (special-word? next-word :then)
-                         (special-word? next-word :period)))
+                         (lexer/special-word? next-word :then)
+                         (lexer/special-word? next-word :period)))
                 (let [ncn (get-ncn gs)
                       gs (-> gs
                              (assoc-in [:parser :end-on-prep] true)
@@ -469,7 +529,7 @@
                 ;; Too many noun clauses
                 (= (get-ncn gs) 2)
                 (do
-                  (parser-say gs :too-many-nouns)
+                  (output/parser-say gs :too-many-nouns)
                   {:error {:type :too-many-nouns}
                    :game-state gs})
 
@@ -478,7 +538,7 @@
                 (let [gs (-> gs
                              (inc-ncn)
                              (assoc-in [:parser :act] verb))
-                      clause-result (clause gs ptr prep-val word)]
+                      clause-result (clause/clause gs ptr prep-val word)]
                   (if (:error clause-result)
                     clause-result
                     (let [new-ptr (:ptr clause-result)
@@ -488,22 +548,22 @@
                         (recur gs (inc new-ptr) verb of-flag word)))))))
 
             ;; OF word
-            (special-word? word :of)
+            (lexer/special-word? word :of)
             (if (or (not of-flag)
-                    (special-word? next-word :period)
-                    (special-word? next-word :then))
+                    (lexer/special-word? next-word :period)
+                    (lexer/special-word? next-word :then))
               (do
-                (cant-use gs ptr)
+                (output/cant-use gs ptr)
                 {:error {:type :bad-of} :game-state gs})
               (recur gs (inc ptr) verb false word))
 
             ;; Buzz word (the, a, an) - skip
-            (wt? word :buzz-word)
+            (lexer/wt? word :buzz-word)
             (recur gs (inc ptr) verb of-flag word)
 
             ;; Unknown usage
             :else
             (do
-              (cant-use gs ptr)
+              (output/cant-use gs ptr)
               {:error {:type :cant-use :ptr ptr}
                :game-state gs})))))))

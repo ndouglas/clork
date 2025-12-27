@@ -1,21 +1,25 @@
-(in-ns 'clork.parser)
+(ns clork.parser.orphan
+  "Incomplete command handling for the parser.
+
+   This module handles:
+   - ORPHAN-MERGE - Merge previous parse with current for completion
+   - ORPHAN - Set up orphan state for next parse
+   - ACLAUSE-WIN / NCLAUSE-WIN - Resolve orphaned clauses
+   - CLAUSE-COPY - Copy clause data between tables
+   - Prompting for missing information
+
+   ZIL Reference: gparser.zil
+   - Lines 541-630: ORPHAN-MERGE routine
+   - Lines 632-653: ACLAUSE-WIN, NCLAUSE-WIN routines
+   - Lines 782-808: ORPHAN routine
+   - Lines 860-887: CLAUSE-COPY, CLAUSE-ADD routines"
+  (:require [clork.utils :as utils]
+            [clork.parser.state :as parser-state]
+            [clork.parser.lexer :as lexer]))
 
 ;;;; ============================================================================
 ;;;; PARSER ORPHAN - Incomplete Command Handling
 ;;;; ============================================================================
-;;;;
-;;;; This file contains:
-;;;;   - ORPHAN-MERGE - Merge previous parse with current for completion
-;;;;   - ORPHAN - Set up orphan state for next parse
-;;;;   - ACLAUSE-WIN / NCLAUSE-WIN - Resolve orphaned clauses
-;;;;   - CLAUSE-COPY - Copy clause data between tables
-;;;;   - Prompting for missing information
-;;;;
-;;;; ZIL Reference: gparser.zil
-;;;;   - Lines 541-630: ORPHAN-MERGE routine
-;;;;   - Lines 632-653: ACLAUSE-WIN, NCLAUSE-WIN routines
-;;;;   - Lines 782-808: ORPHAN routine
-;;;;   - Lines 860-887: CLAUSE-COPY, CLAUSE-ADD routines
 ;;;;
 ;;;; What is Orphaning?
 ;;;;   When the player types an incomplete command like "take", the parser
@@ -88,9 +92,9 @@
     ;; Copy ITBL to OTBL
     (loop [cnt 0
            gs gs]
-      (if (> cnt p-itbllen)
+      (if (> cnt parser-state/p-itbllen)
         ;; Done copying, now handle clause data
-        (let [ncn (get-ncn gs)
+        (let [ncn (parser-state/get-ncn gs)
 
               ;; If we have 2 noun clauses, copy NC2
               gs (if (= ncn 2)
@@ -106,20 +110,20 @@
               gs (cond
                    drive1
                    (-> gs
-                       (set-otbl (:prep1 itbl-indices) (:prep1 drive1))
-                       (set-otbl (:nc1 itbl-indices) 1))
+                       (parser-state/set-otbl (:prep1 parser-state/itbl-indices) (:prep1 drive1))
+                       (parser-state/set-otbl (:nc1 parser-state/itbl-indices) 1))
 
                    drive2
                    (-> gs
-                       (set-otbl (:prep2 itbl-indices) (:prep2 drive2))
-                       (set-otbl (:nc2 itbl-indices) 1))
+                       (parser-state/set-otbl (:prep2 parser-state/itbl-indices) (:prep2 drive2))
+                       (parser-state/set-otbl (:nc2 parser-state/itbl-indices) 1))
 
                    :else gs)]
           gs)
 
         ;; Copy this slot
         (recur (inc cnt)
-               (set-otbl gs cnt (get-itbl gs cnt)))))))
+               (parser-state/set-otbl gs cnt (parser-state/get-itbl gs cnt)))))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; ORPHAN-MERGE - Combine Previous and Current Parse
@@ -147,15 +151,15 @@
   (let [gs (assoc-in game-state [:parser :oflag] false)
 
         ;; Get the first word of new input to check if it's a verb or adjective
-        first-word (lexv-word gs 0)
-        verb-from-itbl (get-itbl gs :verb)
-        verb-from-otbl (get-otbl gs :verb)
+        first-word (lexer/lexv-word gs 0)
+        verb-from-itbl (parser-state/get-itbl gs :verb)
+        verb-from-otbl (parser-state/get-otbl gs :verb)
 
         ;; Check if first word is a verb matching the old verb
         ;; or is an adjective
-        first-is-old-verb? (and (wt? first-word :verb true)
-                                (= (wt? first-word :verb true) verb-from-otbl))
-        first-is-adjective? (wt? first-word :adjective)]
+        first-is-old-verb? (and (lexer/wt? first-word :verb true)
+                                (= (lexer/wt? first-word :verb true) verb-from-otbl))
+        first-is-adjective? (lexer/wt? first-word :adjective)]
 
     (cond
       ;; New input starts with same verb or an adjective - merge
@@ -164,7 +168,7 @@
             adj? first-is-adjective?
 
             ;; Get current noun clause count
-            ncn (get-ncn gs)]
+            ncn (parser-state/get-ncn gs)]
 
         (cond
           ;; New verb doesn't match old (and it's not an adjective)
@@ -178,11 +182,11 @@
           nil
 
           ;; NC1 in OTBL is marked as needing fill (value = 1)
-          (= (get-otbl gs :nc1) 1)
+          (= (parser-state/get-otbl gs :nc1) 1)
           (merge-to-nc1 gs adj?)
 
           ;; NC2 in OTBL is marked as needing fill
-          (= (get-otbl gs :nc2) 1)
+          (= (parser-state/get-otbl gs :nc2) 1)
           (merge-to-nc2 gs adj?)
 
           ;; Check for aclause (orphaned adjective clause)
@@ -193,14 +197,14 @@
           :else nil))
 
       ;; New input starts with object word but no verb
-      (and (wt? first-word :object true)
-           (zero? (get-ncn gs)))
+      (and (lexer/wt? first-word :object true)
+           (zero? (parser-state/get-ncn gs)))
       ;; Treat as noun clause to fill orphan
       (let [gs (-> gs
-                   (set-itbl :verb 0)
-                   (set-itbl :verbn 0)
-                   (set-itbl :nc1 0)  ; Will be set by clause copy
-                   (set-ncn 1))]
+                   (parser-state/set-itbl :verb 0)
+                   (parser-state/set-itbl :verbn 0)
+                   (parser-state/set-itbl :nc1 0)  ; Will be set by clause copy
+                   (parser-state/set-ncn 1))]
         (merge-to-nc1 gs false))
 
       ;; Can't merge - different verb or incompatible structure
@@ -212,19 +216,19 @@
    Helper for orphan-merge when filling the first object slot."
   [game-state adj?]
   (let [;; Check preposition compatibility
-        prep-from-itbl (get-itbl game-state :prep1)
-        prep-from-otbl (get-otbl game-state :prep1)]
+        prep-from-itbl (parser-state/get-itbl game-state :prep1)
+        prep-from-otbl (parser-state/get-otbl game-state :prep1)]
 
     (if (or (= prep-from-itbl prep-from-otbl)
             (nil? prep-from-itbl))
       ;; Compatible - do the merge
       (let [gs (if adj?
                  ;; Adjective merge: set NC1 from lexv start
-                 (set-otbl game-state :nc1 0)  ; Start of lexv
+                 (parser-state/set-otbl game-state :nc1 0)  ; Start of lexv
                  ;; Normal merge: copy NC1 from ITBL
-                 (set-otbl game-state :nc1 (get-itbl game-state :nc1)))
+                 (parser-state/set-otbl game-state :nc1 (parser-state/get-itbl game-state :nc1)))
 
-            gs (set-otbl gs :nc1l (get-itbl gs :nc1l))]
+            gs (parser-state/set-otbl gs :nc1l (parser-state/get-itbl gs :nc1l))]
 
         ;; Copy OTBL back to ITBL and set merged flag
         (finalize-merge gs))
@@ -237,20 +241,20 @@
 
    Helper for orphan-merge when filling the second object slot."
   [game-state adj?]
-  (let [prep-from-itbl (get-itbl game-state :prep1)
-        prep-from-otbl (get-otbl game-state :prep2)]
+  (let [prep-from-itbl (parser-state/get-itbl game-state :prep1)
+        prep-from-otbl (parser-state/get-otbl game-state :prep2)]
 
     (if (or (= prep-from-itbl prep-from-otbl)
             (nil? prep-from-itbl))
       ;; Compatible - merge NC1 from ITBL into NC2 slot of OTBL
       (let [gs (if adj?
-                 (set-itbl game-state :nc1 0)
+                 (parser-state/set-itbl game-state :nc1 0)
                  game-state)
 
             gs (-> gs
-                   (set-otbl :nc2 (get-itbl gs :nc1))
-                   (set-otbl :nc2l (get-itbl gs :nc1l))
-                   (set-ncn 2))]
+                   (parser-state/set-otbl :nc2 (parser-state/get-itbl gs :nc1))
+                   (parser-state/set-otbl :nc2l (parser-state/get-itbl gs :nc1l))
+                   (parser-state/set-ncn 2))]
 
         (finalize-merge gs))
       nil)))
@@ -282,16 +286,16 @@
                          (get-in game-state [:parser :ovtbl 2]))
                (assoc-in [:parser :vtbl 3]
                          (get-in game-state [:parser :ovtbl 3]))
-               (set-otbl :verbn (get-in game-state [:parser :vtbl]))
+               (parser-state/set-otbl :verbn (get-in game-state [:parser :vtbl]))
                (assoc-in [:parser :vtbl 2] 0))]
 
     ;; Copy all of OTBL to ITBL
     (loop [cnt 0
            gs gs]
-      (if (> cnt p-itbllen)
+      (if (> cnt parser-state/p-itbllen)
         (assoc-in gs [:parser :merged] true)
         (recur (inc cnt)
-               (set-itbl gs cnt (get-otbl gs cnt)))))))
+               (parser-state/set-itbl gs cnt (parser-state/get-otbl gs cnt)))))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; CLAUSE WIN FUNCTIONS
@@ -305,7 +309,7 @@
    When player responds to 'which X?' with 'the rusty one', this
    applies the adjective to the orphaned clause."
   [game-state adj]
-  (let [gs (set-itbl game-state :verb (get-otbl game-state :verb))]
+  (let [gs (parser-state/set-itbl game-state :verb (parser-state/get-otbl game-state :verb))]
     ;; Set up clause copy pointers
     (let [aclause (get-in gs [:parser :aclause])
           gs (-> gs
@@ -317,8 +321,8 @@
       (let [gs (clause-copy-with-adj gs :otbl :otbl adj)]
         (-> gs
             ;; Update NCN if NC2 was filled
-            (cond-> (not (zero? (get-otbl gs :nc2)))
-              (set-ncn 2))
+            (cond-> (not (zero? (parser-state/get-otbl gs :nc2)))
+              (parser-state/set-ncn 2))
             ;; Clear aclause
             (assoc-in [:parser :aclause] nil))))))
 
@@ -331,15 +335,15 @@
    this copies it to fill the orphaned slot."
   [game-state]
   (let [gs (-> game-state
-               (assoc-in [:parser :cctbl :sbptr] (:nc1 itbl-indices))
-               (assoc-in [:parser :cctbl :septr] (:nc1l itbl-indices))
+               (assoc-in [:parser :cctbl :sbptr] (:nc1 parser-state/itbl-indices))
+               (assoc-in [:parser :cctbl :septr] (:nc1l parser-state/itbl-indices))
                (assoc-in [:parser :cctbl :dbptr] (get-in game-state [:parser :aclause]))
                (assoc-in [:parser :cctbl :deptr]
                          (inc (get-in game-state [:parser :aclause]))))]
     (let [gs (clause-copy gs :itbl :otbl)]
       (-> gs
-          (cond-> (not (zero? (get-otbl gs :nc2)))
-            (set-ncn 2))
+          (cond-> (not (zero? (parser-state/get-otbl gs :nc2)))
+            (parser-state/set-ncn 2))
           (assoc-in [:parser :aclause] nil)))))
 
 ;;; ---------------------------------------------------------------------------
@@ -404,4 +408,4 @@
    ZIL: CANT-ORPHAN routine, lines 777-779"
   [game-state]
   (-> game-state
-      (tell "\"I don't understand! What are you referring to?\"\n")))
+      (utils/tell "\"I don't understand! What are you referring to?\"\n")))

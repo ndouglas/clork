@@ -1,24 +1,29 @@
-(in-ns 'clork.parser)
+(ns clork.parser.output
+  "Parser error messages and printing utilities.
+
+   This module handles:
+   - UNKNOWN-WORD - \"I don't know the word X\"
+   - CANT-USE - \"You used the word X in a way I don't understand\"
+   - WORD-PRINT - Print a word from the input buffer
+   - THING-PRINT - Print a noun clause
+   - BUFFER-PRINT - Print tokens from a range
+   - PREP-PRINT - Print a preposition
+   - WHICH-PRINT - \"Which X do you mean?\"
+
+   ZIL Reference: gparser.zil
+   - Lines 655-686: UNKNOWN-WORD, CANT-USE routines
+   - Lines 658-663: WORD-PRINT routine
+   - Lines 810-849: THING-PRINT, BUFFER-PRINT routines
+   - Lines 851-858: PREP-PRINT routine
+   - Lines 1146-1166: WHICH-PRINT routine"
+  (:require [clork.utils :as utils]
+            [clork.game-state :as game-state]
+            [clork.parser.state :as parser-state]
+            [clork.parser.lexer :as lexer]))
 
 ;;;; ============================================================================
 ;;;; PARSER OUTPUT - Error Messages and Printing
 ;;;; ============================================================================
-;;;;
-;;;; This file contains:
-;;;;   - UNKNOWN-WORD - "I don't know the word X"
-;;;;   - CANT-USE - "You used the word X in a way I don't understand"
-;;;;   - WORD-PRINT - Print a word from the input buffer
-;;;;   - THING-PRINT - Print a noun clause
-;;;;   - BUFFER-PRINT - Print tokens from a range
-;;;;   - PREP-PRINT - Print a preposition
-;;;;   - WHICH-PRINT - "Which X do you mean?"
-;;;;
-;;;; ZIL Reference: gparser.zil
-;;;;   - Lines 655-686: UNKNOWN-WORD, CANT-USE routines
-;;;;   - Lines 658-663: WORD-PRINT routine
-;;;;   - Lines 810-849: THING-PRINT, BUFFER-PRINT routines
-;;;;   - Lines 851-858: PREP-PRINT routine
-;;;;   - Lines 1146-1166: WHICH-PRINT routine
 ;;;;
 ;;;; Design Note:
 ;;;;   All player-facing parser messages are collected here for easy
@@ -40,7 +45,7 @@
 
    Also sets up OOPS recovery by storing the word position."
   [game-state ptr]
-  (let [word (lexv-word game-state ptr)
+  (let [word (lexer/lexv-word game-state ptr)
         gs (-> game-state
                ;; Store position for OOPS command
                (assoc-in [:parser :oops-ptr] ptr)
@@ -49,9 +54,9 @@
                (assoc-in [:parser :oflag] false))]
 
     ;; Special case: if we're in SAY mode, just say nothing happens
-    (if (= (get-prsa gs) :say)
-      (tell gs "Nothing happens.\n")
-      (tell gs (str "I don't know the word \"" word "\".\n")))))
+    (if (= (parser-state/get-prsa gs) :say)
+      (utils/tell gs "Nothing happens.\n")
+      (utils/tell gs (str "I don't know the word \"" word "\".\n")))))
 
 (defn cant-use
   "Print error for word used in wrong context.
@@ -63,15 +68,15 @@
    This is for words that ARE in the vocabulary but don't make sense
    in the current context."
   [game-state ptr]
-  (let [word (lexv-word game-state ptr)
+  (let [word (lexer/lexv-word game-state ptr)
         gs (-> game-state
                (assoc-in [:parser :quote-flag] false)
                (assoc-in [:parser :oflag] false))]
 
-    (if (= (get-prsa gs) :say)
-      (tell gs "Nothing happens.\n")
-      (tell gs (str "You used the word \"" word
-                    "\" in a way that I don't understand.\n")))))
+    (if (= (parser-state/get-prsa gs) :say)
+      (utils/tell gs "Nothing happens.\n")
+      (utils/tell gs (str "You used the word \"" word
+                          "\" in a way that I don't understand.\n")))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; PRINTING UTILITIES
@@ -105,22 +110,22 @@
          first? true
          printed-noun? false]
     (when (< ptr end-ptr)
-      (let [word (lexv-word game-state ptr)]
+      (let [word (lexer/lexv-word game-state ptr)]
         (cond
           ;; Comma - print without space
-          (special-word? word :comma)
+          (lexer/special-word? word :comma)
           (do
             (print ", ")
             (recur (inc ptr) true printed-noun?))
 
           ;; Period - skip
-          (special-word? word :period)
+          (lexer/special-word? word :period)
           (recur (inc ptr) first? printed-noun?)
 
           ;; ME - print player description
-          (special-word? word :me)
+          (lexer/special-word? word :me)
           (do
-            (print (thing-name game-state (:player game-state)))
+            (print (game-state/thing-name game-state (:player game-state)))
             (recur (inc ptr) false true))
 
           ;; Number
@@ -138,10 +143,10 @@
             ;; Print "the" if first word and requested
             (when (and first? (not printed-noun?) include-the?)
               (print "the "))
-            ;; Handle IT pronoun
-            (if (and (special-word? word :it)
-                     (accessible? game-state (get-in game-state [:parser :it-object])))
-              (print (thing-name game-state (get-in game-state [:parser :it-object])))
+            ;; Handle IT pronoun - resolve to referenced object if available
+            (if (and (lexer/special-word? word :it)
+                     (get-in game-state [:parser :it-object]))
+              (print (game-state/thing-name game-state (get-in game-state [:parser :it-object])))
               (print word))
             (recur (inc ptr) false false)))))))
 
@@ -157,8 +162,8 @@
   [game-state prso? include-the?]
   (let [begin-key (if prso? :nc1 :nc2)
         end-key (if prso? :nc1l :nc2l)
-        begin-ptr (get-in game-state [:parser :itbl (begin-key itbl-indices)])
-        end-ptr (get-in game-state [:parser :itbl (end-key itbl-indices)])]
+        begin-ptr (get-in game-state [:parser :itbl (begin-key parser-state/itbl-indices)])
+        end-ptr (get-in game-state [:parser :itbl (end-key parser-state/itbl-indices)])]
     (buffer-print game-state begin-ptr end-ptr include-the?)))
 
 (defn prep-print
@@ -217,7 +222,7 @@
         (let [obj-id (nth match-table idx nil)]
           (when obj-id
             (print "the ")
-            (print (thing-name game-state obj-id))
+            (print (game-state/thing-name game-state obj-id))
             (cond
               (= remaining 2)
               (do
@@ -256,8 +261,8 @@
 (defn parser-say
   "Print a standard parser message."
   [game-state msg-key]
-  (tell game-state (str (get parser-messages msg-key
-                              "Something went wrong.") "\n")))
+  (utils/tell game-state (str (get parser-messages msg-key
+                                   "Something went wrong.") "\n")))
 
 ;;; ---------------------------------------------------------------------------
 ;;; PROMPT GENERATION

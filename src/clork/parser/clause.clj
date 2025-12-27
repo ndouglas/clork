@@ -1,17 +1,20 @@
-(in-ns 'clork.parser)
+(ns clork.parser.clause
+  "Noun phrase parsing for the parser.
+
+   This module handles:
+   - CLAUSE routine - The main noun phrase parser
+   - Handling of adjectives, nouns, articles
+   - Object lists with AND/COMMA
+   - BUT/EXCEPT exclusions
+
+   ZIL Reference: gparser.zil
+   - Lines 440-510: CLAUSE routine"
+  (:require [clork.parser.state :as parser-state]
+            [clork.parser.lexer :as lexer]))
 
 ;;;; ============================================================================
 ;;;; PARSER CLAUSE - Noun Phrase Parsing
 ;;;; ============================================================================
-;;;;
-;;;; This file contains:
-;;;;   - CLAUSE routine - The main noun phrase parser
-;;;;   - Handling of adjectives, nouns, articles
-;;;;   - Object lists with AND/COMMA
-;;;;   - BUT/EXCEPT exclusions
-;;;;
-;;;; ZIL Reference: gparser.zil
-;;;;   - Lines 440-510: CLAUSE routine
 ;;;;
 ;;;; What is a Noun Clause?
 ;;;;   A noun clause is the part of a sentence that refers to an object.
@@ -71,7 +74,7 @@
   ;; Calculate offset for storing results:
   ;; First clause (P-NCN=1) uses NC1/NC1L
   ;; Second clause (P-NCN=2) uses NC2/NC2L
-  (let [ncn (get-ncn game-state)
+  (let [ncn (parser-state/get-ncn game-state)
         off (* (dec ncn) 2)  ; 0 for first clause, 2 for second
 
         ;; If we have a preposition, store it
@@ -79,27 +82,27 @@
         (if (not (zero? (or val 0)))
           (-> game-state
               ;; Store prep value at PREP1 or PREP2
-              (set-itbl (+ (:prep1 itbl-indices) off) val)
+              (parser-state/set-itbl (+ (:prep1 parser-state/itbl-indices) off) val)
               ;; Store prep word at PREP1N or PREP2N
-              (set-itbl (+ (:prep1n itbl-indices) off) wrd)
+              (parser-state/set-itbl (+ (:prep1n parser-state/itbl-indices) off) wrd)
               ;; Advance past the preposition
               (update-in [:parser :ptr] inc))
           ;; No prep, restore P-LEN since we didn't consume a word
-          (inc-len game-state))
+          (parser-state/inc-len game-state))
 
         ;; Check if we're at end of input
-        p-len (get-len gs-with-prep)]
+        p-len (parser-state/get-len gs-with-prep)]
 
     (if (zero? p-len)
       ;; Empty clause (e.g., "take" with no object)
-      {:game-state (dec-ncn gs-with-prep)
+      {:game-state (parser-state/dec-ncn gs-with-prep)
        :ptr -1}
 
       ;; Start parsing the clause
       ;; Store the starting position
       (let [clause-start ptr
-            nc-slot (+ (:nc1 itbl-indices) off)
-            gs-with-start (set-itbl gs-with-prep nc-slot clause-start)]
+            nc-slot (+ (:nc1 parser-state/itbl-indices) off)
+            gs-with-start (parser-state/set-itbl gs-with-prep nc-slot clause-start)]
 
         ;; Skip leading articles (the, a, an)
         ;; ZIL: <COND (<EQUAL? <GET ,P-LEXV .PTR> ,W?THE ,W?A ,W?AN> ...)>
@@ -109,75 +112,75 @@
                first? true      ; Is this the first word?
                last-word nil]   ; Previous word
 
-          (let [remaining (get-len gs)]
+          (let [remaining (parser-state/get-len gs)]
             (if (neg? (dec remaining))
               ;; End of input - store end position and return
-              (let [end-slot (+ (:nc1l itbl-indices) off)
+              (let [end-slot (+ (:nc1l parser-state/itbl-indices) off)
                     gs-final (-> gs
-                                 (set-itbl end-slot current-ptr)
-                                 (set-len remaining))]
+                                 (parser-state/set-itbl end-slot current-ptr)
+                                 (parser-state/set-len remaining))]
                 {:game-state gs-final
                  :ptr -1})
 
               ;; Get current word
-              (let [current-word (lexv-word gs current-ptr)
+              (let [current-word (lexer/lexv-word gs current-ptr)
                     next-word (when (pos? remaining)
-                                (lexv-word gs (inc current-ptr)))
+                                (lexer/lexv-word gs (inc current-ptr)))
 
                     ;; Check word type
-                    gs-decremented (dec-len gs)
+                    gs-decremented (parser-state/dec-len gs)
 
                     ;; Handle the word
                     result
                     (cond
                       ;; AND or COMMA - marks object list
-                      (or (special-word? current-word :and)
-                          (special-word? current-word :comma))
+                      (or (lexer/special-word? current-word :and)
+                          (lexer/special-word? current-word :comma))
                       {:action :continue
                        :and-flag true}
 
                       ;; ALL/ONE - special quantifiers
-                      (or (special-word? current-word :all)
-                          (special-word? current-word :one))
-                      (if (special-word? next-word :of)
+                      (or (lexer/special-word? current-word :all)
+                          (lexer/special-word? current-word :one))
+                      (if (lexer/special-word? next-word :of)
                         ;; "all of the" - skip the "of"
                         {:action :skip-next}
                         {:action :continue})
 
                       ;; THEN or PERIOD - end of clause
-                      (or (special-word? current-word :then)
-                          (special-word? current-word :period))
+                      (or (lexer/special-word? current-word :then)
+                          (lexer/special-word? current-word :period))
                       {:action :end-clause}
 
                       ;; Preposition - might end clause if not first word
-                      (wt? current-word :preposition)
+                      (lexer/wt? current-word :preposition)
                       (if (and (not first?)
-                               (get-itbl gs :verb))
+                               (parser-state/get-itbl gs :verb))
                         {:action :end-clause-backup}  ; Back up and let main loop handle
                         {:action :continue})
 
                       ;; Object word - potential end of clause
-                      (wt? current-word :object)
+                      (lexer/wt? current-word :object)
                       (cond
                         ;; "X of Y" - continue parsing
                         (and (pos? remaining)
-                             (special-word? next-word :of)
-                             (not (special-word? current-word :all))
-                             (not (special-word? current-word :one)))
+                             (lexer/special-word? next-word :of)
+                             (not (lexer/special-word? current-word :all))
+                             (not (lexer/special-word? current-word :one)))
                         {:action :continue}
 
                         ;; Adjective that's also a noun, followed by another noun
-                        (and (wt? current-word :adjective)
+                        (and (lexer/wt? current-word :adjective)
                              next-word
-                             (wt? next-word :object))
+                             (lexer/wt? next-word :object))
                         {:action :continue}
 
                         ;; End of object reference (no AND, not followed by BUT)
                         (and (not and-flag)
-                             (not (special-word? next-word :but))
-                             (not (special-word? next-word :except))
-                             (not (special-word? next-word :and))
-                             (not (special-word? next-word :comma)))
+                             (not (lexer/special-word? next-word :but))
+                             (not (lexer/special-word? next-word :except))
+                             (not (lexer/special-word? next-word :and))
+                             (not (lexer/special-word? next-word :comma)))
                         {:action :end-clause-here}
 
                         :else
@@ -185,8 +188,8 @@
                          :and-flag false})  ; Clear AND flag after object
 
                       ;; Adjective or buzz-word - continue
-                      (or (wt? current-word :adjective)
-                          (wt? current-word :buzz-word))
+                      (or (lexer/wt? current-word :adjective)
+                          (lexer/wt? current-word :buzz-word))
                       {:action :continue}
 
                       ;; Unknown word in context
@@ -204,29 +207,29 @@
                          current-word)
 
                   :skip-next
-                  (recur (dec-len gs-decremented)
+                  (recur (parser-state/dec-len gs-decremented)
                          (+ current-ptr 2)
                          and-flag
                          false
                          current-word)
 
                   :end-clause
-                  (let [end-slot (+ (:nc1l itbl-indices) off)]
+                  (let [end-slot (+ (:nc1l parser-state/itbl-indices) off)]
                     {:game-state (-> gs
-                                     (set-itbl end-slot current-ptr)
-                                     (inc-len))  ; Restore for main loop
+                                     (parser-state/set-itbl end-slot current-ptr)
+                                     (parser-state/inc-len))  ; Restore for main loop
                      :ptr (dec current-ptr)})
 
                   :end-clause-backup
-                  (let [end-slot (+ (:nc1l itbl-indices) off)]
+                  (let [end-slot (+ (:nc1l parser-state/itbl-indices) off)]
                     {:game-state (-> gs
-                                     (set-itbl end-slot current-ptr)
-                                     (inc-len))
+                                     (parser-state/set-itbl end-slot current-ptr)
+                                     (parser-state/inc-len))
                      :ptr (dec current-ptr)})
 
                   :end-clause-here
-                  (let [end-slot (+ (:nc1l itbl-indices) off)]
-                    {:game-state (set-itbl gs-decremented end-slot (inc current-ptr))
+                  (let [end-slot (+ (:nc1l parser-state/itbl-indices) off)]
+                    {:game-state (parser-state/set-itbl gs-decremented end-slot (inc current-ptr))
                      :ptr current-ptr})
 
                   :error
@@ -245,10 +248,10 @@
    Returns the new pointer position after any articles."
   [game-state ptr]
   (loop [current-ptr ptr]
-    (let [word (lexv-word game-state current-ptr)]
-      (if (or (special-word? word :the)
-              (special-word? word :a)
-              (special-word? word :an))
+    (let [word (lexer/lexv-word game-state current-ptr)]
+      (if (or (lexer/special-word? word :the)
+              (lexer/special-word? word :a)
+              (lexer/special-word? word :an))
         (recur (inc current-ptr))
         current-ptr))))
 
@@ -265,9 +268,9 @@
    - End of input"
   [word]
   (or (nil? word)
-      (special-word? word :period)
-      (special-word? word :then)
-      (wt? word :preposition)))
+      (lexer/special-word? word :period)
+      (lexer/special-word? word :then)
+      (lexer/wt? word :preposition)))
 
 (defn in-object-list?
   "Check if we're in the middle of an object list (X and Y and Z).

@@ -1,28 +1,32 @@
-(in-ns 'clork.parser)
+(ns clork.parser.objects
+  "Object matching and resolution for the parser.
+
+   This module handles:
+   - SNARF-OBJECTS - Extract objects from parsed noun clauses
+   - SNARFEM - Process a single noun clause into object list
+   - GET-OBJECT - Find objects matching adjective/noun criteria
+   - SEARCH-LIST - Search a container for matching objects
+   - THIS-IT? - Test if an object matches the criteria
+   - OBJ-FOUND - Add an object to the match table
+   - GLOBAL-CHECK - Search global/pseudo objects
+   - BUT-MERGE - Handle \"all but X\" exclusions
+
+   ZIL Reference: gparser.zil
+   - Lines 928-943: SNARF-OBJECTS routine
+   - Lines 978-1030: SNARFEM routine
+   - Lines 1040-1140: GET-OBJECT routine
+   - Lines 1216-1237: SEARCH-LIST routine
+   - Lines 1357-1370: THIS-IT? routine
+   - Lines 1239-1242: OBJ-FOUND routine
+   - Lines 1169-1200: GLOBAL-CHECK routine
+   - Lines 945-958: BUT-MERGE routine"
+  (:require [clork.game-state :as game-state]
+            [clork.parser.state :as parser-state]
+            [clork.parser.lexer :as lexer]))
 
 ;;;; ============================================================================
 ;;;; PARSER OBJECTS - Object Matching and Resolution
 ;;;; ============================================================================
-;;;;
-;;;; This file contains:
-;;;;   - SNARF-OBJECTS - Extract objects from parsed noun clauses
-;;;;   - SNARFEM - Process a single noun clause into object list
-;;;;   - GET-OBJECT - Find objects matching adjective/noun criteria
-;;;;   - SEARCH-LIST - Search a container for matching objects
-;;;;   - THIS-IT? - Test if an object matches the criteria
-;;;;   - OBJ-FOUND - Add an object to the match table
-;;;;   - GLOBAL-CHECK - Search global/pseudo objects
-;;;;   - BUT-MERGE - Handle "all but X" exclusions
-;;;;
-;;;; ZIL Reference: gparser.zil
-;;;;   - Lines 928-943: SNARF-OBJECTS routine
-;;;;   - Lines 978-1030: SNARFEM routine
-;;;;   - Lines 1040-1140: GET-OBJECT routine
-;;;;   - Lines 1216-1237: SEARCH-LIST routine
-;;;;   - Lines 1357-1370: THIS-IT? routine
-;;;;   - Lines 1239-1242: OBJ-FOUND routine
-;;;;   - Lines 1169-1200: GLOBAL-CHECK routine
-;;;;   - Lines 945-958: BUT-MERGE routine
 ;;;;
 ;;;; How Object Resolution Works:
 ;;;;   1. SNARF-OBJECTS is called after syntax check passes
@@ -101,14 +105,14 @@
 
    Returns: true if object matches all criteria"
   [game-state obj-id]
-  (let [obj (get-thing game-state obj-id)
+  (let [obj (game-state/get-thing game-state obj-id)
         nam (get-in game-state [:parser :nam])
         adj (get-in game-state [:parser :adj])
         gwimbit (get-in game-state [:parser :gwimbit])]
 
     (and
      ;; Not invisible
-     (not (set-thing-flag? game-state obj-id :invisible))
+     (not (game-state/set-thing-flag? game-state obj-id :invisible))
 
      ;; Name matches (if specified)
      (or (nil? nam)
@@ -120,7 +124,7 @@
 
      ;; GWIM flag matches (if specified)
      (or (nil? gwimbit)
-         (set-thing-flag? game-state obj-id gwimbit)))))
+         (game-state/set-thing-flag? game-state obj-id gwimbit)))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; SEARCH-LIST - Container Search
@@ -146,10 +150,10 @@
 
    Returns: updated match-table with found objects"
   [game-state container match-table level]
-  (let [contents (get-contents game-state container)]
+  (let [contents (game-state/get-contents game-state container)]
     (reduce
      (fn [table obj-id]
-       (let [obj (get-thing game-state obj-id)
+       (let [obj (game-state/get-thing game-state obj-id)
              ;; Check if this object matches (unless :bottom level)
              table-with-obj
              (if (and (not= level :bottom)
@@ -161,18 +165,18 @@
              should-recurse?
              (and
               ;; Has contents
-              (seq (get-contents game-state obj-id))
+              (seq (game-state/get-contents game-state obj-id))
               ;; And is accessible (open, transparent, surface, or searchable)
-              (or (set-thing-flag? game-state obj-id :open)
-                  (set-thing-flag? game-state obj-id :transparent)
-                  (set-thing-flag? game-state obj-id :surface)
-                  (set-thing-flag? game-state obj-id :search)))
+              (or (game-state/set-thing-flag? game-state obj-id :open)
+                  (game-state/set-thing-flag? game-state obj-id :transparent)
+                  (game-state/set-thing-flag? game-state obj-id :surface)
+                  (game-state/set-thing-flag? game-state obj-id :search)))
 
              ;; Determine recursion level
              recurse-level
              (cond
-               (set-thing-flag? game-state obj-id :surface) :all
-               (set-thing-flag? game-state obj-id :search) :all
+               (game-state/set-thing-flag? game-state obj-id :surface) :all
+               (game-state/set-thing-flag? game-state obj-id :search) :all
                :else :top)]
 
          ;; Recurse if appropriate
@@ -238,7 +242,7 @@
   ([game-state match-table]
    (get-object game-state match-table true))
   ([game-state match-table verbose?]
-   (let [getflags (get-in game-state [:parser :getflags] 0)
+   (let [gflags (get-in game-state [:parser :getflags] 0)
          nam (get-in game-state [:parser :nam])
          adj (get-in game-state [:parser :adj])
          lit? (:lit game-state)
@@ -247,12 +251,12 @@
 
      (cond
        ;; Inhibit flag set - skip search
-       (bit-test getflags (:inhibit getflags))
+       (bit-test gflags (:inhibit game-state/getflags))
        {:success true :matches match-table :game-state game-state}
 
        ;; Adjective with no noun - check if adjective is also a noun
        (and (nil? nam) adj)
-       (if (wt? (get-in game-state [:parser :adjn]) :object)
+       (if (lexer/wt? (get-in game-state [:parser :adjn]) :object)
          ;; Use adjective as noun
          (recur (-> game-state
                     (assoc-in [:parser :nam]
@@ -270,7 +274,7 @@
 
        ;; No noun and no adjective and not "all" mode
        (and (nil? nam) (nil? adj)
-            (not (bit-test getflags (:all getflags)))
+            (not (bit-test gflags (:all game-state/getflags)))
             (nil? (get-in game-state [:parser :gwimbit])))
        (if verbose?
          {:success false
@@ -282,7 +286,7 @@
        ;; Normal search
        :else
        (let [;; Set slocbits for full search if not in "all" mode
-             gs (if (or (not (bit-test getflags (:all getflags)))
+             gs (if (or (not (bit-test gflags (:all game-state/getflags)))
                         (zero? (get-in game-state [:parser :slocbits] 0)))
                   (assoc-in game-state [:parser :slocbits] -1)
                   game-state)
@@ -291,25 +295,25 @@
              matches-after-player
              (if lit?
                (do-sl gs player match-table
-                      (:held search-bits) (:carried search-bits))
+                      (:held game-state/search-bits) (:carried game-state/search-bits))
                match-table)
 
              ;; Search room contents (if lit)
              matches-after-room
              (if lit?
                (do-sl gs here matches-after-player
-                      (:on-ground search-bits) (:in-room search-bits))
+                      (:on-ground game-state/search-bits) (:in-room game-state/search-bits))
                matches-after-player)
 
              match-count (match-table-count matches-after-room)]
 
          (cond
            ;; "all" mode - just return what we found
-           (bit-test getflags (:all getflags))
+           (bit-test gflags (:all game-state/getflags))
            {:success true :matches matches-after-room :game-state gs}
 
            ;; "one" mode - pick randomly if multiple
-           (and (bit-test getflags (:one getflags))
+           (and (bit-test gflags (:one game-state/getflags))
                 (pos? match-count))
            (let [picked (rand-nth matches-after-room)]
              {:success true :matches [picked] :game-state gs})
@@ -402,23 +406,23 @@
             result))
 
         ;; Process current word
-        (let [word (lexv-word gs current-ptr)
+        (let [word (lexer/lexv-word gs current-ptr)
               next-word (when (< (inc current-ptr) end-ptr)
-                          (lexv-word gs (inc current-ptr)))]
+                          (lexer/lexv-word gs (inc current-ptr)))]
 
           (cond
             ;; ALL - set flag
-            (special-word? word :all)
-            (let [new-gs (assoc-in gs [:parser :getflags] (:all getflags))
-                  skip-of? (special-word? next-word :of)]
+            (lexer/special-word? word :all)
+            (let [new-gs (assoc-in gs [:parser :getflags] (:all game-state/getflags))
+                  skip-of? (lexer/special-word? next-word :of)]
               (recur new-gs
                      (if skip-of? (+ current-ptr 2) (inc current-ptr))
                      but-mode?
                      match-table))
 
             ;; BUT / EXCEPT - switch to exclusion mode
-            (or (special-word? word :but)
-                (special-word? word :except))
+            (or (lexer/special-word? word :but)
+                (lexer/special-word? word :except))
             (let [result (get-object gs match-table)]
               (if (:success result)
                 (recur (-> (:game-state result)
@@ -429,13 +433,13 @@
                 result))
 
             ;; ONE / A - pick one flag
-            (or (special-word? word :one)
-                (special-word? word :a))
+            (or (lexer/special-word? word :one)
+                (lexer/special-word? word :a))
             (let [adj (get-in gs [:parser :adj])]
               (if (nil? adj)
                 ;; Not in adjective context - set flag
-                (let [new-gs (assoc-in gs [:parser :getflags] (:one getflags))
-                      skip-of? (special-word? next-word :of)]
+                (let [new-gs (assoc-in gs [:parser :getflags] (:one game-state/getflags))
+                      skip-of? (lexer/special-word? next-word :of)]
                   (recur new-gs
                          (if skip-of? (+ current-ptr 2) (inc current-ptr))
                          but-mode?
@@ -458,10 +462,10 @@
                     result))))
 
             ;; AND / COMMA - process current object, continue for more
-            (and (or (special-word? word :and)
-                     (special-word? word :comma))
-                 (not (and (special-word? next-word :and)
-                           (special-word? next-word :comma))))
+            (and (or (lexer/special-word? word :and)
+                     (lexer/special-word? word :comma))
+                 (not (and (lexer/special-word? next-word :and)
+                           (lexer/special-word? next-word :comma))))
             (let [new-gs (assoc-in gs [:parser :and-flag] true)
                   result (get-object new-gs (if but-mode?
                                               (get-in gs [:parser :buts] [])
@@ -474,13 +478,13 @@
                 result))
 
             ;; Buzz word - skip
-            (wt? word :buzz-word)
+            (lexer/wt? word :buzz-word)
             (recur gs (inc current-ptr) but-mode? match-table)
 
             ;; OF - handled with flags
-            (special-word? word :of)
+            (lexer/special-word? word :of)
             (let [new-flags (if (zero? (get-in gs [:parser :getflags] 0))
-                              (:inhibit getflags)
+                              (:inhibit game-state/getflags)
                               (get-in gs [:parser :getflags]))]
               (recur (assoc-in gs [:parser :getflags] new-flags)
                      (inc current-ptr)
@@ -488,17 +492,17 @@
                      match-table))
 
             ;; Adjective - store it
-            (and (wt? word :adjective true)
+            (and (lexer/wt? word :adjective true)
                  (nil? (get-in gs [:parser :adj])))
             (recur (-> gs
-                       (assoc-in [:parser :adj] (wt? word :adjective true))
+                       (assoc-in [:parser :adj] (lexer/wt? word :adjective true))
                        (assoc-in [:parser :adjn] word))
                    (inc current-ptr)
                    but-mode?
                    match-table)
 
             ;; Object word - store as noun
-            (wt? word :object true)
+            (lexer/wt? word :object true)
             (recur (-> gs
                        (assoc-in [:parser :nam] word)
                        (assoc-in [:parser :oneobj] word))
@@ -520,10 +524,10 @@
 
    Returns: {:success bool, :game-state gs} or {:success false, :error ...}"
   [game-state]
-  (let [nc1 (get-itbl game-state :nc1)
-        nc1l (get-itbl game-state :nc1l)
-        nc2 (get-itbl game-state :nc2)
-        nc2l (get-itbl game-state :nc2l)]
+  (let [nc1 (parser-state/get-itbl game-state :nc1)
+        nc1l (parser-state/get-itbl game-state :nc1l)
+        nc2 (parser-state/get-itbl game-state :nc2)
+        nc2l (parser-state/get-itbl game-state :nc2l)]
 
     ;; Clear buts table
     (let [gs (assoc-in game-state [:parser :buts] [])

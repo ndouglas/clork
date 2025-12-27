@@ -1,20 +1,25 @@
-(in-ns 'clork.parser)
+(ns clork.parser.syntax
+  "Syntax checking and GWIM (Get What I Mean) for the parser.
+
+   This module handles:
+   - SYNTAX-CHECK - Validate command against verb's syntax patterns
+   - SYNTAX-FOUND - Store matched syntax
+   - GWIM - \"Get What I Mean\" - infer missing objects
+   - Verb syntax table structure
+
+   ZIL Reference: gparser.zil
+   - Lines 693-705: Syntax constants
+   - Lines 707-775: SYNTAX-CHECK routine
+   - Lines 895-897: SYNTAX-FOUND routine
+   - Lines 901-926: GWIM routine"
+  (:require [clork.utils :as utils]
+            [clork.game-state :as game-state]
+            [clork.verb-defs :as verb-defs]
+            [clork.parser.state :as parser-state]))
 
 ;;;; ============================================================================
 ;;;; PARSER SYNTAX - Syntax Checking and GWIM
 ;;;; ============================================================================
-;;;;
-;;;; This file contains:
-;;;;   - SYNTAX-CHECK - Validate command against verb's syntax patterns
-;;;;   - SYNTAX-FOUND - Store matched syntax
-;;;;   - GWIM - "Get What I Mean" - infer missing objects
-;;;;   - Verb syntax table structure
-;;;;
-;;;; ZIL Reference: gparser.zil
-;;;;   - Lines 693-705: Syntax constants
-;;;;   - Lines 707-775: SYNTAX-CHECK routine
-;;;;   - Lines 895-897: SYNTAX-FOUND routine
-;;;;   - Lines 901-926: GWIM routine
 ;;;;
 ;;;; What is Syntax Checking?
 ;;;;   Each verb has one or more valid syntax patterns. For example:
@@ -99,7 +104,7 @@
    :take [{:num-objects 1, :prep1 nil, ...}]
    :put  [{:num-objects 2, :prep1 nil, :prep2 :in, ...}
           {:num-objects 2, :prep1 nil, :prep2 :on, ...}]"
-  *verb-syntaxes*)
+  verb-defs/*verb-syntaxes*)
 
 ;;; ---------------------------------------------------------------------------
 ;;; SYNTAX CHECKING
@@ -114,9 +119,9 @@
 
    Returns true if the pattern could match this input."
   [game-state syntax]
-  (let [ncn (get-ncn game-state)
-        prep1 (get-itbl game-state :prep1)
-        prep2 (get-itbl game-state :prep2)]
+  (let [ncn (parser-state/get-ncn game-state)
+        prep1 (parser-state/get-itbl game-state :prep1)
+        prep2 (parser-state/get-itbl game-state :prep2)]
     (and
      ;; Number of noun clauses must match or be handleable
      (<= ncn (:num-objects syntax))
@@ -151,14 +156,14 @@
 
    Returns: parser result (use parser-success/parser-error helpers)"
   [game-state]
-  (let [verb (get-itbl game-state :verb)]
+  (let [verb (parser-state/get-itbl game-state :verb)]
     (if (nil? verb)
       ;; No verb found
-      (parser-error game-state :no-verb "There was no verb in that sentence!")
+      (parser-state/parser-error game-state :no-verb "There was no verb in that sentence!")
 
       ;; Find matching syntaxes
       (let [matches (find-matching-syntax game-state verb)
-            ncn (get-ncn game-state)
+            ncn (parser-state/get-ncn game-state)
             ;; Separate exact matches from those needing GWIM
             exact-matches (filter #(= (:num-objects %) ncn) matches)
             gwim-matches (filter #(> (:num-objects %) ncn) matches)]
@@ -174,8 +179,8 @@
 
           ;; No matching syntax at all
           :else
-          (parser-error game-state :bad-syntax
-                        "That sentence isn't one I recognize."))))))
+          (parser-state/parser-error game-state :bad-syntax
+                                     "That sentence isn't one I recognize."))))))
 
 (defn syntax-found
   "Store the matched syntax pattern.
@@ -185,9 +190,9 @@
        <SETG P-SYNTAX .SYN>
        <SETG PRSA <GETB .SYN ,P-SACTION>>>"
   [game-state syntax]
-  (parser-success (-> game-state
-                      (assoc-in [:parser :syntax] syntax)
-                      (set-prsa (:action syntax)))))
+  (parser-state/parser-success (-> game-state
+                                   (assoc-in [:parser :syntax] syntax)
+                                   (parser-state/set-prsa (:action syntax)))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; GWIM - Get What I Mean
@@ -234,11 +239,11 @@
            :object obj
            :game-state (do
                          ;; Print inference message: "(the brass lantern)"
-                         (tell game-state "(")
+                         (utils/tell game-state "(")
                          (when (and prep (not (get-in game-state [:parser :end-on-prep])))
-                           (tell game-state (str (name prep) " ")))
-                         (tell game-state (str "the " (thing-name game-state obj)))
-                         (tell game-state ")\n")
+                           (utils/tell game-state (str (name prep) " ")))
+                         (utils/tell game-state (str "the " (game-state/thing-name game-state obj)))
+                         (utils/tell game-state ")\n")
                          game-state)})
 
         ;; Zero or multiple matches - fail
@@ -254,7 +259,7 @@
    and tries to infer the missing object. Uses the first pattern
    where GWIM succeeds."
   [game-state patterns]
-  (let [ncn (get-ncn game-state)]
+  (let [ncn (parser-state/get-ncn game-state)]
     (loop [remaining patterns]
       (if (empty? remaining)
         ;; No pattern worked with GWIM
@@ -291,8 +296,8 @@
                   obj (:object gwim-result)
                   gs-with-obj
                   (if missing-first?
-                    (set-prso gs [obj])
-                    (set-prsi gs [obj]))]
+                    (parser-state/set-prso gs [obj])
+                    (parser-state/set-prsi gs [obj]))]
               (syntax-found gs-with-obj pattern))
 
             ;; GWIM failed - try next pattern

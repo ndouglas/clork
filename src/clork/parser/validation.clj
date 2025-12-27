@@ -1,22 +1,26 @@
-(in-ns 'clork.parser)
+(ns clork.parser.validation
+  "Pre-action validation checks for the parser.
+
+   This module handles:
+   - TAKE-CHECK / ITAKE-CHECK - Auto-take objects if needed
+   - MANY-CHECK - Verify verb allows multiple objects
+   - ACCESSIBLE? - Check if player can touch an object
+   - META-LOC - Find the room containing an object
+   - LIT? - Check if a location is lit
+
+   ZIL Reference: gparser.zil
+   - Lines 1244-1292: TAKE-CHECK, ITAKE-CHECK routines
+   - Lines 1294-1313: MANY-CHECK routine
+   - Lines 1372-1396: ACCESSIBLE? routine
+   - Lines 1398-1408: META-LOC routine
+   - Lines 1333-1355: LIT? routine"
+  (:require [clork.game-state :as game-state]
+            [clork.parser.state :as parser-state]
+            [clork.parser.objects :as objects]))
 
 ;;;; ============================================================================
 ;;;; PARSER VALIDATION - Pre-Action Checks
 ;;;; ============================================================================
-;;;;
-;;;; This file contains:
-;;;;   - TAKE-CHECK / ITAKE-CHECK - Auto-take objects if needed
-;;;;   - MANY-CHECK - Verify verb allows multiple objects
-;;;;   - ACCESSIBLE? - Check if player can touch an object
-;;;;   - META-LOC - Find the room containing an object
-;;;;   - LIT? - Check if a location is lit
-;;;;
-;;;; ZIL Reference: gparser.zil
-;;;;   - Lines 1244-1292: TAKE-CHECK, ITAKE-CHECK routines
-;;;;   - Lines 1294-1313: MANY-CHECK routine
-;;;;   - Lines 1372-1396: ACCESSIBLE? routine
-;;;;   - Lines 1398-1408: META-LOC routine
-;;;;   - Lines 1333-1355: LIT? routine
 ;;;;
 ;;;; When Are These Called?
 ;;;;   After SYNTAX-CHECK and SNARF-OBJECTS succeed, but before the action
@@ -67,7 +71,7 @@
       nil
 
       ;; Is a global object
-      (= (get-thing-location game-state current) :global-objects)
+      (= (game-state/get-thing-location game-state current) :global-objects)
       :global-objects
 
       ;; Is a room (or in ROOMS)
@@ -76,7 +80,7 @@
 
       ;; Keep climbing
       :else
-      (recur (get-thing-location game-state current)))))
+      (recur (game-state/get-thing-location game-state current)))))
 
 (defn accessible?
   "Check if the player can physically touch an object.
@@ -98,15 +102,15 @@
 
    Returns: true if player can touch the object"
   [game-state obj-id]
-  (let [obj (get-thing game-state obj-id)
-        loc (get-thing-location game-state obj-id)
+  (let [obj (game-state/get-thing game-state obj-id)
+        loc (game-state/get-thing-location game-state obj-id)
         winner (:winner game-state)
         here (:here game-state)
-        winner-loc (get-thing-location game-state winner)]
+        winner-loc (game-state/get-thing-location game-state winner)]
 
     (cond
       ;; Invisible objects are not accessible
-      (set-thing-flag? game-state obj-id :invisible)
+      (game-state/set-thing-flag? game-state obj-id :invisible)
       false
 
       ;; No location means not in world
@@ -135,7 +139,7 @@
       true
 
       ;; In an open container that's accessible
-      (and (set-thing-flag? game-state loc :open)
+      (and (game-state/set-thing-flag? game-state loc :open)
            (accessible? game-state loc))
       true
 
@@ -178,7 +182,7 @@
 
      ;; Room is inherently lit
      (and check-room-flag?
-          (set-thing-flag? game-state room-id :on))
+          (game-state/set-thing-flag? game-state room-id :on))
      true
 
      ;; Search for light source
@@ -195,16 +199,16 @@
            gs (assoc gs :here room-id)
 
            ;; Search winner's inventory
-           matches (do-sl gs winner [] 1 1)
+           matches (objects/do-sl gs winner [] 1 1)
 
            ;; Also search player if different from winner and in room
            matches (if (and (not= winner player)
-                            (= (get-thing-location gs player) room-id))
-                     (do-sl gs player matches 1 1)
+                            (= (game-state/get-thing-location gs player) room-id))
+                     (objects/do-sl gs player matches 1 1)
                      matches)
 
            ;; Search the room
-           matches (do-sl gs room-id matches 1 1)]
+           matches (objects/do-sl gs room-id matches 1 1)]
 
        (pos? (count matches))))))
 
@@ -229,16 +233,16 @@
      {:success false, :game-state gs, :error ...} - too many objects"
   [game-state]
   (let [syntax (get-in game-state [:parser :syntax])
-        prso (or (get-prso game-state) [])
-        prsi (or (get-prsi game-state) [])
+        prso (or (parser-state/get-prso game-state) [])
+        prsi (or (parser-state/get-prsi game-state) [])
         loc1 (:loc1 syntax)
         loc2 (:loc2 syntax)
 
         ;; Check if SMANY bit is set
         allows-many-direct? (and loc1
-                                 (bit-test loc1 (:many search-bits)))
+                                 (bit-test loc1 (:many game-state/search-bits)))
         allows-many-indirect? (and loc2
-                                   (bit-test loc2 (:many search-bits)))
+                                   (bit-test loc2 (:many game-state/search-bits)))
 
         loss (cond
                ;; Multiple direct objects but not allowed
@@ -254,13 +258,13 @@
                :else nil)]
 
     (if loss
-      (parser-error game-state :too-many-objects
-                    (str "You can't use multiple "
-                         (if (= loss :indirect) "in" "")
-                         "direct objects with \""
-                         (get-in game-state [:parser :vtbl 0])
-                         "\"."))
-      (parser-success game-state))))
+      (parser-state/parser-error game-state :too-many-objects
+                                 (str "You can't use multiple "
+                                      (if (= loss :indirect) "in" "")
+                                      "direct objects with \""
+                                      (get-in game-state [:parser :vtbl 0])
+                                      "\"."))
+      (parser-state/parser-success game-state))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; TAKE-CHECK
@@ -273,11 +277,11 @@
   [game-state obj-id]
   (let [player (:player game-state)]
     (loop [current obj-id]
-      (let [loc (get-thing-location game-state current)]
+      (let [loc (game-state/get-thing-location game-state current)]
         (cond
           (nil? loc) false
           (= loc player) true
-          (set-thing-flag? game-state loc :container)
+          (game-state/set-thing-flag? game-state loc :container)
           (recur loc)
           :else false)))))
 
@@ -301,10 +305,10 @@
   [game-state match-table ibits]
   (if (or (nil? ibits)
           (empty? (get-in game-state [:parser match-table] [])))
-    (parser-success game-state)
+    (parser-state/parser-success game-state)
 
-    (let [need-have? (bit-test ibits (:have search-bits))
-          can-take? (bit-test ibits (:take search-bits))
+    (let [need-have? (bit-test ibits (:have game-state/search-bits))
+          can-take? (bit-test ibits (:take game-state/search-bits))
           objects (get-in game-state [:parser match-table] [])]
 
       (reduce
@@ -317,51 +321,51 @@
              (= obj-id :it)
              (let [it-obj (get-in game-state [:parser :it-object])]
                (if (accessible? game-state it-obj)
-                 (parser-success game-state)
-                 (parser-error game-state :not-here
-                               "I don't see what you're referring to.")))
+                 (parser-state/parser-success game-state)
+                 (parser-state/parser-error game-state :not-here
+                                            "I don't see what you're referring to.")))
 
              ;; Already holding it - OK
              (held? game-state obj-id)
-             (parser-success game-state)
+             (parser-state/parser-success game-state)
 
              ;; Special objects that don't need taking
              (or (= obj-id :hands)
                  (= obj-id :me))
-             (parser-success game-state)
+             (parser-state/parser-success game-state)
 
              ;; Has TRYTAKEBIT - always "taken" succeeds
-             (set-thing-flag? game-state obj-id :trytake)
-             (parser-success game-state)
+             (game-state/set-thing-flag? game-state obj-id :trytake)
+             (parser-state/parser-success game-state)
 
              ;; NPC winner can't auto-take
              (not= (:winner game-state) (:player game-state))
-             (parser-success game-state)
+             (parser-state/parser-success game-state)
 
              ;; Can auto-take - try it
              can-take?
              (let [take-result (itake game-state obj-id)]
                (if (= take-result true)
                  ;; Take failed silently (handled by itake)
-                 (parser-success game-state)
+                 (parser-state/parser-success game-state)
                  ;; Take succeeded, print "(Taken)"
                  (do
                    (println "(Taken)")
-                   (parser-success game-state))))
+                   (parser-state/parser-success game-state))))
 
              ;; Must HAVE but don't - error
              need-have?
              (if (= obj-id :not-here-object)
-               (parser-error game-state :dont-have "You don't have that!")
-               (parser-error game-state :dont-have
-                             (str "You don't have the "
-                                  (thing-name game-state obj-id) ".")))
+               (parser-state/parser-error game-state :dont-have "You don't have that!")
+               (parser-state/parser-error game-state :dont-have
+                                          (str "You don't have the "
+                                               (game-state/thing-name game-state obj-id) ".")))
 
              ;; Otherwise OK
              :else
-             (parser-success game-state))))
+             (parser-state/parser-success game-state))))
 
-       (parser-success game-state)
+       (parser-state/parser-success game-state)
        objects))))
 
 (defn take-check
@@ -403,7 +407,7 @@
   [game-state obj-id]
   ;; TODO: Implement actual take logic
   ;; For now, just check if it's takeable
-  (if (set-thing-flag? game-state obj-id :take)
+  (if (game-state/set-thing-flag? game-state obj-id :take)
     false  ; Would succeed
     true)) ; Would fail
 

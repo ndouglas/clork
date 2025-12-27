@@ -1,31 +1,29 @@
-(in-ns 'clork.parser)
+(ns clork.parser.input
+  "Reading and managing input for the parser.
 
-;;;; ============================================================================
-;;;; PARSER INPUT - Reading and Managing Input
-;;;; ============================================================================
-;;;;
-;;;; This file contains:
-;;;;   - Reading player input from the terminal
-;;;;   - Managing lexical value tables (lexv)
-;;;;   - Handling AGAIN, OOPS, and multi-command input
-;;;;   - Table copying utilities (STUFF, INBUF-STUFF, INBUF-ADD)
-;;;;
-;;;; ZIL Reference: gparser.zil
-;;;;   - Lines 131-153: Input source selection in PARSER routine
-;;;;   - Lines 386-423: STUFF, INBUF-STUFF, INBUF-ADD routines
-;;;;
-;;;; Data Flow:
-;;;;   Terminal Input → lexv table → parsing pipeline
-;;;;   For AGAIN: again-lexv → lexv
-;;;;   For multi-command: reserve-lexv → lexv (when first command done)
-;;;;
-;;;; Key Concepts:
-;;;;   - lexv: The "lexical value" table containing tokenized input
-;;;;   - reserve-lexv: Holds overflow when player types multiple commands
-;;;;   - again-lexv: Holds previous command for AGAIN
-;;;;   - P-CONT: Pointer to next command in a "then" chain
-;;;;
-;;;; ============================================================================
+   This module handles:
+   - Reading player input from the terminal
+   - Managing lexical value tables (lexv)
+   - Handling AGAIN, OOPS, and multi-command input
+   - Table copying utilities (STUFF, INBUF-STUFF, INBUF-ADD)
+
+   ZIL Reference: gparser.zil
+   - Lines 131-153: Input source selection in PARSER routine
+   - Lines 386-423: STUFF, INBUF-STUFF, INBUF-ADD routines
+
+   Data Flow:
+     Terminal Input → lexv table → parsing pipeline
+     For AGAIN: again-lexv → lexv
+     For multi-command: reserve-lexv → lexv (when first command done)
+
+   Key Concepts:
+   - lexv: The 'lexical value' table containing tokenized input
+   - reserve-lexv: Holds overflow when player types multiple commands
+   - again-lexv: Holds previous command for AGAIN
+   - P-CONT: Pointer to next command in a 'then' chain"
+  (:require [clork.utils :as utils]
+            [clork.game-state :as game-state]
+            [clork.parser.validation :as validation]))
 
 ;;; ---------------------------------------------------------------------------
 ;;; INPUT SOURCE SELECTION
@@ -63,7 +61,7 @@
         ;; <STUFF ,RESERVE-LEXV ,P-LEXV> - copy reserve to main lexv
         (assoc-in [:parser :lexv] (get-in game-state [:parser :reserve-lexv]))
         ;; Print newline if appropriate
-        (crlf-if (and is-not-super-brief? winner-is-player?))
+        (utils/crlf-if (and is-not-super-brief? winner-is-player?))
         ;; <SETG RESERVE-PTR <>>
         (assoc-in [:parser :reserve-ptr] nil)
         ;; <SETG P-CONT <>>
@@ -91,7 +89,7 @@
         ;; <SET PTR ,P-CONT>
         (assoc-in [:parser :ptr] (get-in game-state [:parser :cont]))
         ;; Print newline if appropriate (not during SAY to preserve quoting)
-        (crlf-if (and is-not-super-brief? winner-is-player? verb-is-not-say?))
+        (utils/crlf-if (and is-not-super-brief? winner-is-player? verb-is-not-say?))
         ;; <SETG P-CONT <>>
         (assoc-in [:parser :cont] nil))))
 
@@ -123,11 +121,11 @@
       (parser-set-here-to-winner-loc)
       ;; <SETG LIT <LIT? ,HERE>>
       ;; Update lighting status
-      ((fn [gs] (assoc gs :lit (lit? gs (:here gs)))))
+      ((fn [gs] (assoc gs :lit (validation/lit? gs (:here gs)))))
       ;; <COND (<NOT ,SUPER-BRIEF> <CRLF>)>
-      ((fn [gs] (crlf-if gs (not (:super-brief gs)))))
+      ((fn [gs] (utils/crlf-if gs (not (:super-brief gs)))))
       ;; <TELL ">">
-      (tell ">")
+      (utils/tell ">")
       ;; <READ ,P-INBUF ,P-LEXV>
       ;; Read input and store in :input (will be tokenized by lexer)
       ((fn [gs] (assoc gs :input (read-line))))))
@@ -142,11 +140,11 @@
      <COND (<NOT <FSET? <LOC ,WINNER> ,VEHBIT>>
        <SETG HERE <LOC ,WINNER>>)>"
   [game-state]
-  (if-let [winner (get-thing game-state (:winner game-state))]
+  (if-let [winner (game-state/get-thing game-state (:winner game-state))]
     (let [winner-loc (:in winner)]
       ;; Only update HERE if winner has a location and it's not a vehicle
       (if (and winner-loc
-               (not (set-thing-flag? game-state winner-loc :vehicle)))
+               (not (game-state/set-thing-flag? game-state winner-loc :vehicle)))
         (assoc game-state :here winner-loc)
         game-state))
     game-state))
@@ -199,8 +197,8 @@
       (-> game-state
           (assoc :winner player)
           ;; META-LOC finds the room containing an object
-          (assoc :here (meta-location game-state player))
-          ((fn [gs] (assoc gs :lit (lit? gs (:here gs))))))
+          (assoc :here (validation/meta-loc game-state player))
+          ((fn [gs] (assoc gs :lit (validation/lit? gs (:here gs))))))
       game-state)))
 
 ;;; ---------------------------------------------------------------------------

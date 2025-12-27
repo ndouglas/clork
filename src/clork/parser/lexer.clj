@@ -1,19 +1,22 @@
-(in-ns 'clork.parser)
+(ns clork.parser.lexer
+  "Tokenization and word type checking for the parser.
+
+   This module handles:
+   - Tokenizing input strings into word lists
+   - Word type checking (WT? - is this word a verb? noun? adjective?)
+   - Number parsing (NUMBER? - parse \"3:30\" or \"42\")
+   - Parts of speech classification
+
+   ZIL Reference: gparser.zil
+   - Lines 71-81: Lexv constants (P-LEXWORDS, P-LEXELEN, P-PSOFF, etc.)
+   - Lines 430-436: WT? routine (word type checking)
+   - Lines 512-534: NUMBER? routine (parse numbers and times)"
+  (:require [clojure.string :as str]
+            [clork.verb-defs :as verb-defs]))
 
 ;;;; ============================================================================
 ;;;; PARSER LEXER - Tokenization and Word Type Checking
 ;;;; ============================================================================
-;;;;
-;;;; This file contains:
-;;;;   - Tokenizing input strings into word lists
-;;;;   - Word type checking (WT? - is this word a verb? noun? adjective?)
-;;;;   - Number parsing (NUMBER? - parse "3:30" or "42")
-;;;;   - Parts of speech classification
-;;;;
-;;;; ZIL Reference: gparser.zil
-;;;;   - Lines 71-81: Lexv constants (P-LEXWORDS, P-LEXELEN, P-PSOFF, etc.)
-;;;;   - Lines 430-436: WT? routine (word type checking)
-;;;;   - Lines 512-534: NUMBER? routine (parse numbers and times)
 ;;;;
 ;;;; Key Concepts:
 ;;;;
@@ -83,7 +86,7 @@
    \"lamp\" {:parts-of-speech #{:object :adjective}
             :object-value :brass-lantern
             :adj-value :lamp-adj}"
-  *verb-vocabulary*)
+  verb-defs/*verb-vocabulary*)
 
 ;;; ---------------------------------------------------------------------------
 ;;; SPECIAL WORDS
@@ -115,7 +118,7 @@
 (defn special-word?
   "Check if a word is a special parser word."
   [word key]
-  (= (clojure.string/lower-case (str word))
+  (= (str/lower-case (str word))
      (get special-words key)))
 
 ;;; ---------------------------------------------------------------------------
@@ -141,26 +144,26 @@
   (when input
     (let [;; Normalize: lowercase, handle punctuation
           normalized (-> input
-                         clojure.string/trim
-                         clojure.string/lower-case)
+                         str/trim
+                         str/lower-case)
           ;; Add spaces around punctuation so they become separate tokens
           spaced (-> normalized
-                     (clojure.string/replace #"([.,\"])" " $1 ")
-                     (clojure.string/replace #"\s+" " ")
-                     clojure.string/trim)]
+                     (str/replace #"([.,\"])" " $1 ")
+                     (str/replace #"\s+" " ")
+                     str/trim)]
       (when (seq spaced)
         (loop [remaining spaced
                position 0
                tokens []]
           (if (empty? remaining)
             tokens
-            (let [trimmed (clojure.string/triml remaining)
+            (let [trimmed (str/triml remaining)
                   skip-count (- (count remaining) (count trimmed))
                   new-pos (+ position skip-count)]
               (if (empty? trimmed)
                 tokens
                 (let [;; Find end of current word
-                      end-idx (or (clojure.string/index-of trimmed " ")
+                      end-idx (or (str/index-of trimmed " ")
                                   (count trimmed))
                       word (subs trimmed 0 end-idx)
                       token {:word word
@@ -214,7 +217,7 @@
   ([word part-of-speech]
    (word-type? word part-of-speech false))
   ([word part-of-speech return-value?]
-   (when-let [vocab-entry (get vocabulary (clojure.string/lower-case (str word)))]
+   (when-let [vocab-entry (get vocabulary (str/lower-case (str word)))]
      (let [has-pos? (contains? (:parts-of-speech vocab-entry) part-of-speech)]
        (if return-value?
          ;; Return the value for this part of speech
@@ -263,7 +266,7 @@
     (cond
       ;; Time format: H:MM or HH:MM
       (re-matches #"\d{1,2}:\d{2}" token-word)
-      (let [[hours-str mins-str] (clojure.string/split token-word #":")
+      (let [[hours-str mins-str] (str/split token-word #":")
             hours (parse-long hours-str)
             mins (parse-long mins-str)]
         (when (and hours mins (<= hours 23) (<= mins 59))
