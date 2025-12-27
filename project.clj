@@ -9,4 +9,7 @@
                  [org.jline/jline "3.25.1"]
                  [net.java.dev.jna/jna "5.14.0"]]
   :jvm-opts ["--enable-native-access=ALL-UNNAMED"]
-  :repl-options {:init-ns clork.core})
+  :repl-options {:init-ns clork.core}
+  :test-selectors {:default (complement :pending)
+                   :pending :pending
+                   :all (constantly true)})
