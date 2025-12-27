@@ -94,6 +94,16 @@
                           :loc1 #{:in-room :on-ground :many}}
                 :handler verbs/v-take}
 
+   :read       {:words   ["read" "skim"]
+                :syntax  {:num-objects 1
+                          :loc1 #{:held :carried :in-room :on-ground :take}}
+                :handler verbs/v-read}
+
+   :drop       {:words   ["drop" "throw" "discard"]
+                :syntax  {:num-objects 1
+                          :loc1 #{:held :many :have}}
+                :handler verbs/v-drop}
+
    :open       {:words   ["open"]
                 :syntax  {:num-objects 1
                           :loc1 #{:held :in-room :on-ground :carried}}

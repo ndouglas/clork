@@ -63,12 +63,12 @@ These are out-of-game commands that don't advance time.
 | [x] | LOOK/L | V-LOOK | Look around room |
 | [ ] | EXAMINE/DESCRIBE | V-EXAMINE | Examine object closely |
 | [x] | TAKE/GET/GRAB | V-TAKE | Pick up object |
-| [ ] | DROP | V-DROP | Drop object |
+| [x] | DROP | V-DROP | Drop object |
 | [ ] | PUT/INSERT | V-PUT | Put object in container |
 | [ ] | PUT ON | V-PUT-ON | Put object on surface |
 | [ ] | OPEN | V-OPEN | Open container/door |
 | [ ] | CLOSE | V-CLOSE | Close container/door |
-| [ ] | READ | V-READ | Read text |
+| [x] | READ | V-READ | Read text |
 | [ ] | SEARCH | V-SEARCH | Search object |
 | [ ] | LOOK IN | V-LOOK-INSIDE | Look inside container |
 | [ ] | LOOK UNDER | V-LOOK-UNDER | Look under object |

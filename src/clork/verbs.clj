@@ -473,6 +473,88 @@
         (utils/tell state "Taken.")))))
 
 ;;; ---------------------------------------------------------------------------
+;;; READ COMMAND
+;;; ---------------------------------------------------------------------------
+;;; ZIL: V-READ in gverbs.zil
+
+(defn- readable?
+  "Returns true if the object has the :read flag."
+  [obj]
+  (contains? (or (:flags obj) #{}) :read))
+
+(defn v-read
+  "Read text on an object.
+
+   ZIL: V-READ in gverbs.zil (line 1159)
+     <ROUTINE V-READ ()
+       <COND (<NOT <FSET? ,PRSO ,READBIT>>
+              <TELL \"How does one read a \" D ,PRSO \"?\" CR>)
+             (T
+              <TELL <GETP ,PRSO ,P?TEXT> CR>)>>"
+  [game-state]
+  (let [prso (parser-state/get-prso game-state)
+        obj (gs/get-thing game-state prso)
+        desc (:desc obj)]
+    (cond
+      ;; Not readable
+      (not (readable? obj))
+      (utils/tell game-state (str "How does one read a " desc "?"))
+
+      ;; Readable - print the text
+      :else
+      (if-let [text (:text obj)]
+        (utils/tell game-state text)
+        (utils/tell game-state "There's nothing written on it.")))))
+
+;;; ---------------------------------------------------------------------------
+;;; DROP COMMAND
+;;; ---------------------------------------------------------------------------
+;;; ZIL: V-DROP and IDROP in gverbs.zil
+
+(defn- carrying?
+  "Returns true if the player (winner) is carrying the object,
+   either directly or in a container they're holding."
+  [game-state obj-id]
+  (let [winner (:winner game-state)
+        obj-loc (gs/get-thing-loc-id game-state obj-id)]
+    (or (= obj-loc winner)
+        ;; Check if in a container the winner is holding
+        (when obj-loc
+          (= (gs/get-thing-loc-id game-state obj-loc) winner)))))
+
+(defn- drop-to-room
+  "Move an object to the current room."
+  [game-state obj-id]
+  (let [here (:here game-state)]
+    (assoc-in game-state [:objects obj-id :in] here)))
+
+(defn v-drop
+  "Drop an object from inventory.
+
+   ZIL: V-DROP in gverbs.zil (line 495)
+     <ROUTINE V-DROP ()
+       <COND (<IDROP>
+              <TELL \"Dropped.\" CR>)>>
+
+   IDROP (line 1982):
+   - Check if not carrying: \"You're not carrying the X.\"
+   - Check if in closed container: \"The X is closed.\"
+   - Move to current room"
+  [game-state]
+  (let [prso (parser-state/get-prso game-state)
+        obj (gs/get-thing game-state prso)
+        desc (:desc obj)]
+    (cond
+      ;; Not carrying it
+      (not (carrying? game-state prso))
+      (utils/tell game-state (str "You're not carrying the " desc "."))
+
+      ;; Success - drop the object
+      :else
+      (let [state (drop-to-room game-state prso)]
+        (utils/tell state "Dropped.")))))
+
+;;; ---------------------------------------------------------------------------
 ;;; OPEN COMMAND
 ;;; ---------------------------------------------------------------------------
 ;;; ZIL: V-OPEN in gverbs.zil
