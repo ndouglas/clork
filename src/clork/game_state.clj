@@ -50,6 +50,7 @@
    :verbose false
    :super-brief false
    :won false
+   :deaths 0
    :parser (parser-state/initial-parser-state)
     ;; Debug system state
    :turn-number 0

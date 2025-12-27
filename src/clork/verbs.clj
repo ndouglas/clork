@@ -82,3 +82,99 @@
                   (utils/tell state (str "  A " obj-name "\n"))))
               (utils/tell game-state "You are carrying:\n")
               contents))))
+
+;;; ---------------------------------------------------------------------------
+;;; Constants for fight/health system
+;;; ---------------------------------------------------------------------------
+;;; ZIL: STRENGTH-MAX = 7, STRENGTH-MIN = 2
+;;; Base fight strength is calculated from score, ranging from 2 to 7.
+;;; For now, we use a fixed base of 4 since scoring isn't implemented.
+
+(def ^:private base-fight-strength
+  "Base fighting strength (before wounds). ZIL calculates this from score."
+  4)
+
+(defn- fight-strength
+  "Calculate the player's current fighting ability.
+
+   ZIL: FIGHT-STRENGTH routine in 1actions.zil
+   Returns base strength (4) plus wound modifier (negative when wounded).
+   If adjust? is false, returns just the base (for survivability display)."
+  ([game-state] (fight-strength game-state true))
+  ([game-state adjust?]
+   (let [wound-modifier (get-in game-state [:objects (:winner game-state) :strength] 0)]
+     (if adjust?
+       (+ base-fight-strength wound-modifier)
+       base-fight-strength))))
+
+(defn- wound-description
+  "Return the description of wounds based on wound level.
+
+   ZIL: Wound levels from V-DIAGNOSE:
+     1 = light wound
+     2 = serious wound
+     3 = several wounds
+     >3 = serious wounds"
+  [wound-level]
+  (cond
+    (= wound-level 1) "a light wound"
+    (= wound-level 2) "a serious wound"
+    (= wound-level 3) "several wounds"
+    (> wound-level 3) "serious wounds"))
+
+(defn- survivability-description
+  "Return description of how much more damage the player can take.
+
+   ZIL: Based on remaining strength (RS = MS + WD):
+     0 = expect death soon
+     1 = killed by one more light wound
+     2 = killed by a serious wound
+     3 = survive one serious wound
+     >3 = survive several wounds"
+  [remaining-strength]
+  (cond
+    (<= remaining-strength 0) "expect death soon"
+    (= remaining-strength 1) "be killed by one more light wound"
+    (= remaining-strength 2) "be killed by a serious wound"
+    (= remaining-strength 3) "survive one serious wound"
+    (> remaining-strength 3) "survive several wounds"))
+
+(defn v-diagnose
+  "Reports the player's health status.
+
+   ZIL: V-DIAGNOSE in 1actions.zil
+     Reports current wounds, time to heal, survivability, and death count.
+
+     <ROUTINE V-DIAGNOSE (\"AUX\" (MS <FIGHT-STRENGTH <>>)
+                          (WD <GETP ,WINNER ,P?STRENGTH>) (RS <+ .MS .WD>))
+       ...>"
+  [game-state]
+  (let [winner-id (:winner game-state)
+        ;; WD = wound modifier (0 = healthy, negative = wounded)
+        wound-modifier (get-in game-state [:objects winner-id :strength] 0)
+        ;; Convert to positive wound level for display
+        wound-level (- wound-modifier)
+        ;; RS = remaining strength = base + wounds
+        remaining-strength (fight-strength game-state)
+        deaths (get game-state :deaths 0)]
+    (-> game-state
+        ;; Report wound status
+        (as-> gs
+              (if (zero? wound-level)
+                (utils/tell gs "You are in perfect health.")
+                (-> gs
+                    (utils/tell "You have ")
+                    (utils/tell (wound-description wound-level))
+                    (utils/tell "."))))
+        ;; Report survivability
+        (utils/tell "\nYou can ")
+        (utils/tell (survivability-description remaining-strength))
+        (utils/tell ".")
+        ;; Report death count if any
+        (as-> gs
+              (if (pos? deaths)
+                (-> gs
+                    (utils/tell "\nYou have been killed ")
+                    (utils/tell (if (= deaths 1) "once" "twice"))
+                    (utils/tell "."))
+                gs)))))

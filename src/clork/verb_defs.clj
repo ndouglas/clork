@@ -67,6 +67,10 @@
                 :syntax  {:num-objects 0}
                 :handler verbs/v-version}
 
+   :diagnose   {:words   ["diagnose"]
+                :syntax  {:num-objects 0}
+                :handler verbs/v-diagnose}
+
    ;; === Observation Verbs ===
    :look       {:words   ["look" "l"]
                 :syntax  {:num-objects 0}

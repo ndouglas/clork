@@ -34,7 +34,7 @@ These are out-of-game commands that don't advance time.
 | [x] | SUPER/SUPERBRIEF | V-SUPER-BRIEF | Minimal descriptions |
 | [x] | INVENTORY/I | V-INVENTORY | Show carried items |
 | [x] | VERSION | V-VERSION | Show game version |
-| [ ] | DIAGNOSE | V-DIAGNOSE | Show player health |
+| [x] | DIAGNOSE | V-DIAGNOSE | Show player health |
 | [ ] | SCORE | V-SCORE | Show current score |
 | [ ] | QUIT/Q | V-QUIT | Quit game |
 | [ ] | RESTART | V-RESTART | Restart game |
@@ -749,7 +749,7 @@ These are out-of-game commands that don't advance time.
 | [ ] | SCORE | Current score |
 | [ ] | SCORE-MAX | Maximum score |
 | [ ] | MOVES | Turn counter |
-| [ ] | DEATHS | Death counter |
+| [x] | DEATHS | Death counter |
 | [x] | VERBOSE | Verbose mode |
 | [x] | SUPER-BRIEF | Super-brief mode |
 | [ ] | LIT | Is room lit |

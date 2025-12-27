@@ -129,3 +129,53 @@
           [_ result] (with-captured-output (parse-test-input gs "i"))]
       (is (nil? (get-in result [:parser :error])))
       (is (= :inventory (get-in result [:parser :prsa]))))))
+
+;;; ---------------------------------------------------------------------------
+;;; DIAGNOSE VERB TESTS
+;;; ---------------------------------------------------------------------------
+
+(deftest v-diagnose-perfect-health-test
+  (testing "v-diagnose with no wounds shows 'You are in perfect health.'"
+    (let [gs (make-test-state)
+          [output _] (with-captured-output (verbs/v-diagnose gs))]
+      (is (clojure.string/includes? output "You are in perfect health.")))))
+
+(deftest v-diagnose-light-wound-test
+  (testing "v-diagnose with light wound reports it"
+    (let [gs (-> (make-test-state)
+                 (assoc-in [:objects :adventurer :strength] -1))
+          [output _] (with-captured-output (verbs/v-diagnose gs))]
+      (is (clojure.string/includes? output "a light wound")))))
+
+(deftest v-diagnose-serious-wound-test
+  (testing "v-diagnose with serious wound reports it"
+    (let [gs (-> (make-test-state)
+                 (assoc-in [:objects :adventurer :strength] -2))
+          [output _] (with-captured-output (verbs/v-diagnose gs))]
+      (is (clojure.string/includes? output "a serious wound")))))
+
+(deftest v-diagnose-several-wounds-test
+  (testing "v-diagnose with several wounds reports it"
+    (let [gs (-> (make-test-state)
+                 (assoc-in [:objects :adventurer :strength] -3))
+          [output _] (with-captured-output (verbs/v-diagnose gs))]
+      (is (clojure.string/includes? output "several wounds")))))
+
+(deftest v-diagnose-deaths-test
+  (testing "v-diagnose reports death count when > 0"
+    (let [gs (-> (make-test-state)
+                 (assoc :deaths 1))
+          [output _] (with-captured-output (verbs/v-diagnose gs))]
+      (is (clojure.string/includes? output "You have been killed once.")))))
+
+(deftest diagnose-vocabulary-test
+  (testing "diagnose is registered in vocabulary as a verb"
+    (is (= true (parser/wt? "diagnose" :verb)))
+    (is (= :diagnose (parser/wt? "diagnose" :verb true)))))
+
+(deftest diagnose-parsing-test
+  (testing "parsing 'diagnose' sets prsa to :diagnose"
+    (let [gs (make-test-state)
+          [_ result] (with-captured-output (parse-test-input gs "diagnose"))]
+      (is (nil? (get-in result [:parser :error])))
+      (is (= :diagnose (get-in result [:parser :prsa]))))))
