@@ -1,77 +1,85 @@
 (in-ns 'clork.core-test)
 
-(deftest set-obj-flag-test
-  (testing "(set-obj-flag game-state obj-id flag) sets a flag on an object"
-    (let [game-state {:objects {1 {}}}]
-      (is (= {:objects {1 {1 true}}} (set-obj-flag game-state 1 1))))))
+;; Generic flag functions
 
-(deftest unset-obj-flag-test
-  (testing "(unset-obj-flag game-state obj-id flag) unsets a flag on an object"
-    (let [game-state {:objects {1 {1 true}}}]
-      (is (= {:objects {1 {1 false}}} (unset-obj-flag game-state 1 1))))))
+(deftest set-flag-test
+  (testing "set-flag sets a flag on an object"
+    (let [game-state {:objects {:obj1 {}}}]
+      (is (= {:objects {:obj1 {:takeable true}}}
+             (set-flag game-state :objects :obj1 :takeable)))))
+  (testing "set-flag sets a flag on a room"
+    (let [game-state {:rooms {:room1 {}}}]
+      (is (= {:rooms {:room1 {:lit true}}}
+             (set-flag game-state :rooms :room1 :lit))))))
 
-(deftest set-obj-flag?-test
-  (testing "(set-obj-flag? game-state obj-id flag) returns true if a flag is set on an object"
-    (let [game-state {:objects {1 {1 true}}}]
-      (is (set-obj-flag? game-state 1 1)))
-    (let [game-state {:objects {1 {1 false}}}]
-      (is (not (set-obj-flag? game-state 1 1))))))
+(deftest unset-flag-test
+  (testing "unset-flag unsets a flag on an object"
+    (let [game-state {:objects {:obj1 {:takeable true}}}]
+      (is (= {:objects {:obj1 {:takeable false}}}
+             (unset-flag game-state :objects :obj1 :takeable)))))
+  (testing "unset-flag unsets a flag on a room"
+    (let [game-state {:rooms {:room1 {:lit true}}}]
+      (is (= {:rooms {:room1 {:lit false}}}
+             (unset-flag game-state :rooms :room1 :lit))))))
 
-(deftest set-room-flag-test
-  (testing "(set-room-flag game-state room-id flag) sets a flag on a room"
-    (let [game-state {:rooms {1 {}}}]
-      (is (= {:rooms {1 {1 true}}} (set-room-flag game-state 1 1))))))
+(deftest flag?-test
+  (testing "flag? returns true when flag is set"
+    (is (flag? {:objects {:obj1 {:takeable true}}} :objects :obj1 :takeable))
+    (is (flag? {:rooms {:room1 {:lit true}}} :rooms :room1 :lit)))
+  (testing "flag? returns false when flag is not set"
+    (is (not (flag? {:objects {:obj1 {:takeable false}}} :objects :obj1 :takeable)))
+    (is (not (flag? {:objects {:obj1 {}}} :objects :obj1 :takeable)))))
 
-(deftest unset-room-flag-test
-  (testing "(unset-room-flag game-state room-id flag) unsets a flag on a room"
-    (let [game-state {:rooms {1 {1 true}}}]
-      (is (= {:rooms {1 {1 false}}} (unset-room-flag game-state 1 1))))))
+;; Polymorphic thing-flag functions
 
-(deftest set-room-flag?-test
-  (testing "(set-room-flag? game-state room-id flag) returns true if a flag is set on a room"
-    (let [game-state {:rooms {1 {1 true}}}]
-      (is (set-room-flag? game-state 1 1)))
-    (let [game-state {:rooms {1 {1 false}}}]
-      (is (not (set-room-flag? game-state 1 1))))))
+(deftest set-thing-flag-test
+  (testing "set-thing-flag sets a flag on an object"
+    (let [game-state {:objects {:lamp {}}}]
+      (is (= {:objects {:lamp {:on true}}}
+             (set-thing-flag game-state :lamp :on)))))
+  (testing "set-thing-flag sets a flag on a room"
+    (let [game-state {:rooms {:kitchen {}}}]
+      (is (= {:rooms {:kitchen {:visited true}}}
+             (set-thing-flag game-state :kitchen :visited)))))
+  (testing "set-thing-flag throws for unknown thing"
+    (let [game-state {:objects {} :rooms {}}]
+      (is (thrown? Exception (set-thing-flag game-state :unknown :flag))))))
 
-(deftest set-adv-flag-test
-  (testing "(set-adv-flag game-state flag) sets a flag on the adventurer"
-    (let [game-state {:adventurer 1 :objects {1 {}}}]
-      (is (= {:adventurer 1 :objects {1 {1 true}}} (set-adv-flag game-state 1))))))
+(deftest unset-thing-flag-test
+  (testing "unset-thing-flag unsets a flag on an object"
+    (let [game-state {:objects {:lamp {:on true}}}]
+      (is (= {:objects {:lamp {:on false}}}
+             (unset-thing-flag game-state :lamp :on)))))
+  (testing "unset-thing-flag unsets a flag on a room"
+    (let [game-state {:rooms {:kitchen {:visited true}}}]
+      (is (= {:rooms {:kitchen {:visited false}}}
+             (unset-thing-flag game-state :kitchen :visited))))))
 
-(deftest unset-adv-flag-test
-  (testing "(unset-adv-flag game-state flag) unsets a flag on the adventurer"
-    (let [game-state {:adventurer 1 :objects {1 {1 true}}}]
-      (is (= {:adventurer 1 :objects {1 {1 false}}} (unset-adv-flag game-state 1))))))
+(deftest set-thing-flag?-test
+  (testing "set-thing-flag? returns true when flag is set"
+    (is (set-thing-flag? {:objects {:lamp {:on true}}} :lamp :on))
+    (is (set-thing-flag? {:rooms {:kitchen {:lit true}}} :kitchen :lit)))
+  (testing "set-thing-flag? returns false when flag is not set"
+    (is (not (set-thing-flag? {:objects {:lamp {:on false}}} :lamp :on)))
+    (is (not (set-thing-flag? {:objects {:lamp {}}} :lamp :on)))))
 
-(deftest set-adv-flag?-test
-  (testing "(set-adv-flag? game-state flag) returns true if a flag is set on the adventurer"
-    (let [game-state {:adventurer 1 :objects {1 {1 true}}}]
-      (is (set-adv-flag? game-state 1)))
-    (let [game-state {:adventurer 1 :objects {1 {1 false}}}]
-      (is (not (set-adv-flag? game-state 1)))))
-    (let [game-state {:adventurer 1 :objects {1 {}}}]
-      (is (not (set-adv-flag? game-state 1)))))
+;; Current room convenience functions
 
 (deftest set-here-flag-test
-  (testing "(set-here-flag game-state flag) sets a flag on the current room"
-    (let [game-state {:here 1 :rooms {1 {}}}]
-      (is (= {:here 1 :rooms {1 {1 true}}} (set-here-flag game-state 1)))))
-    (let [game-state {:here 1 :rooms {1 {1 true}}}]
-      (is (= {:here 1 :rooms {1 {1 true}}} (set-here-flag game-state 1)))))
+  (testing "set-here-flag sets a flag on the current room"
+    (let [game-state {:here :kitchen :rooms {:kitchen {}}}]
+      (is (= {:here :kitchen :rooms {:kitchen {:touch true}}}
+             (set-here-flag game-state :touch))))))
 
 (deftest unset-here-flag-test
-  (testing "(unset-here-flag game-state flag) unsets a flag on the current room"
-    (let [game-state {:here 1 :rooms {1 {1 true}}}]
-      (is (= {:here 1 :rooms {1 {1 false}}} (unset-here-flag game-state 1)))))
-    (let [game-state {:here 1 :rooms {1 {1 false}}}]
-      (is (= {:here 1 :rooms {1 {1 false}}} (unset-here-flag game-state 1)))))
+  (testing "unset-here-flag unsets a flag on the current room"
+    (let [game-state {:here :kitchen :rooms {:kitchen {:touch true}}}]
+      (is (= {:here :kitchen :rooms {:kitchen {:touch false}}}
+             (unset-here-flag game-state :touch))))))
 
 (deftest set-here-flag?-test
-  (testing "(set-here-flag? game-state flag) returns true if a flag is set on the current room"
-    (let [game-state {:here 1 :rooms {1 {1 true}}}]
-      (is (set-here-flag? game-state 1)))
-    (let [game-state {:here 1 :rooms {1 {1 false}}}]
-      (is (not (set-here-flag? game-state 1))))
-    (let [game-state {:here 1 :rooms {1 {}}}]
-      (is (not (set-here-flag? game-state 1))))))
+  (testing "set-here-flag? returns true when flag is set on current room"
+    (is (set-here-flag? {:here :kitchen :rooms {:kitchen {:lit true}}} :lit)))
+  (testing "set-here-flag? returns false when flag is not set"
+    (is (not (set-here-flag? {:here :kitchen :rooms {:kitchen {:lit false}}} :lit)))
+    (is (not (set-here-flag? {:here :kitchen :rooms {:kitchen {}}} :lit)))))

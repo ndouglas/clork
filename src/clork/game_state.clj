@@ -54,104 +54,92 @@
   })
 
 
-(defn set-obj-flag
-  "Sets a flag on an object."
-  [game-state obj-id flag]
-  (assoc-in game-state [:objects obj-id flag] true))
+;;; ---------------------------------------------------------------------------
+;;; FLAG OPERATIONS
+;;; ---------------------------------------------------------------------------
+;;; Generic flag operations for objects, rooms, and other entities.
+;;;
+;;; Base functions:
+;;;   set-flag, unset-flag, flag? - work with entity-type (:objects, :rooms)
+;;;
+;;; Polymorphic functions (auto-detect entity type):
+;;;   set-thing-flag, unset-thing-flag, set-thing-flag?
+;;;
+;;; Current room convenience:
+;;;   set-here-flag, unset-here-flag, set-here-flag?
 
-(defn unset-obj-flag
-  "Unsets a flag on an object."
-  [game-state obj-id flag]
-  (assoc-in game-state [:objects obj-id flag] false))
+(defn- resolve-entity-type
+  "Resolve the entity type for a thing-id. Returns :objects, :rooms, or nil."
+  [game-state thing-id]
+  (cond
+    (contains? (:objects game-state) thing-id) :objects
+    (contains? (:rooms game-state) thing-id) :rooms
+    (= (:player game-state) thing-id) :objects
+    :else nil))
 
-(defn set-obj-flag?
-  "Indicates whether a flag is set on an object."
-  [game-state obj-id flag]
-  (get-in game-state [:objects obj-id flag] false))
+(defn set-flag
+  "Sets a flag on an entity. entity-type is :objects or :rooms."
+  [game-state entity-type entity-id flag]
+  (assoc-in game-state [entity-type entity-id flag] true))
 
-(defn set-room-flag
-  "Sets a flag on a room."
-  [game-state room-id flag]
-  (assoc-in game-state [:rooms room-id flag] true))
+(defn unset-flag
+  "Unsets a flag on an entity. entity-type is :objects or :rooms."
+  [game-state entity-type entity-id flag]
+  (assoc-in game-state [entity-type entity-id flag] false))
 
-(defn unset-room-flag
-  "Unsets a flag on a room."
-  [game-state room-id flag]
-  (assoc-in game-state [:rooms room-id flag] false))
+(defn flag?
+  "Returns true if a flag is set on an entity. entity-type is :objects or :rooms."
+  [game-state entity-type entity-id flag]
+  (get-in game-state [entity-type entity-id flag] false))
 
-(defn set-room-flag?
-  "Indicates whether a flag is set on a room."
-  [game-state room-id flag]
-  (get-in game-state [:rooms room-id flag] false))
-
-(defn set-adv-flag
-  "Sets a flag on the adventurer."
-  [game-state flag]
-  (set-obj-flag game-state (:adventurer game-state) flag))
-
-(defn unset-adv-flag
-  "Unsets a flag on the adventurer."
-  [game-state flag]
-  (unset-obj-flag game-state (:adventurer game-state) flag))
-
-(defn set-adv-flag?
-  "Indicates whether a flag is set on the adventurer."
-  [game-state flag]
-  (set-obj-flag? game-state (:adventurer game-state) flag))
+;; Polymorphic functions that auto-detect entity type
 
 (defn set-thing-flag
   "Sets a flag on a room or object."
-  [game-state thng-id flag]
-  (cond
-    (contains? (:objects game-state) thng-id)
-      (set-obj-flag game-state thng-id flag)
-    (contains? (:rooms game-state) thng-id)
-      (set-room-flag game-state thng-id flag)
-    (= (:player game-state) thng-id)
-      (set-adv-flag game-state flag)
-    true
-      (throw (Exception. (str "Thing " thng-id " not found!")))))
+  [game-state thing-id flag]
+  (if-let [entity-type (resolve-entity-type game-state thing-id)]
+    (let [actual-id (if (= (:player game-state) thing-id)
+                      (:adventurer game-state)
+                      thing-id)]
+      (set-flag game-state entity-type actual-id flag))
+    (throw (Exception. (str "Thing " thing-id " not found!")))))
 
 (defn unset-thing-flag
   "Unsets a flag on room or object."
-  [game-state thng-id flag]
-  (cond
-    (contains? (:objects game-state) thng-id)
-      (unset-obj-flag game-state thng-id flag)
-    (contains? (:rooms game-state) thng-id)
-      (unset-room-flag game-state thng-id flag)
-    (= (:player game-state) thng-id)
-      (unset-adv-flag game-state flag)
-    true
-      (throw (Exception. (str "Thing " thng-id " not found!")))))
+  [game-state thing-id flag]
+  (if-let [entity-type (resolve-entity-type game-state thing-id)]
+    (let [actual-id (if (= (:player game-state) thing-id)
+                      (:adventurer game-state)
+                      thing-id)]
+      (unset-flag game-state entity-type actual-id flag))
+    (throw (Exception. (str "Thing " thing-id " not found!")))))
 
 (defn set-thing-flag?
   "Indicates whether a flag is set on a room or object."
-  [game-state thng-id flag]
-  (cond
-    (contains? (:objects game-state) thng-id)
-      (set-obj-flag? game-state thng-id flag)
-    (contains? (:rooms game-state) thng-id)
-      (set-room-flag? game-state thng-id flag)
-    (= (:player game-state) thng-id)
-      (set-adv-flag? game-state flag)
-    true
-      (throw (Exception. (str "Thing " thng-id " not found!")))))
+  [game-state thing-id flag]
+  (if-let [entity-type (resolve-entity-type game-state thing-id)]
+    (let [actual-id (if (= (:player game-state) thing-id)
+                      (:adventurer game-state)
+                      thing-id)]
+      (flag? game-state entity-type actual-id flag))
+    (throw (Exception. (str "Thing " thing-id " not found!")))))
+
+;; Current room convenience functions
 
 (defn set-here-flag
   "Sets a flag on the current room."
   [game-state flag]
-  (set-room-flag game-state (:here game-state) flag))
+  (set-flag game-state :rooms (:here game-state) flag))
 
 (defn unset-here-flag
   "Unsets a flag on the current room."
   [game-state flag]
-  (unset-room-flag game-state (:here game-state) flag))
+  (unset-flag game-state :rooms (:here game-state) flag))
 
 (defn set-here-flag?
   "Indicates whether a flag is set on the current room."
   [game-state flag]
-  (set-room-flag? game-state (:here game-state) flag))
+  (flag? game-state :rooms (:here game-state) flag))
 
 (defn get-thing
   "Get an object or room based on its ID."
