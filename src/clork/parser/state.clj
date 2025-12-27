@@ -108,36 +108,8 @@
 ;;; ---------------------------------------------------------------------------
 ;;; LOCATION BITS - Where to search for objects
 ;;; ---------------------------------------------------------------------------
-;;; These bits control where GET-OBJECT searches for matching objects.
-;;; They're stored in P-SLOC1/P-SLOC2 in syntax tables.
-;;;
-;;; ZIL Constants from gparser.zil lines 1032-1038:
-;;;   <CONSTANT SH 128>     ; Search HELD (player inventory)
-;;;   <CONSTANT SC 64>      ; Search CARRIED (in containers player has)
-;;;   <CONSTANT SIR 32>     ; Search IN-ROOM (on floor)
-;;;   <CONSTANT SOG 16>     ; Search ON-GROUND (in room containers)
-;;;   <CONSTANT STAKE 8>    ; Try to TAKE the object if not held
-;;;   <CONSTANT SMANY 4>    ; Allow multiple objects ("take all")
-;;;   <CONSTANT SHAVE 2>    ; Must HAVE (already holding) the object
-
-(def search-bits
-  {:held     128   ; SH - search player's inventory
-   :carried   64   ; SC - search containers player is carrying
-   :in-room   32   ; SIR - search room floor
-   :on-ground 16   ; SOG - search containers in room
-   :take       8   ; STAKE - auto-take if not held
-   :many       4   ; SMANY - allow "all", "everything"
-   :have       2}) ; SHAVE - must already be holding
-
-;;; ---------------------------------------------------------------------------
-;;; GET-OBJECT FLAGS - Parsing state for object matching
-;;; ---------------------------------------------------------------------------
-;;; ZIL: <CONSTANT P-ALL 1>, <CONSTANT P-ONE 2>, <CONSTANT P-INHIBIT 4>
-
-(def getflags
-  {:all     1   ; Player said "all" or "everything"
-   :one     2   ; Player said "one" or "a" (pick randomly)
-   :inhibit 4}) ; Inhibit object search (for "of" constructs)
+;;; NOTE: search-bits and getflags are now defined in game_state.clj
+;;; so they're available to verb_defs.clj before parser loads.
 
 ;;; ---------------------------------------------------------------------------
 ;;; PARSER STATE STRUCTURE
@@ -358,3 +330,39 @@
       (assoc-in [:parser :prsi] nil)
       ;; <PUT ,P-BUTS ,P-MATCHLEN 0>
       (assoc-in [:parser :buts] nil)))
+
+;;; ---------------------------------------------------------------------------
+;;; PARSER RESULT HELPERS
+;;; ---------------------------------------------------------------------------
+;;; Standard result structure for parser pipeline functions.
+;;; All parser functions should return {:success bool :game-state gs :error map?}
+;;;
+;;; Using these helpers ensures consistency and prevents bugs like the
+;;; (map? result) check that fails because game-states are also maps.
+
+(defn parser-success
+  "Return a successful parser result.
+
+   Usage: (parser-success game-state)"
+  [game-state]
+  {:success true
+   :game-state game-state
+   :error nil})
+
+(defn parser-error
+  "Return a failed parser result.
+
+   Usage: (parser-error game-state :error-type \"message\")"
+  ([game-state error-type]
+   (parser-error game-state error-type nil))
+  ([game-state error-type message]
+   {:success false
+    :game-state game-state
+    :error {:type error-type :message message}}))
+
+(defn parser-result?
+  "Check if a value is a parser result (has :success key).
+
+   Use this instead of (map? x) to distinguish results from game-states."
+  [x]
+  (and (map? x) (contains? x :success)))

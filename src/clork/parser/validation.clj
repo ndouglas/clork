@@ -254,16 +254,13 @@
                :else nil)]
 
     (if loss
-      {:success false
-       :game-state game-state
-       :error {:type :too-many-objects
-               :which loss
-               :message (str "You can't use multiple "
-                             (if (= loss :indirect) "in" "")
-                             "direct objects with \""
-                             (get-in game-state [:parser :vtbl 0])
-                             "\".")}}
-      {:success true :game-state game-state})))
+      (parser-error game-state :too-many-objects
+                    (str "You can't use multiple "
+                         (if (= loss :indirect) "in" "")
+                         "direct objects with \""
+                         (get-in game-state [:parser :vtbl 0])
+                         "\"."))
+      (parser-success game-state))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; TAKE-CHECK
@@ -304,7 +301,7 @@
   [game-state match-table ibits]
   (if (or (nil? ibits)
           (empty? (get-in game-state [:parser match-table] [])))
-    {:success true :game-state game-state}
+    (parser-success game-state)
 
     (let [need-have? (bit-test ibits (:have search-bits))
           can-take? (bit-test ibits (:take search-bits))
@@ -320,60 +317,51 @@
              (= obj-id :it)
              (let [it-obj (get-in game-state [:parser :it-object])]
                (if (accessible? game-state it-obj)
-                 {:success true
-                  :game-state game-state}
-                 {:success false
-                  :game-state game-state
-                  :error {:type :not-here
-                          :message "I don't see what you're referring to."}}))
+                 (parser-success game-state)
+                 (parser-error game-state :not-here
+                               "I don't see what you're referring to.")))
 
              ;; Already holding it - OK
              (held? game-state obj-id)
-             {:success true :game-state game-state}
+             (parser-success game-state)
 
              ;; Special objects that don't need taking
              (or (= obj-id :hands)
                  (= obj-id :me))
-             {:success true :game-state game-state}
+             (parser-success game-state)
 
              ;; Has TRYTAKEBIT - always "taken" succeeds
              (set-thing-flag? game-state obj-id :trytake)
-             {:success true :game-state game-state}
+             (parser-success game-state)
 
              ;; NPC winner can't auto-take
              (not= (:winner game-state) (:player game-state))
-             {:success true :game-state game-state}
+             (parser-success game-state)
 
              ;; Can auto-take - try it
              can-take?
              (let [take-result (itake game-state obj-id)]
                (if (= take-result true)
                  ;; Take failed silently (handled by itake)
-                 {:success true :game-state game-state}
+                 (parser-success game-state)
                  ;; Take succeeded, print "(Taken)"
                  (do
                    (println "(Taken)")
-                   {:success true :game-state game-state})))
+                   (parser-success game-state))))
 
              ;; Must HAVE but don't - error
              need-have?
              (if (= obj-id :not-here-object)
-               {:success false
-                :game-state game-state
-                :error {:type :dont-have
-                        :message "You don't have that!"}}
-               {:success false
-                :game-state game-state
-                :error {:type :dont-have
-                        :object obj-id
-                        :message (str "You don't have the "
-                                      (thing-name game-state obj-id) ".")}})
+               (parser-error game-state :dont-have "You don't have that!")
+               (parser-error game-state :dont-have
+                             (str "You don't have the "
+                                  (thing-name game-state obj-id) ".")))
 
              ;; Otherwise OK
              :else
-             {:success true :game-state game-state})))
+             (parser-success game-state))))
 
-       {:success true :game-state game-state}
+       (parser-success game-state)
        objects))))
 
 (defn take-check

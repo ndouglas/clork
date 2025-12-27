@@ -6,6 +6,7 @@
 (load "utils")
 (load "game_state")
 (load "verbs")
+(load "verb_defs")
 (load "flags")
 (load "parser")
 (load "rooms")

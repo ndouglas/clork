@@ -88,20 +88,18 @@
    :loc2 loc2
    :action action})
 
-;; TODO: Define verb-syntaxes map when implementing verbs
-;; This will map verb keywords to lists of syntax patterns
+;; verb-syntaxes is built from verb-definitions in verb_defs.clj
 
 (def verb-syntaxes
   "Map of verb keywords to their valid syntax patterns.
+
+   This is derived from *verb-syntaxes* (from verb_defs.clj).
 
    Example entries:
    :take [{:num-objects 1, :prep1 nil, ...}]
    :put  [{:num-objects 2, :prep1 nil, :prep2 :in, ...}
           {:num-objects 2, :prep1 nil, :prep2 :on, ...}]"
-  {:verbose [(make-syntax 0 nil nil nil nil nil nil :verbose)]
-   :brief [(make-syntax 0 nil nil nil nil nil nil :brief)]
-   :super-brief [(make-syntax 0 nil nil nil nil nil nil :super-brief)]
-   :version [(make-syntax 0 nil nil nil nil nil nil :version)]})
+  *verb-syntaxes*)
 
 ;;; ---------------------------------------------------------------------------
 ;;; SYNTAX CHECKING
@@ -151,17 +149,12 @@
    5. If missing objects: tries GWIM to infer them
    6. If still no match: enters orphan mode
 
-   Returns:
-     {:success true, :game-state gs} - syntax matched
-     {:success false, :game-state gs, :error ...} - no match, error set"
+   Returns: parser result (use parser-success/parser-error helpers)"
   [game-state]
   (let [verb (get-in game-state [:parser :itbl (:verb itbl-indices)])]
     (if (nil? verb)
       ;; No verb found
-      {:success false
-       :game-state game-state
-       :error {:type :no-verb
-               :message "There was no verb in that sentence!"}}
+      (parser-error game-state :no-verb "There was no verb in that sentence!")
 
       ;; Find matching syntaxes
       (let [matches (find-matching-syntax game-state verb)
@@ -181,10 +174,8 @@
 
           ;; No matching syntax at all
           :else
-          {:success false
-           :game-state game-state
-           :error {:type :bad-syntax
-                   :message "That sentence isn't one I recognize."}})))))
+          (parser-error game-state :bad-syntax
+                        "That sentence isn't one I recognize."))))))
 
 (defn syntax-found
   "Store the matched syntax pattern.
@@ -194,10 +185,9 @@
        <SETG P-SYNTAX .SYN>
        <SETG PRSA <GETB .SYN ,P-SACTION>>>"
   [game-state syntax]
-  {:success true
-   :game-state (-> game-state
-                   (assoc-in [:parser :syntax] syntax)
-                   (assoc-in [:parser :prsa] (:action syntax)))})
+  (parser-success (-> game-state
+                      (assoc-in [:parser :syntax] syntax)
+                      (assoc-in [:parser :prsa] (:action syntax)))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; GWIM - Get What I Mean

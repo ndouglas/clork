@@ -65,28 +65,21 @@
 ;;; ---------------------------------------------------------------------------
 ;;; VERB DISPATCH
 ;;; ---------------------------------------------------------------------------
-;;; Maps action keywords to their handler functions.
+;;; Handler dispatch uses *verb-handlers* from verb_defs.clj
+;;; Forward declaration allows perform to reference it before it's defined.
 
-(def verb-handlers
-  "Map of action keywords to handler functions.
-
-   When the parser sets :prsa to an action keyword, perform looks it up
-   here to find the function to call."
-  {:version v-version
-   :verbose v-verbose
-   :brief v-brief
-   :super-brief v-super-brief})
+(declare ^:dynamic *verb-handlers*)
 
 (defn perform
   "Execute a verb action.
 
    ZIL: PERFORM routine in gmain.zil
 
-   Looks up the action in verb-handlers and calls the handler function.
-   Returns the updated game-state."
+   Looks up the action in *verb-handlers* (from verb_defs.clj) and calls
+   the handler function. Returns the updated game-state."
   [game-state]
   (let [action (get-in game-state [:parser :prsa])]
-    (if-let [handler (get verb-handlers action)]
+    (if-let [handler (get *verb-handlers* action)]
       (handler game-state)
       (do
         (tell game-state (str "I don't know how to do that. [" action "]\n"))

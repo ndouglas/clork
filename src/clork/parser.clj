@@ -223,8 +223,8 @@
     (let [result (parse-tokens gs)]
 
       (if (:error result)
-        ;; Parsing failed
-        result
+        ;; Parsing failed - return game-state with error set
+        (assoc-in (:game-state result) [:parser :error] (:error result))
 
         ;; === Post-Parse Processing ===
         (let [gs (:game-state result)]

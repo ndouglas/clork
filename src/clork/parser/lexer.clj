@@ -70,26 +70,20 @@
 ;;;   - :adj-value - adjective ID if this is an adjective
 ;;;   - :synonyms - other words this is equivalent to
 
-;; TODO: Define the actual vocabulary when implementing
-;; This will be a large map built from the ZIL word definitions
+;; The vocabulary is built from verb-definitions in verb_defs.clj
+;; Future: will also include object vocabulary, direction vocabulary, etc.
 
 (def vocabulary
   "The game's vocabulary. Maps lowercase word strings to property maps.
+
+   This is derived from *verb-vocabulary* (from verb_defs.clj).
+   Future versions will merge with object and direction vocabularies.
 
    Example entry:
    \"lamp\" {:parts-of-speech #{:object :adjective}
             :object-value :brass-lantern
             :adj-value :lamp-adj}"
-  {"verbose" {:parts-of-speech #{:verb}
-              :verb-value :verbose}
-   "brief" {:parts-of-speech #{:verb}
-            :verb-value :brief}
-   "superbrief" {:parts-of-speech #{:verb}
-                 :verb-value :super-brief}
-   "super-brief" {:parts-of-speech #{:verb}
-                  :verb-value :super-brief}
-   "version" {:parts-of-speech #{:verb}
-              :verb-value :version}})
+  *verb-vocabulary*)
 
 ;;; ---------------------------------------------------------------------------
 ;;; SPECIAL WORDS

@@ -1,5 +1,35 @@
 (in-ns 'clork.core)
 
+;;; ---------------------------------------------------------------------------
+;;; PARSER CONSTANTS
+;;; ---------------------------------------------------------------------------
+;;; These are defined here (rather than in parser/) so they're available
+;;; to verb_defs.clj which is loaded before the parser.
+
+(def search-bits
+  "Location bits controlling where to search for objects.
+
+   ZIL Constants from gparser.zil lines 1032-1038."
+  {:held     128   ; SH - search player's inventory
+   :carried   64   ; SC - search containers player is carrying
+   :in-room   32   ; SIR - search room floor
+   :on-ground 16   ; SOG - search containers in room
+   :take       8   ; STAKE - auto-take if not held
+   :many       4   ; SMANY - allow 'all', 'everything'
+   :have       2}) ; SHAVE - must already be holding
+
+(def getflags
+  "Flags for GET-OBJECT parsing state.
+
+   ZIL: P-ALL, P-ONE, P-INHIBIT constants."
+  {:all     1   ; Player said 'all' or 'everything'
+   :one     2   ; Player said 'one' or 'a' (pick randomly)
+   :inhibit 4}) ; Inhibit object search (for 'of' constructs)
+
+;;; ---------------------------------------------------------------------------
+;;; GAME STATE
+;;; ---------------------------------------------------------------------------
+
 (declare initial-parser-state)
 (defn initial-game-state
   "Return an initial game state."
