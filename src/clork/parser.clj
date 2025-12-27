@@ -64,7 +64,14 @@
 (def parser-error parser-state/parser-error)
 (def parser-result? parser-state/parser-result?)
 
-;; Re-export state accessor functions
+;; Re-export generic state accessor functions
+(def get-parser-field parser-state/get-parser-field)
+(def set-parser-field parser-state/set-parser-field)
+(def update-parser-field parser-state/update-parser-field)
+(def get-table-val parser-state/get-table-val)
+(def set-table-val parser-state/set-table-val)
+
+;; Re-export specific state accessor functions
 (def get-itbl parser-state/get-itbl)
 (def set-itbl parser-state/set-itbl)
 (def get-otbl parser-state/get-otbl)

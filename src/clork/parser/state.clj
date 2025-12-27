@@ -383,116 +383,112 @@
 ;;; These functions centralize access to commonly-used nested state paths,
 ;;; making it easier to refactor the state structure and improving readability.
 
-;; --- ITBL (Instruction Table) Accessors ---
-;; The ITBL stores parsed command structure: verb, prepositions, noun clause pointers
+;; --- Generic Accessors ---
+;; Base functions that specific accessors are built on.
+
+(defn get-parser-field
+  "Get a value from parser state by field keyword."
+  ([game-state field]
+   (get-in game-state [:parser field]))
+  ([game-state field default]
+   (get-in game-state [:parser field] default)))
+
+(defn set-parser-field
+  "Set a value in parser state by field keyword."
+  [game-state field value]
+  (assoc-in game-state [:parser field] value))
+
+(defn update-parser-field
+  "Update a value in parser state with a function."
+  [game-state field f]
+  (update-in game-state [:parser field] f))
+
+(defn get-table-val
+  "Get a value from a parser table (itbl, otbl, etc.) by key.
+   Key can be a keyword (:verb, :nc1, etc.) or an integer index."
+  [game-state table-name key]
+  (let [idx (if (keyword? key) (key itbl-indices) key)]
+    (get-in game-state [:parser table-name idx])))
+
+(defn set-table-val
+  "Set a value in a parser table (itbl, otbl, etc.) by key.
+   Key can be a keyword (:verb, :nc1, etc.) or an integer index."
+  [game-state table-name key val]
+  (let [idx (if (keyword? key) (key itbl-indices) key)]
+    (assoc-in game-state [:parser table-name idx] val)))
+
+;; --- ITBL/OTBL (Instruction Table) Accessors ---
+;; The ITBL stores parsed command structure: verb, prepositions, noun clause pointers.
+;; OTBL stores the previous parse for AGAIN and orphan resolution.
 
 (defn get-itbl
-  "Get a value from the instruction table by key.
-   Key can be a keyword (:verb, :nc1, etc.) or an integer index."
+  "Get a value from the instruction table by key."
   [game-state key]
-  (let [idx (if (keyword? key) (key itbl-indices) key)]
-    (get-in game-state [:parser :itbl idx])))
+  (get-table-val game-state :itbl key))
 
 (defn set-itbl
-  "Set a value in the instruction table by key.
-   Key can be a keyword (:verb, :nc1, etc.) or an integer index."
+  "Set a value in the instruction table by key."
   [game-state key val]
-  (let [idx (if (keyword? key) (key itbl-indices) key)]
-    (assoc-in game-state [:parser :itbl idx] val)))
+  (set-table-val game-state :itbl key val))
 
 (defn get-otbl
-  "Get a value from the old instruction table by key.
-   Key can be a keyword (:verb, :nc1, etc.) or an integer index."
+  "Get a value from the old instruction table by key."
   [game-state key]
-  (let [idx (if (keyword? key) (key itbl-indices) key)]
-    (get-in game-state [:parser :otbl idx])))
+  (get-table-val game-state :otbl key))
 
 (defn set-otbl
   "Set a value in the old instruction table by key."
   [game-state key val]
-  (let [idx (if (keyword? key) (key itbl-indices) key)]
-    (assoc-in game-state [:parser :otbl idx] val)))
+  (set-table-val game-state :otbl key val))
 
 ;; --- Core Parser State Accessors ---
 
-(defn get-ncn
-  "Get the noun clause number (0, 1, or 2)."
-  [game-state]
-  (get-in game-state [:parser :ncn] 0))
+(defn get-ncn  "Get the noun clause number (0, 1, or 2)." [game-state]
+  (get-parser-field game-state :ncn 0))
 
-(defn set-ncn
-  "Set the noun clause number."
-  [game-state ncn]
-  (assoc-in game-state [:parser :ncn] ncn))
+(defn set-ncn  "Set the noun clause number." [game-state ncn]
+  (set-parser-field game-state :ncn ncn))
 
-(defn inc-ncn
-  "Increment the noun clause number."
-  [game-state]
-  (update-in game-state [:parser :ncn] inc))
+(defn inc-ncn  "Increment the noun clause number." [game-state]
+  (update-parser-field game-state :ncn inc))
 
-(defn dec-ncn
-  "Decrement the noun clause number."
-  [game-state]
-  (update-in game-state [:parser :ncn] dec))
+(defn dec-ncn  "Decrement the noun clause number." [game-state]
+  (update-parser-field game-state :ncn dec))
 
-(defn get-len
-  "Get the remaining token count."
-  [game-state]
-  (get-in game-state [:parser :len] 0))
+(defn get-len  "Get the remaining token count." [game-state]
+  (get-parser-field game-state :len 0))
 
-(defn set-len
-  "Set the remaining token count."
-  [game-state len]
-  (assoc-in game-state [:parser :len] len))
+(defn set-len  "Set the remaining token count." [game-state len]
+  (set-parser-field game-state :len len))
 
-(defn inc-len
-  "Increment the token count (used when un-consuming a token)."
-  [game-state]
-  (update-in game-state [:parser :len] inc))
+(defn inc-len  "Increment the token count (used when un-consuming a token)." [game-state]
+  (update-parser-field game-state :len inc))
 
-(defn dec-len
-  "Decrement the token count (used when consuming a token)."
-  [game-state]
-  (update-in game-state [:parser :len] dec))
+(defn dec-len  "Decrement the token count (used when consuming a token)." [game-state]
+  (update-parser-field game-state :len dec))
 
-(defn get-parser-error
-  "Get the parser error map, or nil if no error."
-  [game-state]
-  (get-in game-state [:parser :error]))
+(defn get-parser-error  "Get the parser error map, or nil if no error." [game-state]
+  (get-parser-field game-state :error))
 
-(defn set-parser-error
-  "Set the parser error. Pass nil to clear."
-  [game-state error]
-  (assoc-in game-state [:parser :error] error))
+(defn set-parser-error  "Set the parser error. Pass nil to clear." [game-state error]
+  (set-parser-field game-state :error error))
 
 ;; --- Parsed Results Accessors (prsa/prso/prsi) ---
 
-(defn get-prsa
-  "Get the parsed action (verb)."
-  [game-state]
-  (get-in game-state [:parser :prsa]))
+(defn get-prsa  "Get the parsed action (verb)." [game-state]
+  (get-parser-field game-state :prsa))
 
-(defn set-prsa
-  "Set the parsed action (verb)."
-  [game-state action]
-  (assoc-in game-state [:parser :prsa] action))
+(defn set-prsa  "Set the parsed action (verb)." [game-state action]
+  (set-parser-field game-state :prsa action))
 
-(defn get-prso
-  "Get the parsed direct object(s)."
-  [game-state]
-  (get-in game-state [:parser :prso]))
+(defn get-prso  "Get the parsed direct object(s)." [game-state]
+  (get-parser-field game-state :prso))
 
-(defn set-prso
-  "Set the parsed direct object(s)."
-  [game-state objs]
-  (assoc-in game-state [:parser :prso] objs))
+(defn set-prso  "Set the parsed direct object(s)." [game-state objs]
+  (set-parser-field game-state :prso objs))
 
-(defn get-prsi
-  "Get the parsed indirect object(s)."
-  [game-state]
-  (get-in game-state [:parser :prsi]))
+(defn get-prsi  "Get the parsed indirect object(s)." [game-state]
+  (get-parser-field game-state :prsi))
 
-(defn set-prsi
-  "Set the parsed indirect object(s)."
-  [game-state objs]
-  (assoc-in game-state [:parser :prsi] objs))
+(defn set-prsi  "Set the parsed indirect object(s)." [game-state objs]
+  (set-parser-field game-state :prsi objs))
