@@ -439,7 +439,7 @@ These are out-of-game commands that don't advance time.
 
 | Status | Object ID | Description |
 |--------|-----------|-------------|
-| [ ] | ADVERTISEMENT | Leaflet |
+| [x] | ADVERTISEMENT | Leaflet |
 | [ ] | BOOK | Black Book |
 | [ ] | GUIDE | Tour Guide |
 | [ ] | MAP | Ancient Map |

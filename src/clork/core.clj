@@ -33,7 +33,8 @@
        (assoc :script-config config)
        (game-state/add-rooms [rooms/west-of-house])
        (game-state/add-objects [objects/adventurer,
-                                objects/mailbox])
+                                objects/mailbox,
+                                objects/leaflet])
        (utils/this-is-it :mailbox)
        (initial-version)
        (game-state/set-here-flag :lit)

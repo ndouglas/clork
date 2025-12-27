@@ -29,6 +29,32 @@
                (utils/tell game-state "It is securely anchored.\n")
                game-state))})
 
+;; <OBJECT ADVERTISEMENT
+;;   (IN MAILBOX)
+;;   (SYNONYM ADVERTISEMENT LEAFLET BOOKLET MAIL)
+;;   (ADJECTIVE SMALL)
+;;   (DESC "leaflet")
+;;   (FLAGS READBIT TAKEBIT BURNBIT)
+;;   (LDESC "A small leaflet is on the ground.")
+;;   (TEXT
+;; "\"WELCOME TO ZORK!|
+;; |
+;; ZORK is a game of adventure, danger, and low cunning. In it you
+;; will explore some of the most amazing territory ever seen by mortals.
+;; No computer should be without one!\"")
+;;   (SIZE 2)>
+
+(def leaflet
+  {:id :leaflet
+   :in :mailbox
+   :synonym ["advertisement" "leaflet" "booklet" "mail"]
+   :adjective "small"
+   :desc "leaflet"
+   :flags (flags/flags :read :take :burn)
+   :ldesc "A small leaflet is on the ground."
+   :text "\"WELCOME TO ZORK!\n\nZORK is a game of adventure, danger, and low cunning. In it you will explore some of the most amazing territory ever seen by mortals. No computer should be without one!\""
+   :size 2})
+
 ;; <OBJECT ADVENTURER
 ;; 	(SYNONYM ADVENTURER)
 ;; 	(DESC "cretin")
