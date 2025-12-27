@@ -134,7 +134,9 @@
          (contains? adjectives (clojure.string/lower-case (str adj))))
 
      ;; GWIM flag matches (if specified)
+     ;; gwimbit of 0 or nil means "don't filter by flag"
      (or (nil? gwimbit)
+         (and (number? gwimbit) (zero? gwimbit))
          (game-state/set-thing-flag? game-state obj-id gwimbit)))))
 
 ;;; ---------------------------------------------------------------------------
@@ -256,9 +258,11 @@
    (let [gflags (get-in game-state [:parser :getflags] 0)
          nam (get-in game-state [:parser :nam])
          adj (get-in game-state [:parser :adj])
-         lit? (:lit game-state)
-         player (:player game-state)
-         here (:here game-state)]
+         ;; Check if current room is lit (has :lit or :on flag)
+         here (:here game-state)
+         lit? (or (game-state/set-thing-flag? game-state here :lit)
+                  (game-state/set-thing-flag? game-state here :on))
+         player (:player game-state)]
 
      (cond
        ;; Inhibit flag set - skip search

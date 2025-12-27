@@ -108,9 +108,14 @@
   (assoc-in game-state [entity-type entity-id flag] false))
 
 (defn flag?
-  "Returns true if a flag is set on an entity. entity-type is :objects or :rooms."
+  "Returns true if a flag is set on an entity. entity-type is :objects or :rooms.
+   Checks both direct flag keys (e.g., [:rooms :id :lit]) and :flags sets."
   [game-state entity-type entity-id flag]
-  (get-in game-state [entity-type entity-id flag] false))
+  (or
+   ;; Check direct key (set by set-flag)
+   (get-in game-state [entity-type entity-id flag] false)
+   ;; Check :flags set (used by object/room definitions)
+   (contains? (get-in game-state [entity-type entity-id :flags] #{}) flag)))
 
 ;; Polymorphic functions that auto-detect entity type
 

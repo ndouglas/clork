@@ -485,14 +485,43 @@
 (defn set-prsa  "Set the parsed action (verb)." [game-state action]
   (set-parser-field game-state :prsa action))
 
-(defn get-prso  "Get the parsed direct object(s)." [game-state]
-  (get-parser-field game-state :prso))
+(defn get-prso
+  "Get the parsed direct object. Returns the first object if multiple.
+   For 'take all' etc., use get-prso-all to get the full list."
+  [game-state]
+  (let [prso (get-parser-field game-state :prso)]
+    (if (sequential? prso)
+      (first prso)
+      prso)))
+
+(defn get-prso-all
+  "Get all parsed direct objects as a sequence.
+   Use this for commands like 'take all' that operate on multiple objects."
+  [game-state]
+  (let [prso (get-parser-field game-state :prso)]
+    (if (sequential? prso)
+      prso
+      (when prso [prso]))))
 
 (defn set-prso  "Set the parsed direct object(s)." [game-state objs]
   (set-parser-field game-state :prso objs))
 
-(defn get-prsi  "Get the parsed indirect object(s)." [game-state]
-  (get-parser-field game-state :prsi))
+(defn get-prsi
+  "Get the parsed indirect object. Returns the first object if multiple."
+  [game-state]
+  (let [prsi (get-parser-field game-state :prsi)]
+    (if (sequential? prsi)
+      (first prsi)
+      prsi)))
+
+(defn get-prsi-all
+  "Get all parsed indirect objects as a sequence.
+   Use this for commands that operate on multiple objects."
+  [game-state]
+  (let [prsi (get-parser-field game-state :prsi)]
+    (if (sequential? prsi)
+      prsi
+      (when prsi [prsi]))))
 
 (defn set-prsi  "Set the parsed indirect object(s)." [game-state objs]
   (set-parser-field game-state :prsi objs))

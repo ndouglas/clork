@@ -1,7 +1,8 @@
 (ns clork.verbs
   "Verb handler functions."
   (:require [clork.utils :as utils]
-            [clork.game-state :as gs]))
+            [clork.game-state :as gs]
+            [clork.parser.state :as parser-state]))
 
 ;;; ---------------------------------------------------------------------------
 ;;; VERB HANDLERS
@@ -407,7 +408,7 @@
              (T
               <TELL \"You must tell me how to do that to a \" D ,PRSO \".\" CR>)>>"
   [game-state]
-  (let [prso (get-in game-state [:parser :prso])
+  (let [prso (parser-state/get-prso game-state)
         obj (gs/get-thing game-state prso)
         desc (:desc obj)]
     (cond
