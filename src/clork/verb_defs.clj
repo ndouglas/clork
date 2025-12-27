@@ -2,7 +2,8 @@
   "Verb definitions - single source of truth for vocabulary, syntax, and handlers."
   (:require [clork.utils :as utils]
             [clork.game-state :as game-state]
-            [clork.verbs :as verbs]))
+            [clork.verbs :as verbs]
+            [clork.verbs-look :as verbs-look]))
 
 ;;;; ============================================================================
 ;;;; VERB DEFINITIONS - Single Source of Truth
@@ -63,7 +64,12 @@
 
    :version    {:words   ["version"]
                 :syntax  {:num-objects 0}
-                :handler verbs/v-version}})
+                :handler verbs/v-version}
+
+   ;; === Observation Verbs ===
+   :look       {:words   ["look" "l"]
+                :syntax  {:num-objects 0}
+                :handler verbs-look/v-look}})
 
 ;;; ---------------------------------------------------------------------------
 ;;; BUILDER FUNCTIONS
