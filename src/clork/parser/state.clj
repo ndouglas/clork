@@ -469,8 +469,13 @@
 (defn get-parser-error  "Get the parser error map, or nil if no error." [game-state]
   (get-parser-field game-state :error))
 
-(defn set-parser-error  "Set the parser error. Pass nil to clear." [game-state error]
-  (set-parser-field game-state :error error))
+(defn set-parser-error
+  "Set the parser error. Pass nil to clear.
+   Also increments :parser-error-count when setting an error (for script mode)."
+  [game-state error]
+  (cond-> (set-parser-field game-state :error error)
+    ;; Only increment counter when setting an actual error
+    (some? error) (update :parser-error-count (fnil inc 0))))
 
 ;; --- Parsed Results Accessors (prsa/prso/prsi) ---
 

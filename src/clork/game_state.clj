@@ -70,7 +70,9 @@
            :daemons false}
     ;; Daemon system state
    :daemons {}
-   :daemon-history []})
+   :daemon-history []
+    ;; Script mode tracking
+   :parser-error-count 0})
 
 ;;; ---------------------------------------------------------------------------
 ;;; FLAG OPERATIONS

@@ -203,10 +203,27 @@
                 (utils/crlf)
                 (update :turn-number inc))))))))
 
+(defn- max-turns-exceeded?
+  "Check if max turns has been exceeded (for script mode)."
+  [game-state]
+  (when-let [max-turns (get-in game-state [:script-config :max-turns])]
+    (>= (:turn-number game-state 0) max-turns)))
+
 (defn main-loop
   "The main loop for the game."
   [game-state]
   (loop [gs game-state]
-    (if (:quit gs)
+    (cond
+      ;; Normal quit
+      (:quit gs)
       gs
+
+      ;; Max turns exceeded (script mode)
+      (max-turns-exceeded? gs)
+      (-> gs
+          (utils/tell "\n[Max turns exceeded]\n")
+          (assoc :quit true :max-turns-exceeded true))
+
+      ;; Continue looping
+      :else
       (recur (main-loop-once gs)))))
