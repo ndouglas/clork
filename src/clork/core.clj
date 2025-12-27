@@ -25,18 +25,14 @@
   "The GO routine."
   [game-state]
   (-> game-state
-    (game-state/add-rooms [
-      rooms/west-of-house,
-    ])
-    (game-state/add-objects [
-      objects/adventurer,
-      objects/mailbox,
-    ])
-    (utils/this-is-it :mailbox)
-    (initial-version)
-    (game-state/set-here-flag :lit)
-    (verbs-look/v-look)
-    (main-loop/main-loop)))
+      (game-state/add-rooms [rooms/west-of-house])
+      (game-state/add-objects [objects/adventurer,
+                               objects/mailbox])
+      (utils/this-is-it :mailbox)
+      (initial-version)
+      (game-state/set-here-flag :lit)
+      (verbs-look/v-look)
+      (main-loop/main-loop)))
 
 (defn -main
   "Main function for CLORK."

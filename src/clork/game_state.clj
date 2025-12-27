@@ -35,39 +35,36 @@
 (defn initial-game-state
   "Return an initial game state."
   []
-  {
-    :rooms {}
-    :objects {}
-    :i-candles 40
-    :i-lantern 200
+  {:rooms {}
+   :objects {}
+   :i-candles 40
+   :i-lantern 200
     ;; <GLOBAL HERE 0>
-    :here :west-of-house
-    :it :mailbox
-    :lit false
-    :adventurer :adventurer
+   :here :west-of-house
+   :it :mailbox
+   :lit false
+   :adventurer :adventurer
     ;; <GLOBAL WINNER 0>
-    :winner :adventurer
-    :player :adventurer
-    :verbose false
-    :super-brief false
-    :won false
-    :parser (parser-state/initial-parser-state)
+   :winner :adventurer
+   :player :adventurer
+   :verbose false
+   :super-brief false
+   :won false
+   :parser (parser-state/initial-parser-state)
     ;; Debug system state
-    :turn-number 0
+   :turn-number 0
     ;; Undo system state
-    :undo-stack []
-    :redo-stack []
-    :undo-limit 100
+   :undo-stack []
+   :redo-stack []
+   :undo-limit 100
     ;; Trace system state
-    :trace {:verbs false
-            :parser false
-            :actions false
-            :daemons false}
+   :trace {:verbs false
+           :parser false
+           :actions false
+           :daemons false}
     ;; Daemon system state
-    :daemons {}
-    :daemon-history []
-  })
-
+   :daemons {}
+   :daemon-history []})
 
 ;;; ---------------------------------------------------------------------------
 ;;; FLAG OPERATIONS
@@ -216,7 +213,7 @@
   "Add a room to the game state"
   [game-state room]
   (assoc game-state :rooms
-    (assoc (:rooms game-state) (:id room) room)))
+         (assoc (:rooms game-state) (:id room) room)))
 
 (defn add-rooms
   "Add each of the list of rooms to the game state"
@@ -227,7 +224,7 @@
   "Add an object to the game state"
   [game-state object]
   (assoc game-state :objects
-    (assoc (:objects game-state) (:id object) object)))
+         (assoc (:objects game-state) (:id object) object)))
 
 (defn add-objects
   "Add each of the list of objects to the game state"
@@ -237,8 +234,7 @@
 (defn game-state-copy
   "Set the value of one key in game-state to the value of another."
   [game-state source-key dest-key]
-  (assoc-in game-state dest-key (get-in game-state source-key))
-)
+  (assoc-in game-state dest-key (get-in game-state source-key)))
 
 ;;
 ;; <ROUTINE META-LOC (OBJ)
@@ -257,10 +253,10 @@
   [game-state thing]
   (cond
     (nil? thing)
-      nil
+    nil
     (contains? (:objects game-state) thing)
-      :objects
+    :objects
     (contains? (:rooms game-state) thing)
-      :rooms
+    :rooms
     true
-      (meta-location game-state (:in thing))))
+    (meta-location game-state (:in thing))))

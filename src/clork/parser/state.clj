@@ -125,8 +125,7 @@
    This corresponds to all the parser globals in ZIL (P-* variables).
    The state is immutable and threaded through parser functions."
   []
-  {
-   ;; === Core Parse Results ===
+  {;; === Core Parse Results ===
    ;; These are the final outputs: what action with what objects
 
    ;; <GLOBAL PRSA <>> - Parsed Result: Action (verb)

@@ -64,7 +64,7 @@
      :enabled - whether daemon starts enabled (default true)
      :data    - daemon-specific data map"
   [game-state daemon-id handler-fn & {:keys [tick enabled data]
-                                       :or {tick -1 enabled true data {}}}]
+                                      :or {tick -1 enabled true data {}}}]
   (assoc-in game-state [:daemons daemon-id]
             {:handler handler-fn
              :enabled enabled
