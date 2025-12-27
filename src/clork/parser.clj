@@ -265,7 +265,7 @@
                   (let [gs (:game-state syntax-result)
                         snarf-result (snarf-objects gs)]
 
-                    (if (and (map? snarf-result) (not (:success snarf-result)))
+                    (if (and (parser-result? snarf-result) (not (:success snarf-result)))
                       ;; Object resolution failed
                       (do
                         (when-let [msg (get-in snarf-result [:error :message])]
@@ -275,7 +275,7 @@
                                   (:error snarf-result)))
 
                       ;; Continue with validation
-                      (let [gs (if (map? snarf-result)
+                      (let [gs (if (parser-result? snarf-result)
                                  (:game-state snarf-result)
                                  snarf-result)
                             many-result (many-check gs)]
