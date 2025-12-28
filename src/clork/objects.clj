@@ -269,6 +269,33 @@
 ;;	(DESC "trap door")
 ;;	(FLAGS DOORBIT NDESCBIT INVISIBLE)
 ;;	(ACTION TRAP-DOOR-FCN)>
+;;
+;; <ROUTINE TRAP-DOOR-FCN ()
+;;     <COND (<VERB? RAISE>
+;; 	   <PERFORM ,V?OPEN ,TRAP-DOOR>
+;; 	   <RTRUE>)
+;; 	  (<AND <VERB? OPEN CLOSE>
+;; 		<EQUAL? ,HERE ,LIVING-ROOM>>
+;; 	   <OPEN-CLOSE ,PRSO
+;; "The door reluctantly opens to reveal a rickety staircase descending into
+;; darkness."
+;; "The door swings shut and closes.">)
+;; 	  (<AND <VERB? LOOK-UNDER> <EQUAL? ,HERE LIVING-ROOM>>
+;; 	   <COND (<FSET? ,TRAP-DOOR ,OPENBIT>
+;; 		  <TELL
+;; "You see a rickety staircase descending into darkness." CR>)
+;; 		 (T <TELL "It's closed." CR>)>)
+;; 	  (<EQUAL? ,HERE ,CELLAR>
+;; 	   <COND (<AND <VERB? OPEN UNLOCK>
+;; 		       <NOT <FSET? ,TRAP-DOOR ,OPENBIT>>>
+;; 		  <TELL
+;; "The door is locked from above." CR>)
+;; 		 (<AND <VERB? CLOSE> <NOT <FSET? ,TRAP-DOOR ,OPENBIT>>>
+;; 		  <FCLEAR ,TRAP-DOOR ,TOUCHBIT>
+;; 		  <FCLEAR ,TRAP-DOOR ,OPENBIT>
+;; 		  <TELL "The door closes and locks." CR>)
+;; 		 (<VERB? OPEN CLOSE>
+;; 		  <TELL <PICK-ONE ,DUMMY> CR>)>)>>
 
 (def trap-door
   {:id :trap-door
@@ -276,7 +303,71 @@
    :synonym ["door" "trapdoor" "trap-door" "trap" "cover"]
    :adjective ["trap" "dusty"]
    :desc "trap door"
-   :flags (flags/flags :door :ndesc :invisible)})  ; Starts closed, hidden under rug
+   :flags (flags/flags :door :ndesc :invisible)  ; Starts closed, hidden under rug
+   :action (fn [game-state]
+             (let [verb (parser-state/get-prsa game-state)
+                   here (:here game-state)
+                   is-open? (gs/set-thing-flag? game-state :trap-door :open)]
+               (cond
+                 ;; RAISE -> same as OPEN
+                 (= verb :raise)
+                 (if is-open?
+                   (utils/tell game-state "It is already open.")
+                   (-> game-state
+                       (gs/set-thing-flag :trap-door :open)
+                       (gs/set-thing-flag :trap-door :touch)
+                       (utils/tell "The door reluctantly opens to reveal a rickety staircase descending into darkness.")))
+
+                 ;; OPEN/CLOSE from living-room
+                 (and (#{:open :close} verb) (= here :living-room))
+                 (cond
+                   ;; OPEN
+                   (= verb :open)
+                   (if is-open?
+                     (utils/tell game-state "It is already open.")
+                     (-> game-state
+                         (gs/set-thing-flag :trap-door :open)
+                         (gs/set-thing-flag :trap-door :touch)
+                         (utils/tell "The door reluctantly opens to reveal a rickety staircase descending into darkness.")))
+                   ;; CLOSE
+                   (= verb :close)
+                   (if is-open?
+                     (-> game-state
+                         (gs/unset-thing-flag :trap-door :open)
+                         (utils/tell "The door swings shut and closes."))
+                     (utils/tell game-state "It is already closed.")))
+
+                 ;; LOOK-UNDER from living-room
+                 (and (= verb :look-under) (= here :living-room))
+                 (if is-open?
+                   (utils/tell game-state "You see a rickety staircase descending into darkness.")
+                   (utils/tell game-state "It's closed."))
+
+                 ;; From cellar
+                 (= here :cellar)
+                 (cond
+                   ;; OPEN/UNLOCK when closed -> locked from above
+                   (and (#{:open :unlock} verb) (not is-open?))
+                   (utils/tell game-state "The door is locked from above.")
+
+                   ;; CLOSE when closed -> closes and locks
+                   (and (= verb :close) (not is-open?))
+                   (-> game-state
+                       (gs/unset-thing-flag :trap-door :touch)
+                       (gs/unset-thing-flag :trap-door :open)
+                       (utils/tell "The door closes and locks."))
+
+                   ;; OPEN/CLOSE otherwise -> dummy message
+                   (#{:open :close} verb)
+                   (utils/tell game-state (rand-nth ["Look around."
+                                                     "Too late for that."
+                                                     "Have your eyes checked."]))
+
+                   ;; Not handled
+                   :else nil)
+
+                 ;; Not handled
+                 :else nil)))})
 
 ;;; ---------------------------------------------------------------------------
 ;;; KITCHEN OBJECTS
