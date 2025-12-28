@@ -316,6 +316,53 @@
           [_ result] (with-captured-output (verbs/v-walk gs))]
       (is (= 0 (:score result)) "Entering room without :value should not change score"))))
 
+;;; ---------------------------------------------------------------------------
+;;; V-TAKE SCORING TESTS
+;;; ---------------------------------------------------------------------------
+;;; ZIL: ITAKE calls SCORE-OBJ when taking objects (gverbs.zil line 1977)
+
+(deftest v-take-scores-treasure-test
+  (testing "taking a treasure with :value awards points"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :egg :desc "jewel-encrusted egg"
+                                 :in :west-of-house
+                                 :flags #{:take}
+                                 :value 5})
+                 (assoc :here :west-of-house)
+                 (assoc-in [:parser :prso] [:egg]))
+          [_ result] (with-captured-output (verbs/v-take gs))]
+      (is (= 5 (:score result)) "Taking treasure should award its :value in points")
+      (is (= 0 (get-in result [:objects :egg :value]))
+          "Object :value should be set to 0 after scoring")))
+
+  (testing "taking a non-treasure doesn't award points"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :rock :desc "rock"
+                                 :in :west-of-house
+                                 :flags #{:take}})
+                 (assoc :here :west-of-house)
+                 (assoc-in [:parser :prso] [:rock]))
+          [_ result] (with-captured-output (verbs/v-take gs))]
+      (is (= 0 (:score result)) "Taking non-treasure should not award points")))
+
+  (testing "taking the same treasure twice only scores once"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :diamond :desc "diamond"
+                                 :in :west-of-house
+                                 :flags #{:take}
+                                 :value 10})
+                 (assoc :here :west-of-house)
+                 (assoc-in [:parser :prso] [:diamond]))
+          ;; Take it once
+          [_ result1] (with-captured-output (verbs/v-take gs))
+          ;; Drop it and take again
+          dropped (-> result1
+                      (assoc-in [:objects :diamond :in] :west-of-house)
+                      (assoc-in [:parser :prso] [:diamond]))
+          [_ result2] (with-captured-output (verbs/v-take dropped))]
+      (is (= 10 (:score result1)) "First take should award points")
+      (is (= 10 (:score result2)) "Second take should not award more points"))))
+
 (deftest score-vocabulary-test
   (testing "score is registered in vocabulary as a verb"
     (is (= true (parser/wt? "score" :verb)))

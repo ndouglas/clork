@@ -488,7 +488,10 @@
         :else
         (let [state (-> game-state
                         (move-to-inventory prso)
-                        (add-flag prso :touch))]
+                        (add-flag prso :touch)
+                        ;; ZIL: SCORE-OBJ called in ITAKE (gverbs.zil line 1977)
+                        ;; Treasures are scored when first taken
+                        (score-obj prso))]
           (utils/tell state "Taken."))))))
 
 ;;; ---------------------------------------------------------------------------
