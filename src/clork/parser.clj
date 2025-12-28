@@ -384,10 +384,13 @@
    and noun clauses from the tokenized input."
   [game-state]
 
-  ;; Save lexv for AGAIN
+  ;; Save lexv for AGAIN and reset :won flag
+  ;; ZIL: P-WON is set to false at start of parsing, then true only on success.
+  ;; This ensures AGAIN correctly detects when the previous command failed.
   (let [gs (-> game-state
                (assoc-in [:parser :again-lexv]
                          (get-in game-state [:parser :lexv]))
+               (assoc-in [:parser :won] false)  ; Reset - will be set true on success
                (assoc-in [:parser :dir] nil)
                (set-ncn 0)
                (assoc-in [:parser :getflags] 0))]
@@ -411,7 +414,9 @@
                 (set-prso [dir])
                 (assoc-in [:parser :oflag] false)
                 (assoc-in [:parser :walk-dir] dir)
-                (assoc-in [:parser :again-dir] dir))
+                (assoc-in [:parser :again-dir] dir)
+                (assoc-in [:parser :won] true)  ; Mark as successful for AGAIN
+                (set-parser-error nil))
 
             ;; Normal command processing
             (let [;; Try orphan merge if in orphan mode

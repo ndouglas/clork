@@ -680,6 +680,135 @@
           (is (= :mailbox (:it result-state)))))))
 
 ;;; ---------------------------------------------------------------------------
+;;; AGAIN/G COMMAND TESTS
+;;; ---------------------------------------------------------------------------
+
+(deftest handle-again-no-previous-command-test
+  (testing "AGAIN with no previous command returns error"
+    (let [game-state (-> (gs/initial-game-state)
+                         (assoc :input "g"))
+          result (parser/parser-from-input game-state)]
+      (is (some? (parser/get-parser-error result)))
+      (is (= :no-again (get-in result [:parser :error :type]))))))
+
+(deftest handle-again-after-successful-command-test
+  (testing "AGAIN after successful command repeats it"
+    (let [;; First, parse a "look" command
+          game-state (-> (gs/initial-game-state)
+                         (assoc :input "look"))
+          after-look (parser/parser-from-input game-state)]
+      ;; Verify first parse was successful
+      (is (nil? (parser/get-parser-error after-look)))
+      (is (= :look (parser/get-prsa after-look)))
+      (is (true? (get-in after-look [:parser :won])))
+
+      ;; Now parse "g" to repeat
+      (let [after-again (parser/parser-from-input (assoc after-look :input "g"))]
+        ;; Verify AGAIN was successful and repeated the look command
+        (is (nil? (parser/get-parser-error after-again)))
+        (is (= :look (parser/get-prsa after-again)))))))
+
+(deftest handle-again-with-full-word-test
+  (testing "AGAIN with full word 'again' works"
+    (let [game-state (-> (gs/initial-game-state)
+                         (assoc :input "look"))
+          after-look (parser/parser-from-input game-state)]
+      (is (nil? (parser/get-parser-error after-look)))
+
+      (let [after-again (parser/parser-from-input (assoc after-look :input "again"))]
+        (is (nil? (parser/get-parser-error after-again)))
+        (is (= :look (parser/get-prsa after-again)))))))
+
+(deftest handle-again-case-insensitive-test
+  (testing "AGAIN/G is case insensitive"
+    (let [game-state (-> (gs/initial-game-state)
+                         (assoc :input "look"))
+          after-look (parser/parser-from-input game-state)]
+      ;; Test "G"
+      (let [result (parser/parser-from-input (assoc after-look :input "G"))]
+        (is (nil? (parser/get-parser-error result)))
+        (is (= :look (parser/get-prsa result))))
+
+      ;; Test "AGAIN"
+      (let [result (parser/parser-from-input (assoc after-look :input "AGAIN"))]
+        (is (nil? (parser/get-parser-error result)))
+        (is (= :look (parser/get-prsa result)))))))
+
+(deftest handle-again-repeats-walk-command-test
+  (testing "AGAIN repeats movement commands"
+    (let [game-state (-> (gs/initial-game-state)
+                         (assoc :input "north"))
+          after-north (parser/parser-from-input game-state)]
+      ;; The command should parse (whether movement succeeds is up to the game)
+      (is (nil? (parser/get-parser-error after-north)))
+      (is (= :walk (parser/get-prsa after-north)))
+
+      ;; Repeat with G
+      (let [after-again (parser/parser-from-input (assoc after-north :input "g"))]
+        (is (nil? (parser/get-parser-error after-again)))
+        (is (= :walk (parser/get-prsa after-again)))))))
+
+(deftest handle-again-after-failed-parse-test
+  (testing "AGAIN after failed parse returns mistake error"
+    (let [;; First, parse a successful command to set again-lexv
+          game-state (-> (gs/initial-game-state)
+                         (assoc :input "look"))
+          after-look (parser/parser-from-input game-state)]
+      (is (nil? (parser/get-parser-error after-look)))
+      (is (true? (get-in after-look [:parser :won])))
+
+      ;; Now parse a bad command (gibberish) - this should fail
+      (let [after-bad (parser/parser-from-input (assoc after-look :input "xyzzy123"))]
+        (is (some? (parser/get-parser-error after-bad)))
+        ;; :won should now be false because parsing failed
+        (is (false? (get-in after-bad [:parser :won])))
+
+        ;; Now try G - it should say "That would just repeat a mistake"
+        (let [after-again (parser/parser-from-input (assoc after-bad :input "g"))]
+          (is (some? (parser/get-parser-error after-again)))
+          (is (= :again-mistake (get-in after-again [:parser :error :type]))))))))
+
+(deftest handle-again-with-object-command-test
+  (testing "AGAIN repeats commands with objects"
+    (let [game-state (-> (gs/initial-game-state)
+                         (assoc :input "examine mailbox"))
+          after-examine (parser/parser-from-input game-state)]
+      ;; Verify first parse succeeded
+      (is (nil? (parser/get-parser-error after-examine)))
+      (is (= :examine (parser/get-prsa after-examine)))
+      (is (= :mailbox (parser/get-prso after-examine)))
+
+      ;; Repeat with G
+      (let [after-again (parser/parser-from-input (assoc after-examine :input "g"))]
+        (is (nil? (parser/get-parser-error after-again)))
+        (is (= :examine (parser/get-prsa after-again)))
+        (is (= :mailbox (parser/get-prso after-again)))))))
+
+(deftest handle-again-recovers-after-good-command-test
+  (testing "AGAIN works after a successful command following a failed one"
+    (let [;; First command succeeds
+          gs1 (-> (gs/initial-game-state)
+                  (assoc :input "look"))
+          after-look (parser/parser-from-input gs1)]
+      (is (nil? (parser/get-parser-error after-look)))
+
+      ;; Second command fails
+      (let [after-bad (parser/parser-from-input (assoc after-look :input "xyzzy123"))]
+        (is (some? (parser/get-parser-error after-bad)))
+        (is (false? (get-in after-bad [:parser :won])))
+
+        ;; Third command succeeds (inventory)
+        (let [after-inv (parser/parser-from-input (assoc after-bad :input "inventory"))]
+          (is (nil? (parser/get-parser-error after-inv)))
+          (is (= :inventory (parser/get-prsa after-inv)))
+          (is (true? (get-in after-inv [:parser :won])))
+
+          ;; Now G should repeat inventory, not fail
+          (let [after-again (parser/parser-from-input (assoc after-inv :input "g"))]
+            (is (nil? (parser/get-parser-error after-again)))
+            (is (= :inventory (parser/get-prsa after-again)))))))))
+
+;;; ---------------------------------------------------------------------------
 ;;; AUTO-TAKE (ITAKE) TESTS
 ;;; ---------------------------------------------------------------------------
 
