@@ -125,12 +125,22 @@
       ((fn [gs] (assoc gs :lit (validation/lit? gs (:here gs)))))
       ;; <COND (<NOT ,SUPER-BRIEF> <CRLF>)>
       ((fn [gs] (utils/crlf-if gs (not (:super-brief gs)))))
-      ;; <TELL ">">
-      (utils/tell ">")
+      ;; <TELL ">"> - only in interactive mode
+      ((fn [gs] (if (readline/jline-available?)
+                  (utils/tell gs ">")
+                  gs)))
       ;; <READ ,P-INBUF ,P-LEXV>
       ;; Read input and store in :input (will be tokenized by lexer)
       ;; Uses JLine for history support and tab completion
-      ((fn [gs] (assoc gs :input (readline/read-input ""))))))
+      ((fn [gs]
+         (let [input (readline/read-input "")]
+           (-> gs
+               (assoc :input input)
+               ;; In non-interactive mode, echo the command for transcript readability
+               (cond-> (and (not (readline/jline-available?)) input)
+                 (-> (utils/tell ">")
+                     (utils/tell input)
+                     (utils/crlf)))))))))
 
 (defn parser-set-here-to-winner-loc
   "Update HERE to the winner's location, unless they're in a vehicle.
