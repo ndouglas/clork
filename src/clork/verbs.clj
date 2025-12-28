@@ -2,7 +2,8 @@
   "Verb handler functions."
   (:require [clork.utils :as utils]
             [clork.game-state :as gs]
-            [clork.parser.state :as parser-state]))
+            [clork.parser.state :as parser-state]
+            [clork.verbs-look :as verbs-look]))
 
 ;;; ---------------------------------------------------------------------------
 ;;; VERB HANDLERS
@@ -721,3 +722,121 @@
       :else
       (let [state (add-flag game-state prso :open)]
         (utils/tell state (str "The " desc " opens."))))))
+
+;;; ---------------------------------------------------------------------------
+;;; MOVEMENT COMMANDS
+;;; ---------------------------------------------------------------------------
+;;; ZIL: V-WALK, DO-WALK, GOTO in gverbs.zil
+
+(defn- get-exit
+  "Get the exit definition for a direction from the current room.
+   Returns nil if no exit, a keyword for room destination, or a string for blocked message."
+  [game-state direction]
+  (let [here (:here game-state)
+        room (gs/get-thing game-state here)]
+    (get-in room [:exits direction])))
+
+(defn- room-lit?
+  "Check if a room is lit (simple version for movement).
+
+   A room is lit if it has the :lit flag in its :flags set.
+   This is a simplified check - the full LIT? in validation.clj
+   also searches for light sources, but that creates a cyclic dependency.
+
+   Note: parser/validation.clj has a more complete lit? that also
+   checks for carried light sources. That version is used during parsing."
+  [game-state room-id]
+  (let [room (gs/get-thing game-state room-id)
+        room-flags (or (:flags room) #{})]
+    (or (contains? room-flags :lit)
+        (contains? room-flags :on)
+        (gs/flag? game-state :rooms room-id :lit)
+        ;; Also check for carried light source (simple check)
+        (let [winner (:winner game-state)
+              contents (gs/get-contents game-state winner)]
+          (some (fn [obj-id]
+                  (let [obj (gs/get-thing game-state obj-id)
+                        obj-flags (or (:flags obj) #{})]
+                    (and (contains? obj-flags :light)
+                         (contains? obj-flags :on))))
+                contents)))))
+
+(defn- goto
+  "Move the player to a new room and describe it.
+
+   ZIL: GOTO routine in gverbs.zil (lines 2061-2110)
+   - Move winner to new room
+   - Update HERE global
+   - Update LIT flag
+   - Call V-FIRST-LOOK to describe room
+
+   Returns updated game-state."
+  [game-state room-id]
+  (let [winner (:winner game-state)
+        ;; Move the winner to the new room
+        gs (assoc-in game-state [:objects winner :in] room-id)
+        ;; Update HERE
+        gs (assoc gs :here room-id)
+        ;; Update LIT flag
+        gs (assoc gs :lit (room-lit? gs room-id))]
+    ;; Describe the room (V-FIRST-LOOK)
+    (verbs-look/v-look gs)))
+
+(defn v-walk
+  "Move in a direction.
+
+   ZIL: V-WALK in gverbs.zil (lines 1537-1597)
+   Handles various exit types:
+   - Simple exit: (NORTH TO KITCHEN) -> move to room
+   - Blocked exit: (EAST \"The door is boarded.\") -> print message
+   - Conditional exit: (SW TO BARROW IF WON-FLAG) -> check flag
+   - Door exit: (WEST TO ROOM IF DOOR IS OPEN) -> check door
+
+   For now we implement simple and blocked exits."
+  [game-state]
+  (let [;; Get direction from parser (stored in prso as a keyword)
+        prso (parser-state/get-prso game-state)
+        direction (if (keyword? prso) prso prso)]
+    (cond
+      ;; No direction specified
+      (nil? direction)
+      (utils/tell game-state "You must specify a direction to go.")
+
+      :else
+      (let [exit (get-exit game-state direction)]
+        (cond
+          ;; No exit in that direction
+          (nil? exit)
+          (utils/tell game-state "You can't go that way.")
+
+          ;; Exit is a string (blocked message)
+          (string? exit)
+          (utils/tell game-state exit)
+
+          ;; Exit is a map with conditions
+          (map? exit)
+          (let [{:keys [to if door]} exit]
+            (cond
+              ;; Conditional on a flag
+              (and if (not (get game-state if)))
+              (if-let [else-msg (:else exit)]
+                (utils/tell game-state else-msg)
+                (utils/tell game-state "You can't go that way."))
+
+              ;; Conditional on a door being open
+              (and door (not (contains? (or (:flags (gs/get-thing game-state door)) #{}) :open)))
+              (let [door-obj (gs/get-thing game-state door)
+                    door-desc (:desc door-obj)]
+                (utils/tell game-state (str "The " door-desc " is closed.")))
+
+              ;; All conditions met - go to the room
+              :else
+              (goto game-state to)))
+
+          ;; Exit is a keyword (simple room destination)
+          (keyword? exit)
+          (goto game-state exit)
+
+          ;; Unknown exit type
+          :else
+          (utils/tell game-state "You can't go that way."))))))

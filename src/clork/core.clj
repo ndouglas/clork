@@ -32,10 +32,8 @@
   ([game-state config]
    (let [gs (-> game-state
                 (assoc :script-config config)
-                (game-state/add-rooms [rooms/west-of-house])
-                (game-state/add-objects [objects/adventurer,
-                                         objects/mailbox,
-                                         objects/leaflet]))]
+                (game-state/add-rooms rooms/all-rooms)
+                (game-state/add-objects objects/all-objects))]
      ;; Register object vocabulary for parser
      (verb-defs/register-object-vocabulary! (:objects gs))
      (-> gs

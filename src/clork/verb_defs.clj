@@ -117,7 +117,59 @@
    :look-inside {:words   ["search"]
                  :syntax  {:num-objects 1
                            :loc1 #{:held :carried :in-room :on-ground}}
-                 :handler verbs/v-look-inside}})
+                 :handler verbs/v-look-inside}
+
+   ;; === Movement Verbs ===
+   ;; Walk takes a direction as its object. The parser handles bare directions
+   ;; (like "north") specially, converting them to WALK NORTH.
+   :walk       {:words   ["walk" "go" "run" "proceed"]
+                :syntax  {:num-objects 1
+                          :loc1 #{}}  ; Direction, not a normal object
+                :handler verbs/v-walk}})
+
+;;; ---------------------------------------------------------------------------
+;;; DIRECTION VOCABULARY
+;;; ---------------------------------------------------------------------------
+;;; Directions are a special part of speech. When the parser sees a bare
+;;; direction like "north", it converts it to "walk north".
+;;;
+;;; ZIL: <DIRECTIONS NORTH EAST WEST SOUTH NE NW SE SW UP DOWN IN OUT LAND>
+
+(def direction-definitions
+  "Map of direction keywords to their vocabulary words.
+   Each direction can have multiple synonyms."
+  {:north ["north" "n"]
+   :south ["south" "s"]
+   :east  ["east" "e"]
+   :west  ["west" "w"]
+   :ne    ["northeast" "ne"]
+   :nw    ["northwest" "nw"]
+   :se    ["southeast" "se"]
+   :sw    ["southwest" "sw"]
+   :up    ["up" "u"]
+   :down  ["down" "d"]
+   :in    ["in" "inside" "enter"]
+   :out   ["out" "outside" "exit" "leave"]
+   :land  ["land"]})
+
+(defn build-direction-vocabulary
+  "Build vocabulary entries for directions.
+
+   Returns a map of word-string -> {:parts-of-speech #{:direction} :dir-value dir-kw}"
+  [definitions]
+  (reduce-kv
+   (fn [vocab dir-kw words]
+     (reduce (fn [v word]
+               (assoc v word {:parts-of-speech #{:direction}
+                              :dir-value dir-kw}))
+             vocab
+             words))
+   {}
+   definitions))
+
+(def direction-vocabulary
+  "Vocabulary entries for direction words."
+  (build-direction-vocabulary direction-definitions))
 
 ;;; ---------------------------------------------------------------------------
 ;;; BUILDER FUNCTIONS
@@ -192,7 +244,8 @@
 
 (def ^:dynamic *verb-vocabulary*
   "Vocabulary entries for verbs. Merged with object/direction vocabulary."
-  (build-vocabulary verb-definitions))
+  (merge (build-vocabulary verb-definitions)
+         direction-vocabulary))
 
 (def ^:dynamic *verb-syntaxes*
   "Syntax patterns for each verb action."

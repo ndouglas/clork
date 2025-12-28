@@ -388,6 +388,8 @@
 (deftest describe-objects-dark-test
   (testing "describe-objects in dark shows bat message"
     (let [gs (-> (make-test-state)
+                 ;; Make the room dark by removing the :lit flag
+                 (assoc-in [:rooms :west-of-house :flags] #{})
                  (gs/add-object {:id :lamp
                                  :in :west-of-house
                                  :desc "brass lamp"}))

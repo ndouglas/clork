@@ -48,9 +48,9 @@ These are out-of-game commands that don't advance time.
 
 | Status | Verb | Handler | Description |
 |--------|------|---------|-------------|
-| [ ] | WALK/GO/RUN | V-WALK | Move in direction |
-| [ ] | ENTER | V-ENTER | Enter location |
-| [ ] | EXIT | V-EXIT | Exit location |
+| [x] | WALK/GO/RUN | V-WALK | Move in direction |
+| [x] | ENTER | V-ENTER | Enter location (via :in direction) |
+| [~] | EXIT | V-EXIT | Exit location (via :out direction) |
 | [ ] | CLIMB | V-CLIMB-FOO | Climb object |
 | [ ] | CLIMB UP | V-CLIMB-UP | Climb up |
 | [ ] | CLIMB DOWN | V-CLIMB-DOWN | Climb down |
@@ -61,16 +61,16 @@ These are out-of-game commands that don't advance time.
 | Status | Verb | Handler | Description |
 |--------|------|---------|-------------|
 | [x] | LOOK/L | V-LOOK | Look around room |
-| [ ] | EXAMINE/DESCRIBE | V-EXAMINE | Examine object closely |
+| [x] | EXAMINE/DESCRIBE | V-EXAMINE | Examine object closely |
 | [x] | TAKE/GET/GRAB | V-TAKE | Pick up object |
 | [x] | DROP | V-DROP | Drop object |
 | [ ] | PUT/INSERT | V-PUT | Put object in container |
 | [ ] | PUT ON | V-PUT-ON | Put object on surface |
-| [ ] | OPEN | V-OPEN | Open container/door |
+| [x] | OPEN | V-OPEN | Open container/door |
 | [ ] | CLOSE | V-CLOSE | Close container/door |
 | [x] | READ | V-READ | Read text |
-| [ ] | SEARCH | V-SEARCH | Search object |
-| [ ] | LOOK IN | V-LOOK-INSIDE | Look inside container |
+| [x] | SEARCH | V-SEARCH | Search object (v-look-inside) |
+| [x] | LOOK IN | V-LOOK-INSIDE | Look inside container |
 | [ ] | LOOK UNDER | V-LOOK-UNDER | Look under object |
 | [ ] | LOOK BEHIND | V-LOOK-BEHIND | Look behind object |
 | [ ] | LOOK ON | V-LOOK-ON | Look on surface |
