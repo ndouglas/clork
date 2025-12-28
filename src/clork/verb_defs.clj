@@ -349,11 +349,23 @@
 ;;; ---------------------------------------------------------------------------
 ;;; These are derived from verb-definitions and used by the parser and executor.
 
+(defn- merge-vocab-entries
+  "Merge two vocabulary entries, combining parts-of-speech and keeping all values."
+  [existing new]
+  (-> existing
+      (update :parts-of-speech into (:parts-of-speech new))
+      (cond-> (:verb-value new) (assoc :verb-value (:verb-value new)))
+      (cond-> (:dir-value new) (assoc :dir-value (:dir-value new)))
+      (cond-> (:prep-value new) (assoc :prep-value (:prep-value new)))
+      (cond-> (:object-value new) (assoc :object-value (:object-value new)))
+      (cond-> (:adj-value new) (assoc :adj-value (:adj-value new)))))
+
 (def ^:dynamic *verb-vocabulary*
   "Vocabulary entries for verbs. Merged with object/direction/preposition vocabulary."
-  (merge (build-vocabulary verb-definitions)
-         direction-vocabulary
-         preposition-vocabulary))
+  (merge-with merge-vocab-entries
+              (build-vocabulary verb-definitions)
+              direction-vocabulary
+              preposition-vocabulary))
 
 (def ^:dynamic *verb-syntaxes*
   "Syntax patterns for each verb action."
