@@ -264,17 +264,17 @@
                  :else nil)))})
 
 ;; <OBJECT TRAP-DOOR
-;;	(SYNONYM DOOR TRAPDOOR)
-;;	(ADJECTIVE TRAP)
+;;	(SYNONYM DOOR TRAPDOOR TRAP-DOOR COVER)
+;;	(ADJECTIVE TRAP DUSTY)
 ;;	(DESC "trap door")
-;;	(FLAGS DOORBIT INVISIBLE NDESCBIT)
-;;	(ACTION TRAP-DOOR-F)>
+;;	(FLAGS DOORBIT NDESCBIT INVISIBLE)
+;;	(ACTION TRAP-DOOR-FCN)>
 
 (def trap-door
   {:id :trap-door
    :in :living-room
-   :synonym ["door" "trapdoor"]
-   :adjective ["trap"]
+   :synonym ["door" "trapdoor" "trap-door" "trap" "cover"]
+   :adjective ["trap" "dusty"]
    :desc "trap door"
    :flags (flags/flags :door :ndesc :invisible)})  ; Starts closed, hidden under rug
 
