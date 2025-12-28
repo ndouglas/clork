@@ -197,6 +197,7 @@
 ;;; ---------------------------------------------------------------------------
 
 ;; <OBJECT KITCHEN-WINDOW
+;;	(IN LOCAL-GLOBALS)
 ;;	(SYNONYM WINDOW)
 ;;	(ADJECTIVE KITCHEN SMALL)
 ;;	(DESC "kitchen window")
@@ -211,7 +212,7 @@
 ;; ZIL: KITCHEN-WINDOW-F in 1actions.zil handles OPEN/CLOSE with custom messages
 (def kitchen-window
   {:id :kitchen-window
-   :in :behind-house  ; It's a global, visible from both sides
+   :in :local-globals  ; Global object, visible from both sides
    :synonym ["window"]
    :adjective ["kitchen" "small"]
    :desc "kitchen window"
@@ -374,48 +375,97 @@
 ;;; KITCHEN OBJECTS
 ;;; ---------------------------------------------------------------------------
 
-;; <OBJECT BROWN-SACK
+;; <OBJECT KITCHEN-TABLE
 ;;	(IN KITCHEN)
+;;	(SYNONYM TABLE)
+;;	(ADJECTIVE KITCHEN)
+;;	(DESC "kitchen table")
+;;	(FLAGS NDESCBIT CONTBIT OPENBIT SURFACEBIT)
+;;	(CAPACITY 50)>
+
+(def kitchen-table
+  {:id :kitchen-table
+   :in :kitchen
+   :synonym ["table"]
+   :adjective ["kitchen"]
+   :desc "kitchen table"
+   :flags (flags/flags :ndesc :cont :open :surface)
+   :capacity 50})
+
+;; <OBJECT SANDWICH-BAG
+;;	(IN KITCHEN-TABLE)
 ;;	(SYNONYM BAG SACK)
 ;;	(ADJECTIVE BROWN ELONGATED SMELLY)
 ;;	(DESC "brown sack")
 ;;	(FLAGS TAKEBIT CONTBIT BURNBIT)
+;;	(FDESC "On the table is an elongated brown sack, smelling of hot peppers.")
 ;;	(CAPACITY 9)
-;;	(SIZE 6)>
+;;	(SIZE 9)
+;;	(ACTION SANDWICH-BAG-FCN)>
 
-;; ZIL: SANDWICH-BAG in 1dungeon.zil
-;;   (FDESC "On the table is an elongated brown sack, smelling of hot peppers.")
 (def brown-sack
   {:id :brown-sack
-   :in :kitchen
+   :in :kitchen-table
    :synonym ["bag" "sack"]
    :adjective ["brown" "elongated" "smelly"]
    :desc "brown sack"
    :flags (flags/flags :take :cont :burn)
    :fdesc "On the table is an elongated brown sack, smelling of hot peppers."
    :capacity 9
-   :size 6})
+   :size 9})
+
+;; <OBJECT LUNCH
+;;	(IN SANDWICH-BAG)
+;;	(SYNONYM FOOD SANDWICH LUNCH DINNER)
+;;	(ADJECTIVE HOT PEPPER)
+;;	(DESC "lunch")
+;;	(FLAGS TAKEBIT FOODBIT)
+;;	(LDESC "A hot pepper sandwich is here.")>
+
+(def lunch
+  {:id :lunch
+   :in :brown-sack
+   :synonym ["food" "sandwich" "lunch" "dinner"]
+   :adjective ["hot" "pepper"]
+   :desc "lunch"
+   :flags (flags/flags :take :food)
+   :ldesc "A hot pepper sandwich is here."})
+
+;; <OBJECT GARLIC
+;;	(IN SANDWICH-BAG)
+;;	(SYNONYM GARLIC CLOVE)
+;;	(DESC "clove of garlic")
+;;	(FLAGS TAKEBIT FOODBIT)
+;;	(ACTION GARLIC-F)
+;;	(SIZE 4)>
+
+(def garlic
+  {:id :garlic
+   :in :brown-sack
+   :synonym ["garlic" "clove"]
+   :desc "clove of garlic"
+   :flags (flags/flags :take :food)
+   :size 4})
 
 ;; <OBJECT BOTTLE
-;;	(IN KITCHEN)
+;;	(IN KITCHEN-TABLE)
 ;;	(SYNONYM BOTTLE CONTAINER)
-;;	(ADJECTIVE GLASS)
+;;	(ADJECTIVE CLEAR GLASS)
 ;;	(DESC "glass bottle")
-;;	(FLAGS TAKEBIT CONTBIT TRANSBIT)
-;;	(CAPACITY 4)
-;;	(SIZE 6)>
+;;	(FLAGS TAKEBIT TRANSBIT CONTBIT)
+;;	(ACTION BOTTLE-FUNCTION)
+;;	(FDESC "A bottle is sitting on the table.")
+;;	(CAPACITY 4)>
 
-;; ZIL: (FDESC "A bottle is sitting on the table.")
 (def bottle
   {:id :bottle
-   :in :kitchen
+   :in :kitchen-table
    :synonym ["bottle" "container"]
-   :adjective ["glass"]
+   :adjective ["clear" "glass"]
    :desc "glass bottle"
    :flags (flags/flags :take :cont :trans)
    :fdesc "A bottle is sitting on the table."
-   :capacity 4
-   :size 6})
+   :capacity 4})
 
 ;; <OBJECT WATER
 ;;	(IN BOTTLE)
@@ -491,12 +541,12 @@
   {:id :sword
    :in :living-room
    :synonym ["sword" "orcrist" "glamdring" "blade"]
-   :adjective ["elvish" "antique" "old"]
-   :desc "elvish sword"
-   :flags (flags/flags :take :trytake :weapon :vowel)  ; :vowel for "an elvish"
+   :adjective ["elvish" "old" "antique"]
+   :desc "sword"
+   :flags (flags/flags :take :trytake :weapon)
    :fdesc "Above the trophy case hangs an elvish sword of great antiquity."
-   :size 30  ; ZIL: SIZE 30
-   :value 0})
+   :size 30
+   :tvalue 0})
 
 ;; <OBJECT RUG
 ;;	(IN LIVING-ROOM)
@@ -574,6 +624,21 @@
 ;;; ATTIC OBJECTS
 ;;; ---------------------------------------------------------------------------
 
+;; <OBJECT ATTIC-TABLE
+;;	(IN ATTIC)
+;;	(SYNONYM TABLE)
+;;	(DESC "table")
+;;	(FLAGS NDESCBIT CONTBIT OPENBIT SURFACEBIT)
+;;	(CAPACITY 40)>
+
+(def attic-table
+  {:id :attic-table
+   :in :attic
+   :synonym ["table"]
+   :desc "table"
+   :flags (flags/flags :ndesc :cont :open :surface)
+   :capacity 40})
+
 ;; <OBJECT ROPE
 ;;	(IN ATTIC)
 ;;	(SYNONYM ROPE HEMP COIL)
@@ -605,13 +670,12 @@
 
 (def knife
   {:id :knife
-   :in :attic
-   :synonym ["knife"]
-   :adjective ["nasty"]
+   :in :attic-table
+   :synonym ["knives" "knife" "blade"]
+   :adjective ["nasty" "unrusty"]
    :desc "nasty knife"
    :flags (flags/flags :take :weapon :trytake)
-   :fdesc "On a table is a nasty-looking knife."
-   :size 4})
+   :fdesc "On a table is a nasty-looking knife."})
 
 ;;; ---------------------------------------------------------------------------
 ;;; GALLERY OBJECTS
@@ -634,14 +698,15 @@
 (def painting
   {:id :painting
    :in :gallery
-   :synonym ["painting" "canvas"]
-   :adjective ["beautiful" "huge"]
+   :synonym ["painting" "art" "canvas" "treasure"]
+   :adjective ["beautiful"]
    :desc "painting"
    :flags (flags/flags :take :burn)
    :fdesc "Fortunately, there is still one chance for you to be a vandal, for on the far wall is a painting of unparalleled beauty."
    :ldesc "A painting by a neglected genius is here."
    :size 15
-   :value 4})
+   :value 4
+   :tvalue 6})
 
 ;;; ---------------------------------------------------------------------------
 ;;; FOREST OBJECTS
@@ -675,7 +740,7 @@
   {:id :nest
    :in :up-a-tree
    :synonym ["nest"]
-   :adjective ["bird's" "small"]
+   :adjective ["birds"]
    :desc "bird's nest"
    :flags (flags/flags :take :cont :burn :open :search)
    :fdesc "Beside you on the branch is a small bird's nest."
@@ -700,13 +765,14 @@
 (def egg
   {:id :egg
    :in :nest
-   :synonym ["egg" "bauble"]
-   :adjective ["jewel-encrusted" "bird's"]
+   :synonym ["egg" "treasure"]
+   :adjective ["birds" "encrusted" "jeweled"]
    :desc "jewel-encrusted egg"
    :flags (flags/flags :take :cont :search)
-   :fdesc "In the bird's nest is a large egg encrusted with precious jewels, apparently scavenged by a childless songbird who must have been compelled by a strong maternal instinct."
+   :fdesc "In the bird's nest is a large egg encrusted with precious jewels, apparently scavenged by a childless songbird. The egg is covered with fine gold inlay, and ornamented in lapis lazuli and mother-of-pearl. Unlike most eggs, this one is hinged and closed with a delicate looking clasp. The egg appears extremely fragile."
    :capacity 6
-   :value 5})
+   :value 5
+   :tvalue 5})
 
 ;;; ---------------------------------------------------------------------------
 ;;; ALL OBJECTS LIST
@@ -720,13 +786,17 @@
    white-house
    kitchen-window
    trap-door
+   kitchen-table
    brown-sack
+   lunch
+   garlic
    bottle
    water
    brass-lantern
    trophy-case
    sword
    rug
+   attic-table
    rope
    knife
    painting
