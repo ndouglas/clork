@@ -3,7 +3,8 @@
   (:require [clork.utils :as utils]
             [clork.game-state :as gs]
             [clork.parser.state :as parser-state]
-            [clork.verbs-look :as verbs-look]))
+            [clork.verbs-look :as verbs-look]
+            [clork.debug.trace :as trace]))
 
 ;;; ---------------------------------------------------------------------------
 ;;; VERB HANDLERS
@@ -464,7 +465,10 @@
         action-fn (:action obj)]
     ;; For objects with :trytake flag, try their action handler first
     (if-let [result (when (and (trytake? obj) action-fn)
-                      (action-fn game-state))]
+                      (let [gs-traced (trace/trace-action-call game-state prso :take)
+                            action-result (action-fn gs-traced)]
+                        (trace/trace-action-result game-state prso (some? action-result))
+                        action-result))]
       result
       ;; Default take behavior
       (cond

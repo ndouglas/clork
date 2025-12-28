@@ -478,9 +478,14 @@
         multi? (and all-prso
                     (or (> (count all-prso) 1)
                         all-mode?))
+        ;; Get handler for tracing
+        handler (get *verb-handlers* action)
+        handler-name (when handler (str action))
         ;; Trace verb dispatch if enabled
-        gs (trace/trace-verb game-state action prso prsi)]
-    (if-let [handler (get *verb-handlers* action)]
+        gs (-> game-state
+               (trace/trace-verb action prso prsi)
+               (trace/trace-verb-dispatch action handler-name multi? all-mode?))]
+    (if handler
       (if multi?
         ;; Multiple objects - loop through each one
         ;; ZIL: MAIN-LOOP-1 lines 99-153
@@ -488,7 +493,9 @@
          (fn [current-gs obj]
            ;; Print "object: " prefix
            (let [obj-name (game-state/thing-name current-gs obj)
-                 gs-with-prefix (utils/tell current-gs (str obj-name ": "))
+                 ;; Trace individual object processing
+                 gs-traced (trace/trace-verb-object current-gs obj obj-name)
+                 gs-with-prefix (utils/tell gs-traced (str obj-name ": "))
                  ;; Set prso to just this single object for the handler
                  gs-single (assoc-in gs-with-prefix [:parser :prso] [obj])
                  result-gs (perform-single gs-single handler)]

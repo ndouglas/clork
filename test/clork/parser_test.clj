@@ -1022,4 +1022,132 @@
                  (assoc :input "take sword and lamp"))
           result (parser/parser-from-input gs)]
       ;; Should fail - objects aren't visible from empty-room
-      (is (some? (parser/get-parser-error result)))))))
+      (is (some? (parser/get-parser-error result))))))
+
+;;; ---------------------------------------------------------------------------
+;;; ALL-MODE PARSING AND EXECUTION TESTS
+;;; ---------------------------------------------------------------------------
+
+(deftest all-mode-parsing-test
+  (testing "parser sets ALL flag in getflags when 'all' is used"
+    (let [gs (-> (gs/initial-game-state)
+                 (gs/add-room {:id :living-room :desc "Living Room"
+                               :flags #{:lit}})
+                 (gs/add-object {:id :sword :desc "sword"
+                                 :synonym ["sword"]
+                                 :in :living-room
+                                 :flags #{:take}})
+                 (assoc :here :living-room)
+                 (assoc :input "take all"))
+          result (parser/parser-from-input gs)]
+      ;; Parser should succeed
+      (is (nil? (parser/get-parser-error result)))
+      (is (= :take (parser/get-prsa result)))
+      ;; The getflags should have the ALL bit set
+      (let [getflags (get-in result [:parser :getflags] 0)
+            all-bit (:all gs/getflags)]
+        (is (pos? (bit-and getflags all-bit))
+            "ALL flag should be set in getflags"))))
+
+  (testing "'take all' finds multiple objects in room"
+    (let [gs (-> (gs/initial-game-state)
+                 (gs/add-room {:id :living-room :desc "Living Room"
+                               :flags #{:lit}})
+                 (gs/add-object {:id :sword :desc "sword"
+                                 :synonym ["sword"]
+                                 :in :living-room
+                                 :flags #{:take}})
+                 (gs/add-object {:id :lamp :desc "brass lamp"
+                                 :synonym ["lamp" "lantern"]
+                                 :in :living-room
+                                 :flags #{:take}})
+                 (assoc :here :living-room)
+                 (assoc :input "take all"))
+          result (parser/parser-from-input gs)]
+      (is (nil? (parser/get-parser-error result)))
+      (let [all-prso (parser-state/get-prso-all result)]
+        (is (>= (count all-prso) 2)
+            "Should find at least 2 objects with 'take all'"))))
+
+  (testing "'take all' with single object still sets all-mode flag"
+    ;; This tests the specific bug that was fixed:
+    ;; Even with a single object, 'take all' should print the object prefix
+    (let [gs (-> (gs/initial-game-state)
+                 (gs/add-room {:id :test-room :desc "Test Room"
+                               :flags #{:lit}})
+                 (gs/add-object {:id :single-obj :desc "widget"
+                                 :synonym ["widget"]
+                                 :in :test-room
+                                 :flags #{:take}})
+                 (assoc :here :test-room)
+                 (assoc :input "take all"))
+          result (parser/parser-from-input gs)]
+      (is (nil? (parser/get-parser-error result)))
+      ;; Even with single object, ALL flag should be set
+      (let [getflags (get-in result [:parser :getflags] 0)
+            all-bit (:all gs/getflags)]
+        (is (pos? (bit-and getflags all-bit))
+            "ALL flag should be set even with single object")))))
+
+(deftest perform-all-mode-prefix-test
+  (testing "perform prints object prefix in all-mode even with single object"
+    ;; This is the core test for the bug fix:
+    ;; In ZIL: <OR <G? .NUM 1> <EQUAL? <GET <GET ,P-ITBL ,P-NC1> 0> ,W?ALL>>
+    ;; Print prefix if count > 1 OR if we're in "all" mode
+    (let [gs (-> (gs/initial-game-state)
+                 (gs/add-room {:id :test-room :desc "Test Room"
+                               :flags #{:lit}})
+                 (gs/add-object {:id :test-obj :desc "widget"
+                                 :synonym ["widget"]
+                                 :in :test-room
+                                 :flags #{:take}})
+                 (assoc :here :test-room)
+                 (assoc-in [:parser :prsa] :take)
+                 (assoc-in [:parser :prso] [:test-obj])
+                 ;; Key: set getflags to include ALL flag
+                 (assoc-in [:parser :getflags] (:all gs/getflags)))
+          output (with-out-str (verb-defs/perform gs))]
+      ;; The output should contain the object prefix "widget: "
+      (is (re-find #"widget:" output)
+          "In all-mode, single object should still have prefix printed")))
+
+  (testing "perform does not print prefix for single object without all-mode"
+    ;; Control test: without all-mode flag, single object should NOT have prefix
+    (let [gs (-> (gs/initial-game-state)
+                 (gs/add-room {:id :test-room :desc "Test Room"
+                               :flags #{:lit}})
+                 (gs/add-object {:id :test-obj :desc "widget"
+                                 :synonym ["widget"]
+                                 :in :test-room
+                                 :flags #{:take}})
+                 (assoc :here :test-room)
+                 (assoc-in [:parser :prsa] :take)
+                 (assoc-in [:parser :prso] [:test-obj])
+                 ;; No getflags = 0 = not in all-mode
+                 (assoc-in [:parser :getflags] 0))
+          output (with-out-str (verb-defs/perform gs))]
+      ;; Output should NOT contain the prefix pattern
+      (is (not (re-find #"widget:" output))
+          "Without all-mode, single object should not have prefix")))
+
+  (testing "perform prints prefix for multiple objects"
+    ;; Sanity check: multiple objects always get prefixes
+    (let [gs (-> (gs/initial-game-state)
+                 (gs/add-room {:id :test-room :desc "Test Room"
+                               :flags #{:lit}})
+                 (gs/add-object {:id :test-obj1 :desc "widget"
+                                 :synonym ["widget"]
+                                 :in :test-room
+                                 :flags #{:take}})
+                 (gs/add-object {:id :test-obj2 :desc "gadget"
+                                 :synonym ["gadget"]
+                                 :in :test-room
+                                 :flags #{:take}})
+                 (assoc :here :test-room)
+                 (assoc-in [:parser :prsa] :take)
+                 (assoc-in [:parser :prso] [:test-obj1 :test-obj2])
+                 (assoc-in [:parser :getflags] 0))
+          output (with-out-str (verb-defs/perform gs))]
+      ;; Both objects should have prefixes
+      (is (re-find #"widget:" output) "First object should have prefix")
+      (is (re-find #"gadget:" output) "Second object should have prefix")))))

@@ -11,7 +11,8 @@
             [clork.parser.objects :as objects]
             [clork.parser.orphan :as orphan]
             [clork.parser.validation :as validation]
-            [clork.parser.output :as output]))
+            [clork.parser.output :as output]
+            [clork.debug.trace :as trace]))
 
 ;;;; ============================================================================
 ;;;; PARSER - Main Entry Point and Orchestration

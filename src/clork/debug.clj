@@ -18,6 +18,7 @@
             [clork.debug.manipulation :as debug-manip]
             [clork.debug.trace :as debug-trace]
             [clork.debug.daemon :as debug-daemon]
+            [clork.debug.test :as debug-test]
             [clork.undo :as undo]))
 
 ;;; ---------------------------------------------------------------------------
@@ -193,7 +194,11 @@
   ;; Daemon commands
   (register-command! :daemon debug-daemon/cmd-daemon
                      "Daemon inspection and control"
-                     :subcommands debug-daemon/subcommands))
+                     :subcommands debug-daemon/subcommands)
+  ;; Test commands
+  (register-command! :test debug-test/cmd-test
+                     "Test object actions and behaviors"
+                     :subcommands debug-test/subcommands))
 
 ;; Auto-initialize on namespace load
 (init-commands!)

@@ -2,10 +2,17 @@
   "Trace system for runtime debugging visibility.
 
    Provides toggleable tracing for:
-   - verbs: Log verb handler calls
-   - parser: Log parser stages
+   - verbs: Log verb handler calls, action function invocations
+   - parser: Log parser pipeline stages (snarfem, get-object, etc.)
    - actions: Log room/object action calls
    - daemons: Log daemon execution
+
+   Usage:
+     $trace on           - Enable all tracing
+     $trace off          - Disable all tracing
+     $trace parser       - Toggle parser tracing
+     $trace verbs        - Toggle verb tracing
+     $trace status       - Show what's enabled
 
    Trace output is prefixed with [TRACE:<category>] for easy filtering."
   (:require [clork.utils :as utils]
@@ -75,11 +82,67 @@
                   (when prso (str ", PRSO: " prso))
                   (when prsi (str ", PRSI: " prsi)))))
 
+(defn trace-verb-dispatch
+  "Log verb handler dispatch."
+  [game-state action handler-name multi? all-mode?]
+  (trace-log game-state :verbs
+             (str "Dispatch: " action " -> " handler-name
+                  (when multi? " [MULTI]")
+                  (when all-mode? " [ALL-MODE]"))))
+
+(defn trace-verb-object
+  "Log processing of individual object in multi-object loop."
+  [game-state obj-id obj-name]
+  (trace-log game-state :verbs
+             (str "  Object: " obj-id " (" obj-name ")")))
+
+(defn trace-action-call
+  "Log object/room action function being called."
+  [game-state obj-id verb]
+  (trace-log game-state :verbs
+             (str "  Calling action: " obj-id " for verb " verb)))
+
+(defn trace-action-result
+  "Log result of object/room action function."
+  [game-state obj-id returned?]
+  (trace-log game-state :verbs
+             (str "  Action result: " obj-id " -> " (if returned? "handled" "nil (pass-through)"))))
+
 (defn trace-parser
   "Log parser stage trace."
   [game-state stage message]
   (trace-log game-state :parser
              (str stage ": " message)))
+
+(defn trace-parser-snarfem
+  "Log snarfem processing a word."
+  [game-state word word-type]
+  (trace-log game-state :parser
+             (str "snarfem: \"" word "\" -> " word-type)))
+
+(defn trace-parser-getflags
+  "Log getflags being set."
+  [game-state flag-name flag-value]
+  (trace-log game-state :parser
+             (str "snarfem: set " flag-name " flag (getflags=" flag-value ")")))
+
+(defn trace-parser-get-object
+  "Log get-object search."
+  [game-state here lit? contents]
+  (trace-log game-state :parser
+             (str "get-object: room=" here ", lit=" lit? ", contents=" contents)))
+
+(defn trace-parser-matches
+  "Log objects found by get-object."
+  [game-state matches source]
+  (trace-log game-state :parser
+             (str "get-object: found " (count matches) " match(es) in " source ": " matches)))
+
+(defn trace-parser-result
+  "Log final parser result."
+  [game-state prso prsi]
+  (trace-log game-state :parser
+             (str "result: PRSO=" prso ", PRSI=" prsi)))
 
 (defn trace-action
   "Log room/object action trace."

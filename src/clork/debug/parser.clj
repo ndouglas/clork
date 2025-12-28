@@ -9,12 +9,14 @@
    - $parser lexv    - Show tokenized input
    - $parser itbl    - Show instruction table state
    - $parser vocab   - Look up word in vocabularies
-   - $parser syntax  - Show syntax rules for a verb"
+   - $parser syntax  - Show syntax rules for a verb
+   - $parser trace   - Parse a command with tracing enabled"
   (:require [clork.utils :as utils]
             [clork.verb-defs :as verb-defs]
             [clork.parser.state :as parser-state]
             [clork.parser.objects :as parser-objects]
             [clork.game-state :as gs]
+            [clork.debug.trace :as trace]
             [clojure.string :as str]))
 
 ;;; ---------------------------------------------------------------------------
@@ -250,7 +252,8 @@
 (defn cmd-parser-itbl
   "Show instruction table state."
   [game-state _args]
-  (let [itbl (parser-state/get-itbl game-state)
+  (let [;; Get the entire itbl map directly from game state
+        itbl (get-in game-state [:parser :itbl] {})
         len (parser-state/get-len game-state)
         ncn (parser-state/get-ncn game-state)]
     (-> game-state
@@ -258,17 +261,19 @@
         (tell-line "LEN (tokens remaining)" len)
         (tell-line "NCN (noun clause number)" ncn)
         ((fn [gs]
-           (if (nil? itbl)
-             (utils/tell gs "  (itbl is nil)\n")
+           (if (empty? itbl)
+             (utils/tell gs "  (itbl is empty)\n")
              (-> gs
                  (tell-line "Verb" (get itbl :verb))
                  (tell-line "Prep1" (get itbl :prep1))
                  (tell-line "Prep2" (get itbl :prep2))
                  (tell-line "NC1" (get itbl :nc1))
+                 (tell-line "NC1L" (get itbl :nc1l))
                  (tell-line "NC2" (get itbl :nc2))
+                 (tell-line "NC2L" (get itbl :nc2l))
                  ((fn [gs2]
                     (reduce-kv (fn [gs3 k v]
-                                 (if (#{:verb :prep1 :prep2 :nc1 :nc2} k)
+                                 (if (#{:verb :prep1 :prep2 :nc1 :nc1l :nc2 :nc2l} k)
                                    gs3
                                    (tell-line gs3 (format-keyword k) (str v))))
                                gs2
@@ -354,6 +359,46 @@
         (utils/tell "\n"))))
 
 ;;; ---------------------------------------------------------------------------
+;;; $parser trace <command>
+;;; ---------------------------------------------------------------------------
+
+(defn cmd-parser-trace
+  "Parse a command with tracing enabled (without executing).
+
+   Temporarily enables parser tracing, parses the given command,
+   then disables tracing. Shows the full parser pipeline execution.
+
+   Usage: $parser trace take all"
+  [game-state args]
+  (if (empty? args)
+    (utils/tell game-state "Usage: $parser trace <command>\nExample: $parser trace take all\n")
+    (let [;; Enable parser tracing temporarily
+          gs-with-trace (trace/enable-trace game-state :parser)
+          ;; Set up the input to parse
+          input (str/join " " args)
+          gs-with-input (assoc gs-with-trace :input input)
+          ;; Show what we're parsing
+          gs-header (utils/tell gs-with-input (str "=== Parsing: \"" input "\" ===\n"))]
+      ;; We need to require the parser dynamically to avoid circular dependency
+      (try
+        (require 'clork.parser)
+        (let [parser-from-input (ns-resolve 'clork.parser 'parser-from-input)
+              gs-parsed (parser-from-input gs-header)
+              ;; Disable tracing
+              gs-final (trace/disable-trace gs-parsed :parser)]
+          ;; Show final result summary
+          (-> gs-final
+              (utils/tell "=== Parse Result ===\n")
+              (tell-line "PRSA" (or (parser-state/get-prsa gs-parsed) "nil"))
+              (tell-line "PRSO" (pr-str (get-in gs-parsed [:parser :prso])))
+              (tell-line "PRSI" (pr-str (get-in gs-parsed [:parser :prsi])))
+              (tell-line "Error" (pr-str (get-in gs-parsed [:parser :error])))))
+        (catch Exception e
+          (-> game-state
+              (trace/disable-trace :parser)
+              (utils/tell (str "Parse error: " (.getMessage e) "\n"))))))))
+
+;;; ---------------------------------------------------------------------------
 ;;; MAIN PARSER DISPATCHER
 ;;; ---------------------------------------------------------------------------
 
@@ -366,7 +411,8 @@
    :itbl    {:handler cmd-parser-itbl    :help "Show instruction table state"}
    :vocab   {:handler cmd-parser-vocab   :help "Look up word in vocabularies"}
    :syntax  {:handler cmd-parser-syntax  :help "Show syntax rules for a verb"}
-   :verbs   {:handler cmd-parser-verbs   :help "List all registered verbs"}})
+   :verbs   {:handler cmd-parser-verbs   :help "List all registered verbs"}
+   :trace   {:handler cmd-parser-trace   :help "Parse a command with tracing (e.g., $parser trace take all)"}})
 
 (defn cmd-parser
   "Main $parser command dispatcher."

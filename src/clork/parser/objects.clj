@@ -23,7 +23,8 @@
   (:require [clork.game-state :as game-state]
             [clork.parser.state :as parser-state]
             [clork.parser.lexer :as lexer]
-            [clork.random :as random]))
+            [clork.random :as random]
+            [clork.debug.trace :as trace]))
 
 (defn- bit-set?
   "Check if a bit mask is set in a value.
@@ -270,7 +271,11 @@
          here (:here game-state)
          lit? (or (game-state/set-thing-flag? game-state here :lit)
                   (game-state/set-thing-flag? game-state here :on))
-         player (:player game-state)]
+         player (:player game-state)
+         ;; Trace the search parameters
+         gs-traced (trace/trace-parser-get-object
+                    game-state here lit?
+                    (game-state/get-contents game-state here))]
 
      (cond
        ;; Inhibit flag set - skip search
@@ -331,6 +336,11 @@
                (do-sl gs here matches-after-player
                       (:on-ground game-state/search-bits) (:in-room game-state/search-bits))
                matches-after-player)
+
+             ;; Trace what we found
+             _ (when (trace/trace-enabled? game-state :parser)
+                 (trace/trace-parser-matches game-state matches-after-player "player inventory")
+                 (trace/trace-parser-matches game-state matches-after-room "room"))
 
              total-count (match-table-count matches-after-room)
              ;; Only count NEW matches for ambiguity check
@@ -459,7 +469,10 @@
           (cond
             ;; ALL - set flag
             (lexer/special-word? word :all)
-            (let [new-gs (assoc-in gs [:parser :getflags] (:all game-state/getflags))
+            (let [new-gs (-> gs
+                             (assoc-in [:parser :getflags] (:all game-state/getflags))
+                             (trace/trace-parser-snarfem word "ALL")
+                             (trace/trace-parser-getflags "ALL" (:all game-state/getflags)))
                   skip-of? (lexer/special-word? next-word :of)]
               (recur new-gs
                      (if skip-of? (+ current-ptr 2) (inc current-ptr))
