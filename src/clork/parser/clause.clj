@@ -233,14 +233,14 @@
 
                   :end-clause
                   (let [end-slot (+ (:nc1l parser-state/itbl-indices) off)]
-                    {:game-state (-> gs
+                    {:game-state (-> gs-decremented
                                      (parser-state/set-itbl end-slot current-ptr)
                                      (parser-state/inc-len))  ; Restore for main loop
                      :ptr (dec current-ptr)})
 
                   :end-clause-backup
                   (let [end-slot (+ (:nc1l parser-state/itbl-indices) off)]
-                    {:game-state (-> gs
+                    {:game-state (-> gs-decremented
                                      (parser-state/set-itbl end-slot current-ptr)
                                      (parser-state/inc-len))
                      :ptr (dec current-ptr)})

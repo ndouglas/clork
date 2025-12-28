@@ -2,19 +2,23 @@
   "Parser debugging commands.
 
    Commands:
-   - $parser result  - Show last parse result (prsa, prso, prsi)
-   - $parser it      - Show what IT refers to
-   - $parser state   - Show full parser state
-   - $parser resolve - Test object resolution for a word
-   - $parser lexv    - Show tokenized input
-   - $parser itbl    - Show instruction table state
-   - $parser vocab   - Look up word in vocabularies
-   - $parser syntax  - Show syntax rules for a verb
-   - $parser trace   - Parse a command with tracing enabled"
+   - $parser result      - Show last parse result (prsa, prso, prsi)
+   - $parser it          - Show what IT refers to
+   - $parser state       - Show full parser state
+   - $parser resolve     - Test object resolution for a word
+   - $parser lexv        - Show tokenized input
+   - $parser itbl        - Show instruction table state
+   - $parser vocab       - Look up word in vocabularies
+   - $parser syntax      - Show syntax rules for a verb
+   - $parser syntax-check - Show syntax coverage for a verb
+   - $parser trace       - Parse a command with tracing enabled
+   - $parser trace-len   - Parse showing :len counter at each step"
   (:require [clork.utils :as utils]
             [clork.verb-defs :as verb-defs]
             [clork.parser.state :as parser-state]
             [clork.parser.objects :as parser-objects]
+            [clork.parser.lexer :as lexer]
+            [clork.parser.clause :as clause]
             [clork.game-state :as gs]
             [clork.debug.trace :as trace]
             [clojure.string :as str]))
@@ -399,20 +403,257 @@
               (utils/tell (str "Parse error: " (.getMessage e) "\n"))))))))
 
 ;;; ---------------------------------------------------------------------------
+;;; $parser trace-len <command>
+;;; ---------------------------------------------------------------------------
+
+(defn- trace-len-parse-tokens
+  "Parse tokens with detailed :len tracing.
+
+   This is a simplified version of parse-tokens that outputs :len at each step."
+  [game-state]
+  (let [output (atom [])]
+    (letfn [(log [& args] (swap! output conj (apply str args)))
+            (get-len [gs] (parser-state/get-len gs))
+            (dec-len [gs] (parser-state/dec-len gs))
+            (inc-ncn [gs] (parser-state/inc-ncn gs))
+            (get-ncn [gs] (parser-state/get-ncn gs))
+            (set-itbl [gs k v] (parser-state/set-itbl gs k v))]
+
+      (loop [gs game-state
+             ptr 0
+             verb nil]
+
+        (let [remaining (get-len gs)]
+          (if (neg? (dec remaining))
+            ;; End of input
+            {:game-state gs :output @output}
+
+            ;; Get current word
+            (let [word (lexer/lexv-word gs ptr)
+                  next-word (when (pos? remaining)
+                              (lexer/lexv-word gs (inc ptr)))
+                  gs-after-dec (dec-len gs)
+                  new-len (get-len gs-after-dec)]
+
+              (log "ptr=" ptr " \"" word "\": :len " remaining "→" new-len)
+
+              (cond
+                ;; No word
+                (nil? word)
+                (do
+                  (log " → ERROR: unknown word at ptr=" ptr)
+                  {:game-state gs-after-dec :output @output :error {:type :unknown-word :ptr ptr}})
+
+                ;; Verb word
+                (and (lexer/wt? word :verb true) (nil? verb))
+                (let [verb-val (lexer/wt? word :verb true)
+                      gs (-> gs-after-dec
+                             (set-itbl :verb verb-val)
+                             (set-itbl :verbn word))]
+                  (log " (verb: " verb-val ")")
+                  (recur gs (inc ptr) verb-val))
+
+                ;; Preposition, adjective, object, all/one, it
+                (or (lexer/wt? word :preposition)
+                    (lexer/special-word? word :all)
+                    (lexer/special-word? word :one)
+                    (lexer/special-word? word :it)
+                    (lexer/wt? word :adjective)
+                    (lexer/wt? word :object))
+                (let [prep-val (lexer/wt? word :preposition true)
+                      part-of-speech (cond
+                                       prep-val :preposition
+                                       (lexer/special-word? word :all) :all
+                                       (lexer/special-word? word :one) :one
+                                       (lexer/special-word? word :it) :it
+                                       (lexer/wt? word :adjective) :adjective
+                                       :else :object)]
+                  (log " (" (name part-of-speech) ")")
+
+                  (cond
+                    ;; Too many noun clauses
+                    (= (get-ncn gs-after-dec) 2)
+                    (do
+                      (log " → ERROR: too many noun clauses")
+                      {:game-state gs-after-dec :output @output :error {:type :too-many-nouns}})
+
+                    ;; Start a noun clause
+                    :else
+                    (let [gs-ncn (-> gs-after-dec
+                                     (inc-ncn)
+                                     (assoc-in [:parser :act] verb))
+                          ncn (get-ncn gs-ncn)
+                          _ (log " → entering clause " ncn ", :len=" (get-len gs-ncn))
+                          clause-result (clause/clause gs-ncn ptr prep-val word)]
+                      (if (:error clause-result)
+                        (do
+                          (log " → clause error: " (:error clause-result))
+                          {:game-state (:game-state clause-result) :output @output :error (:error clause-result)})
+                        (let [new-ptr (:ptr clause-result)
+                              gs-out (:game-state clause-result)
+                              _ (log "  clause returned: ptr=" new-ptr ", :len=" (get-len gs-out))]
+                          (if (neg? new-ptr)
+                            {:game-state gs-out :output @output}
+                            (recur gs-out (inc new-ptr) verb)))))))
+
+                ;; Direction
+                (lexer/wt? word :direction true)
+                (let [dir (lexer/wt? word :direction true)]
+                  (log " (direction: " dir ")")
+                  {:game-state (assoc-in gs-after-dec [:parser :dir] dir) :output @output})
+
+                ;; Then/period
+                (or (lexer/special-word? word :then)
+                    (lexer/special-word? word :period))
+                (do
+                  (log " (terminator)")
+                  {:game-state gs-after-dec :output @output})
+
+                ;; Buzz word
+                (lexer/wt? word :buzz-word)
+                (do
+                  (log " (buzz-word, skipping)")
+                  (recur gs-after-dec (inc ptr) verb))
+
+                ;; Unknown
+                :else
+                (do
+                  (log " → ERROR: can't use \"" word "\"")
+                  {:game-state gs-after-dec :output @output :error {:type :cant-use :word word}})))))))))
+
+(defn cmd-parser-trace-len
+  "Parse a command showing :len counter at each step.
+
+   This traces the internal :len counter that tracks remaining tokens.
+   Very useful for debugging 'unknown word' errors caused by :len being off.
+
+   Usage: $parser trace-len get all from mailbox"
+  [game-state args]
+  (if (empty? args)
+    (utils/tell game-state "Usage: $parser trace-len <command>\nExample: $parser trace-len get all from mailbox\n")
+    (let [input (str/join " " args)
+          lexv (lexer/lexv-from-input input)
+          token-count (:count lexv)
+          gs (-> game-state
+                 (parser-state/parser-init)
+                 (assoc :input input)
+                 (assoc-in [:parser :lexv] lexv)
+                 (parser-state/set-len token-count))
+          result (trace-len-parse-tokens gs)]
+      (-> game-state
+          (utils/tell (str "=== :len Trace for \"" input "\" ===\n"))
+          (utils/tell (str "Initial: " token-count " tokens, :len=" token-count "\n"))
+          (utils/tell "\n")
+          ((fn [g]
+             (reduce (fn [g2 line]
+                       (utils/tell g2 (str line "\n")))
+                     g
+                     (:output result))))
+          (utils/tell "\n")
+          (utils/tell (str "=== Result ===\n"))
+          (tell-line "Final :len" (parser-state/get-len (:game-state result)))
+          (tell-line "Error" (pr-str (:error result)))))))
+
+;;; ---------------------------------------------------------------------------
+;;; $parser syntax-check <verb>
+;;; ---------------------------------------------------------------------------
+
+(defn- syntax-pattern-description
+  "Generate a human-readable description of a syntax pattern."
+  [{:keys [num-objects prep1 prep2 loc1 loc2 action]}]
+  (cond
+    (zero? num-objects) "VERB"
+    (= num-objects 1) (if prep1
+                        (str "VERB " (str/upper-case (name prep1)) " OBJECT")
+                        "VERB OBJECT")
+    (= num-objects 2) (str "VERB OBJECT "
+                           (if prep2
+                             (str (str/upper-case (name prep2)) " OBJECT")
+                             "OBJECT"))
+    :else (str num-objects "-object pattern")))
+
+(def common-syntax-patterns
+  "Common syntax patterns that verbs might support."
+  [{:desc "VERB"                    :check {:num-objects 0}}
+   {:desc "VERB OBJECT"             :check {:num-objects 1 :prep1 nil}}
+   {:desc "VERB OBJECT FROM OBJECT" :check {:num-objects 2 :prep2 :from}}
+   {:desc "VERB OBJECT IN OBJECT"   :check {:num-objects 2 :prep2 :in}}
+   {:desc "VERB OBJECT ON OBJECT"   :check {:num-objects 2 :prep2 :on}}
+   {:desc "VERB OBJECT OFF OBJECT"  :check {:num-objects 2 :prep2 :off}}
+   {:desc "VERB OBJECT WITH OBJECT" :check {:num-objects 2 :prep2 :with}}
+   {:desc "VERB OBJECT TO OBJECT"   :check {:num-objects 2 :prep2 :to}}
+   {:desc "VERB IN OBJECT"          :check {:num-objects 1 :prep1 :in}}
+   {:desc "VERB ON OBJECT"          :check {:num-objects 1 :prep1 :on}}
+   {:desc "VERB AT OBJECT"          :check {:num-objects 1 :prep1 :at}}
+   {:desc "VERB AROUND OBJECT"      :check {:num-objects 1 :prep1 :around}}
+   {:desc "VERB THROUGH OBJECT"     :check {:num-objects 1 :prep1 :through}}])
+
+(defn- pattern-matches?
+  "Check if a syntax entry matches a pattern check."
+  [syntax-entry {:keys [num-objects prep1 prep2]}]
+  (and (= (:num-objects syntax-entry) num-objects)
+       (or (nil? prep1) (= (:prep1 syntax-entry) prep1))
+       (or (nil? prep2) (= (:prep2 syntax-entry) prep2))))
+
+(defn cmd-parser-syntax-check
+  "Show which common syntax patterns a verb supports.
+
+   Checks against common patterns like 'VERB OBJECT FROM OBJECT' to
+   quickly identify missing syntax definitions.
+
+   Usage: $parser syntax-check take"
+  [game-state args]
+  (if (empty? args)
+    (-> game-state
+        (utils/tell "Usage: $parser syntax-check <verb>\n")
+        (utils/tell "Checks which common syntax patterns a verb supports.\n"))
+    (let [verb-word (str/lower-case (first args))
+          vocab-entry (get verb-defs/*verb-vocabulary* verb-word)
+          action (or (when vocab-entry (:verb-value vocab-entry))
+                     (keyword verb-word))
+          syntaxes (get verb-defs/*verb-syntaxes* action)]
+      (if (nil? syntaxes)
+        (utils/tell game-state (str "Unknown verb: " verb-word "\n"))
+        (-> game-state
+            (utils/tell (str "Syntax coverage for :" (name action) ":\n"))
+            ((fn [g]
+               (reduce
+                (fn [g2 {:keys [desc check]}]
+                  (let [supported? (some #(pattern-matches? % check) syntaxes)
+                        mark (if supported? "✓" "✗")]
+                    (utils/tell g2 (str "  " mark " " desc "\n"))))
+                g
+                common-syntax-patterns)))
+            (utils/tell "\n")
+            (utils/tell (str "Defined patterns (" (count syntaxes) "):\n"))
+            ((fn [g]
+               (reduce
+                (fn [g2 syntax]
+                  (utils/tell g2 (str "  - " (syntax-pattern-description syntax)
+                                      (when-let [a (:action syntax)]
+                                        (when (not= a action)
+                                          (str " → :" (name a))))
+                                      "\n")))
+                g
+                syntaxes))))))))
+
+;;; ---------------------------------------------------------------------------
 ;;; MAIN PARSER DISPATCHER
 ;;; ---------------------------------------------------------------------------
 
 (def subcommands
-  {:result  {:handler cmd-parser-result  :help "Show last parse result (PRSA, PRSO, PRSI)"}
-   :it      {:handler cmd-parser-it      :help "Show what IT refers to"}
-   :state   {:handler cmd-parser-state   :help "Show full parser state (all internal variables)"}
-   :resolve {:handler cmd-parser-resolve :help "Test object resolution for a word"}
-   :lexv    {:handler cmd-parser-lexv    :help "Show tokenized input"}
-   :itbl    {:handler cmd-parser-itbl    :help "Show instruction table state"}
-   :vocab   {:handler cmd-parser-vocab   :help "Look up word in vocabularies"}
-   :syntax  {:handler cmd-parser-syntax  :help "Show syntax rules for a verb"}
-   :verbs   {:handler cmd-parser-verbs   :help "List all registered verbs"}
-   :trace   {:handler cmd-parser-trace   :help "Parse a command with tracing (e.g., $parser trace take all)"}})
+  {:result       {:handler cmd-parser-result       :help "Show last parse result (PRSA, PRSO, PRSI)"}
+   :it           {:handler cmd-parser-it           :help "Show what IT refers to"}
+   :state        {:handler cmd-parser-state        :help "Show full parser state (all internal variables)"}
+   :resolve      {:handler cmd-parser-resolve      :help "Test object resolution for a word"}
+   :lexv         {:handler cmd-parser-lexv         :help "Show tokenized input"}
+   :itbl         {:handler cmd-parser-itbl         :help "Show instruction table state"}
+   :vocab        {:handler cmd-parser-vocab        :help "Look up word in vocabularies"}
+   :syntax       {:handler cmd-parser-syntax       :help "Show syntax rules for a verb"}
+   :syntax-check {:handler cmd-parser-syntax-check :help "Show syntax coverage for a verb"}
+   :verbs        {:handler cmd-parser-verbs        :help "List all registered verbs"}
+   :trace        {:handler cmd-parser-trace        :help "Parse a command with tracing (e.g., $parser trace take all)"}
+   :trace-len    {:handler cmd-parser-trace-len    :help "Parse showing :len counter at each step"}})
 
 (defn cmd-parser
   "Main $parser command dispatcher."

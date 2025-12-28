@@ -565,13 +565,13 @@
         (is (= "testbrass" (parser/wt? "testbrass" :adjective true)))
         (finally
           ;; Restore original vocabulary
-          (alter-var-root #'verb-defs/*verb-vocabulary* (constantly original-vocab))))))
+          (alter-var-root #'verb-defs/*verb-vocabulary* (constantly original-vocab)))))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; PRSO/PRSI ACCESS TESTS
 ;;; ---------------------------------------------------------------------------
 
-  (deftest get-prso-test
+(deftest get-prso-test
     (testing "get-prso returns first element when prso is a vector"
       (let [game-state {:parser {:prso [:mailbox :lamp]}}]
         (is (= :mailbox (parser-state/get-prso game-state)))))
@@ -683,167 +683,196 @@
 ;;; AGAIN/G COMMAND TESTS
 ;;; ---------------------------------------------------------------------------
 
-(deftest handle-again-no-previous-command-test
-  (testing "AGAIN with no previous command returns error"
-    (let [game-state (-> (gs/initial-game-state)
-                         (assoc :input "g"))
-          result (parser/parser-from-input game-state)]
-      (is (some? (parser/get-parser-error result)))
-      (is (= :no-again (get-in result [:parser :error :type]))))))
+  (deftest handle-again-no-previous-command-test
+    (testing "AGAIN with no previous command returns error"
+      (let [game-state (-> (gs/initial-game-state)
+                           (assoc :input "g"))
+            result (parser/parser-from-input game-state)]
+        (is (some? (parser/get-parser-error result)))
+        (is (= :no-again (get-in result [:parser :error :type]))))))
 
-(deftest handle-again-after-successful-command-test
-  (testing "AGAIN after successful command repeats it"
-    (let [;; First, parse a "look" command
-          game-state (-> (gs/initial-game-state)
-                         (assoc :input "look"))
-          after-look (parser/parser-from-input game-state)]
+  (deftest handle-again-after-successful-command-test
+    (testing "AGAIN after successful command repeats it"
+      (let [;; First, parse a "look" command
+            game-state (-> (gs/initial-game-state)
+                           (assoc :input "look"))
+            after-look (parser/parser-from-input game-state)]
       ;; Verify first parse was successful
-      (is (nil? (parser/get-parser-error after-look)))
-      (is (= :look (parser/get-prsa after-look)))
-      (is (true? (get-in after-look [:parser :won])))
+        (is (nil? (parser/get-parser-error after-look)))
+        (is (= :look (parser/get-prsa after-look)))
+        (is (true? (get-in after-look [:parser :won])))
 
       ;; Now parse "g" to repeat
-      (let [after-again (parser/parser-from-input (assoc after-look :input "g"))]
+        (let [after-again (parser/parser-from-input (assoc after-look :input "g"))]
         ;; Verify AGAIN was successful and repeated the look command
-        (is (nil? (parser/get-parser-error after-again)))
-        (is (= :look (parser/get-prsa after-again)))))))
+          (is (nil? (parser/get-parser-error after-again)))
+          (is (= :look (parser/get-prsa after-again)))))))
 
-(deftest handle-again-with-full-word-test
-  (testing "AGAIN with full word 'again' works"
-    (let [game-state (-> (gs/initial-game-state)
-                         (assoc :input "look"))
-          after-look (parser/parser-from-input game-state)]
-      (is (nil? (parser/get-parser-error after-look)))
+  (deftest handle-again-with-full-word-test
+    (testing "AGAIN with full word 'again' works"
+      (let [game-state (-> (gs/initial-game-state)
+                           (assoc :input "look"))
+            after-look (parser/parser-from-input game-state)]
+        (is (nil? (parser/get-parser-error after-look)))
 
-      (let [after-again (parser/parser-from-input (assoc after-look :input "again"))]
-        (is (nil? (parser/get-parser-error after-again)))
-        (is (= :look (parser/get-prsa after-again)))))))
+        (let [after-again (parser/parser-from-input (assoc after-look :input "again"))]
+          (is (nil? (parser/get-parser-error after-again)))
+          (is (= :look (parser/get-prsa after-again)))))))
 
-(deftest handle-again-case-insensitive-test
-  (testing "AGAIN/G is case insensitive"
-    (let [game-state (-> (gs/initial-game-state)
-                         (assoc :input "look"))
-          after-look (parser/parser-from-input game-state)]
+  (deftest handle-again-case-insensitive-test
+    (testing "AGAIN/G is case insensitive"
+      (let [game-state (-> (gs/initial-game-state)
+                           (assoc :input "look"))
+            after-look (parser/parser-from-input game-state)]
       ;; Test "G"
-      (let [result (parser/parser-from-input (assoc after-look :input "G"))]
-        (is (nil? (parser/get-parser-error result)))
-        (is (= :look (parser/get-prsa result))))
+        (let [result (parser/parser-from-input (assoc after-look :input "G"))]
+          (is (nil? (parser/get-parser-error result)))
+          (is (= :look (parser/get-prsa result))))
 
       ;; Test "AGAIN"
-      (let [result (parser/parser-from-input (assoc after-look :input "AGAIN"))]
-        (is (nil? (parser/get-parser-error result)))
-        (is (= :look (parser/get-prsa result)))))))
+        (let [result (parser/parser-from-input (assoc after-look :input "AGAIN"))]
+          (is (nil? (parser/get-parser-error result)))
+          (is (= :look (parser/get-prsa result)))))))
 
-(deftest handle-again-repeats-walk-command-test
-  (testing "AGAIN repeats movement commands"
-    (let [game-state (-> (gs/initial-game-state)
-                         (assoc :input "north"))
-          after-north (parser/parser-from-input game-state)]
+  (deftest handle-again-repeats-walk-command-test
+    (testing "AGAIN repeats movement commands"
+      (let [game-state (-> (gs/initial-game-state)
+                           (assoc :input "north"))
+            after-north (parser/parser-from-input game-state)]
       ;; The command should parse (whether movement succeeds is up to the game)
-      (is (nil? (parser/get-parser-error after-north)))
-      (is (= :walk (parser/get-prsa after-north)))
+        (is (nil? (parser/get-parser-error after-north)))
+        (is (= :walk (parser/get-prsa after-north)))
 
       ;; Repeat with G
-      (let [after-again (parser/parser-from-input (assoc after-north :input "g"))]
-        (is (nil? (parser/get-parser-error after-again)))
-        (is (= :walk (parser/get-prsa after-again)))))))
+        (let [after-again (parser/parser-from-input (assoc after-north :input "g"))]
+          (is (nil? (parser/get-parser-error after-again)))
+          (is (= :walk (parser/get-prsa after-again)))))))
 
-(deftest handle-again-after-failed-parse-test
-  (testing "AGAIN after failed parse returns mistake error"
-    (let [;; First, parse a successful command to set again-lexv
-          game-state (-> (gs/initial-game-state)
-                         (assoc :input "look"))
-          after-look (parser/parser-from-input game-state)]
-      (is (nil? (parser/get-parser-error after-look)))
-      (is (true? (get-in after-look [:parser :won])))
+  (deftest handle-again-after-failed-parse-test
+    (testing "AGAIN after failed parse returns mistake error"
+      (let [;; First, parse a successful command to set again-lexv
+            game-state (-> (gs/initial-game-state)
+                           (assoc :input "look"))
+            after-look (parser/parser-from-input game-state)]
+        (is (nil? (parser/get-parser-error after-look)))
+        (is (true? (get-in after-look [:parser :won])))
 
       ;; Now parse a bad command (gibberish) - this should fail
-      (let [after-bad (parser/parser-from-input (assoc after-look :input "xyzzy123"))]
-        (is (some? (parser/get-parser-error after-bad)))
+        (let [after-bad (parser/parser-from-input (assoc after-look :input "xyzzy123"))]
+          (is (some? (parser/get-parser-error after-bad)))
         ;; :won should now be false because parsing failed
-        (is (false? (get-in after-bad [:parser :won])))
+          (is (false? (get-in after-bad [:parser :won])))
 
         ;; Now try G - it should say "That would just repeat a mistake"
-        (let [after-again (parser/parser-from-input (assoc after-bad :input "g"))]
-          (is (some? (parser/get-parser-error after-again)))
-          (is (= :again-mistake (get-in after-again [:parser :error :type]))))))))
+          (let [after-again (parser/parser-from-input (assoc after-bad :input "g"))]
+            (is (some? (parser/get-parser-error after-again)))
+            (is (= :again-mistake (get-in after-again [:parser :error :type]))))))))
 
-(deftest handle-again-with-object-command-test
-  (testing "AGAIN repeats commands with objects"
-    (let [game-state (-> (gs/initial-game-state)
-                         (assoc :input "examine mailbox"))
-          after-examine (parser/parser-from-input game-state)]
-      ;; Verify first parse succeeded
-      (is (nil? (parser/get-parser-error after-examine)))
-      (is (= :examine (parser/get-prsa after-examine)))
-      (is (= :mailbox (parser/get-prso after-examine)))
+  (deftest handle-again-with-object-command-test
+    (testing "AGAIN repeats commands with objects"
+      (let [original-vocab verb-defs/*verb-vocabulary*]
+        (try
+          (verb-defs/register-object-vocabulary!
+           {:mailbox {:id :mailbox :synonym ["mailbox"]}})
+          (let [game-state (-> (gs/initial-game-state)
+                               (gs/add-room {:id :west-of-house :desc "West of House"
+                                             :flags #{:lit}})
+                               (gs/add-object {:id :mailbox
+                                               :in :west-of-house
+                                               :synonym ["mailbox"]
+                                               :desc "small mailbox"})
+                               (assoc :here :west-of-house)
+                               (assoc :input "examine mailbox"))
+                after-examine (parser/parser-from-input game-state)]
+            ;; Verify first parse succeeded
+            (is (nil? (parser/get-parser-error after-examine)))
+            (is (= :examine (parser/get-prsa after-examine)))
+            (is (= :mailbox (parser/get-prso after-examine)))
 
-      ;; Repeat with G
-      (let [after-again (parser/parser-from-input (assoc after-examine :input "g"))]
-        (is (nil? (parser/get-parser-error after-again)))
-        (is (= :examine (parser/get-prsa after-again)))
-        (is (= :mailbox (parser/get-prso after-again)))))))
+            ;; Repeat with G
+            (let [after-again (parser/parser-from-input (assoc after-examine :input "g"))]
+              (is (nil? (parser/get-parser-error after-again)))
+              (is (= :examine (parser/get-prsa after-again)))
+              (is (= :mailbox (parser/get-prso after-again)))))
+          (finally
+            (alter-var-root #'verb-defs/*verb-vocabulary* (constantly original-vocab)))))))
 
-(deftest handle-again-recovers-after-good-command-test
-  (testing "AGAIN works after a successful command following a failed one"
-    (let [;; First command succeeds
-          gs1 (-> (gs/initial-game-state)
-                  (assoc :input "look"))
-          after-look (parser/parser-from-input gs1)]
-      (is (nil? (parser/get-parser-error after-look)))
+  (deftest handle-again-recovers-after-good-command-test
+    (testing "AGAIN works after a successful command following a failed one"
+      (let [;; First command succeeds
+            gs1 (-> (gs/initial-game-state)
+                    (assoc :input "look"))
+            after-look (parser/parser-from-input gs1)]
+        (is (nil? (parser/get-parser-error after-look)))
 
       ;; Second command fails
-      (let [after-bad (parser/parser-from-input (assoc after-look :input "xyzzy123"))]
-        (is (some? (parser/get-parser-error after-bad)))
-        (is (false? (get-in after-bad [:parser :won])))
+        (let [after-bad (parser/parser-from-input (assoc after-look :input "xyzzy123"))]
+          (is (some? (parser/get-parser-error after-bad)))
+          (is (false? (get-in after-bad [:parser :won])))
 
         ;; Third command succeeds (inventory)
-        (let [after-inv (parser/parser-from-input (assoc after-bad :input "inventory"))]
-          (is (nil? (parser/get-parser-error after-inv)))
-          (is (= :inventory (parser/get-prsa after-inv)))
-          (is (true? (get-in after-inv [:parser :won])))
+          (let [after-inv (parser/parser-from-input (assoc after-bad :input "inventory"))]
+            (is (nil? (parser/get-parser-error after-inv)))
+            (is (= :inventory (parser/get-prsa after-inv)))
+            (is (true? (get-in after-inv [:parser :won])))
 
           ;; Now G should repeat inventory, not fail
-          (let [after-again (parser/parser-from-input (assoc after-inv :input "g"))]
-            (is (nil? (parser/get-parser-error after-again)))
-            (is (= :inventory (parser/get-prsa after-again)))))))))
+            (let [after-again (parser/parser-from-input (assoc after-inv :input "g"))]
+              (is (nil? (parser/get-parser-error after-again)))
+              (is (= :inventory (parser/get-prsa after-again)))))))))
 
-(deftest handle-again-with-preposition-command-test
-  (testing "AGAIN repeats commands with prepositions (regression test for :len bug)"
-    ;; This tests the bug where :len wasn't restored, causing multi-word
-    ;; commands like "go around house" to fail silently on AGAIN
-    (let [game-state (-> (gs/initial-game-state)
-                         (assoc :input "go around house"))
-          after-cmd (parser/parser-from-input game-state)]
-      ;; Verify first parse succeeded
-      (is (nil? (parser/get-parser-error after-cmd)))
-      (is (= :walk-around (parser/get-prsa after-cmd)))
-      (is (true? (get-in after-cmd [:parser :won])))
-      ;; Verify :len was consumed during parsing
-      (is (zero? (parser/get-len after-cmd)))
+  (deftest handle-again-with-multiword-command-test
+    (testing "AGAIN repeats multi-word commands (regression test for :len bug)"
+      ;; This tests the bug where :len wasn't restored, causing multi-word
+      ;; commands to fail silently on AGAIN
+      (let [original-vocab verb-defs/*verb-vocabulary*]
+        (try
+          (verb-defs/register-object-vocabulary!
+           {:mailbox {:id :mailbox :synonym ["mailbox"] :adjective ["small"]}})
+          (let [game-state (-> (gs/initial-game-state)
+                               (gs/add-room {:id :west-of-house :desc "West of House"
+                                             :flags #{:lit}})
+                               (gs/add-object {:id :mailbox
+                                               :in :west-of-house
+                                               :synonym ["mailbox"]
+                                               :adjective ["small"]
+                                               :desc "small mailbox"})
+                               (assoc :here :west-of-house)
+                               (assoc :input "examine small mailbox"))
+                after-cmd (parser/parser-from-input game-state)]
+            ;; Verify first parse succeeded (3-word command)
+            (is (nil? (parser/get-parser-error after-cmd)))
+            (is (= :examine (parser/get-prsa after-cmd)))
+            (is (= :mailbox (parser/get-prso after-cmd)))
+            (is (true? (get-in after-cmd [:parser :won])))
+            ;; Verify :len was consumed during parsing
+            (is (zero? (parser/get-len after-cmd)))
 
-      ;; Now repeat with G - this should restore :len and re-parse
-      (let [after-again (parser/parser-from-input (assoc after-cmd :input "g"))]
-        (is (nil? (parser/get-parser-error after-again))
-            "AGAIN should not fail - :len must be restored from again-lexv")
-        (is (= :walk-around (parser/get-prsa after-again)))))))
+            ;; Now repeat with G - this should restore :len and re-parse
+            (let [after-again (parser/parser-from-input (assoc after-cmd :input "g"))]
+              (is (nil? (parser/get-parser-error after-again))
+                  "AGAIN should not fail - :len must be restored from again-lexv")
+              (is (= :examine (parser/get-prsa after-again)))
+              (is (= :mailbox (parser/get-prso after-again)))))
+          (finally
+            (alter-var-root #'verb-defs/*verb-vocabulary* (constantly original-vocab)))))))
 
-(deftest handle-again-direction-shortcut-test
-  (testing "AGAIN repeats bare direction commands"
-    (let [game-state (-> (gs/initial-game-state)
-                         (assoc :input "n"))
-          after-cmd (parser/parser-from-input game-state)]
+  (deftest handle-again-direction-shortcut-test
+    (testing "AGAIN repeats bare direction commands"
+      (let [game-state (-> (gs/initial-game-state)
+                           (assoc :input "n"))
+            after-cmd (parser/parser-from-input game-state)]
       ;; Verify direction shortcut parsed correctly
-      (is (nil? (parser/get-parser-error after-cmd)))
-      (is (= :walk (parser/get-prsa after-cmd)))
-      (is (= :north (parser/get-prso after-cmd)))
-      (is (true? (get-in after-cmd [:parser :won])))
+        (is (nil? (parser/get-parser-error after-cmd)))
+        (is (= :walk (parser/get-prsa after-cmd)))
+        (is (= :north (parser/get-prso after-cmd)))
+        (is (true? (get-in after-cmd [:parser :won])))
 
       ;; Repeat with G
-      (let [after-again (parser/parser-from-input (assoc after-cmd :input "g"))]
-        (is (nil? (parser/get-parser-error after-again)))
-        (is (= :walk (parser/get-prsa after-again)))
-        (is (= :north (parser/get-prso after-again)))))))
+        (let [after-again (parser/parser-from-input (assoc after-cmd :input "g"))]
+          (is (nil? (parser/get-parser-error after-again)))
+          (is (= :walk (parser/get-prsa after-again)))
+          (is (= :north (parser/get-prso after-again)))))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; AUTO-TAKE (ITAKE) TESTS
@@ -929,225 +958,306 @@
 ;;; MULTI-OBJECT PARSING TESTS (X AND Y)
 ;;; ---------------------------------------------------------------------------
 
-(deftest multi-object-parsing-test
-  (testing "parser collects multiple objects with 'and'"
-    (let [gs (-> (gs/initial-game-state)
-                 (gs/add-room {:id :living-room :desc "Living Room"
-                               :flags #{:lit}})
-                 (gs/add-object {:id :sword :desc "sword"
-                                 :synonym ["sword"]
-                                 :in :living-room
-                                 :flags #{:take}})
-                 (gs/add-object {:id :lamp :desc "lamp"
-                                 :synonym ["lamp"]
-                                 :in :living-room
-                                 :flags #{:take}})
-                 (assoc :here :living-room)
-                 (assoc :input "take sword and lamp"))
-          result (parser/parser-from-input gs)]
-      ;; Should parse successfully
-      (is (nil? (parser/get-parser-error result)))
-      (is (= :take (parser/get-prsa result)))
-      ;; prso should contain BOTH objects
-      (let [all-prso (parser-state/get-prso-all result)]
-        (is (= 2 (count all-prso)))
-        (is (some #{:sword} all-prso))
-        (is (some #{:lamp} all-prso)))))
+  (deftest multi-object-parsing-test
+    (let [original-vocab verb-defs/*verb-vocabulary*]
+      (try
+        (verb-defs/register-object-vocabulary!
+         {:sword {:id :sword :synonym ["sword"]}
+          :lamp {:id :lamp :synonym ["lamp"]}
+          :key {:id :key :synonym ["key"]}})
 
-  (testing "parser collects multiple objects with comma"
-    (let [gs (-> (gs/initial-game-state)
-                 (gs/add-room {:id :living-room :desc "Living Room"
-                               :flags #{:lit}})
-                 (gs/add-object {:id :sword :desc "sword"
-                                 :synonym ["sword"]
-                                 :in :living-room
-                                 :flags #{:take}})
-                 (gs/add-object {:id :lamp :desc "lamp"
-                                 :synonym ["lamp"]
-                                 :in :living-room
-                                 :flags #{:take}})
-                 (assoc :here :living-room)
-                 (assoc :input "take sword, lamp"))
-          result (parser/parser-from-input gs)]
-      ;; Should parse successfully
-      (is (nil? (parser/get-parser-error result)))
-      (is (= :take (parser/get-prsa result)))
-      ;; prso should contain BOTH objects
-      (let [all-prso (parser-state/get-prso-all result)]
-        (is (= 2 (count all-prso)))
-        (is (some #{:sword} all-prso))
-        (is (some #{:lamp} all-prso)))))
+        (testing "parser collects multiple objects with 'and'"
+          (let [gs (-> (gs/initial-game-state)
+                       (gs/add-room {:id :living-room :desc "Living Room"
+                                     :flags #{:lit}})
+                       (gs/add-object {:id :sword :desc "sword"
+                                       :synonym ["sword"]
+                                       :in :living-room
+                                       :flags #{:take}})
+                       (gs/add-object {:id :lamp :desc "lamp"
+                                       :synonym ["lamp"]
+                                       :in :living-room
+                                       :flags #{:take}})
+                       (assoc :here :living-room)
+                       (assoc :input "take sword and lamp"))
+                result (parser/parser-from-input gs)]
+            ;; Should parse successfully
+            (is (nil? (parser/get-parser-error result)))
+            (is (= :take (parser/get-prsa result)))
+            ;; prso should contain BOTH objects
+            (let [all-prso (parser-state/get-prso-all result)]
+              (is (= 2 (count all-prso)))
+              (is (some #{:sword} all-prso))
+              (is (some #{:lamp} all-prso)))))
 
-  (testing "parser handles three objects with 'and'"
-    (let [gs (-> (gs/initial-game-state)
-                 (gs/add-room {:id :living-room :desc "Living Room"
-                               :flags #{:lit}})
-                 (gs/add-object {:id :sword :desc "sword"
-                                 :synonym ["sword"]
-                                 :in :living-room
-                                 :flags #{:take}})
-                 (gs/add-object {:id :lamp :desc "lamp"
-                                 :synonym ["lamp"]
-                                 :in :living-room
-                                 :flags #{:take}})
-                 (gs/add-object {:id :key :desc "key"
-                                 :synonym ["key"]
-                                 :in :living-room
-                                 :flags #{:take}})
-                 (assoc :here :living-room)
-                 (assoc :input "take sword and lamp and key"))
-          result (parser/parser-from-input gs)]
-      (is (nil? (parser/get-parser-error result)))
-      (let [all-prso (parser-state/get-prso-all result)]
-        (is (= 3 (count all-prso)))
-        (is (some #{:sword} all-prso))
-        (is (some #{:lamp} all-prso))
-        (is (some #{:key} all-prso))))))
+        (testing "parser collects multiple objects with comma"
+          (let [gs (-> (gs/initial-game-state)
+                       (gs/add-room {:id :living-room :desc "Living Room"
+                                     :flags #{:lit}})
+                       (gs/add-object {:id :sword :desc "sword"
+                                       :synonym ["sword"]
+                                       :in :living-room
+                                       :flags #{:take}})
+                       (gs/add-object {:id :lamp :desc "lamp"
+                                       :synonym ["lamp"]
+                                       :in :living-room
+                                       :flags #{:take}})
+                       (assoc :here :living-room)
+                       (assoc :input "take sword, lamp"))
+                result (parser/parser-from-input gs)]
+            ;; Should parse successfully
+            (is (nil? (parser/get-parser-error result)))
+            (is (= :take (parser/get-prsa result)))
+            ;; prso should contain BOTH objects
+            (let [all-prso (parser-state/get-prso-all result)]
+              (is (= 2 (count all-prso)))
+              (is (some #{:sword} all-prso))
+              (is (some #{:lamp} all-prso)))))
 
-(deftest multi-object-not-found-test
-  (testing "parser returns error when objects not visible"
-    (let [gs (-> (gs/initial-game-state)
-                 (gs/add-room {:id :empty-room :desc "Empty Room"
-                               :flags #{:lit}})
+        (testing "parser handles three objects with 'and'"
+          (let [gs (-> (gs/initial-game-state)
+                       (gs/add-room {:id :living-room :desc "Living Room"
+                                     :flags #{:lit}})
+                       (gs/add-object {:id :sword :desc "sword"
+                                       :synonym ["sword"]
+                                       :in :living-room
+                                       :flags #{:take}})
+                       (gs/add-object {:id :lamp :desc "lamp"
+                                       :synonym ["lamp"]
+                                       :in :living-room
+                                       :flags #{:take}})
+                       (gs/add-object {:id :key :desc "key"
+                                       :synonym ["key"]
+                                       :in :living-room
+                                       :flags #{:take}})
+                       (assoc :here :living-room)
+                       (assoc :input "take sword and lamp and key"))
+                result (parser/parser-from-input gs)]
+            (is (nil? (parser/get-parser-error result)))
+            (let [all-prso (parser-state/get-prso-all result)]
+              (is (= 3 (count all-prso)))
+              (is (some #{:sword} all-prso))
+              (is (some #{:lamp} all-prso))
+              (is (some #{:key} all-prso)))))
+
+        (finally
+          (alter-var-root #'verb-defs/*verb-vocabulary* (constantly original-vocab))))))
+
+  (deftest multi-object-not-found-test
+    (testing "parser returns error when objects not visible"
+      (let [gs (-> (gs/initial-game-state)
+                   (gs/add-room {:id :empty-room :desc "Empty Room"
+                                 :flags #{:lit}})
                  ;; Objects exist but are in a different room
-                 (gs/add-object {:id :test-sword :desc "sword"
-                                 :synonym ["sword"]
-                                 :in :other-room
-                                 :flags #{:take}})
-                 (gs/add-object {:id :test-lamp :desc "lamp"
-                                 :synonym ["lamp"]
-                                 :in :other-room
-                                 :flags #{:take}})
-                 (assoc :here :empty-room)
-                 (assoc :input "take sword and lamp"))
-          result (parser/parser-from-input gs)]
+                   (gs/add-object {:id :test-sword :desc "sword"
+                                   :synonym ["sword"]
+                                   :in :other-room
+                                   :flags #{:take}})
+                   (gs/add-object {:id :test-lamp :desc "lamp"
+                                   :synonym ["lamp"]
+                                   :in :other-room
+                                   :flags #{:take}})
+                   (assoc :here :empty-room)
+                   (assoc :input "take sword and lamp"))
+            result (parser/parser-from-input gs)]
       ;; Should fail - objects aren't visible from empty-room
-      (is (some? (parser/get-parser-error result))))))
+        (is (some? (parser/get-parser-error result))))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; ALL-MODE PARSING AND EXECUTION TESTS
 ;;; ---------------------------------------------------------------------------
 
-(deftest all-mode-parsing-test
-  (testing "parser sets ALL flag in getflags when 'all' is used"
-    (let [gs (-> (gs/initial-game-state)
-                 (gs/add-room {:id :living-room :desc "Living Room"
-                               :flags #{:lit}})
-                 (gs/add-object {:id :sword :desc "sword"
-                                 :synonym ["sword"]
-                                 :in :living-room
-                                 :flags #{:take}})
-                 (assoc :here :living-room)
-                 (assoc :input "take all"))
-          result (parser/parser-from-input gs)]
+  (deftest all-mode-parsing-test
+    (testing "parser sets ALL flag in getflags when 'all' is used"
+      (let [gs (-> (gs/initial-game-state)
+                   (gs/add-room {:id :living-room :desc "Living Room"
+                                 :flags #{:lit}})
+                   (gs/add-object {:id :sword :desc "sword"
+                                   :synonym ["sword"]
+                                   :in :living-room
+                                   :flags #{:take}})
+                   (assoc :here :living-room)
+                   (assoc :input "take all"))
+            result (parser/parser-from-input gs)]
       ;; Parser should succeed
-      (is (nil? (parser/get-parser-error result)))
-      (is (= :take (parser/get-prsa result)))
+        (is (nil? (parser/get-parser-error result)))
+        (is (= :take (parser/get-prsa result)))
       ;; The getflags should have the ALL bit set
-      (let [getflags (get-in result [:parser :getflags] 0)
-            all-bit (:all gs/getflags)]
-        (is (pos? (bit-and getflags all-bit))
-            "ALL flag should be set in getflags"))))
+        (let [getflags (get-in result [:parser :getflags] 0)
+              all-bit (:all gs/getflags)]
+          (is (pos? (bit-and getflags all-bit))
+              "ALL flag should be set in getflags"))))
 
-  (testing "'take all' finds multiple objects in room"
-    (let [gs (-> (gs/initial-game-state)
-                 (gs/add-room {:id :living-room :desc "Living Room"
-                               :flags #{:lit}})
-                 (gs/add-object {:id :sword :desc "sword"
-                                 :synonym ["sword"]
-                                 :in :living-room
-                                 :flags #{:take}})
-                 (gs/add-object {:id :lamp :desc "brass lamp"
-                                 :synonym ["lamp" "lantern"]
-                                 :in :living-room
-                                 :flags #{:take}})
-                 (assoc :here :living-room)
-                 (assoc :input "take all"))
-          result (parser/parser-from-input gs)]
-      (is (nil? (parser/get-parser-error result)))
-      (let [all-prso (parser-state/get-prso-all result)]
-        (is (>= (count all-prso) 2)
-            "Should find at least 2 objects with 'take all'"))))
+    (testing "'take all' finds multiple objects in room"
+      (let [gs (-> (gs/initial-game-state)
+                   (gs/add-room {:id :living-room :desc "Living Room"
+                                 :flags #{:lit}})
+                   (gs/add-object {:id :sword :desc "sword"
+                                   :synonym ["sword"]
+                                   :in :living-room
+                                   :flags #{:take}})
+                   (gs/add-object {:id :lamp :desc "brass lamp"
+                                   :synonym ["lamp" "lantern"]
+                                   :in :living-room
+                                   :flags #{:take}})
+                   (assoc :here :living-room)
+                   (assoc :input "take all"))
+            result (parser/parser-from-input gs)]
+        (is (nil? (parser/get-parser-error result)))
+        (let [all-prso (parser-state/get-prso-all result)]
+          (is (>= (count all-prso) 2)
+              "Should find at least 2 objects with 'take all'"))))
 
-  (testing "'take all' with single object still sets all-mode flag"
+    (testing "'take all' with single object still sets all-mode flag"
     ;; This tests the specific bug that was fixed:
     ;; Even with a single object, 'take all' should print the object prefix
-    (let [gs (-> (gs/initial-game-state)
-                 (gs/add-room {:id :test-room :desc "Test Room"
-                               :flags #{:lit}})
-                 (gs/add-object {:id :single-obj :desc "widget"
-                                 :synonym ["widget"]
-                                 :in :test-room
-                                 :flags #{:take}})
-                 (assoc :here :test-room)
-                 (assoc :input "take all"))
-          result (parser/parser-from-input gs)]
-      (is (nil? (parser/get-parser-error result)))
+      (let [gs (-> (gs/initial-game-state)
+                   (gs/add-room {:id :test-room :desc "Test Room"
+                                 :flags #{:lit}})
+                   (gs/add-object {:id :single-obj :desc "widget"
+                                   :synonym ["widget"]
+                                   :in :test-room
+                                   :flags #{:take}})
+                   (assoc :here :test-room)
+                   (assoc :input "take all"))
+            result (parser/parser-from-input gs)]
+        (is (nil? (parser/get-parser-error result)))
       ;; Even with single object, ALL flag should be set
-      (let [getflags (get-in result [:parser :getflags] 0)
-            all-bit (:all gs/getflags)]
-        (is (pos? (bit-and getflags all-bit))
-            "ALL flag should be set even with single object")))))
+        (let [getflags (get-in result [:parser :getflags] 0)
+              all-bit (:all gs/getflags)]
+          (is (pos? (bit-and getflags all-bit))
+              "ALL flag should be set even with single object")))))
 
-(deftest perform-all-mode-prefix-test
-  (testing "perform prints object prefix in all-mode even with single object"
+  (deftest perform-all-mode-prefix-test
+    (testing "perform prints object prefix in all-mode even with single object"
     ;; This is the core test for the bug fix:
     ;; In ZIL: <OR <G? .NUM 1> <EQUAL? <GET <GET ,P-ITBL ,P-NC1> 0> ,W?ALL>>
     ;; Print prefix if count > 1 OR if we're in "all" mode
-    (let [gs (-> (gs/initial-game-state)
-                 (gs/add-room {:id :test-room :desc "Test Room"
-                               :flags #{:lit}})
-                 (gs/add-object {:id :test-obj :desc "widget"
-                                 :synonym ["widget"]
-                                 :in :test-room
-                                 :flags #{:take}})
-                 (assoc :here :test-room)
-                 (assoc-in [:parser :prsa] :take)
-                 (assoc-in [:parser :prso] [:test-obj])
+      (let [gs (-> (gs/initial-game-state)
+                   (gs/add-room {:id :test-room :desc "Test Room"
+                                 :flags #{:lit}})
+                   (gs/add-object {:id :test-obj :desc "widget"
+                                   :synonym ["widget"]
+                                   :in :test-room
+                                   :flags #{:take}})
+                   (assoc :here :test-room)
+                   (assoc-in [:parser :prsa] :take)
+                   (assoc-in [:parser :prso] [:test-obj])
                  ;; Key: set getflags to include ALL flag
-                 (assoc-in [:parser :getflags] (:all gs/getflags)))
-          output (with-out-str (verb-defs/perform gs))]
+                   (assoc-in [:parser :getflags] (:all gs/getflags)))
+            output (with-out-str (verb-defs/perform gs))]
       ;; The output should contain the object prefix "widget: "
-      (is (re-find #"widget:" output)
-          "In all-mode, single object should still have prefix printed")))
+        (is (re-find #"widget:" output)
+            "In all-mode, single object should still have prefix printed")))
 
-  (testing "perform does not print prefix for single object without all-mode"
+    (testing "perform does not print prefix for single object without all-mode"
     ;; Control test: without all-mode flag, single object should NOT have prefix
-    (let [gs (-> (gs/initial-game-state)
-                 (gs/add-room {:id :test-room :desc "Test Room"
-                               :flags #{:lit}})
-                 (gs/add-object {:id :test-obj :desc "widget"
-                                 :synonym ["widget"]
-                                 :in :test-room
-                                 :flags #{:take}})
-                 (assoc :here :test-room)
-                 (assoc-in [:parser :prsa] :take)
-                 (assoc-in [:parser :prso] [:test-obj])
+      (let [gs (-> (gs/initial-game-state)
+                   (gs/add-room {:id :test-room :desc "Test Room"
+                                 :flags #{:lit}})
+                   (gs/add-object {:id :test-obj :desc "widget"
+                                   :synonym ["widget"]
+                                   :in :test-room
+                                   :flags #{:take}})
+                   (assoc :here :test-room)
+                   (assoc-in [:parser :prsa] :take)
+                   (assoc-in [:parser :prso] [:test-obj])
                  ;; No getflags = 0 = not in all-mode
-                 (assoc-in [:parser :getflags] 0))
-          output (with-out-str (verb-defs/perform gs))]
+                   (assoc-in [:parser :getflags] 0))
+            output (with-out-str (verb-defs/perform gs))]
       ;; Output should NOT contain the prefix pattern
-      (is (not (re-find #"widget:" output))
-          "Without all-mode, single object should not have prefix")))
+        (is (not (re-find #"widget:" output))
+            "Without all-mode, single object should not have prefix")))
 
-  (testing "perform prints prefix for multiple objects"
+    (testing "perform prints prefix for multiple objects"
     ;; Sanity check: multiple objects always get prefixes
-    (let [gs (-> (gs/initial-game-state)
-                 (gs/add-room {:id :test-room :desc "Test Room"
-                               :flags #{:lit}})
-                 (gs/add-object {:id :test-obj1 :desc "widget"
-                                 :synonym ["widget"]
-                                 :in :test-room
-                                 :flags #{:take}})
-                 (gs/add-object {:id :test-obj2 :desc "gadget"
-                                 :synonym ["gadget"]
-                                 :in :test-room
-                                 :flags #{:take}})
-                 (assoc :here :test-room)
-                 (assoc-in [:parser :prsa] :take)
-                 (assoc-in [:parser :prso] [:test-obj1 :test-obj2])
-                 (assoc-in [:parser :getflags] 0))
-          output (with-out-str (verb-defs/perform gs))]
+      (let [gs (-> (gs/initial-game-state)
+                   (gs/add-room {:id :test-room :desc "Test Room"
+                                 :flags #{:lit}})
+                   (gs/add-object {:id :test-obj1 :desc "widget"
+                                   :synonym ["widget"]
+                                   :in :test-room
+                                   :flags #{:take}})
+                   (gs/add-object {:id :test-obj2 :desc "gadget"
+                                   :synonym ["gadget"]
+                                   :in :test-room
+                                   :flags #{:take}})
+                   (assoc :here :test-room)
+                   (assoc-in [:parser :prsa] :take)
+                   (assoc-in [:parser :prso] [:test-obj1 :test-obj2])
+                   (assoc-in [:parser :getflags] 0))
+            output (with-out-str (verb-defs/perform gs))]
       ;; Both objects should have prefixes
-      (is (re-find #"widget:" output) "First object should have prefix")
-      (is (re-find #"gadget:" output) "Second object should have prefix")))))
+        (is (re-find #"widget:" output) "First object should have prefix")
+        (is (re-find #"gadget:" output) "Second object should have prefix"))))
+
+;;; ---------------------------------------------------------------------------
+;;; TAKE FROM SYNTAX TESTS (regression test for empty word bug)
+;;; ---------------------------------------------------------------------------
+
+(deftest take-from-syntax-test
+  (testing "parsing 'take X from Y' works correctly"
+    ;; This is a regression test for a bug where "get all from mailbox"
+    ;; resulted in "I don't know the word ''" due to :len counter being off
+    (let [original-vocab verb-defs/*verb-vocabulary*]
+      (try
+        ;; Register test objects in vocabulary
+        (verb-defs/register-object-vocabulary!
+         {:container {:id :container :synonym ["box"]}
+          :item {:id :item :synonym ["widget"]}})
+        (let [gs (-> (gs/initial-game-state)
+                     (gs/add-room {:id :test-room :desc "Test Room"
+                                   :flags #{:lit}})
+                     (gs/add-object {:id :container :desc "box"
+                                     :synonym ["box"]
+                                     :in :test-room
+                                     :flags #{:cont :open}})
+                     (gs/add-object {:id :item :desc "widget"
+                                     :synonym ["widget"]
+                                     :in :container
+                                     :flags #{:take}})
+                     (assoc :here :test-room)
+                     (assoc :input "take widget from box"))
+              result (parser/parser-from-input gs)]
+          ;; Should parse successfully
+          (is (nil? (parser/get-parser-error result))
+              "Should not have parser error")
+          (is (= :take (parser/get-prsa result))
+              "Action should be :take")
+          ;; Should have prso (object to take) and prsi (container)
+          (is (= :item (parser/get-prso result))
+              "Direct object should be the item")
+          (is (= :container (parser/get-prsi result))
+              "Indirect object should be the container"))
+        (finally
+          (alter-var-root #'verb-defs/*verb-vocabulary* (constantly original-vocab))))))
+
+  (testing "parsing 'get all from Y' doesn't produce empty word error"
+    (let [original-vocab verb-defs/*verb-vocabulary*]
+      (try
+        ;; Register test objects in vocabulary
+        (verb-defs/register-object-vocabulary!
+         {:container {:id :container :synonym ["box"]}
+          :item {:id :item :synonym ["widget"]}})
+        (let [gs (-> (gs/initial-game-state)
+                     (gs/add-room {:id :test-room :desc "Test Room"
+                                   :flags #{:lit}})
+                     (gs/add-object {:id :container :desc "box"
+                                     :synonym ["box"]
+                                     :in :test-room
+                                     :flags #{:cont :open}})
+                     (gs/add-object {:id :item :desc "widget"
+                                     :synonym ["widget"]
+                                     :in :container
+                                     :flags #{:take}})
+                     (assoc :here :test-room)
+                     (assoc :input "get all from box"))
+              result (parser/parser-from-input gs)]
+          ;; Should not produce "unknown word" error (the original bug)
+          (is (not= :unknown-word (get-in result [:parser :error :type]))
+              "Should not get 'unknown word' error")
+          ;; Should parse as take with prsi = container
+          (is (= :take (parser/get-prsa result))
+              "Action should be :take"))
+        (finally
+          (alter-var-root #'verb-defs/*verb-vocabulary* (constantly original-vocab)))))))

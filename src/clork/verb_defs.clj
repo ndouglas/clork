@@ -89,9 +89,27 @@
                 :handler verbs/v-inventory}
 
    ;; === Manipulation Verbs ===
+   ;; ZIL: TAKE has multiple syntaxes:
+   ;;   <SYNTAX TAKE OBJECT (ON-GROUND IN-ROOM MANY) = V-TAKE>
+   ;;   <SYNTAX TAKE OBJECT FROM OBJECT (ON-GROUND) = V-TAKE>
+   ;;   <SYNTAX TAKE OBJECT OFF OBJECT (ON-GROUND) = V-TAKE>
+   ;;   <SYNTAX TAKE OBJECT OUT OF OBJECT (ON-GROUND) = V-TAKE>
    :take       {:words   ["take" "get" "hold" "carry" "remove" "grab" "catch"]
-                :syntax  {:num-objects 1
-                          :loc1 #{:in-room :on-ground :many}}
+                :syntax  [;; Basic: TAKE OBJECT
+                          {:num-objects 1
+                           :loc1 #{:in-room :on-ground :many}}
+
+                          ;; TAKE OBJECT FROM OBJECT - take from container
+                          {:num-objects 2
+                           :prep2 :from
+                           :loc1 #{:carried :in-room :many}
+                           :loc2 #{:on-ground}}
+
+                          ;; TAKE OBJECT OFF OBJECT - take off surface
+                          {:num-objects 2
+                           :prep2 :off
+                           :loc1 #{:carried :in-room :many}
+                           :loc2 #{:on-ground}}]
                 :handler verbs/v-take}
 
    :read       {:words   ["read" "skim"]
