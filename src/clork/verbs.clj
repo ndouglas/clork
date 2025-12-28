@@ -813,7 +813,8 @@
                  (assoc-in [:rooms room-id :value] 0))
              gs)]
     ;; Describe the room (V-FIRST-LOOK)
-    (verbs-look/v-look gs)))
+    ;; ZIL: V-FIRST-LOOK only calls DESCRIBE-OBJECTS if room is lit
+    (verbs-look/v-first-look gs)))
 
 (defn v-walk
   "Move in a direction.

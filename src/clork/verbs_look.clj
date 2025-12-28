@@ -65,8 +65,9 @@
          here (gs/get-here game-state)
          act (:action here)]
      (if (not lit?)
-       ;; Dark room - tell them and return
-       (utils/tell game-state "It is pitch black. You are likely to be eaten by a grue.")
+       ;; Dark room - tell them and return (ZIL: <RFALSE> after this)
+       (-> game-state
+           (utils/tell "It is pitch black. You are likely to be eaten by a grue.\n"))
        ;; Lit room - describe it, threading state through each operation
        ;; ZIL: <TELL D ,HERE> <CRLF> -- print room name first
        (let [room-name (:desc here)
@@ -308,10 +309,37 @@
            game-state))
        (utils/tell game-state "Only bats can see in the dark. And you're not one.\n")))))
 
+;; ZIL: <ROUTINE V-FIRST-LOOK ()
+;;        <COND (<DESCRIBE-ROOM>
+;;               <COND (<NOT ,SUPER-BRIEF>
+;;                      <DESCRIBE-OBJECTS>)>)>>
+;;
+;; V-FIRST-LOOK is called when entering a room.
+;; It only describes objects if the room was described (i.e., lit).
+(defn v-first-look
+  "Describes the room when entering. Only describes objects if lit.
+   ZIL: V-FIRST-LOOK in gverbs.zil"
+  ([game-state] (v-first-look game-state (gs/get-winner-loc game-state)))
+  ([game-state location]
+   (let [lit? (or (:lit game-state) (gs/set-here-flag? game-state :lit))
+         state (describe-room game-state location false)]
+     (if (and lit? (not (:super-brief game-state)))
+       (describe-objects state false)
+       state))))
+
+;; ZIL: <ROUTINE V-LOOK ()
+;;        <COND (<DESCRIBE-ROOM T>
+;;               <DESCRIBE-OBJECTS T>)>>
+;;
+;; V-LOOK is called for explicit LOOK command.
+;; It only describes objects if the room was described (i.e., lit).
 (defn v-look
-  "Describes the room and any objects."
+  "Describes the room and any objects for explicit LOOK command.
+   ZIL: V-LOOK in gverbs.zil"
   ([game-state] (v-look game-state (gs/get-winner-loc game-state)))
   ([game-state location]
-   (-> game-state
-       (describe-room location true)
-       (describe-objects true))))
+   (let [lit? (or (:lit game-state) (gs/set-here-flag? game-state :lit))
+         state (describe-room game-state location true)]
+     (if lit?
+       (describe-objects state true)
+       state))))

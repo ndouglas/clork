@@ -142,8 +142,9 @@
         gs (assoc gs :lit (room-lit? gs room-id))
         ;; Score the room (ZIL: SCORE-OBJ .RM)
         gs (score-room gs room-id)]
-    ;; Describe the room
-    (verbs-look/v-look gs)))
+    ;; Describe the room (V-FIRST-LOOK)
+    ;; ZIL: V-FIRST-LOOK only calls DESCRIBE-OBJECTS if room is lit
+    (verbs-look/v-first-look gs)))
 
 (def white-house
   {:id :white-house
