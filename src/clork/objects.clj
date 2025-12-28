@@ -114,6 +114,19 @@
     (or (contains? room-flags :lit)
         (contains? room-flags :on))))
 
+(defn- score-room
+  "Score a room's value (if any) and set its value to 0.
+   Rooms with a :value property award points on first entry."
+  [game-state room-id]
+  (let [room (gs/get-thing game-state room-id)
+        room-value (get room :value 0)]
+    (if (pos? room-value)
+      (-> game-state
+          (update :base-score + room-value)
+          (update :score + room-value)
+          (assoc-in [:rooms room-id :value] 0))
+      game-state)))
+
 (defn- move-to-room
   "Move the player to a new room and describe it.
    Similar to GOTO in verbs.clj but callable from objects."
@@ -124,7 +137,9 @@
         ;; Update HERE
         gs (assoc gs :here room-id)
         ;; Update LIT flag
-        gs (assoc gs :lit (room-lit? gs room-id))]
+        gs (assoc gs :lit (room-lit? gs room-id))
+        ;; Score the room (ZIL: SCORE-OBJ .RM)
+        gs (score-room gs room-id)]
     ;; Describe the room
     (verbs-look/v-look gs)))
 

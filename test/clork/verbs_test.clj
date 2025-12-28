@@ -270,6 +270,52 @@
                  (verbs/score-obj :diamond))]
       (is (= 10 (:score gs))))))
 
+(deftest room-entry-scoring-test
+  (testing "entering a room with :value awards points"
+    ;; Create a minimal game state with a room that has :value
+    (let [test-room {:id :treasure-vault :desc "Vault" :value 50 :exits {}}
+          start-room {:id :hallway :desc "Hallway" :exits {:north :treasure-vault}}
+          gs (-> (make-test-state)
+                 (gs/add-rooms [test-room start-room])
+                 (assoc :here :hallway)
+                 (assoc-in [:objects :adventurer :in] :hallway)
+                 (assoc-in [:parser :prso] :north))
+          [_ result] (with-captured-output (verbs/v-walk gs))]
+      (is (= 50 (:score result)) "Entering room with :value should award points")
+      (is (= 0 (get-in result [:rooms :treasure-vault :value]))
+          "Room :value should be set to 0 after scoring")))
+
+  (testing "re-entering the same room doesn't award points again"
+    ;; Create a room with value, enter twice
+    (let [test-room {:id :treasure-vault :desc "Vault" :value 50 :exits {:south :hallway}}
+          start-room {:id :hallway :desc "Hallway" :exits {:north :treasure-vault}}
+          gs (-> (make-test-state)
+                 (gs/add-rooms [test-room start-room])
+                 (assoc :here :hallway)
+                 (assoc-in [:objects :adventurer :in] :hallway)
+                 (assoc-in [:parser :prso] :north))
+          ;; First entry
+          [_ result1] (with-captured-output (verbs/v-walk gs))
+          ;; Go back and enter again
+          [_ result2] (with-captured-output
+                        (verbs/v-walk (-> result1
+                                          (assoc :here :treasure-vault)
+                                          (assoc-in [:parser :prso] :south))))
+          [_ result3] (with-captured-output
+                        (verbs/v-walk (-> result2
+                                          (assoc :here :hallway)
+                                          (assoc-in [:parser :prso] :north))))]
+      (is (= 50 (:score result1)) "First entry should award 50 points")
+      (is (= 50 (:score result3)) "Re-entering should not award more points")))
+
+  (testing "rooms without :value don't affect score"
+    (let [gs (-> (make-test-state)
+                 (assoc :here :west-of-house)
+                 (assoc-in [:objects :adventurer :in] :west-of-house)
+                 (assoc-in [:parser :prso] :south))
+          [_ result] (with-captured-output (verbs/v-walk gs))]
+      (is (= 0 (:score result)) "Entering room without :value should not change score"))))
+
 (deftest score-vocabulary-test
   (testing "score is registered in vocabulary as a verb"
     (is (= true (parser/wt? "score" :verb)))

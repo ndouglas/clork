@@ -787,6 +787,7 @@
    - Move winner to new room
    - Update HERE global
    - Update LIT flag
+   - Score the room (if it has a value)
    - Call V-FIRST-LOOK to describe room
 
    Returns updated game-state."
@@ -797,7 +798,16 @@
         ;; Update HERE
         gs (assoc gs :here room-id)
         ;; Update LIT flag
-        gs (assoc gs :lit (room-lit? gs room-id))]
+        gs (assoc gs :lit (room-lit? gs room-id))
+        ;; Score the room (ZIL: SCORE-OBJ .RM in gverbs.zil line 2138)
+        ;; Rooms can have a :value property for first-time entry points
+        room (gs/get-thing gs room-id)
+        room-value (get room :value 0)
+        gs (if (pos? room-value)
+             (-> gs
+                 (score-upd room-value)
+                 (assoc-in [:rooms room-id :value] 0))
+             gs)]
     ;; Describe the room (V-FIRST-LOOK)
     (verbs-look/v-look gs)))
 

@@ -272,6 +272,7 @@
   {:id :kitchen
    :desc "Kitchen"
    :flags #{:lit}
+   :value 10   ; ZIL: (VALUE 10) - points for entering house first time
    :exits {:west :living-room
            :up :attic
            :down :studio  ; via chimney, but only if small
@@ -341,6 +342,7 @@
    :desc "Cellar"
    :ldesc "You are in a dark and damp cellar with a narrow passageway leading north, and a crawlway to the south. On the west is the bottom of a steep metal ramp which is unclimbable."
    :flags #{}  ; Underground - not lit
+   :value 25   ; ZIL: (VALUE 25) - points for entering cellar first time
    :exits {:north :troll-room
            :south :east-of-chasm
            :up {:to :living-room :door :trap-door}
@@ -448,6 +450,7 @@
    :desc "East-West Passage"
    :ldesc "This is a narrow east-west passageway. There is a narrow stairway leading down at the north end of the room."
    :flags #{}
+   :value 5    ; ZIL: (VALUE 5) - points for first-time entry
    :exits {:west :troll-room
            :east "TODO: This exit leads to ROUND-ROOM."
            :down "TODO: This exit leads to CHASM-ROOM."
