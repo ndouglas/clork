@@ -50,7 +50,7 @@ These are out-of-game commands that don't advance time.
 |--------|------|---------|-------------|
 | [x] | WALK/GO/RUN | V-WALK | Move in direction |
 | [x] | ENTER | V-ENTER | Enter location (via :in direction) |
-| [~] | EXIT | V-EXIT | Exit location (via :out direction) |
+| [x] | EXIT | V-EXIT | Exit location (via :out direction) |
 | [ ] | CLIMB | V-CLIMB-FOO | Climb object |
 | [ ] | CLIMB UP | V-CLIMB-UP | Climb up |
 | [ ] | CLIMB DOWN | V-CLIMB-DOWN | Climb down |
@@ -197,16 +197,16 @@ These are out-of-game commands that don't advance time.
 
 | Status | Room ID | Description |
 |--------|---------|-------------|
-| [~] | WEST-OF-HOUSE | West of House (starting location) |
-| [ ] | NORTH-OF-HOUSE | North of House |
-| [ ] | SOUTH-OF-HOUSE | South of House |
-| [ ] | EAST-OF-HOUSE | Behind House |
-| [ ] | CLEARING | Forest Clearing |
-| [ ] | FOREST-1 | Forest |
+| [x] | WEST-OF-HOUSE | West of House (starting location) |
+| [x] | NORTH-OF-HOUSE | North of House |
+| [x] | SOUTH-OF-HOUSE | South of House |
+| [x] | EAST-OF-HOUSE | Behind House |
+| [x] | CLEARING | Forest Clearing |
+| [x] | FOREST-1 | Forest |
 | [ ] | FOREST-2 | Forest |
-| [ ] | FOREST-3 | Forest |
-| [ ] | PATH | Forest Path |
-| [ ] | UP-A-TREE | Up a Tree |
+| [x] | FOREST-3 | Forest |
+| [x] | PATH | Forest Path |
+| [x] | UP-A-TREE | Up a Tree |
 | [ ] | GRATING-CLEARING | Clearing with Grating |
 | [ ] | MOUNTAINS | Mountains |
 | [ ] | END-OF-RAINBOW | End of Rainbow |
@@ -221,29 +221,29 @@ These are out-of-game commands that don't advance time.
 
 | Status | Room ID | Description |
 |--------|---------|-------------|
-| [ ] | KITCHEN | Kitchen |
-| [ ] | LIVING-ROOM | Living Room |
-| [ ] | ATTIC | Attic |
+| [x] | KITCHEN | Kitchen |
+| [x] | LIVING-ROOM | Living Room |
+| [x] | ATTIC | Attic |
 
 ### Underground - Near House
 
 | Status | Room ID | Description |
 |--------|---------|-------------|
-| [ ] | CELLAR | Cellar |
-| [ ] | TROLL-ROOM | Troll Room |
-| [ ] | EW-PASSAGE | East-West Passage |
+| [x] | CELLAR | Cellar |
+| [x] | TROLL-ROOM | Troll Room |
+| [x] | EW-PASSAGE | East-West Passage |
 | [ ] | ROUND-ROOM | Round Room |
 | [ ] | NS-PASSAGE | North-South Passage |
 | [ ] | CHASM-ROOM | Chasm |
-| [ ] | EAST-OF-CHASM | East of Chasm |
-| [ ] | GALLERY | Gallery |
-| [ ] | STUDIO | Studio |
+| [x] | EAST-OF-CHASM | East of Chasm |
+| [x] | GALLERY | Gallery |
+| [x] | STUDIO | Studio |
 
 ### Underground - Maze
 
 | Status | Room ID | Description |
 |--------|---------|-------------|
-| [ ] | MAZE-1 | Maze |
+| [x] | MAZE-1 | Maze |
 | [ ] | MAZE-2 | Maze |
 | [ ] | MAZE-3 | Maze |
 | [ ] | MAZE-4 | Maze |
@@ -353,7 +353,7 @@ These are out-of-game commands that don't advance time.
 | [ ] | MIRROR-ROOM-2 | Mirror Room |
 | [ ] | MACHINE-ROOM | Machine Room |
 | [ ] | SANDY-CAVE | Sandy Cave |
-| [ ] | STONE-BARROW | Stone Barrow (endgame) |
+| [x] | STONE-BARROW | Stone Barrow (endgame) |
 | [ ] | SMELLY-ROOM | Smelly Room |
 | [ ] | SQUEEKY-ROOM | Squeaky Room |
 
@@ -371,10 +371,10 @@ These are out-of-game commands that don't advance time.
 | [ ] | CHALICE | Silver Chalice | 10 |
 | [ ] | COFFIN | Gold Coffin | 10 |
 | [ ] | DIAMOND | Huge Diamond | 10 |
-| [ ] | EGG | Jewel-Encrusted Egg | 5 |
+| [~] | EGG | Jewel-Encrusted Egg | 5 |
 | [ ] | EMERALD | Large Emerald | 5 |
 | [ ] | JADE | Jade Figurine | 5 |
-| [ ] | PAINTING | Beautiful Painting | 4 |
+| [~] | PAINTING | Beautiful Painting | 4 |
 | [ ] | POT-OF-GOLD | Pot of Gold | 10 |
 | [ ] | SCARAB | Jeweled Scarab | 5 |
 | [ ] | SCEPTRE | Royal Sceptre | 4 |
@@ -388,7 +388,7 @@ These are out-of-game commands that don't advance time.
 
 | Status | Object ID | Description |
 |--------|-----------|-------------|
-| [ ] | LAMP | Brass Lantern |
+| [~] | LAMP | Brass Lantern |
 | [ ] | CANDLES | Pair of Candles |
 | [ ] | TORCH | Ivory Torch |
 | [ ] | MATCH | Match |
@@ -397,8 +397,8 @@ These are out-of-game commands that don't advance time.
 
 | Status | Object ID | Description |
 |--------|-----------|-------------|
-| [ ] | SWORD | Elvish Sword |
-| [ ] | KNIFE | Nasty Knife |
+| [~] | SWORD | Elvish Sword |
+| [~] | KNIFE | Nasty Knife |
 | [ ] | RUSTY-KNIFE | Rusty Knife |
 | [ ] | AXE | Bloody Axe |
 | [ ] | STILETTO | Stiletto |
@@ -411,7 +411,7 @@ These are out-of-game commands that don't advance time.
 | [ ] | KEYS | Set of Keys |
 | [ ] | SCREWDRIVER | Screwdriver |
 | [ ] | WRENCH | Wrench |
-| [ ] | ROPE | Rope |
+| [~] | ROPE | Rope |
 | [ ] | PUTTY | Gunk/Putty |
 
 ### Containers
@@ -419,11 +419,11 @@ These are out-of-game commands that don't advance time.
 | Status | Object ID | Description |
 |--------|-----------|-------------|
 | [~] | MAILBOX | Small Mailbox |
-| [ ] | TROPHY-CASE | Trophy Case |
+| [~] | TROPHY-CASE | Trophy Case |
 | [ ] | TOOL-CHEST | Tool Chest |
 | [ ] | LARGE-BAG | Large Bag |
-| [ ] | SANDWICH-BAG | Brown Sack |
-| [ ] | BOTTLE | Glass Bottle |
+| [~] | SANDWICH-BAG | Brown Sack |
+| [~] | BOTTLE | Glass Bottle |
 | [ ] | BUOY | Buoy |
 
 ### Boat-Related
@@ -465,8 +465,8 @@ These are out-of-game commands that don't advance time.
 | [ ] | TREE | Tree |
 | [ ] | BOARD | Wooden Board |
 | [ ] | FRONT-DOOR | Front Door |
-| [ ] | KITCHEN-WINDOW | Kitchen Window |
-| [ ] | TRAP-DOOR | Trap Door |
+| [~] | KITCHEN-WINDOW | Kitchen Window |
+| [~] | TRAP-DOOR | Trap Door |
 | [ ] | GRATE | Grating |
 | [ ] | CHIMNEY | Chimney |
 | [ ] | LEAVES | Pile of Leaves |
@@ -480,7 +480,7 @@ These are out-of-game commands that don't advance time.
 | [ ] | LEAK | Leak |
 | [ ] | WOODEN-DOOR | Wooden Door |
 | [ ] | BARROW-DOOR | Barrow Door |
-| [ ] | RUG | Rug |
+| [~] | RUG | Rug |
 | [ ] | ALTAR | Altar |
 | [ ] | PEDESTAL | Pedestal |
 | [ ] | CONTROL-PANEL | Control Panel |
@@ -491,7 +491,7 @@ These are out-of-game commands that don't advance time.
 |--------|-----------|-------------|
 | [ ] | RAISED-BASKET | Basket (raised) |
 | [ ] | LOWERED-BASKET | Basket (lowered) |
-| [ ] | NEST | Bird's Nest |
+| [~] | NEST | Bird's Nest |
 
 ### Special Items
 
@@ -823,21 +823,21 @@ These are out-of-game commands that don't advance time.
 - [~] Parser (basic)
 - [x] Room/object framework
 - [x] Meta-verbs (version, verbose, brief, inventory)
-- [~] Look command
-- [ ] Movement commands
-- [ ] Core interaction (take, drop, open, close)
+- [x] Look command
+- [x] Movement commands
+- [~] Core interaction (take, drop, open, close)
 
 ### Phase 2: Core Gameplay
-- [ ] Light system (lamp, darkness, grue)
-- [ ] Container system
-- [ ] Scoring system
+- [~] Light system (lamp, darkness, grue)
+- [~] Container system
+- [x] Scoring system
 - [ ] Save/restore
 
 ### Phase 3: World Building
-- [ ] All rooms with connections
-- [ ] All objects placed
-- [ ] Room descriptions
-- [ ] Object descriptions
+- [~] All rooms with connections
+- [~] All objects placed
+- [~] Room descriptions
+- [~] Object descriptions
 
 ### Phase 4: NPCs and Combat
 - [ ] Troll encounter
