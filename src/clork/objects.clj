@@ -654,6 +654,14 @@
 ;;   (DESC "tree")
 ;;   (FLAGS NDESCBIT CLIMBBIT)>
 
+(def tree
+  {:id :tree
+   :in :local-globals  ; Visible from forest rooms
+   :synonym ["tree" "branch"]
+   :adjective ["large" "storm-tossed"]
+   :desc "tree"
+   :flags (flags/flags :ndesc :climb)})
+
 ;; <OBJECT NEST
 ;;	(IN UP-A-TREE)
 ;;	(SYNONYM NEST)
@@ -722,5 +730,6 @@
    rope
    knife
    painting
+   tree
    nest
    egg])

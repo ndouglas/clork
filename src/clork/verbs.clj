@@ -1016,3 +1016,138 @@
         ;; Can't move it
         :else
         (utils/tell game-state (str "You can't move the " desc "."))))))
+
+;;; ---------------------------------------------------------------------------
+;;; CLIMB COMMANDS
+;;; ---------------------------------------------------------------------------
+;;; ZIL: V-CLIMB-UP, V-CLIMB-DOWN, V-CLIMB-FOO, V-CLIMB-ON in gverbs.zil
+;;;
+;;; V-CLIMB-UP is the core routine that handles climbing. It takes:
+;;;   DIR  - direction to go (default UP)
+;;;   OBJ  - optional object being climbed
+;;;
+;;; The routine checks if there's an exit in that direction. If climbing
+;;; an object, it verifies the object leads that way. Then it walks.
+
+(defn- climbable?
+  "Returns true if the object has the :climb flag.
+
+   ZIL: CLIMBBIT flag - objects like trees, stairs, ladders, etc."
+  [obj]
+  (contains? (or (:flags obj) #{}) :climb))
+
+(defn- has-exit?
+  "Returns true if the current room has an exit in the given direction."
+  [game-state direction]
+  (let [exit (get-exit game-state direction)]
+    (some? exit)))
+
+(defn v-climb-up
+  "Climb up (or down, depending on direction passed).
+
+   ZIL: V-CLIMB-UP in gverbs.zil (line 316)
+
+   This is the core climb routine. It:
+   1. Checks if there's an exit in the given direction
+   2. If climbing a specific object, verifies it leads that way
+   3. Performs the walk
+
+   Called directly for 'climb up X' or via v-climb-down/v-climb-foo.
+
+   When PRSO is :rooms (from RMUNGBIT via GWIM), it means no specific object
+   was named - just 'climb up' or 'climb down'. In this case we try to walk
+   in the direction."
+  ([game-state] (v-climb-up game-state :up))
+  ([game-state direction]
+   (let [prso (parser-state/get-prso game-state)
+         ;; ZIL: <COND (<AND .OBJ <NOT <EQUAL? ,PRSO ,ROOMS>>> <SET OBJ ,PRSO>)>
+         ;; When PRSO is ROOMS (our :rooms), treat it as no object
+         prso (when (not= prso :rooms) prso)
+         obj (when prso (gs/get-thing game-state prso))
+         desc (when obj (:desc obj))
+         ;; Check if there's an exit in the requested direction
+         exit (get-exit game-state direction)
+         dir-word (if (= direction :up) "upward" "downward")]
+     ;; First try the object's action handler if there is one
+     (if-let [result (when (and obj (:action obj))
+                       ((:action obj) game-state))]
+       result
+       ;; Default climb behavior
+       (cond
+         ;; There's an exit - walk that direction
+         (and exit (not (string? exit)))
+         (-> game-state
+             (assoc-in [:parser :prso] [direction])
+             v-walk)
+
+         ;; Exit is blocked with a message (like "You cannot climb any higher.")
+         (string? exit)
+         (utils/tell game-state exit)
+
+         ;; Climbing a wall-like object
+         (and obj
+              (let [synonyms (or (:synonym obj) [])]
+                (some #{"wall" "walls"} synonyms)))
+         (utils/tell game-state "Climbing the walls is to no avail.")
+
+         ;; Climbing a specific object but no exit that way
+         (and obj (climbable? obj))
+         (utils/tell game-state
+                     (str "The " desc
+                          (if (= prso :stairs) " don't" " doesn't")
+                          " lead " dir-word "."))
+
+         ;; No object specified (or :rooms), no exit
+         ;; ZIL: (<EQUAL? .OBJ <> ,ROOMS> <TELL "You can't go that way." CR>)
+         (nil? obj)
+         (utils/tell game-state "You can't go that way.")
+
+         ;; Trying to climb something not climbable
+         :else
+         (utils/tell game-state "You can't do that!"))))))
+
+(defn v-climb-down
+  "Climb down.
+
+   ZIL: V-CLIMB-DOWN in gverbs.zil (line 295)
+     <ROUTINE V-CLIMB-DOWN () <V-CLIMB-UP ,P?DOWN ,PRSO>>
+
+   Just calls v-climb-up with direction :down."
+  [game-state]
+  (v-climb-up game-state :down))
+
+(defn v-climb-foo
+  "Climb something (direction unspecified, defaults to up).
+
+   ZIL: V-CLIMB-FOO in gverbs.zil (line 297)
+     In Zork I: <V-CLIMB-UP ,P?UP ,PRSO>
+
+   When you just say 'climb tree' without specifying up or down,
+   this defaults to climbing up."
+  [game-state]
+  (v-climb-up game-state :up))
+
+(defn v-climb-on
+  "Climb onto an object.
+
+   ZIL: V-CLIMB-ON in gverbs.zil (line 306)
+
+   If the object is a vehicle (VEHBIT), board it.
+   Otherwise, print an error message."
+  [game-state]
+  (let [prso (parser-state/get-prso game-state)
+        obj (gs/get-thing game-state prso)
+        desc (:desc obj)
+        flags (or (:flags obj) #{})]
+    ;; First try the object's action handler
+    (if-let [result (when (:action obj) ((:action obj) game-state))]
+      result
+      ;; Default behavior
+      (cond
+        ;; Vehicle - board it (not implemented yet, so just acknowledge)
+        (contains? flags :vehicle)
+        (utils/tell game-state (str "You are now in the " desc "."))
+
+        ;; Not a vehicle - can't climb onto it
+        :else
+        (utils/tell game-state (str "You can't climb onto the " desc "."))))))

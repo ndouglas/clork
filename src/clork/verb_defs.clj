@@ -190,7 +190,103 @@
    :move       {:words   ["move" "pull" "roll" "push" "slide" "shift"]
                 :syntax  {:num-objects 1
                           :loc1 #{:in-room :on-ground}}
-                :handler verbs/v-move}})
+                :handler verbs/v-move}
+
+   ;; === Climb Verbs ===
+   ;; ZIL: <SYNTAX CLIMB UP OBJECT (FIND CLIMBBIT) (ON-GROUND IN-ROOM) = V-CLIMB-UP>
+   ;;      <SYNTAX CLIMB DOWN OBJECT (FIND CLIMBBIT) (ON-GROUND IN-ROOM) = V-CLIMB-DOWN>
+   ;;      <SYNTAX CLIMB OBJECT (FIND CLIMBBIT) (ON-GROUND IN-ROOM) = V-CLIMB-FOO>
+   ;;      <SYNTAX CLIMB ON OBJECT (FIND VEHBIT) (ON-GROUND IN-ROOM) = V-CLIMB-ON>
+   ;;      <SYNONYM CLIMB SIT>
+   :climb-up   {:words   []  ; Reached via :climb syntax with "up" prep
+                :syntax  {:num-objects 1
+                          :loc1 #{:in-room :on-ground}}
+                :handler verbs/v-climb-up}
+
+   :climb-down {:words   []  ; Reached via :climb syntax with "down" prep
+                :syntax  {:num-objects 1
+                          :loc1 #{:in-room :on-ground}}
+                :handler verbs/v-climb-down}
+
+   :climb-foo  {:words   []  ; Reached via :climb syntax without direction
+                :syntax  {:num-objects 1
+                          :loc1 #{:in-room :on-ground}}
+                :handler verbs/v-climb-foo}
+
+   :climb-on   {:words   []  ; Reached via :climb syntax with "on" prep
+                :syntax  {:num-objects 1
+                          :loc1 #{:in-room :on-ground}}
+                :handler verbs/v-climb-on}
+
+   ;; Main climb verb with multiple syntaxes
+   ;; ZIL: <SYNTAX CLIMB UP OBJECT (FIND RMUNGBIT) = V-CLIMB-UP>
+   ;;      <SYNTAX CLIMB UP OBJECT (FIND CLIMBBIT) (ON-GROUND IN-ROOM) = V-CLIMB-UP>
+   ;;      <SYNTAX CLIMB DOWN OBJECT (FIND RMUNGBIT) = V-CLIMB-DOWN>
+   ;;      <SYNTAX CLIMB DOWN OBJECT (FIND CLIMBBIT) (ON-GROUND IN-ROOM) = V-CLIMB-DOWN>
+   ;;      <SYNTAX CLIMB OBJECT (FIND CLIMBBIT) (ON-GROUND IN-ROOM) = V-CLIMB-FOO>
+   ;;      <SYNTAX CLIMB IN OBJECT (FIND VEHBIT) (ON-GROUND IN-ROOM) = V-BOARD PRE-BOARD>
+   ;;      <SYNTAX CLIMB ON OBJECT (FIND VEHBIT) (ON-GROUND IN-ROOM) = V-CLIMB-ON>
+   ;;      <SYNTAX CLIMB WITH OBJECT = V-THROUGH>
+   ;;      <SYNONYM CLIMB SIT>
+   ;; Note: RMUNGBIT allows finding room as pseudo-object for bare "climb up/down".
+   ;; Without RMUNGBIT, users should use "up"/"down" or "climb <object>".
+   :climb      {:words   ["climb" "sit"]
+                :syntax  [;; CLIMB UP OBJECT (FIND RMUNGBIT) - climb up (no object, defaults to ROOMS)
+                          ;; ZIL: <SYNTAX CLIMB UP OBJECT (FIND RMUNGBIT) = V-CLIMB-UP>
+                          {:num-objects 1
+                           :prep1 :up
+                           :gwim1 :room  ; RMUNGBIT - returns :rooms pseudo-object
+                           :action :climb-up}
+
+                          ;; CLIMB UP OBJECT (FIND CLIMBBIT) - climb up tree
+                          ;; ZIL: <SYNTAX CLIMB UP OBJECT (FIND CLIMBBIT) (ON-GROUND IN-ROOM) = V-CLIMB-UP>
+                          {:num-objects 1
+                           :prep1 :up
+                           :loc1 #{:in-room :on-ground}
+                           :action :climb-up}
+
+                          ;; CLIMB DOWN OBJECT (FIND RMUNGBIT) - climb down (no object, defaults to ROOMS)
+                          ;; ZIL: <SYNTAX CLIMB DOWN OBJECT (FIND RMUNGBIT) = V-CLIMB-DOWN>
+                          {:num-objects 1
+                           :prep1 :down
+                           :gwim1 :room  ; RMUNGBIT
+                           :action :climb-down}
+
+                          ;; CLIMB DOWN OBJECT (FIND CLIMBBIT) - climb down tree
+                          ;; ZIL: <SYNTAX CLIMB DOWN OBJECT (FIND CLIMBBIT) (ON-GROUND IN-ROOM) = V-CLIMB-DOWN>
+                          {:num-objects 1
+                           :prep1 :down
+                           :loc1 #{:in-room :on-ground}
+                           :action :climb-down}
+
+                          ;; CLIMB OBJECT (FIND CLIMBBIT) - climb tree (no direction, defaults to up)
+                          ;; ZIL: <SYNTAX CLIMB OBJECT (FIND CLIMBBIT) (ON-GROUND IN-ROOM) = V-CLIMB-FOO>
+                          {:num-objects 1
+                           :loc1 #{:in-room :on-ground}
+                           :action :climb-foo}
+
+                          ;; CLIMB IN OBJECT - board vehicle (V-BOARD)
+                          ;; ZIL: <SYNTAX CLIMB IN OBJECT (FIND VEHBIT) (ON-GROUND IN-ROOM) = V-BOARD PRE-BOARD>
+                          ;; TODO: Route to :board when implemented
+                          {:num-objects 1
+                           :prep1 :in
+                           :loc1 #{:in-room :on-ground}
+                           :action :through}
+
+                          ;; CLIMB ON OBJECT - climb on boat
+                          ;; ZIL: <SYNTAX CLIMB ON OBJECT (FIND VEHBIT) (ON-GROUND IN-ROOM) = V-CLIMB-ON>
+                          {:num-objects 1
+                           :prep1 :on
+                           :loc1 #{:in-room :on-ground}
+                           :action :climb-on}
+
+                          ;; CLIMB WITH OBJECT - go through (V-THROUGH)
+                          ;; ZIL: <SYNTAX CLIMB WITH OBJECT = V-THROUGH>
+                          {:num-objects 1
+                           :prep1 :with
+                           :loc1 #{:in-room :on-ground}
+                           :action :through}]
+                :handler verbs/v-climb-foo}})
 
 ;;; ---------------------------------------------------------------------------
 ;;; DIRECTION VOCABULARY
