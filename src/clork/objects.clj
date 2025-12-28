@@ -259,7 +259,7 @@
    :synonym ["door" "trapdoor"]
    :adjective ["trap"]
    :desc "trap door"
-   :flags (flags/flags :door :ndesc)})  ; Starts closed, hidden under rug
+   :flags (flags/flags :door :ndesc :invisible)})  ; Starts closed, hidden under rug
 
 ;;; ---------------------------------------------------------------------------
 ;;; KITCHEN OBJECTS
@@ -396,6 +396,30 @@
 ;;	(DESC "carpet")
 ;;	(FLAGS NDESCBIT TRYTAKEBIT)
 ;;	(ACTION RUG-FCN)>
+;;
+;; <ROUTINE RUG-FCN ()
+;;    <COND (<VERB? RAISE>
+;;           <TELL "The rug is too heavy to lift">
+;;           <COND (,RUG-MOVED <TELL "." CR>)
+;;                 (T <TELL ", but in trying to take it you have
+;; noticed an irregularity beneath it." CR>)>)
+;;          (<VERB? MOVE PUSH>
+;;           <COND (,RUG-MOVED
+;;                  <TELL "Having moved the carpet previously, you find it
+;; impossible to move it again." CR>)
+;;                 (T
+;;                  <TELL "With a great effort, the rug is moved to one side
+;; of the room, revealing the dusty cover of a closed trap door." CR>
+;;                  <FCLEAR ,TRAP-DOOR ,INVISIBLE>
+;;                  <THIS-IS-IT ,TRAP-DOOR>
+;;                  <SETG RUG-MOVED T>)>)
+;;          (<VERB? TAKE>
+;;           <TELL "The rug is extremely heavy and cannot be carried." CR>)
+;;          (<AND <VERB? LOOK-UNDER>
+;;                <NOT ,RUG-MOVED>
+;;                <NOT <FSET? ,TRAP-DOOR ,OPENBIT>>>
+;;           <TELL "Underneath the rug is a closed trap door. As you drop
+;; the corner of the rug, the trap door is once again concealed from view." CR>)>>
 
 (def rug
   {:id :rug
@@ -403,7 +427,39 @@
    :synonym ["rug" "carpet"]
    :adjective ["large" "oriental"]
    :desc "large oriental rug"
-   :flags (flags/flags :ndesc :trytake)})
+   :flags (flags/flags :ndesc :trytake)
+   :action (fn [game-state]
+             (let [verb (parser-state/get-prsa game-state)
+                   rug-moved? (get game-state :rug-moved false)]
+               (cond
+                 ;; RAISE verb
+                 (= verb :raise)
+                 (if rug-moved?
+                   (utils/tell game-state "The rug is too heavy to lift.")
+                   (utils/tell game-state "The rug is too heavy to lift, but in trying to take it you have noticed an irregularity beneath it."))
+
+                 ;; MOVE/PUSH verb
+                 (= verb :move)
+                 (if rug-moved?
+                   (utils/tell game-state "Having moved the carpet previously, you find it impossible to move it again.")
+                   (-> game-state
+                       (assoc :rug-moved true)
+                       (gs/unset-thing-flag :trap-door :invisible)
+                       (utils/this-is-it :trap-door)
+                       (utils/tell "With a great effort, the rug is moved to one side of the room, revealing the dusty cover of a closed trap door.")))
+
+                 ;; TAKE verb
+                 (= verb :take)
+                 (utils/tell game-state "The rug is extremely heavy and cannot be carried.")
+
+                 ;; LOOK-UNDER verb (if rug not moved and trap door not open)
+                 (and (= verb :look-under)
+                      (not rug-moved?)
+                      (not (gs/set-thing-flag? game-state :trap-door :open)))
+                 (utils/tell game-state "Underneath the rug is a closed trap door. As you drop the corner of the rug, the trap door is once again concealed from view.")
+
+                 ;; Not handled by rug
+                 :else nil)))})
 
 ;;; ---------------------------------------------------------------------------
 ;;; ATTIC OBJECTS

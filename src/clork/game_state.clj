@@ -107,13 +107,16 @@
 
 (defn flag?
   "Returns true if a flag is set on an entity. entity-type is :objects or :rooms.
-   Checks both direct flag keys (e.g., [:rooms :id :lit]) and :flags sets."
+   Checks both direct flag keys (e.g., [:rooms :id :lit]) and :flags sets.
+   If the direct key is explicitly set (true/false), that takes precedence.
+   Otherwise falls back to checking the :flags set."
   [game-state entity-type entity-id flag]
-  (or
-   ;; Check direct key (set by set-flag)
-   (get-in game-state [entity-type entity-id flag] false)
-   ;; Check :flags set (used by object/room definitions)
-   (contains? (get-in game-state [entity-type entity-id :flags] #{}) flag)))
+  (let [direct-flag (get-in game-state [entity-type entity-id flag])]
+    (if (some? direct-flag)
+      ;; Direct key is explicitly set - use its value
+      direct-flag
+      ;; Not explicitly set - check the :flags set
+      (contains? (get-in game-state [entity-type entity-id :flags] #{}) flag))))
 
 ;; Polymorphic functions that auto-detect entity type
 

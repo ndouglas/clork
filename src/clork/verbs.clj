@@ -428,6 +428,11 @@
         obj-loc (gs/get-thing-loc-id game-state obj-id)]
     (= obj-loc winner)))
 
+(defn- trytake?
+  "Returns true if the object has the :trytake flag (action should be tried first)."
+  [obj]
+  (contains? (or (:flags obj) #{}) :trytake))
+
 (defn v-take
   "Take an object and add it to inventory.
 
@@ -448,30 +453,39 @@
    - In closed container: fail silently
    - Too heavy: \"Your load is too heavy\"
    - Too many items: \"You're holding too many things already!\"
-   - Success: move to inventory, set TOUCHBIT"
+   - Success: move to inventory, set TOUCHBIT
+
+   Objects with TRYTAKEBIT have their action handler called first,
+   which can override the default take behavior (e.g., rug, trophy case)."
   [game-state]
   (let [prso (parser-state/get-prso game-state)
         obj (gs/get-thing game-state prso)
-        desc (:desc obj)]
-    (cond
-      ;; Already holding it
-      (already-holding? game-state prso)
-      (utils/tell game-state "You already have that!")
+        desc (:desc obj)
+        action-fn (:action obj)]
+    ;; For objects with :trytake flag, try their action handler first
+    (if-let [result (when (and (trytake? obj) action-fn)
+                      (action-fn game-state))]
+      result
+      ;; Default take behavior
+      (cond
+        ;; Already holding it
+        (already-holding? game-state prso)
+        (utils/tell game-state "You already have that!")
 
-      ;; In a closed container - can't reach it
-      (in-closed-container? game-state prso)
-      (utils/tell game-state "You can't reach something that's inside a closed container.")
+        ;; In a closed container - can't reach it
+        (in-closed-container? game-state prso)
+        (utils/tell game-state "You can't reach something that's inside a closed container.")
 
-      ;; Not takeable - respond with humor
-      (not (takeable? obj))
-      (utils/tell game-state (rand-nth yuks))
+        ;; Not takeable - respond with humor
+        (not (takeable? obj))
+        (utils/tell game-state (rand-nth yuks))
 
-      ;; Success - take the object
-      :else
-      (let [state (-> game-state
-                      (move-to-inventory prso)
-                      (add-flag prso :touch))]
-        (utils/tell state "Taken.")))))
+        ;; Success - take the object
+        :else
+        (let [state (-> game-state
+                        (move-to-inventory prso)
+                        (add-flag prso :touch))]
+          (utils/tell state "Taken."))))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; READ COMMAND
@@ -820,7 +834,8 @@
 
           ;; Exit is a map with conditions
           (map? exit)
-          (let [{:keys [to if door]} exit]
+          (let [{:keys [to if door]} exit
+                door-obj (when door (gs/get-thing game-state door))]
             (cond
               ;; Conditional on a flag
               (and if (not (get game-state if)))
@@ -828,10 +843,13 @@
                 (utils/tell game-state else-msg)
                 (utils/tell game-state "You can't go that way."))
 
+              ;; Door is invisible (hidden) - can't go that way
+              (and door (gs/set-thing-flag? game-state door :invisible))
+              (utils/tell game-state "You can't go that way.")
+
               ;; Conditional on a door being open
-              (and door (not (contains? (or (:flags (gs/get-thing game-state door)) #{}) :open)))
-              (let [door-obj (gs/get-thing game-state door)
-                    door-desc (:desc door-obj)]
+              (and door (not (gs/set-thing-flag? game-state door :open)))
+              (let [door-desc (:desc door-obj)]
                 (utils/tell game-state (str "The " door-desc " is closed.")))
 
               ;; All conditions met - go to the room
@@ -934,3 +952,52 @@
       result
       ;; Object didn't handle it - default message
       (utils/tell game-state "Use compass directions for movement."))))
+
+;;; ---------------------------------------------------------------------------
+;;; MOVE COMMAND
+;;; ---------------------------------------------------------------------------
+;;; ZIL: V-MOVE and PRE-MOVE in gverbs.zil
+;;;
+;;;   <ROUTINE PRE-MOVE ()
+;;;     <COND (<HELD? ,PRSO>
+;;;            <TELL "You aren't an accomplished enough juggler." CR>)>>
+;;;
+;;;   <ROUTINE V-MOVE ()
+;;;     <COND (<FSET? ,PRSO ,TAKEBIT>
+;;;            <TELL "Moving the " D ,PRSO " reveals nothing." CR>)
+;;;           (T
+;;;            <TELL "You can't move the " D ,PRSO "." CR>)>>
+
+(defn v-move
+  "Move an object.
+
+   ZIL: V-MOVE in gverbs.zil (line 930)
+
+   First tries the object's action handler (e.g., the rug reveals the trap door).
+   If not handled:
+   - If player is holding it: \"You aren't an accomplished enough juggler.\"
+   - If takeable: \"Moving the X reveals nothing.\"
+   - Otherwise: \"You can't move the X.\""
+  [game-state]
+  (let [prso (parser-state/get-prso game-state)
+        obj (gs/get-thing game-state prso)
+        desc (:desc obj)
+        flags (or (:flags obj) #{})
+        action-fn (:action obj)]
+    ;; First try the object's action handler
+    (if-let [result (when action-fn (action-fn game-state))]
+      ;; Object handled the verb
+      result
+      ;; Object didn't handle it - default behavior
+      (cond
+        ;; PRE-MOVE: Can't move something you're holding
+        (already-holding? game-state prso)
+        (utils/tell game-state "You aren't an accomplished enough juggler.")
+
+        ;; Takeable object - moving reveals nothing
+        (contains? flags :take)
+        (utils/tell game-state (str "Moving the " desc " reveals nothing."))
+
+        ;; Can't move it
+        :else
+        (utils/tell game-state (str "You can't move the " desc "."))))))

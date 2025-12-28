@@ -163,7 +163,16 @@
    :walk-around {:words   []  ; No direct words - reached via :walk syntax
                  :syntax  {:num-objects 1
                            :loc1 #{:in-room :on-ground}}
-                 :handler verbs/v-walk-around}})
+                 :handler verbs/v-walk-around}
+
+   ;; === Manipulation Verbs (continued) ===
+   ;; ZIL: <SYNTAX MOVE OBJECT (ON-GROUND IN-ROOM) = V-MOVE PRE-MOVE>
+   ;;      <SYNTAX PULL OBJECT (ON-GROUND IN-ROOM) = V-MOVE PRE-MOVE>
+   ;;      <SYNTAX ROLL OBJECT (ON-GROUND IN-ROOM) = V-MOVE PRE-MOVE>
+   :move       {:words   ["move" "pull" "roll" "push" "slide" "shift"]
+                :syntax  {:num-objects 1
+                          :loc1 #{:in-room :on-ground}}
+                :handler verbs/v-move}})
 
 ;;; ---------------------------------------------------------------------------
 ;;; DIRECTION VOCABULARY
