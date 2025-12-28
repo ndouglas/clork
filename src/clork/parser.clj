@@ -356,14 +356,19 @@
 
       ;; OK to repeat
       :else
-      (let [;; Restore previous lexv
+      (let [;; Restore previous lexv and token count
+            again-lexv (get-in game-state [:parser :again-lexv])
             gs (-> game-state
-                   (assoc-in [:parser :lexv]
-                             (get-in game-state [:parser :again-lexv]))
+                   (assoc-in [:parser :lexv] again-lexv)
+                   ;; CRITICAL: Restore :len so parse-tokens knows how many tokens to parse
+                   (set-len (lexer/lexv-count {:parser {:lexv again-lexv}}))
                    ;; Restore saved state
                    (assoc :winner (get-in game-state [:parser :owinner]))
                    (assoc-in [:parser :merged]
-                             (get-in game-state [:parser :omerged])))
+                             (get-in game-state [:parser :omerged]))
+                   ;; Restore saved direction (for direction shortcuts)
+                   (assoc-in [:parser :dir]
+                             (get-in game-state [:parser :again-dir])))
             ;; Copy OTBL to ITBL
             gs (reduce
                 (fn [s i]

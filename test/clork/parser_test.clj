@@ -808,6 +808,43 @@
             (is (nil? (parser/get-parser-error after-again)))
             (is (= :inventory (parser/get-prsa after-again)))))))))
 
+(deftest handle-again-with-preposition-command-test
+  (testing "AGAIN repeats commands with prepositions (regression test for :len bug)"
+    ;; This tests the bug where :len wasn't restored, causing multi-word
+    ;; commands like "go around house" to fail silently on AGAIN
+    (let [game-state (-> (gs/initial-game-state)
+                         (assoc :input "go around house"))
+          after-cmd (parser/parser-from-input game-state)]
+      ;; Verify first parse succeeded
+      (is (nil? (parser/get-parser-error after-cmd)))
+      (is (= :walk-around (parser/get-prsa after-cmd)))
+      (is (true? (get-in after-cmd [:parser :won])))
+      ;; Verify :len was consumed during parsing
+      (is (zero? (parser/get-len after-cmd)))
+
+      ;; Now repeat with G - this should restore :len and re-parse
+      (let [after-again (parser/parser-from-input (assoc after-cmd :input "g"))]
+        (is (nil? (parser/get-parser-error after-again))
+            "AGAIN should not fail - :len must be restored from again-lexv")
+        (is (= :walk-around (parser/get-prsa after-again)))))))
+
+(deftest handle-again-direction-shortcut-test
+  (testing "AGAIN repeats bare direction commands"
+    (let [game-state (-> (gs/initial-game-state)
+                         (assoc :input "n"))
+          after-cmd (parser/parser-from-input game-state)]
+      ;; Verify direction shortcut parsed correctly
+      (is (nil? (parser/get-parser-error after-cmd)))
+      (is (= :walk (parser/get-prsa after-cmd)))
+      (is (= :north (parser/get-prso after-cmd)))
+      (is (true? (get-in after-cmd [:parser :won])))
+
+      ;; Repeat with G
+      (let [after-again (parser/parser-from-input (assoc after-cmd :input "g"))]
+        (is (nil? (parser/get-parser-error after-again)))
+        (is (= :walk (parser/get-prsa after-again)))
+        (is (= :north (parser/get-prso after-again)))))))
+
 ;;; ---------------------------------------------------------------------------
 ;;; AUTO-TAKE (ITAKE) TESTS
 ;;; ---------------------------------------------------------------------------
