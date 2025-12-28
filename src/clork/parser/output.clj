@@ -173,9 +173,9 @@
 
    Looks up the preposition number and prints its word form."
   [game-state prep]
-  (when (and prep (not (zero? prep)))
+  (when (some? prep)
     (print " ")
-    ;; TODO: Look up prep word from PREPOSITIONS table
+    ;; prep is now a keyword like :around, :in
     (print (name prep))))
 
 ;;; ---------------------------------------------------------------------------

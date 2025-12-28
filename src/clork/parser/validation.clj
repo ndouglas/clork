@@ -287,9 +287,13 @@
     (loop [current obj-id]
       (let [loc (game-state/get-thing-location game-state current)]
         (cond
-          (nil? loc) false
+          ;; No location or special location like :local-globals
+          (or (nil? loc) (= loc :local-globals)) false
+          ;; Directly held by player
           (= loc player) true
-          (game-state/set-thing-flag? game-state loc :container)
+          ;; In a container - check if that container is held
+          (and (game-state/get-thing game-state loc)  ; Valid location
+               (game-state/set-thing-flag? game-state loc :container))
           (recur loc)
           :else false)))))
 

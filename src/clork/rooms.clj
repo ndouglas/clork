@@ -1,6 +1,7 @@
 (ns clork.rooms
   "Room definitions for Clork."
-  (:require [clork.utils :as utils]))
+  (:require [clork.utils :as utils]
+            [clork.game-state :as gs]))
 
 ;;; ---------------------------------------------------------------------------
 ;;; ABOVE GROUND - HOUSE EXTERIOR
@@ -76,11 +77,16 @@
 ;; <ROOM EAST-OF-HOUSE (BEHIND-HOUSE)
 ;;       (DESC "Behind House")
 ;;       (ACTION EAST-HOUSE)
+;;
+;; ZIL: EAST-HOUSE in 1actions.zil
+;;   <COND (<EQUAL? .RARG ,M-LOOK>
+;;     <TELL "You are behind the white house...which is ">
+;;     <COND (<FSET? ,KITCHEN-WINDOW ,OPENBIT> <TELL "open.">)
+;;           (T <TELL "slightly ajar.">)>
 
 (def behind-house
   {:id :behind-house
    :desc "Behind House"
-   :ldesc "You are behind the white house. A path leads into the forest to the east. In one corner of the house there is a small window which is slightly ajar."
    :flags #{:lit}
    :exits {:north :north-of-house
            :south :south-of-house
@@ -88,7 +94,14 @@
            :nw :north-of-house
            :east :clearing
            :west {:to :kitchen :door :kitchen-window}
-           :in {:to :kitchen :door :kitchen-window}}})
+           :in {:to :kitchen :door :kitchen-window}}
+   :action (fn [game-state rarg]
+             (when (= rarg :look)
+               (let [window-open? (gs/set-thing-flag? game-state :kitchen-window :open)
+                     window-state (if window-open? "open" "slightly ajar")]
+                 (-> game-state
+                     (utils/tell (str "You are behind the white house. A path leads into the forest to the east. In one corner of the house there is a small window which is " window-state "."))
+                     (utils/crlf)))))})
 
 ;;; ---------------------------------------------------------------------------
 ;;; ABOVE GROUND - FOREST
@@ -145,17 +158,29 @@
 ;; <ROOM KITCHEN
 ;;       (DESC "Kitchen")
 ;;       (ACTION KITCHEN-FCN)
+;;
+;; ZIL: KITCHEN-FCN in 1actions.zil
+;;   <COND (<EQUAL? .RARG ,M-LOOK>
+;;     <TELL "...to the east is a small window which is ">
+;;     <COND (<FSET? ,KITCHEN-WINDOW ,OPENBIT> <TELL "open.">)
+;;           (T <TELL "slightly ajar.">)>
 
 (def kitchen
   {:id :kitchen
    :desc "Kitchen"
-   :ldesc "You are in the kitchen of the white house. A table seems to have been used recently for the preparation of food. A passage leads to the west and a dark staircase can be seen leading upward. A dark chimney leads down and to the east is a small window which is open."
    :flags #{:lit}
    :exits {:west :living-room
            :up :attic
            :down :studio  ; via chimney, but only if small
            :east {:to :behind-house :door :kitchen-window}
-           :out {:to :behind-house :door :kitchen-window}}})
+           :out {:to :behind-house :door :kitchen-window}}
+   :action (fn [game-state rarg]
+             (when (= rarg :look)
+               (let [window-open? (gs/set-thing-flag? game-state :kitchen-window :open)
+                     window-state (if window-open? "open" "slightly ajar")]
+                 (-> game-state
+                     (utils/tell (str "You are in the kitchen of the white house. A table seems to have been used recently for the preparation of food. A passage leads to the west and a dark staircase can be seen leading upward. A dark chimney leads down and to the east is a small window which is " window-state "."))
+                     (utils/crlf)))))})
 
 ;; <ROOM LIVING-ROOM
 ;;       (DESC "Living Room")

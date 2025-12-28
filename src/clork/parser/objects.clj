@@ -374,11 +374,26 @@
    conceptually present in many rooms. Pseudo objects are room-specific
    vocabulary that refers to scenery.
 
-   This is called when local search finds nothing."
+   This is called when local search finds nothing.
+
+   We search for objects with :in :local-globals which should be visible
+   from many rooms (like the white house, forest, etc.)"
   [game-state match-table]
-  ;; TODO: Implement when we have global/pseudo object definitions
-  ;; For now, just return the table unchanged
-  match-table)
+  (let [;; Find all objects with :in :local-globals
+        global-objects (->> (vals (:objects game-state))
+                            (filter #(= (:in %) :local-globals)))
+
+        ;; Filter to objects that match the current search criteria
+        matching-objects
+        (filter (fn [obj]
+                  (this-it? game-state (:id obj)))
+                global-objects)]
+
+    ;; Add matching objects to match-table
+    (reduce (fn [tbl obj]
+              (obj-found tbl (:id obj)))
+            match-table
+            matching-objects)))
 
 ;;; ---------------------------------------------------------------------------
 ;;; SNARF-OBJECTS - Process Noun Clauses

@@ -121,16 +121,19 @@
   [game-state syntax]
   (let [ncn (parser-state/get-ncn game-state)
         prep1 (parser-state/get-itbl game-state :prep1)
-        prep2 (parser-state/get-itbl game-state :prep2)]
+        prep2 (parser-state/get-itbl game-state :prep2)
+        ;; Normalize prep values - 0 means nil (no prep)
+        prep1 (when (and prep1 (not= prep1 0)) prep1)
+        prep2 (when (and prep2 (not= prep2 0)) prep2)]
     (and
      ;; Number of noun clauses must match or be handleable
      (<= ncn (:num-objects syntax))
-     ;; Preposition 1 must match if specified
-     (or (nil? (:prep1 syntax))
-         (= prep1 (:prep1 syntax)))
-     ;; Preposition 2 must match if specified
-     (or (nil? (:prep2 syntax))
-         (= prep2 (:prep2 syntax))))))
+     ;; Preposition 1 must match EXACTLY:
+     ;; - If input has prep1, pattern must expect that prep
+     ;; - If input has no prep1, pattern must not require one
+     (= prep1 (:prep1 syntax))
+     ;; Preposition 2 must match EXACTLY
+     (= prep2 (:prep2 syntax)))))
 
 (defn find-matching-syntax
   "Find all syntax patterns that could match the current parse.

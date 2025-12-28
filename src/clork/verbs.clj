@@ -840,3 +840,92 @@
           ;; Unknown exit type
           :else
           (utils/tell game-state "You can't go that way."))))))
+
+;;; ---------------------------------------------------------------------------
+;;; THROUGH COMMAND
+;;; ---------------------------------------------------------------------------
+;;; ZIL: V-THROUGH in gverbs.zil
+;;;   <ROUTINE V-THROUGH ("OPTIONAL" (OBJ <>) "AUX" M)
+;;;     <COND (<AND <FSET? ,PRSO ,DOORBIT>
+;;;                 <SET M <OTHER-SIDE ,PRSO>>>
+;;;            <DO-WALK .M>
+;;;            <RTRUE>)
+;;;           ...>>
+;;;
+;;; Handles "enter X", "go through X", "walk in X" etc.
+;;; First calls object's action handler; if not handled, falls back to
+;;; door logic (walk to other side if DOORBIT set).
+
+(defn v-through
+  "Go through a door, window, or other passageway.
+
+   ZIL: V-THROUGH in gverbs.zil
+
+   First tries the object's action handler. If the object handles the verb,
+   we're done. Otherwise, if the object has :door flag, try to walk through
+   to the other side."
+  [game-state]
+  (let [prso (parser-state/get-prso game-state)
+        obj (gs/get-thing game-state prso)
+        desc (:desc obj)
+        flags (or (:flags obj) #{})
+        action-fn (:action obj)]
+    ;; First try the object's action handler
+    (if-let [result (when action-fn (action-fn game-state))]
+      ;; Object handled the verb
+      result
+      ;; Object didn't handle it - try default door behavior
+      (cond
+        ;; Object has door flag - find the other side and walk there
+        (contains? flags :door)
+        (let [here (:here game-state)
+              ;; Find which room has an exit through this door
+              rooms (:rooms game-state)
+              ;; Look for exits that reference this door
+              other-side (some (fn [[room-id room]]
+                                 (when (not= room-id here)
+                                   (some (fn [[dir exit]]
+                                           (when (and (map? exit)
+                                                      (= (:door exit) prso))
+                                             (:to exit)))
+                                         (:exits room))))
+                               rooms)]
+          (if (and other-side (contains? flags :open))
+            (goto game-state other-side)
+            (if (not (contains? flags :open))
+              (utils/tell game-state (str "The " desc " is closed."))
+              (utils/tell game-state "You can't go that way."))))
+
+        ;; Not a door - can't go through it
+        :else
+        (utils/tell game-state "I don't know how to do that.")))))
+
+;;; ---------------------------------------------------------------------------
+;;; WALK-AROUND COMMAND
+;;; ---------------------------------------------------------------------------
+;;; ZIL: V-WALK-AROUND in gverbs.zil
+;;;   <ROUTINE V-WALK-AROUND ()
+;;;     <TELL "Use compass directions for movement." CR>>
+;;;
+;;; Default behavior just tells player to use compass directions.
+;;; Objects like WHITE-HOUSE intercept this via their action handlers
+;;; to implement "go around house" functionality.
+
+(defn v-walk-around
+  "Walk around an object.
+
+   ZIL: V-WALK-AROUND in gverbs.zil
+
+   First tries the object's action handler. If the object handles the verb
+   (like the white house cycling through exterior rooms), we're done.
+   Otherwise, just tell player to use compass directions."
+  [game-state]
+  (let [prso (parser-state/get-prso game-state)
+        obj (gs/get-thing game-state prso)
+        action-fn (:action obj)]
+    ;; First try the object's action handler
+    (if-let [result (when action-fn (action-fn game-state))]
+      ;; Object handled the verb
+      result
+      ;; Object didn't handle it - default message
+      (utils/tell game-state "Use compass directions for movement."))))

@@ -120,12 +120,50 @@
                  :handler verbs/v-look-inside}
 
    ;; === Movement Verbs ===
-   ;; Walk takes a direction as its object. The parser handles bare directions
-   ;; (like "north") specially, converting them to WALK NORTH.
+   ;; Walk has multiple syntax patterns routing to different handlers.
+   ;; ZIL: WALK is a synonym of GO, RUN, PROCEED, STEP
+   ;;   <SYNTAX WALK OBJECT = V-WALK>
+   ;;   <SYNTAX WALK AROUND OBJECT = V-WALK-AROUND>
+   ;;   <SYNTAX WALK IN OBJECT = V-THROUGH>
+   ;;   <SYNTAX WALK THROUGH OBJECT = V-THROUGH>
    :walk       {:words   ["walk" "go" "run" "proceed"]
+                :syntax  [;; WALK DIRECTION - walk north, go east
+                          {:num-objects 1
+                           :loc1 #{}}
+
+                          ;; WALK AROUND OBJECT - walk around house
+                          {:num-objects 1
+                           :prep1 :around
+                           :loc1 #{:in-room :on-ground}
+                           :action :walk-around}
+
+                          ;; WALK IN OBJECT - walk in window
+                          {:num-objects 1
+                           :prep1 :in
+                           :loc1 #{:in-room :on-ground}
+                           :action :through}
+
+                          ;; WALK THROUGH OBJECT - walk through window
+                          {:num-objects 1
+                           :prep1 :through
+                           :loc1 #{:in-room :on-ground}
+                           :action :through}]
+                :handler verbs/v-walk}
+
+   ;; ZIL: <SYNTAX ENTER = V-ENTER> (bare enter goes to :in direction)
+   ;;      <SYNTAX ENTER OBJECT = V-THROUGH>
+   ;; Go through a door, window, or other passageway
+   :through    {:words   ["enter" "through"]
                 :syntax  {:num-objects 1
-                          :loc1 #{}}  ; Direction, not a normal object
-                :handler verbs/v-walk}})
+                          :loc1 #{:in-room :on-ground}}
+                :handler verbs/v-through}
+
+   ;; Handler for walk-around - used when WALK AROUND OBJECT is parsed
+   ;; The verb words aren't used directly since this routes through :walk
+   :walk-around {:words   []  ; No direct words - reached via :walk syntax
+                 :syntax  {:num-objects 1
+                           :loc1 #{:in-room :on-ground}}
+                 :handler verbs/v-walk-around}})
 
 ;;; ---------------------------------------------------------------------------
 ;;; DIRECTION VOCABULARY
@@ -148,7 +186,7 @@
    :sw    ["southwest" "sw"]
    :up    ["up" "u"]
    :down  ["down" "d"]
-   :in    ["in" "inside" "enter"]
+   :in    ["in" "inside"]
    :out   ["out" "outside" "exit" "leave"]
    :land  ["land"]})
 
@@ -170,6 +208,63 @@
 (def direction-vocabulary
   "Vocabulary entries for direction words."
   (build-direction-vocabulary direction-definitions))
+
+;;; ---------------------------------------------------------------------------
+;;; PREPOSITION VOCABULARY
+;;; ---------------------------------------------------------------------------
+;;; Prepositions are used to modify verbs and connect objects.
+;;; Examples: "put X IN Y", "walk AROUND house", "look UNDER bed"
+;;;
+;;; ZIL: Prepositions are defined with PR? constants and used in SYNTAX patterns.
+
+(def preposition-definitions
+  "Map of preposition keywords to their vocabulary words.
+   These are used in syntax patterns like {:prep1 :around} to match
+   'walk around house' → WALK AROUND OBJECT → v-walk-around"
+  {:in      ["in" "into" "inside"]
+   :on      ["on" "onto" "upon"]
+   :with    ["with" "using"]
+   :to      ["to" "toward" "towards"]
+   :from    ["from"]
+   :at      ["at"]
+   :for     ["for"]
+   :about   ["about"]
+   :under   ["under" "underneath" "beneath"]
+   :behind  ["behind"]
+   :over    ["over"]
+   :through ["through"]
+   :around  ["around"]
+   :off     ["off"]
+   :out     ["out"]
+   :up      ["up"]
+   :down    ["down"]})
+
+(defn build-preposition-vocabulary
+  "Build vocabulary entries for prepositions.
+
+   Returns a map of word-string -> {:parts-of-speech #{:preposition} :prep-value prep-kw}"
+  [definitions]
+  (reduce-kv
+   (fn [vocab prep-kw words]
+     (reduce (fn [v word]
+               (update v word
+                       (fn [existing]
+                         (if existing
+                           ;; Word exists - add preposition to its parts of speech
+                           (-> existing
+                               (update :parts-of-speech conj :preposition)
+                               (assoc :prep-value prep-kw))
+                           ;; New word
+                           {:parts-of-speech #{:preposition}
+                            :prep-value prep-kw}))))
+             vocab
+             words))
+   {}
+   definitions))
+
+(def preposition-vocabulary
+  "Vocabulary entries for preposition words."
+  (build-preposition-vocabulary preposition-definitions))
 
 ;;; ---------------------------------------------------------------------------
 ;;; BUILDER FUNCTIONS
@@ -200,8 +295,11 @@
    definitions))
 
 (defn build-syntax-entry
-  "Convert a syntax spec map to the internal syntax format."
-  [action-kw {:keys [num-objects prep1 prep2 gwim1 gwim2 loc1 loc2]
+  "Convert a syntax spec map to the internal syntax format.
+
+   The :action field in the syntax spec can override the default action,
+   allowing patterns like 'walk around X' to route to :walk-around instead of :walk."
+  [action-kw {:keys [num-objects prep1 prep2 gwim1 gwim2 loc1 loc2 action]
               :or {num-objects 0}}]
   {:num-objects num-objects
    :prep1       prep1
@@ -210,7 +308,7 @@
    :gwim2       gwim2
    :loc1        (loc-set->bits loc1)
    :loc2        (loc-set->bits loc2)
-   :action      action-kw})
+   :action      (or action action-kw)})
 
 (defn build-verb-syntaxes
   "Build the verb-syntaxes map from verb-definitions.
@@ -243,9 +341,10 @@
 ;;; These are derived from verb-definitions and used by the parser and executor.
 
 (def ^:dynamic *verb-vocabulary*
-  "Vocabulary entries for verbs. Merged with object/direction vocabulary."
+  "Vocabulary entries for verbs. Merged with object/direction/preposition vocabulary."
   (merge (build-vocabulary verb-definitions)
-         direction-vocabulary))
+         direction-vocabulary
+         preposition-vocabulary))
 
 (def ^:dynamic *verb-syntaxes*
   "Syntax patterns for each verb action."

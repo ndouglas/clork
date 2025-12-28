@@ -78,15 +78,16 @@
         off (* (dec ncn) 2)  ; 0 for first clause, 2 for second
 
         ;; If we have a preposition, store it
+        ;; val is the preposition keyword (like :around, :in) or nil
         gs-with-prep
-        (if (not (zero? (or val 0)))
+        (if (some? val)
           (-> game-state
               ;; Store prep value at PREP1 or PREP2
               (parser-state/set-itbl (+ (:prep1 parser-state/itbl-indices) off) val)
               ;; Store prep word at PREP1N or PREP2N
               (parser-state/set-itbl (+ (:prep1n parser-state/itbl-indices) off) wrd)
-              ;; Advance past the preposition
-              (update-in [:parser :ptr] inc))
+              ;; Advance past the preposition - use assoc-in since :ptr might be nil
+              (assoc-in [:parser :ptr] (inc ptr)))
           ;; No prep, restore P-LEN since we didn't consume a word
           (parser-state/inc-len game-state))
 
@@ -100,14 +101,15 @@
 
       ;; Start parsing the clause
       ;; Store the starting position
-      (let [clause-start ptr
+      ;; If we had a preposition, start AFTER it (inc ptr), otherwise at ptr
+      (let [clause-start (if (some? val) (inc ptr) ptr)
             nc-slot (+ (:nc1 parser-state/itbl-indices) off)
             gs-with-start (parser-state/set-itbl gs-with-prep nc-slot clause-start)]
 
         ;; Skip leading articles (the, a, an)
         ;; ZIL: <COND (<EQUAL? <GET ,P-LEXV .PTR> ,W?THE ,W?A ,W?AN> ...)>
         (loop [gs gs-with-start
-               current-ptr ptr
+               current-ptr clause-start
                and-flag false   ; Have we seen AND/COMMA?
                first? true      ; Is this the first word?
                last-word nil]   ; Previous word

@@ -1,7 +1,10 @@
 (ns clork.objects
   "Object definitions for Clork."
   (:require [clork.utils :as utils]
-            [clork.flags :as flags]))
+            [clork.flags :as flags]
+            [clork.game-state :as gs]
+            [clork.parser.state :as parser-state]
+            [clork.verbs-look :as verbs-look]))
 
 ;; <OBJECT MAILBOX
 ;;	(IN WEST-OF-HOUSE)
@@ -70,6 +73,108 @@
    :strength 0})
 
 ;;; ---------------------------------------------------------------------------
+;;; GLOBAL OBJECTS (visible from multiple rooms)
+;;; ---------------------------------------------------------------------------
+
+;; <OBJECT WHITE-HOUSE
+;;	(IN LOCAL-GLOBALS)
+;;	(SYNONYM HOUSE)
+;;	(ADJECTIVE WHITE BEAUTI COLONI)
+;;	(DESC "white house")
+;;	(FLAGS NDESCBIT)
+;;	(ACTION WHITE-HOUSE-F)>
+;;
+;; ZIL: WHITE-HOUSE-F in 1actions.zil handles:
+;;   WALK-AROUND: cycles through exterior rooms (west→north→east→south→west)
+;;                or interior rooms (living→kitchen→attic→kitchen)
+;;   THROUGH/OPEN: if at behind-house and window is open, enter kitchen
+
+(def house-around
+  "Cycle order for walking around the exterior of the house."
+  [:west-of-house :north-of-house :behind-house :south-of-house :west-of-house])
+
+(def in-house-around
+  "Cycle order for walking around inside the house."
+  [:living-room :kitchen :attic :kitchen])
+
+(defn go-next
+  "Find the next room in a cycle table from the current location.
+   ZIL: GO-NEXT routine."
+  [game-state table]
+  (let [here (:here game-state)
+        idx (.indexOf table here)]
+    (when (>= idx 0)
+      (get table (inc idx)))))
+
+(defn- room-lit?
+  "Check if a room is lit (has light source)."
+  [game-state room-id]
+  (let [room (gs/get-thing game-state room-id)
+        room-flags (or (:flags room) #{})]
+    (or (contains? room-flags :lit)
+        (contains? room-flags :on))))
+
+(defn- move-to-room
+  "Move the player to a new room and describe it.
+   Similar to GOTO in verbs.clj but callable from objects."
+  [game-state room-id]
+  (let [winner (:winner game-state)
+        ;; Move the winner to the new room
+        gs (assoc-in game-state [:objects winner :in] room-id)
+        ;; Update HERE
+        gs (assoc gs :here room-id)
+        ;; Update LIT flag
+        gs (assoc gs :lit (room-lit? gs room-id))]
+    ;; Describe the room
+    (verbs-look/v-look gs)))
+
+(def white-house
+  {:id :white-house
+   :in :local-globals  ; Visible from many rooms
+   :synonym ["house"]
+   :adjective ["white" "beautiful" "colonial"]
+   :desc "white house"
+   :flags (flags/flags :ndesc)
+   :action (fn [game-state]
+             (let [verb (parser-state/get-prsa game-state)
+                   here (:here game-state)
+                   inside? (contains? #{:kitchen :living-room :attic} here)
+                   outside-house? (contains? #{:behind-house :west-of-house
+                                               :north-of-house :south-of-house} here)]
+               (cond
+                 ;; WALK-AROUND: cycle through house rooms
+                 (= verb :walk-around)
+                 (let [table (if inside? in-house-around house-around)
+                       next-room (go-next game-state table)]
+                   (if next-room
+                     ;; Move to next room in cycle
+                     (move-to-room game-state next-room)
+                     ;; Not at house, can't walk around it
+                     (if outside-house?
+                       (utils/tell game-state "Use compass directions for movement.")
+                       (utils/tell game-state "You're not at the house."))))
+
+                 ;; THROUGH/OPEN: enter the house
+                 (= verb :through)
+                 (cond
+                   ;; At behind-house - can enter through window if open
+                   (= here :behind-house)
+                   (if (gs/set-thing-flag? game-state :kitchen-window :open)
+                     ;; Window is open - go to kitchen
+                     (move-to-room game-state :kitchen)
+                     ;; Window is closed
+                     (-> game-state
+                         (utils/tell "The window is closed.")
+                         (utils/this-is-it :kitchen-window)))
+
+                   ;; Not at a place where you can enter the house
+                   :else
+                   (utils/tell game-state "I can't see how to get in from here."))
+
+                 ;; Other verbs - not handled
+                 :else nil)))})
+
+;;; ---------------------------------------------------------------------------
 ;;; DOORS AND WINDOWS
 ;;; ---------------------------------------------------------------------------
 
@@ -79,6 +184,11 @@
 ;;	(DESC "kitchen window")
 ;;	(FLAGS DOORBIT NDESCBIT)
 ;;	(ACTION KITCHEN-WINDOW-F)>
+;;
+;; ZIL: KITCHEN-WINDOW-F in 1actions.zil handles:
+;;   WALK/BOARD/THROUGH: walk through the window
+;;     - From kitchen: walk east to behind-house
+;;     - From outside: walk west to kitchen (if open)
 
 (def kitchen-window
   {:id :kitchen-window
@@ -86,7 +196,32 @@
    :synonym ["window"]
    :adjective ["kitchen" "small"]
    :desc "kitchen window"
-   :flags (flags/flags :door :ndesc)})  ; Starts closed (slightly ajar), not open
+   :flags (flags/flags :door :ndesc)  ; Starts closed (slightly ajar), not open
+   :action (fn [game-state]
+             (let [verb (parser-state/get-prsa game-state)
+                   here (:here game-state)]
+               (cond
+                 ;; THROUGH: walk through the window
+                 (= verb :through)
+                 (cond
+                   ;; From kitchen - go east to behind-house
+                   (= here :kitchen)
+                   (if (gs/set-thing-flag? game-state :kitchen-window :open)
+                     (move-to-room game-state :behind-house)
+                     (utils/tell game-state "The kitchen window is closed."))
+
+                   ;; From behind-house - go west to kitchen
+                   (= here :behind-house)
+                   (if (gs/set-thing-flag? game-state :kitchen-window :open)
+                     (move-to-room game-state :kitchen)
+                     (utils/tell game-state "The kitchen window is closed."))
+
+                   ;; Not near the window
+                   :else
+                   nil)
+
+                 ;; Other verbs - not handled by window
+                 :else nil)))})
 
 ;; <OBJECT TRAP-DOOR
 ;;	(SYNONYM DOOR TRAPDOOR)
@@ -322,6 +457,7 @@
   [adventurer
    mailbox
    leaflet
+   white-house
    kitchen-window
    trap-door
    brown-sack
