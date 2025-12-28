@@ -86,7 +86,7 @@
    :synonym ["window"]
    :adjective ["kitchen" "small"]
    :desc "kitchen window"
-   :flags (flags/flags :door :ndesc :open)})  ; Start slightly ajar per description
+   :flags (flags/flags :door :ndesc)})  ; Starts closed (slightly ajar), not open
 
 ;; <OBJECT TRAP-DOOR
 ;;	(SYNONYM DOOR TRAPDOOR)
