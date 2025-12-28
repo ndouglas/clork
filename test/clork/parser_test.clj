@@ -923,4 +923,103 @@
       ;; Should still succeed (silent failure for non-takeable)
         (is (:success result))
       ;; Object should NOT be moved
-        (is (= :west-of-house (get-in (:game-state result) [:objects :mailbox :in])))))))
+        (is (= :west-of-house (get-in (:game-state result) [:objects :mailbox :in]))))))
+
+;;; ---------------------------------------------------------------------------
+;;; MULTI-OBJECT PARSING TESTS (X AND Y)
+;;; ---------------------------------------------------------------------------
+
+(deftest multi-object-parsing-test
+  (testing "parser collects multiple objects with 'and'"
+    (let [gs (-> (gs/initial-game-state)
+                 (gs/add-room {:id :living-room :desc "Living Room"
+                               :flags #{:lit}})
+                 (gs/add-object {:id :sword :desc "sword"
+                                 :synonym ["sword"]
+                                 :in :living-room
+                                 :flags #{:take}})
+                 (gs/add-object {:id :lamp :desc "lamp"
+                                 :synonym ["lamp"]
+                                 :in :living-room
+                                 :flags #{:take}})
+                 (assoc :here :living-room)
+                 (assoc :input "take sword and lamp"))
+          result (parser/parser-from-input gs)]
+      ;; Should parse successfully
+      (is (nil? (parser/get-parser-error result)))
+      (is (= :take (parser/get-prsa result)))
+      ;; prso should contain BOTH objects
+      (let [all-prso (parser-state/get-prso-all result)]
+        (is (= 2 (count all-prso)))
+        (is (some #{:sword} all-prso))
+        (is (some #{:lamp} all-prso)))))
+
+  (testing "parser collects multiple objects with comma"
+    (let [gs (-> (gs/initial-game-state)
+                 (gs/add-room {:id :living-room :desc "Living Room"
+                               :flags #{:lit}})
+                 (gs/add-object {:id :sword :desc "sword"
+                                 :synonym ["sword"]
+                                 :in :living-room
+                                 :flags #{:take}})
+                 (gs/add-object {:id :lamp :desc "lamp"
+                                 :synonym ["lamp"]
+                                 :in :living-room
+                                 :flags #{:take}})
+                 (assoc :here :living-room)
+                 (assoc :input "take sword, lamp"))
+          result (parser/parser-from-input gs)]
+      ;; Should parse successfully
+      (is (nil? (parser/get-parser-error result)))
+      (is (= :take (parser/get-prsa result)))
+      ;; prso should contain BOTH objects
+      (let [all-prso (parser-state/get-prso-all result)]
+        (is (= 2 (count all-prso)))
+        (is (some #{:sword} all-prso))
+        (is (some #{:lamp} all-prso)))))
+
+  (testing "parser handles three objects with 'and'"
+    (let [gs (-> (gs/initial-game-state)
+                 (gs/add-room {:id :living-room :desc "Living Room"
+                               :flags #{:lit}})
+                 (gs/add-object {:id :sword :desc "sword"
+                                 :synonym ["sword"]
+                                 :in :living-room
+                                 :flags #{:take}})
+                 (gs/add-object {:id :lamp :desc "lamp"
+                                 :synonym ["lamp"]
+                                 :in :living-room
+                                 :flags #{:take}})
+                 (gs/add-object {:id :key :desc "key"
+                                 :synonym ["key"]
+                                 :in :living-room
+                                 :flags #{:take}})
+                 (assoc :here :living-room)
+                 (assoc :input "take sword and lamp and key"))
+          result (parser/parser-from-input gs)]
+      (is (nil? (parser/get-parser-error result)))
+      (let [all-prso (parser-state/get-prso-all result)]
+        (is (= 3 (count all-prso)))
+        (is (some #{:sword} all-prso))
+        (is (some #{:lamp} all-prso))
+        (is (some #{:key} all-prso))))))
+
+(deftest multi-object-not-found-test
+  (testing "parser returns error when objects not visible"
+    (let [gs (-> (gs/initial-game-state)
+                 (gs/add-room {:id :empty-room :desc "Empty Room"
+                               :flags #{:lit}})
+                 ;; Objects exist but are in a different room
+                 (gs/add-object {:id :test-sword :desc "sword"
+                                 :synonym ["sword"]
+                                 :in :other-room
+                                 :flags #{:take}})
+                 (gs/add-object {:id :test-lamp :desc "lamp"
+                                 :synonym ["lamp"]
+                                 :in :other-room
+                                 :flags #{:take}})
+                 (assoc :here :empty-room)
+                 (assoc :input "take sword and lamp"))
+          result (parser/parser-from-input gs)]
+      ;; Should fail - objects aren't visible from empty-room
+      (is (some? (parser/get-parser-error result)))))))

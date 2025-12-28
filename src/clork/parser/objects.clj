@@ -314,6 +314,10 @@
                   (assoc-in game-state [:parser :slocbits] -1)
                   game-state)
 
+             ;; Track incoming match count to separate new from previous
+             ;; This is important for AND clauses where we accumulate matches
+             incoming-count (match-table-count match-table)
+
              ;; Search player inventory (if lit)
              matches-after-player
              (if lit?
@@ -328,7 +332,9 @@
                       (:on-ground game-state/search-bits) (:in-room game-state/search-bits))
                matches-after-player)
 
-             match-count (match-table-count matches-after-room)]
+             total-count (match-table-count matches-after-room)
+             ;; Only count NEW matches for ambiguity check
+             new-match-count (- total-count incoming-count)]
 
          (cond
            ;; "all" mode - just return what we found
@@ -337,27 +343,30 @@
 
            ;; "one" mode - pick randomly if multiple
            (and (bit-set? gflags (:one game-state/getflags))
-                (pos? match-count))
-           (let [picked (random/rand-nth* matches-after-room)]
-             {:success true :matches [picked] :game-state gs})
+                (pos? new-match-count))
+           (let [;; Pick from only the NEW matches
+                 new-matches (vec (drop incoming-count matches-after-room))
+                 picked (random/rand-nth* new-matches)]
+             {:success true :matches (conj (vec (take incoming-count matches-after-room)) picked) :game-state gs})
 
-           ;; Multiple matches - ambiguous
-           (> match-count 1)
+           ;; Multiple NEW matches - ambiguous
+           (> new-match-count 1)
            {:success false
             :game-state gs
             :error {:type :ambiguous
-                    :matches matches-after-room}}
+                    :matches (vec (drop incoming-count matches-after-room))}}
 
-           ;; No matches - try globals
-           (zero? match-count)
+           ;; No NEW matches - try globals
+           (zero? new-match-count)
            (let [global-matches (global-check gs match-table)]
-             (if (pos? (match-table-count global-matches))
+             (if (> (match-table-count global-matches) incoming-count)
                {:success true :matches global-matches :game-state gs}
                {:success false
                 :game-state gs
-                :error {:type :not-here}}))
+                :error {:type :not-here
+                        :message "You can't see any such thing."}}))
 
-           ;; Exactly one match - success
+           ;; Exactly one NEW match - success
            :else
            {:success true :matches matches-after-room :game-state gs}))))))
 
@@ -447,7 +456,6 @@
         (let [word (lexer/lexv-word gs current-ptr)
               next-word (when (< (inc current-ptr) end-ptr)
                           (lexer/lexv-word gs (inc current-ptr)))]
-
           (cond
             ;; ALL - set flag
             (lexer/special-word? word :all)
@@ -588,7 +596,6 @@
         nc1l (parser-state/get-itbl game-state :nc1l)
         nc2 (parser-state/get-itbl game-state :nc2)
         nc2l (parser-state/get-itbl game-state :nc2l)]
-
     ;; Clear buts table
     (let [gs (assoc-in game-state [:parser :buts] [])
 

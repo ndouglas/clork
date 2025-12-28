@@ -443,12 +443,24 @@
 ;;; VERB DISPATCH
 ;;; ---------------------------------------------------------------------------
 
+(defn- perform-single
+  "Execute a verb action for a single object.
+   Returns the updated game-state."
+  [game-state handler]
+  (let [prso (get-in game-state [:parser :prso])
+        result-gs (handler game-state)]
+    ;; Update :it to refer to the direct object (if any) for "it" pronoun
+    (if-let [obj (first prso)]
+      (utils/this-is-it result-gs obj)
+      result-gs)))
+
 (defn perform
   "Execute a verb action.
 
-   ZIL: PERFORM routine in gmain.zil
+   ZIL: PERFORM routine in gmain.zil, MAIN-LOOP-1 multi-object loop
 
-   Looks up the action in *verb-handlers* and calls the handler function.
+   When multiple direct objects are specified (e.g., 'take sword and lamp'),
+   loops through each object, printing its name before executing the action.
    After successful execution with a direct object, updates :it to refer
    to that object for pronoun resolution.
    Returns the updated game-state."
@@ -456,15 +468,29 @@
   (let [action (get-in game-state [:parser :prsa])
         prso (get-in game-state [:parser :prso])
         prsi (get-in game-state [:parser :prsi])
+        ;; Get all objects - prso may be a vector of multiple objects
+        all-prso (if (sequential? prso) prso (when prso [prso]))
+        multi? (and all-prso (> (count all-prso) 1))
         ;; Trace verb dispatch if enabled
         gs (trace/trace-verb game-state action prso prsi)]
     (if-let [handler (get *verb-handlers* action)]
-      (let [result-gs (handler gs)]
-        ;; Update :it to refer to the direct object (if any) for "it" pronoun
-        ;; Use the first object from prso (it's a vector)
-        (if-let [obj (first prso)]
-          (utils/this-is-it result-gs obj)
-          result-gs))
+      (if multi?
+        ;; Multiple objects - loop through each one
+        ;; ZIL: MAIN-LOOP-1 lines 99-153
+        (reduce
+         (fn [current-gs obj]
+           ;; Print "object: " prefix
+           (let [obj-name (game-state/thing-name current-gs obj)
+                 gs-with-prefix (utils/tell current-gs (str obj-name ": "))
+                 ;; Set prso to just this single object for the handler
+                 gs-single (assoc-in gs-with-prefix [:parser :prso] [obj])
+                 result-gs (perform-single gs-single handler)]
+             ;; Add newline after each object's output
+             (utils/crlf result-gs)))
+         gs
+         all-prso)
+        ;; Single object (or no object)
+        (perform-single gs handler))
       (do
         (utils/tell gs (str "I don't know how to do that. [" action "]\n"))
         gs))))
