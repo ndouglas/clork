@@ -74,7 +74,7 @@
                        (cond-> vehicle? (utils/tell (str "(You are in the " (:desc location) ".)"))))
              state (cond
                      (and is-verbose? (some? act)) (act state :look)
-                     is-verbose? (utils/tell state (:ldesc here))
+                     is-verbose? (-> state (utils/tell (:ldesc here)) (utils/crlf))
                      (some? act) (act state :flash)
                      :else state)
              state (if (and vehicle? (some? act) (not= (:id location) (:id here)))

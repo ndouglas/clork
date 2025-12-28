@@ -464,6 +464,24 @@
     (is (= true (parser/wt? "l" :verb)))
     (is (= :look (parser/wt? "l" :verb true)))))
 
+(deftest v-look-ldesc-newline-test
+  (testing "v-look adds newline after ldesc before objects"
+    (let [gs (-> (make-test-state)
+                 (assoc :here :test-room)
+                 (gs/add-room {:id :test-room
+                               :desc "Test Room"
+                               :ldesc "This is a test room."
+                               :flags #{:lit}})
+                 (gs/add-object {:id :ball
+                                 :in :test-room
+                                 :desc "red ball"
+                                 :flags #{:touch}}))
+          [output _] (with-captured-output (verbs-look/v-look gs))]
+      ;; Room description should end with newline before object list
+      (is (clojure.string/includes? output "This is a test room.\n"))
+      ;; Object should be listed separately
+      (is (clojure.string/includes? output "There is a red ball here")))))
+
 ;;; ---------------------------------------------------------------------------
 ;;; OPEN VERB TESTS
 ;;; ---------------------------------------------------------------------------
