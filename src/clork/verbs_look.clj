@@ -68,7 +68,11 @@
        ;; Dark room - tell them and return
        (utils/tell game-state "It is pitch black. You are likely to be eaten by a grue.")
        ;; Lit room - describe it, threading state through each operation
-       (let [state (-> game-state
+       ;; ZIL: <TELL D ,HERE> <CRLF> -- print room name first
+       (let [room-name (:desc here)
+             state (-> game-state
+                       (cond-> room-name (utils/tell room-name))
+                       (cond-> room-name (utils/tell "\n"))
                        (gs/set-here-flag :touch)
                        (cond-> maze? (gs/unset-here-flag :touch))
                        (cond-> vehicle? (utils/tell (str "(You are in the " (:desc location) ".)"))))

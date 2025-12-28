@@ -692,36 +692,41 @@
   [game-state]
   (let [prso (parser-state/get-prso game-state)
         obj (gs/get-thing game-state prso)
-        desc (:desc obj)]
-    (cond
-      ;; Not openable
-      (not (openable? obj))
-      (utils/tell game-state (str "You must tell me how to do that to a " desc "."))
+        desc (:desc obj)
+        action-fn (:action obj)]
+    ;; First try the object's action handler (like kitchen window)
+    (if-let [result (when action-fn (action-fn game-state))]
+      result
+      ;; Object didn't handle it - default behavior
+      (cond
+        ;; Not openable
+        (not (openable? obj))
+        (utils/tell game-state (str "You must tell me how to do that to a " desc "."))
 
-      ;; Already open
-      (already-open? obj)
-      (utils/tell game-state "It is already open.")
+        ;; Already open
+        (already-open? obj)
+        (utils/tell game-state "It is already open.")
 
-      ;; Container
-      (container? obj)
-      (let [state (-> game-state
-                      (add-flag prso :open)
-                      (add-flag prso :touch))
-            contents (gs/get-contents state prso)
-            visible (remove (fn [id]
-                              (let [o (gs/get-thing state id)
-                                    flags (or (:flags o) #{})]
-                                (contains? flags :invisible)))
-                            contents)]
-        (if (or (empty? visible) (transparent? obj))
-          (utils/tell state "Opened.")
-          (let [content-desc (describe-contents state prso)]
-            (utils/tell state (str "Opening the " desc " reveals " content-desc ".")))))
+        ;; Container
+        (container? obj)
+        (let [state (-> game-state
+                        (add-flag prso :open)
+                        (add-flag prso :touch))
+              contents (gs/get-contents state prso)
+              visible (remove (fn [id]
+                                (let [o (gs/get-thing state id)
+                                      flags (or (:flags o) #{})]
+                                  (contains? flags :invisible)))
+                              contents)]
+          (if (or (empty? visible) (transparent? obj))
+            (utils/tell state "Opened.")
+            (let [content-desc (describe-contents state prso)]
+              (utils/tell state (str "Opening the " desc " reveals " content-desc ".")))))
 
-      ;; Door
-      :else
-      (let [state (add-flag game-state prso :open)]
-        (utils/tell state (str "The " desc " opens."))))))
+        ;; Door
+        :else
+        (let [state (add-flag game-state prso :open)]
+          (utils/tell state (str "The " desc " opens.")))))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; MOVEMENT COMMANDS

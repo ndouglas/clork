@@ -28,9 +28,9 @@
    :flags (flags/flags :cont :trytake)
    :capacity 10
    :action (fn [game-state]
-             (if (and (= (:verb game-state) :take) (= (:prso game-state) :mailbox))
-               (utils/tell game-state "It is securely anchored.\n")
-               game-state))})
+             ;; Only handles :take verb - returns nil for other verbs
+             (when (and (= (:verb game-state) :take) (= (:prso game-state) :mailbox))
+               (utils/tell game-state "It is securely anchored.\n")))})
 
 ;; <OBJECT ADVERTISEMENT
 ;;   (IN MAILBOX)
@@ -190,6 +190,7 @@
 ;;     - From kitchen: walk east to behind-house
 ;;     - From outside: walk west to kitchen (if open)
 
+;; ZIL: KITCHEN-WINDOW-F in 1actions.zil handles OPEN/CLOSE with custom messages
 (def kitchen-window
   {:id :kitchen-window
    :in :behind-house  ; It's a global, visible from both sides
@@ -201,6 +202,28 @@
              (let [verb (parser-state/get-prsa game-state)
                    here (:here game-state)]
                (cond
+                 ;; OPEN: custom message for opening the window
+                 (= verb :open)
+                 (if (gs/set-thing-flag? game-state :kitchen-window :open)
+                   (utils/tell game-state "It is already open.")
+                   (let [state (-> game-state
+                                   (gs/set-thing-flag :kitchen-window :open)
+                                   (gs/set-thing-flag :kitchen-window :touch))]
+                     (utils/tell state "With great effort, you open the window far enough to allow entry.")))
+
+                 ;; CLOSE: custom message for closing the window
+                 (= verb :close)
+                 (if (not (gs/set-thing-flag? game-state :kitchen-window :open))
+                   (utils/tell game-state "It is already closed.")
+                   (let [state (gs/unset-thing-flag game-state :kitchen-window :open)]
+                     (utils/tell state "The window closes (more easily than it opened).")))
+
+                 ;; EXAMINE: special message when window hasn't been touched
+                 (= verb :examine)
+                 (if (not (gs/set-thing-flag? game-state :kitchen-window :touch))
+                   (utils/tell game-state "The window is slightly ajar, but not enough to allow entry.")
+                   nil)  ; Let default examine handle it
+
                  ;; THROUGH: walk through the window
                  (= verb :through)
                  (cond
@@ -251,6 +274,8 @@
 ;;	(CAPACITY 9)
 ;;	(SIZE 6)>
 
+;; ZIL: SANDWICH-BAG in 1dungeon.zil
+;;   (FDESC "On the table is an elongated brown sack, smelling of hot peppers.")
 (def brown-sack
   {:id :brown-sack
    :in :kitchen
@@ -258,6 +283,7 @@
    :adjective ["brown" "elongated" "smelly"]
    :desc "brown sack"
    :flags (flags/flags :take :cont :burn)
+   :fdesc "On the table is an elongated brown sack, smelling of hot peppers."
    :capacity 9
    :size 6})
 
@@ -270,6 +296,7 @@
 ;;	(CAPACITY 4)
 ;;	(SIZE 6)>
 
+;; ZIL: (FDESC "A bottle is sitting on the table.")
 (def bottle
   {:id :bottle
    :in :kitchen
@@ -277,6 +304,7 @@
    :adjective ["glass"]
    :desc "glass bottle"
    :flags (flags/flags :take :cont :trans)
+   :fdesc "A bottle is sitting on the table."
    :capacity 4
    :size 6})
 
@@ -289,6 +317,8 @@
 ;;	(ACTION LANTERN-F)
 ;;	(SIZE 15)>
 
+;; ZIL: (FDESC "A battery-powered brass lantern is on the trophy case.")
+;;      (LDESC "There is a brass lantern (battery-powered) here.")
 (def brass-lantern
   {:id :brass-lantern
    :in :living-room
@@ -296,6 +326,8 @@
    :adjective ["brass"]
    :desc "brass lantern"
    :flags (flags/flags :take :light)
+   :fdesc "A battery-powered brass lantern is on the trophy case."
+   :ldesc "There is a brass lantern (battery-powered) here."
    :size 15})
 
 ;;; ---------------------------------------------------------------------------
@@ -330,13 +362,15 @@
 ;;	(SIZE 10)
 ;;	(TVALUE 0)>
 
+;; ZIL: (FDESC "Above the trophy case hangs an elvish sword of great antiquity.")
 (def sword
   {:id :sword
    :in :living-room
    :synonym ["sword" "orchrist" "glamdring" "blade"]
    :adjective ["elvish" "antique" "old"]
    :desc "elvish sword"
-   :flags (flags/flags :take :trytake :weapon)
+   :flags (flags/flags :take :trytake :weapon :vowel)  ; :vowel for "an elvish"
+   :fdesc "Above the trophy case hangs an elvish sword of great antiquity."
    :size 10
    :value 0})
 
