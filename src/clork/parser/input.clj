@@ -126,7 +126,7 @@
       ;; <COND (<NOT ,SUPER-BRIEF> <CRLF>)>
       ((fn [gs] (utils/crlf-if gs (not (:super-brief gs)))))
       ;; <TELL ">"> - only in interactive mode
-      ((fn [gs] (if (readline/jline-available?)
+      ((fn [gs] (if (readline/interactive?)
                   (utils/tell gs ">")
                   gs)))
       ;; <READ ,P-INBUF ,P-LEXV>
@@ -137,7 +137,7 @@
            (-> gs
                (assoc :input input)
                ;; In non-interactive mode, echo the command for transcript readability
-               (cond-> (and (not (readline/jline-available?)) input)
+               (cond-> (and (not (readline/interactive?)) input)
                  (-> (utils/tell ">")
                      (utils/tell input)
                      (utils/crlf)))))))))

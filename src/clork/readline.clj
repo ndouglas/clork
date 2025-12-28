@@ -18,14 +18,26 @@
 
 (def ^:private terminal-atom (atom nil))
 (def ^:private reader-atom (atom nil))
+(def ^:private interactive-atom (atom nil))
+
+(defn- detect-interactive
+  "Detect if we're running interactively.
+   Checks if stdin has data immediately available - if so, input is likely piped."
+  []
+  (try
+    ;; If there's data available on stdin at startup, we're non-interactive
+    (zero? (.available System/in))
+    (catch Exception _
+      ;; If we can't check, assume interactive
+      true)))
 
 (defn- create-terminal
   "Create a JLine terminal. Returns nil on failure.
-   Checks for real TTY before attempting to create system terminal."
+   Lets JLine detect the terminal type rather than checking System/console,
+   since lein run doesn't provide a console even when interactive."
   []
-  ;; Check if we have a real TTY (not piped/redirected)
-  (if (and (System/console)
-           (not (Boolean/getBoolean "clork.dumb-terminal")))
+  (if (Boolean/getBoolean "clork.dumb-terminal")
+    nil
     (try
       ;; Suppress JLine's noisy warnings during terminal creation
       (let [logger (java.util.logging.Logger/getLogger "org.jline")
@@ -39,11 +51,7 @@
           (finally
             (.setLevel logger old-level))))
       (catch Exception e
-        (binding [*out* *err*]
-          (println "Warning: Could not create JLine terminal:" (.getMessage e)))
-        nil))
-    ;; No TTY available - skip JLine, will use fallback read-line
-    nil))
+        nil))))
 
 ;; Forward declaration - actual implementation is below after completer is defined
 (declare create-reader-with-completion)
@@ -54,8 +62,10 @@
   []
   (if @reader-atom
     true  ; Already initialized
-    (let [terminal (create-terminal)
+    (let [interactive (detect-interactive)
+          terminal (when interactive (create-terminal))
           reader (create-reader-with-completion terminal)]
+      (reset! interactive-atom interactive)
       (reset! terminal-atom terminal)
       (reset! reader-atom reader)
       (boolean reader))))
@@ -103,6 +113,12 @@
   "Returns true if JLine is initialized and available."
   []
   (boolean @reader-atom))
+
+(defn interactive?
+  "Returns true if running interactively (with a TTY).
+   Determined during init! by checking terminal type."
+  []
+  (boolean @interactive-atom))
 
 ;;; ---------------------------------------------------------------------------
 ;;; TAB COMPLETION
