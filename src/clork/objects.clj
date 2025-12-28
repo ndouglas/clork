@@ -29,8 +29,10 @@
    :capacity 10
    :action (fn [game-state]
              ;; Only handles :take verb - returns nil for other verbs
-             (when (and (= (:verb game-state) :take) (= (:prso game-state) :mailbox))
-               (utils/tell game-state "It is securely anchored.\n")))})
+             ;; ZIL: <COND (<AND <VERB? TAKE> <EQUAL? ,PRSO ,MAILBOX>>
+             (when (and (= (parser-state/get-prsa game-state) :take)
+                        (= (parser-state/get-prso game-state) :mailbox))
+               (utils/tell game-state "It is securely anchored.")))})
 
 ;; <OBJECT ADVERTISEMENT
 ;;   (IN MAILBOX)

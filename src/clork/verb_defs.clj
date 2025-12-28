@@ -470,7 +470,14 @@
         prsi (get-in game-state [:parser :prsi])
         ;; Get all objects - prso may be a vector of multiple objects
         all-prso (if (sequential? prso) prso (when prso [prso]))
-        multi? (and all-prso (> (count all-prso) 1))
+        ;; Check if we're in "all" mode (even with single object)
+        ;; ZIL: <OR <G? .NUM 1> <EQUAL? <GET <GET ,P-ITBL ,P-NC1> 0> ,W?ALL>>
+        getflags (get-in game-state [:parser :getflags] 0)
+        all-mode? (pos? (bit-and (or getflags 0) (:all game-state/getflags)))
+        ;; Print prefixes when multiple objects OR in "all" mode
+        multi? (and all-prso
+                    (or (> (count all-prso) 1)
+                        all-mode?))
         ;; Trace verb dispatch if enabled
         gs (trace/trace-verb game-state action prso prsi)]
     (if-let [handler (get *verb-handlers* action)]

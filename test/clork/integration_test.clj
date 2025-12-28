@@ -101,6 +101,15 @@
       (is (true? (:won (:game-state result)))
           "Player should have won the game"))))
 
+(deftest take-all-test
+  (testing "take all finds objects in room"
+    (let [script "take all\n$quit\n"
+          result (run-script script)]
+      ;; Check that the mailbox was reported as a response to take all
+      ;; The expected output is "small mailbox: It is securely anchored."
+      (is (re-find #"small mailbox: It is securely anchored\." (:output result))
+          (str "take all should find and report on the mailbox. Output:\n" (:output result))))))
+
 (deftest move-counting-test
   (testing "game actions increment move count"
     ;; open, read, drop are game actions that should count as moves
