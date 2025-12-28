@@ -308,6 +308,22 @@
    :capacity 4
    :size 6})
 
+;; <OBJECT WATER
+;;	(IN BOTTLE)
+;;	(SYNONYM WATER QUANTITY LIQUID H2O)
+;;	(DESC "quantity of water")
+;;	(FLAGS TRYTAKEBIT TAKEBIT DRINKBIT)
+;;	(ACTION WATER-F)
+;;	(SIZE 4)>
+
+(def water
+  {:id :water
+   :in :bottle
+   :synonym ["water" "quantity" "liquid" "h2o"]
+   :desc "quantity of water"
+   :flags (flags/flags :trytake :take :drink)
+   :size 4})
+
 ;; <OBJECT LANTERN
 ;;	(IN LIVING-ROOM)
 ;;	(SYNONYM LAMP LANTERN LIGHT)
@@ -533,6 +549,7 @@
    trap-door
    brown-sack
    bottle
+   water
    brass-lantern
    trophy-case
    sword

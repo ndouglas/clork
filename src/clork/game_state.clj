@@ -184,10 +184,11 @@
 (def get-thing-location get-thing-loc-id)
 
 (defn get-contents
-  "Return the IDs of all objects inside the given container."
+  "Return the IDs of all objects inside the given container, sorted by definition order."
   [game-state container-id]
   (->> (:objects game-state)
        (filter (fn [[_ obj]] (= (:in obj) container-id)))
+       (sort-by (fn [[_ obj]] (or (:order obj) 999)))
        (map first)))
 
 (defn verbose?
@@ -232,15 +233,22 @@
   (reduce add-room game-state rooms))
 
 (defn add-object
-  "Add an object to the game state"
-  [game-state object]
-  (assoc game-state :objects
-         (assoc (:objects game-state) (:id object) object)))
+  "Add an object to the game state. Optionally takes an order index."
+  ([game-state object]
+   (add-object game-state object nil))
+  ([game-state object order]
+   (let [obj-with-order (if order (assoc object :order order) object)]
+     (assoc game-state :objects
+            (assoc (:objects game-state) (:id obj-with-order) obj-with-order)))))
 
 (defn add-objects
-  "Add each of the list of objects to the game state"
+  "Add each of the list of objects to the game state, preserving order.
+   Objects receive an :order field matching their position in the list.
+   This mirrors ZIL's FIRST?/NEXT? iteration order for room descriptions."
   [game-state objects]
-  (reduce add-object game-state objects))
+  (reduce-kv (fn [gs idx obj] (add-object gs obj idx))
+             game-state
+             (vec objects)))
 
 (defn game-state-copy
   "Set the value of one key in game-state to the value of another."

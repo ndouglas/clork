@@ -94,3 +94,27 @@
   (testing "set-here-flag? returns false when flag is not set"
     (is (not (gs/set-here-flag? {:here :kitchen :rooms {:kitchen {:lit false}}} :lit)))
     (is (not (gs/set-here-flag? {:here :kitchen :rooms {:kitchen {}}} :lit)))))
+
+;; Object and content functions
+
+(deftest add-objects-preserves-order-test
+  (testing "add-objects assigns :order field based on definition order"
+    (let [gs (gs/add-objects {:objects {}}
+                             [{:id :first} {:id :second} {:id :third}])]
+      (is (= 0 (get-in gs [:objects :first :order])))
+      (is (= 1 (get-in gs [:objects :second :order])))
+      (is (= 2 (get-in gs [:objects :third :order]))))))
+
+(deftest get-contents-returns-ordered-test
+  (testing "get-contents returns objects in definition order"
+    (let [gs (gs/add-objects {:objects {}}
+                             [{:id :sack :in :kitchen}
+                              {:id :bottle :in :kitchen}
+                              {:id :water :in :bottle}
+                              {:id :knife :in :attic}])
+          kitchen-contents (gs/get-contents gs :kitchen)
+          bottle-contents (gs/get-contents gs :bottle)]
+      ;; Kitchen should have sack before bottle (definition order)
+      (is (= [:sack :bottle] kitchen-contents))
+      ;; Bottle should have water
+      (is (= [:water] bottle-contents)))))
