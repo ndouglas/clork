@@ -339,8 +339,8 @@
 ;;	(SYNONYM CASE)
 ;;	(ADJECTIVE TROPHY)
 ;;	(DESC "trophy case")
-;;	(FLAGS CONTBIT NDESCBIT TRANSBIT SEARCHBIT)
-;;	(ACTION TROPHY-CASE-F)
+;;	(FLAGS TRANSBIT CONTBIT NDESCBIT TRYTAKEBIT SEARCHBIT)
+;;	(ACTION TROPHY-CASE-FCN)
 ;;	(CAPACITY 10000)>
 
 (def trophy-case
@@ -349,38 +349,37 @@
    :synonym ["case"]
    :adjective ["trophy"]
    :desc "trophy case"
-   :flags (flags/flags :cont :ndesc :trans)
+   :flags (flags/flags :cont :ndesc :trans :trytake :search)
    :capacity 10000})
 
 ;; <OBJECT SWORD
 ;;	(IN LIVING-ROOM)
-;;	(SYNONYM SWORD ORCHRIST GLAMDRING BLADE)
-;;	(ADJECTIVE ELVISH ANTIQUE OLD)
-;;	(DESC "elvish sword")
-;;	(FLAGS TAKEBIT TRYTAKEBIT WEAPONBIT)
-;;	(ACTION SWORD-F)
-;;	(SIZE 10)
+;;	(SYNONYM SWORD ORCRIST GLAMDRING BLADE)
+;;	(ADJECTIVE ELVISH OLD ANTIQUE)
+;;	(DESC "sword")
+;;	(FLAGS TAKEBIT WEAPONBIT TRYTAKEBIT)
+;;	(ACTION SWORD-FCN)
+;;	(FDESC "Above the trophy case hangs an elvish sword of great antiquity.")
+;;	(SIZE 30)
 ;;	(TVALUE 0)>
-
-;; ZIL: (FDESC "Above the trophy case hangs an elvish sword of great antiquity.")
 (def sword
   {:id :sword
    :in :living-room
-   :synonym ["sword" "orchrist" "glamdring" "blade"]
+   :synonym ["sword" "orcrist" "glamdring" "blade"]
    :adjective ["elvish" "antique" "old"]
    :desc "elvish sword"
    :flags (flags/flags :take :trytake :weapon :vowel)  ; :vowel for "an elvish"
    :fdesc "Above the trophy case hangs an elvish sword of great antiquity."
-   :size 10
+   :size 30  ; ZIL: SIZE 30
    :value 0})
 
 ;; <OBJECT RUG
 ;;	(IN LIVING-ROOM)
 ;;	(SYNONYM RUG CARPET)
 ;;	(ADJECTIVE LARGE ORIENTAL)
-;;	(DESC "large oriental rug")
-;;	(FLAGS NDESCBIT)
-;;	(ACTION RUG-F)>
+;;	(DESC "carpet")
+;;	(FLAGS NDESCBIT TRYTAKEBIT)
+;;	(ACTION RUG-FCN)>
 
 (def rug
   {:id :rug
@@ -388,7 +387,7 @@
    :synonym ["rug" "carpet"]
    :adjective ["large" "oriental"]
    :desc "large oriental rug"
-   :flags (flags/flags :ndesc)})
+   :flags (flags/flags :ndesc :trytake)})
 
 ;;; ---------------------------------------------------------------------------
 ;;; ATTIC OBJECTS
@@ -398,8 +397,10 @@
 ;;	(IN ATTIC)
 ;;	(SYNONYM ROPE HEMP COIL)
 ;;	(ADJECTIVE LARGE)
-;;	(DESC "coil of rope")
-;;	(FLAGS TAKEBIT)
+;;	(DESC "rope")
+;;	(FLAGS TAKEBIT SACREDBIT TRYTAKEBIT)
+;;	(ACTION ROPE-FUNCTION)
+;;	(FDESC "A large coil of rope is lying in the corner.")
 ;;	(SIZE 10)>
 
 (def rope
@@ -408,16 +409,18 @@
    :synonym ["rope" "hemp" "coil"]
    :adjective ["large"]
    :desc "coil of rope"
-   :flags (flags/flags :take)
+   :flags (flags/flags :take :sacred :trytake)
+   :fdesc "A large coil of rope is lying in the corner."
    :size 10})
 
-;; <OBJECT NASTY-KNIFE
-;;	(IN ATTIC)
-;;	(SYNONYM KNIFE)
-;;	(ADJECTIVE NASTY)
+;; <OBJECT KNIFE
+;;	(IN ATTIC-TABLE)
+;;	(SYNONYM KNIVES KNIFE BLADE)
+;;	(ADJECTIVE NASTY UNRUSTY)
 ;;	(DESC "nasty knife")
-;;	(FLAGS TAKEBIT WEAPONBIT)
-;;	(SIZE 4)>
+;;	(FLAGS TAKEBIT WEAPONBIT TRYTAKEBIT)
+;;	(FDESC "On a table is a nasty-looking knife.")
+;;	(ACTION KNIFE-F)>
 
 (def knife
   {:id :knife
@@ -425,7 +428,8 @@
    :synonym ["knife"]
    :adjective ["nasty"]
    :desc "nasty knife"
-   :flags (flags/flags :take :weapon)
+   :flags (flags/flags :take :weapon :trytake)
+   :fdesc "On a table is a nasty-looking knife."
    :size 4})
 
 ;;; ---------------------------------------------------------------------------
@@ -434,12 +438,17 @@
 
 ;; <OBJECT PAINTING
 ;;	(IN GALLERY)
-;;	(SYNONYM PAINTING CANVAS)
-;;	(ADJECTIVE BEAUTIFUL HUGE)
+;;	(SYNONYM PAINTING ART CANVAS TREASURE)
+;;	(ADJECTIVE BEAUTI)
 ;;	(DESC "painting")
 ;;	(FLAGS TAKEBIT BURNBIT)
+;;	(ACTION PAINTING-FCN)
+;;	(FDESC "Fortunately, there is still one chance for you to be a vandal, for on
+;;	        the far wall is a painting of unparalleled beauty.")
+;;	(LDESC "A painting by a neglected genius is here.")
 ;;	(SIZE 15)
-;;	(TVALUE 4)>
+;;	(VALUE 4)
+;;	(TVALUE 6)>
 
 (def painting
   {:id :painting
@@ -448,6 +457,8 @@
    :adjective ["beautiful" "huge"]
    :desc "painting"
    :flags (flags/flags :take :burn)
+   :fdesc "Fortunately, there is still one chance for you to be a vandal, for on the far wall is a painting of unparalleled beauty."
+   :ldesc "A painting by a neglected genius is here."
    :size 15
    :value 4})
 
@@ -462,15 +473,40 @@
 ;;   (DESC "tree")
 ;;   (FLAGS NDESCBIT CLIMBBIT)>
 
-;; Egg in the bird's nest
+;; <OBJECT NEST
+;;	(IN UP-A-TREE)
+;;	(SYNONYM NEST)
+;;	(ADJECTIVE BIRDS)
+;;	(DESC "bird's nest")
+;;	(FLAGS TAKEBIT BURNBIT CONTBIT OPENBIT SEARCHBIT)
+;;	(FDESC "Beside you on the branch is a small bird's nest.")
+;;	(CAPACITY 20)>
+
 (def nest
   {:id :nest
    :in :up-a-tree
    :synonym ["nest"]
    :adjective ["bird's" "small"]
    :desc "bird's nest"
-   :flags (flags/flags :take :cont)
-   :capacity 6})
+   :flags (flags/flags :take :cont :burn :open :search)
+   :fdesc "Beside you on the branch is a small bird's nest."
+   :capacity 20})
+
+;; <OBJECT EGG
+;;	(IN NEST)
+;;	(SYNONYM EGG TREASURE)
+;;	(ADJECTIVE BIRDS ENCRUSTED JEWELED)
+;;	(DESC "jewel-encrusted egg")
+;;	(FLAGS TAKEBIT CONTBIT SEARCHBIT)
+;;	(ACTION EGG-OBJECT)
+;;	(VALUE 5)
+;;	(TVALUE 5)
+;;	(CAPACITY 6)
+;;	(FDESC "In the bird's nest is a large egg encrusted with precious jewels,
+;;	        apparently scavenged by a childless songbird. The egg is covered with
+;;	        fine gold inlay, and ornamented in lapis lazuli and mother-of-pearl.
+;;	        Unlike most eggs, this one is hinged and closed with a delicate looking
+;;	        clasp. The egg appears extremely fragile.")>
 
 (def egg
   {:id :egg
@@ -478,7 +514,8 @@
    :synonym ["egg" "bauble"]
    :adjective ["jewel-encrusted" "bird's"]
    :desc "jewel-encrusted egg"
-   :flags (flags/flags :take :cont)
+   :flags (flags/flags :take :cont :search)
+   :fdesc "In the bird's nest is a large egg encrusted with precious jewels, apparently scavenged by a childless songbird who must have been compelled by a strong maternal instinct."
    :capacity 6
    :value 5})
 
