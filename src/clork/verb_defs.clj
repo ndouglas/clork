@@ -83,6 +83,38 @@
                 :syntax  {:num-objects 0}
                 :handler verbs-health/v-quit}
 
+   ;; ZIL: <SYNTAX RESTART = V-RESTART>
+   :restart    {:words   ["restart"]
+                :syntax  {:num-objects 0}
+                :handler verbs-health/v-restart}
+
+   ;; ZIL: <SYNTAX SAVE = V-SAVE>
+   :save       {:words   ["save"]
+                :syntax  {:num-objects 0}
+                :handler verbs-health/v-save}
+
+   ;; ZIL: <SYNTAX RESTORE = V-RESTORE>
+   :restore    {:words   ["restore"]
+                :syntax  {:num-objects 0}
+                :handler verbs-health/v-restore}
+
+   ;; ZIL: <SYNTAX SCRIPT = V-SCRIPT>
+   :script     {:words   ["script"]
+                :syntax  {:num-objects 0}
+                :handler verbs-health/v-script}
+
+   ;; ZIL: <SYNTAX UNSCRIPT = V-UNSCRIPT>
+   :unscript   {:words   ["unscript"]
+                :syntax  {:num-objects 0}
+                :handler verbs-health/v-unscript}
+
+   ;; ZIL: <SYNTAX $VERIFY = V-VERIFY>
+   ;; Note: In ZIL, $VERIFY used $ prefix for debugging commands.
+   ;; We support both "verify" and "$verify" for compatibility.
+   :verify     {:words   ["verify" "$verify"]
+                :syntax  {:num-objects 0}
+                :handler verbs-health/v-verify}
+
    ;; === Observation Verbs ===
    :look       {:words   ["look" "l"]
                 :syntax  {:num-objects 0}

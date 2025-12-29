@@ -36,12 +36,16 @@
                 (game-state/add-objects objects/all-objects))]
      ;; Register object vocabulary for parser
      (verb-defs/register-object-vocabulary! (:objects gs))
-     (-> gs
-         (utils/this-is-it :mailbox)
-         (initial-version)
-         (game-state/set-here-flag :lit)
-         (verbs-look/v-look)
-         (main-loop/main-loop)))))
+     ;; Initialize the game state and store a copy for restart
+     (let [init-gs (-> gs
+                       (utils/this-is-it :mailbox)
+                       (game-state/set-here-flag :lit))
+           ;; Store initial state for restart (before version/look output)
+           gs-with-restart (assoc init-gs :restart-state init-gs)]
+       (-> gs-with-restart
+           (initial-version)
+           (verbs-look/v-look)
+           (main-loop/main-loop))))))
 
 (defn print-usage
   "Print usage information."

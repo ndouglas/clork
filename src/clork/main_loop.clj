@@ -7,7 +7,9 @@
             [clork.debug :as debug]
             [clork.undo :as undo]
             [clork.readline :as readline]
-            [clork.daemon :as daemon]))
+            [clork.daemon :as daemon]
+            [clork.verbs-look :as verbs-look]
+            [clork.verbs-meta :as verbs-meta]))
 
 ;;; ---------------------------------------------------------------------------
 ;;; MOVE COUNTING
@@ -21,7 +23,8 @@
   "Verbs that don't count as moves (meta/system commands).
    ZIL: TELL BRIEF SUPER-BRIEF VERBOSE SAVE VERSION QUIT RESTART SCORE SCRIPT UNSCRIPT RESTORE
    Note: LOOK and INVENTORY are NOT meta-verbs - they count as moves and run daemons."
-  #{:verbose :brief :super-brief :version :diagnose :score :quit})
+  #{:verbose :brief :super-brief :version :diagnose :score :quit :verify
+    :restart :save :restore :script :unscript})
 
 (defn- increment-moves-if-needed
   "Increment the move counter if the action is not a meta-verb.
@@ -255,6 +258,29 @@
       ;; Normal quit
       (:quit gs)
       gs
+
+      ;; Restart - restore from initial state
+      ;; ZIL: <RESTART> opcode resets game to initial state
+      (:restart gs)
+      (if-let [restart-state (:restart-state gs)]
+        ;; Restore initial state, show version and look
+        (let [restarted (-> restart-state
+                            (verbs-meta/v-version)
+                            (utils/crlf)
+                            (verbs-look/v-look))]
+          (recur restarted))
+        ;; No restart-state available (shouldn't happen)
+        (do
+          (utils/tell gs "\nRestart failed.")
+          (recur (dissoc gs :restart))))
+
+      ;; Restored from save file - show room
+      ;; ZIL: V-RESTORE calls V-FIRST-LOOK after successful restore
+      (:restored gs)
+      (let [looked (-> gs
+                       (dissoc :restored)
+                       (verbs-look/v-look))]
+        (recur looked))
 
       ;; Max turns exceeded (script mode)
       (max-turns-exceeded? gs)

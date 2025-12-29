@@ -37,12 +37,12 @@ These are out-of-game commands that don't advance time.
 | [x] | DIAGNOSE | V-DIAGNOSE | Show player health |
 | [x] | SCORE | V-SCORE | Show current score |
 | [x] | QUIT/Q | V-QUIT | Quit game |
-| [ ] | RESTART | V-RESTART | Restart game |
-| [ ] | RESTORE | V-RESTORE | Load saved game |
-| [ ] | SAVE | V-SAVE | Save game |
-| [ ] | SCRIPT | V-SCRIPT | Start transcript |
-| [ ] | UNSCRIPT | V-UNSCRIPT | Stop transcript |
-| [ ] | $VERIFY | V-VERIFY | Verify game file |
+| [x] | RESTART | V-RESTART | Restart game |
+| [x] | RESTORE | V-RESTORE | Load saved game |
+| [x] | SAVE | V-SAVE | Save game |
+| [x] | SCRIPT | V-SCRIPT | Start transcript |
+| [x] | UNSCRIPT | V-UNSCRIPT | Stop transcript |
+| [x] | $VERIFY | V-VERIFY | Verify game file |
 
 ### Core Movement Verbs
 
@@ -831,7 +831,7 @@ These are out-of-game commands that don't advance time.
 - [~] Light system (lamp, darkness, grue)
 - [~] Container system
 - [x] Scoring system
-- [ ] Save/restore
+- [x] Save/restore
 
 ### Phase 3: World Building
 - [~] All rooms with connections

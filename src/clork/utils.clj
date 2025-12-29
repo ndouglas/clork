@@ -1,11 +1,64 @@
 (ns clork.utils
-  "Output utilities for Clork.")
+  "Output utilities for Clork."
+  (:require [clojure.java.io :as io]))
+
+;;; ---------------------------------------------------------------------------
+;;; TRANSCRIPT SUPPORT
+;;; ---------------------------------------------------------------------------
+;;; ZIL: SCRIPT/UNSCRIPT commands enable/disable transcription to a file
+
+(def ^:private transcript-writer
+  "Atom holding the current transcript writer, or nil if not scripting."
+  (atom nil))
+
+(defn script-enabled?
+  "Returns true if transcript mode is currently enabled."
+  []
+  (some? @transcript-writer))
+
+(defn start-script!
+  "Start transcription to the specified file.
+   Returns true on success, false on failure."
+  [filename]
+  (try
+    (let [writer (io/writer filename)]
+      (reset! transcript-writer writer)
+      true)
+    (catch Exception e
+      (binding [*out* *err*]
+        (println (str "Failed to start transcript: " (.getMessage e))))
+      false)))
+
+(defn stop-script!
+  "Stop transcription and close the file.
+   Returns true on success, false if no transcript was active."
+  []
+  (if-let [writer @transcript-writer]
+    (do
+      (try
+        (.close writer)
+        (catch Exception _))
+      (reset! transcript-writer nil)
+      true)
+    false))
+
+(defn- write-to-transcript
+  "Write message to transcript file if transcription is enabled."
+  [message]
+  (when-let [writer @transcript-writer]
+    (try
+      (.write writer message)
+      (.flush writer)
+      (catch Exception _))))
 
 (defn tell
-  "Tell the player something, and return the game state."
+  "Tell the player something, and return the game state.
+   Also writes to transcript if scripting is enabled."
   [game-state message]
   (print message)
   (flush)
+  ;; Also write to transcript if enabled
+  (write-to-transcript message)
   game-state)
 
 (defn crlf

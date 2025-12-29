@@ -1,6 +1,7 @@
 (ns clork.verbs-test
   "Verb handler tests for Clork."
   (:require [clojure.test :refer :all]
+            [clojure.java.io :as io]
             [clork.verbs-meta :as verbs-meta]
             [clork.verbs-health :as verbs-health]
             [clork.verbs-inventory :as verbs-inv]
@@ -10,6 +11,7 @@
             [clork.verb-defs :as verb-defs]
             [clork.parser :as parser]
             [clork.game-state :as gs]
+            [clork.utils :as utils]
             [clork.utils-test :refer [with-captured-output make-test-state parse-test-input]]))
 
 ;;; ---------------------------------------------------------------------------
@@ -838,3 +840,186 @@
   (testing "search is registered in vocabulary as a verb"
     (is (= true (parser/wt? "search" :verb)))
     (is (= :look-inside (parser/wt? "search" :verb true)))))
+
+;;; ---------------------------------------------------------------------------
+;;; VERIFY VERB TESTS
+;;; ---------------------------------------------------------------------------
+
+(deftest v-verify-test
+  (testing "v-verify always reports success"
+    (let [gs (make-test-state)
+          [output _] (with-captured-output (verbs-health/v-verify gs))]
+      (is (clojure.string/includes? output "Verifying disk..."))
+      (is (clojure.string/includes? output "The disk is correct.")))))
+
+(deftest verify-vocabulary-test
+  (testing "verify is registered in vocabulary as a verb"
+    (is (= true (parser/wt? "verify" :verb)))
+    (is (= :verify (parser/wt? "verify" :verb true))))
+  (testing "$verify is a synonym for verify"
+    (is (= true (parser/wt? "$verify" :verb)))
+    (is (= :verify (parser/wt? "$verify" :verb true)))))
+
+(deftest verify-parsing-test
+  (testing "parsing 'verify' sets prsa to :verify"
+    (let [gs (make-test-state)
+          [_ result] (with-captured-output (parse-test-input gs "verify"))]
+      (is (nil? (get-in result [:parser :error])))
+      (is (= :verify (get-in result [:parser :prsa]))))))
+
+;;; ---------------------------------------------------------------------------
+;;; RESTART VERB TESTS
+;;; ---------------------------------------------------------------------------
+
+(deftest v-restart-confirmed-test
+  (testing "v-restart with 'y' response sets :restart to true"
+    (binding [verbs-health/*read-input-fn* (constantly "y")]
+      (let [gs (make-test-state)
+            [output result] (with-captured-output (verbs-health/v-restart gs))]
+        (is (true? (:restart result)))
+        ;; Should show score first
+        (is (clojure.string/includes? output "Your score is"))
+        (is (clojure.string/includes? output "Restarting."))))))
+
+(deftest v-restart-declined-test
+  (testing "v-restart with 'n' response does not set :restart"
+    (binding [verbs-health/*read-input-fn* (constantly "n")]
+      (let [gs (make-test-state)
+            [output result] (with-captured-output (verbs-health/v-restart gs))]
+        (is (nil? (:restart result)))
+        (is (clojure.string/includes? output "Ok."))))))
+
+(deftest restart-vocabulary-test
+  (testing "restart is registered in vocabulary as a verb"
+    (is (= true (parser/wt? "restart" :verb)))
+    (is (= :restart (parser/wt? "restart" :verb true)))))
+
+(deftest restart-parsing-test
+  (testing "parsing 'restart' sets prsa to :restart"
+    (let [gs (make-test-state)
+          [_ result] (with-captured-output (parse-test-input gs "restart"))]
+      (is (nil? (get-in result [:parser :error])))
+      (is (= :restart (get-in result [:parser :prsa]))))))
+
+;;; ---------------------------------------------------------------------------
+;;; SAVE/RESTORE VERB TESTS
+;;; ---------------------------------------------------------------------------
+
+(deftest v-save-test
+  (testing "v-save saves game state to file"
+    (binding [verbs-health/*read-input-fn* (constantly "test-save.sav")]
+      (let [gs (-> (make-test-state)
+                   (assoc :score 42)
+                   (assoc :moves 10))
+            [output _] (with-captured-output (verbs-health/v-save gs))]
+        (is (= "Ok." output))
+        ;; Clean up test file
+        (try
+          (io/delete-file "test-save.sav")
+          (catch Exception _))))))
+
+(deftest v-restore-test
+  (testing "v-restore restores game state from file"
+    ;; First save a game
+    (binding [verbs-health/*read-input-fn* (constantly "test-restore.sav")]
+      (let [gs (-> (make-test-state)
+                   (assoc :score 100)
+                   (assoc :moves 50))]
+        (with-captured-output (verbs-health/v-save gs))))
+    ;; Now restore it
+    (binding [verbs-health/*read-input-fn* (constantly "test-restore.sav")]
+      (let [gs (-> (make-test-state)
+                   (assoc :score 0)
+                   (assoc :moves 0))
+            [output result] (with-captured-output (verbs-health/v-restore gs))]
+        (is (= "Ok." output))
+        (is (true? (:restored result)))
+        (is (= 100 (:score result)))
+        (is (= 50 (:moves result)))))
+    ;; Clean up
+    (try
+      (io/delete-file "test-restore.sav")
+      (catch Exception _))))
+
+(deftest v-restore-missing-file-test
+  (testing "v-restore with missing file shows 'Failed.'"
+    (binding [verbs-health/*read-input-fn* (constantly "nonexistent-file.sav")]
+      (let [gs (make-test-state)
+            [output result] (with-captured-output (verbs-health/v-restore gs))]
+        (is (= "Failed." output))
+        (is (nil? (:restored result)))))))
+
+(deftest save-vocabulary-test
+  (testing "save is registered in vocabulary as a verb"
+    (is (= true (parser/wt? "save" :verb)))
+    (is (= :save (parser/wt? "save" :verb true)))))
+
+(deftest restore-vocabulary-test
+  (testing "restore is registered in vocabulary as a verb"
+    (is (= true (parser/wt? "restore" :verb)))
+    (is (= :restore (parser/wt? "restore" :verb true)))))
+
+;;; ---------------------------------------------------------------------------
+;;; SCRIPT/UNSCRIPT VERB TESTS
+;;; ---------------------------------------------------------------------------
+
+(deftest v-script-test
+  (testing "v-script starts transcription"
+    (binding [verbs-health/*read-input-fn* (constantly "test-script.txt")]
+      (let [gs (make-test-state)
+            [output _] (with-captured-output (verbs-health/v-script gs))]
+        (is (clojure.string/includes? output "Here begins a transcript"))
+        (is (clojure.string/includes? output "ZORK I"))
+        ;; Stop script and clean up
+        (utils/stop-script!)
+        (try
+          (io/delete-file "test-script.txt")
+          (catch Exception _))))))
+
+(deftest v-script-already-on-test
+  (testing "v-script when already on shows error"
+    (binding [verbs-health/*read-input-fn* (constantly "test-script2.txt")]
+      ;; Start script first
+      (let [gs (make-test-state)]
+        (with-captured-output (verbs-health/v-script gs)))
+      ;; Try to start again
+      (let [gs (make-test-state)
+            [output _] (with-captured-output (verbs-health/v-script gs))]
+        (is (= "Transcription is already on." output)))
+      ;; Clean up
+      (utils/stop-script!)
+      (try
+        (io/delete-file "test-script2.txt")
+        (catch Exception _)))))
+
+(deftest v-unscript-test
+  (testing "v-unscript stops transcription"
+    (binding [verbs-health/*read-input-fn* (constantly "test-unscript.txt")]
+      ;; Start script first
+      (let [gs (make-test-state)]
+        (with-captured-output (verbs-health/v-script gs)))
+      ;; Now stop it
+      (let [gs (make-test-state)
+            [output _] (with-captured-output (verbs-health/v-unscript gs))]
+        (is (clojure.string/includes? output "Here ends a transcript"))
+        (is (clojure.string/includes? output "ZORK I")))
+      ;; Clean up
+      (try
+        (io/delete-file "test-unscript.txt")
+        (catch Exception _)))))
+
+(deftest v-unscript-not-on-test
+  (testing "v-unscript when not on shows error"
+    (let [gs (make-test-state)
+          [output _] (with-captured-output (verbs-health/v-unscript gs))]
+      (is (= "Transcription is not on." output)))))
+
+(deftest script-vocabulary-test
+  (testing "script is registered in vocabulary as a verb"
+    (is (= true (parser/wt? "script" :verb)))
+    (is (= :script (parser/wt? "script" :verb true)))))
+
+(deftest unscript-vocabulary-test
+  (testing "unscript is registered in vocabulary as a verb"
+    (is (= true (parser/wt? "unscript" :verb)))
+    (is (= :unscript (parser/wt? "unscript" :verb true)))))

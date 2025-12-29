@@ -3,7 +3,9 @@
 
    ZIL Reference: V-DIAGNOSE, V-SCORE, V-QUIT in gverbs.zil and 1actions.zil."
   (:require [clork.utils :as utils]
-            [clork.game-state :as gs]))
+            [clork.game-state :as gs]
+            [clojure.java.io :as io]
+            [clojure.edn :as edn]))
 
 ;;; ---------------------------------------------------------------------------
 ;;; Constants for fight/health system
@@ -257,3 +259,269 @@
           (utils/tell "\n")
           (assoc :quit true))
       (utils/tell gs "\nOk."))))
+
+;;; ---------------------------------------------------------------------------
+;;; RESTART COMMAND
+;;; ---------------------------------------------------------------------------
+;;; ZIL: V-RESTART in gverbs.zil
+
+(defn- read-restart-confirmation
+  "Read confirmation from user for restart. Returns the response string."
+  []
+  (if *read-input-fn*
+    (*read-input-fn*)
+    (do
+      (print "Do you wish to restart? (Y is affirmative): ")
+      (flush)
+      (read-line))))
+
+(defn v-restart
+  "Restart the game after showing score and asking for confirmation.
+
+   ZIL: V-RESTART in gverbs.zil
+     <ROUTINE V-RESTART ()
+       <V-SCORE T>
+       <TELL \"Do you wish to restart? (Y is affirmative): \">
+       <COND (<YES?>
+              <TELL \"Restarting.\" CR>
+              <RESTART>
+              <TELL \"Failed.\" CR>)>>
+
+   In our implementation, sets :restart flag which main-loop uses to
+   restore from the initial game state stored in :restart-state."
+  [game-state]
+  ;; First show the score (like ZIL does with <V-SCORE T>)
+  (let [gs (v-score game-state)
+        response (read-restart-confirmation)]
+    (if (yes? response)
+      (-> gs
+          (utils/tell "\nRestarting.")
+          (assoc :restart true))
+      (utils/tell gs "\nOk."))))
+
+;;; ---------------------------------------------------------------------------
+;;; SAVE/RESTORE COMMANDS
+;;; ---------------------------------------------------------------------------
+;;; ZIL: V-SAVE, V-RESTORE in gverbs.zil
+
+(def ^:private default-save-file "clork.sav")
+
+(defn- read-save-filename
+  "Read save filename from user. Returns the response string or default."
+  [prompt default]
+  (if *read-input-fn*
+    (let [response (*read-input-fn*)]
+      (if (clojure.string/blank? response)
+        default
+        response))
+    (do
+      (print prompt)
+      (print (str " [" default "]: "))
+      (flush)
+      (let [response (read-line)]
+        (if (clojure.string/blank? response)
+          default
+          (clojure.string/trim response))))))
+
+(defn- remove-functions
+  "Recursively remove function values from a map.
+   Functions (like :action handlers on objects) can't be serialized."
+  [m]
+  (cond
+    (map? m)
+    (reduce-kv (fn [acc k v]
+                 (if (fn? v)
+                   acc  ; Skip functions
+                   (assoc acc k (remove-functions v))))
+               {}
+               m)
+    (sequential? m)
+    (mapv remove-functions m)
+    (set? m)
+    (set (map remove-functions m))
+    :else m))
+
+(defn- saveable-state
+  "Extract the saveable portion of game state.
+   Removes transient data like :restart-state to avoid nested copies.
+   Removes functions that can't be serialized to EDN."
+  [game-state]
+  (-> game-state
+      (dissoc :restart-state)
+      (dissoc :script-config)
+      ;; Remove any IO-related state
+      (dissoc :transcript-file)
+      (dissoc :transcript-writer)
+      ;; Remove functions that can't be serialized
+      remove-functions))
+
+(defn- save-game-to-file
+  "Save game state to file. Returns true on success, false on failure."
+  [game-state filename]
+  (try
+    (let [save-data (saveable-state game-state)
+          ;; Convert to EDN with pretty printing
+          edn-str (pr-str save-data)]
+      (spit filename edn-str)
+      true)
+    (catch Exception e
+      (binding [*out* *err*]
+        (println (str "Save failed: " (.getMessage e))))
+      false)))
+
+(defn- restore-game-from-file
+  "Restore game state from file. Returns game-state on success, nil on failure."
+  [filename current-state]
+  (try
+    (when (.exists (io/file filename))
+      (let [edn-str (slurp filename)
+            restored (edn/read-string edn-str)]
+        ;; Merge back in the non-saveable state
+        (-> restored
+            (assoc :restart-state (:restart-state current-state))
+            (assoc :script-config (:script-config current-state)))))
+    (catch Exception e
+      (binding [*out* *err*]
+        (println (str "Restore failed: " (.getMessage e))))
+      nil)))
+
+(defn v-save
+  "Save the current game state to a file.
+
+   ZIL: V-SAVE in gverbs.zil
+     <ROUTINE V-SAVE ()
+       <COND (<SAVE>
+              <TELL \"Ok.\" CR>)
+             (T
+              <TELL \"Failed.\" CR>)>>
+
+   Prompts for filename and saves game state as EDN."
+  [game-state]
+  (let [filename (read-save-filename "Enter save file name" default-save-file)]
+    (if (save-game-to-file game-state filename)
+      (utils/tell game-state "Ok.")
+      (utils/tell game-state "Failed."))))
+
+(defn v-restore
+  "Restore game state from a saved file.
+
+   ZIL: V-RESTORE in gverbs.zil
+     <ROUTINE V-RESTORE ()
+       <COND (<RESTORE>
+              <TELL \"Ok.\" CR>
+              <V-FIRST-LOOK>)
+             (T
+              <TELL \"Failed.\" CR>)>>
+
+   Prompts for filename and restores game state from EDN file.
+   On success, sets :restored flag which main-loop uses to show room."
+  [game-state]
+  (let [filename (read-save-filename "Enter restore file name" default-save-file)]
+    (if-let [restored-state (restore-game-from-file filename game-state)]
+      (-> restored-state
+          (utils/tell "Ok.")
+          ;; Set flag to trigger v-first-look in main loop
+          (assoc :restored true))
+      (utils/tell game-state "Failed."))))
+
+;;; ---------------------------------------------------------------------------
+;;; SCRIPT/UNSCRIPT COMMANDS
+;;; ---------------------------------------------------------------------------
+;;; ZIL: V-SCRIPT, V-UNSCRIPT in gverbs.zil
+
+(def ^:private default-script-file "clork.txt")
+
+(defn- read-script-filename
+  "Read transcript filename from user. Returns the response string or default."
+  [default]
+  (if *read-input-fn*
+    (let [response (*read-input-fn*)]
+      (if (clojure.string/blank? response)
+        default
+        response))
+    (do
+      (print (str "Enter transcript file name [" default "]: "))
+      (flush)
+      (let [response (read-line)]
+        (if (clojure.string/blank? response)
+          default
+          (clojure.string/trim response))))))
+
+(defn v-script
+  "Start transcription to a file.
+
+   ZIL: V-SCRIPT in gverbs.zil
+     <ROUTINE V-SCRIPT ()
+       <PUT 0 8 <BOR <GET 0 8> 1>>
+       <TELL \"Here begins a transcript of interaction with\" CR>
+       <V-VERSION>
+       <RTRUE>>
+
+   Prompts for filename and starts writing all output to the transcript file."
+  [game-state]
+  (if (utils/script-enabled?)
+    (utils/tell game-state "Transcription is already on.")
+    (let [filename (read-script-filename default-script-file)]
+      (if (utils/start-script! filename)
+        (-> game-state
+            (utils/tell "Here begins a transcript of interaction with")
+            (utils/crlf)
+            ;; Call v-version inline (can't forward-reference verbs-meta)
+            (utils/tell "ZORK I: The Great Underground Empire\n")
+            (utils/tell "Infocom interactive fiction - a fantasy story\n")
+            (utils/tell "Copyright (c) 1981, 1982, 1983, 1984, 1985, 1986 Infocom, Inc. All rights reserved.\n")
+            (utils/tell "ZORK is a registered trademark of Infocom, Inc.\n")
+            (utils/tell "Release 1 / Serial number 1\n")
+            (utils/tell "Clojure port by Nathan Douglas\n"))
+        (utils/tell game-state "Failed to start transcript.")))))
+
+(defn v-unscript
+  "Stop transcription to file.
+
+   ZIL: V-UNSCRIPT in gverbs.zil
+     <ROUTINE V-UNSCRIPT ()
+       <TELL \"Here ends a transcript of interaction with\" CR>
+       <V-VERSION>
+       <PUT 0 8 <BAND <GET 0 8> -2>>
+       <RTRUE>>
+
+   Closes the transcript file and stops writing output to it."
+  [game-state]
+  (if (utils/script-enabled?)
+    (let [gs (-> game-state
+                 (utils/tell "Here ends a transcript of interaction with")
+                 (utils/crlf)
+                 ;; Call v-version inline
+                 (utils/tell "ZORK I: The Great Underground Empire\n")
+                 (utils/tell "Infocom interactive fiction - a fantasy story\n")
+                 (utils/tell "Copyright (c) 1981, 1982, 1983, 1984, 1985, 1986 Infocom, Inc. All rights reserved.\n")
+                 (utils/tell "ZORK is a registered trademark of Infocom, Inc.\n")
+                 (utils/tell "Release 1 / Serial number 1\n")
+                 (utils/tell "Clojure port by Nathan Douglas\n"))]
+      (utils/stop-script!)
+      gs)
+    (utils/tell game-state "Transcription is not on.")))
+
+;;; ---------------------------------------------------------------------------
+;;; VERIFY COMMAND
+;;; ---------------------------------------------------------------------------
+;;; ZIL: V-VERIFY in gverbs.zil
+
+(defn v-verify
+  "Verify the game file integrity.
+
+   ZIL: V-VERIFY in gverbs.zil
+     <ROUTINE V-VERIFY ()
+       <TELL \"Verifying disk...\" CR>
+       <COND (<VERIFY>
+              <TELL \"The disk is correct.\" CR>)
+             (T
+              <TELL CR \"** Disk Failure **\" CR>)>>
+
+   In the original ZIL, this verified the game disk for corruption.
+   In our Clojure implementation, we always return success since there's
+   no disk to verify."
+  [game-state]
+  (-> game-state
+      (utils/tell "Verifying disk...")
+      (utils/tell "\nThe disk is correct.")))
