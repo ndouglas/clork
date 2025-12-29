@@ -1,7 +1,11 @@
 (ns clork.verbs-test
   "Verb handler tests for Clork."
   (:require [clojure.test :refer :all]
-            [clork.verbs :as verbs]
+            [clork.verbs-meta :as verbs-meta]
+            [clork.verbs-health :as verbs-health]
+            [clork.verbs-inventory :as verbs-inv]
+            [clork.verbs-containers :as verbs-containers]
+            [clork.verbs-movement :as verbs-movement]
             [clork.verbs-look :as verbs-look]
             [clork.verb-defs :as verb-defs]
             [clork.parser :as parser]
@@ -14,21 +18,21 @@
 
 (deftest v-verbose-test
   (testing "v-verbose sets verbose to true and super-brief to false"
-    (let [[output state] (with-captured-output (verbs/v-verbose (gs/initial-game-state)))]
+    (let [[output state] (with-captured-output (verbs-meta/v-verbose (gs/initial-game-state)))]
       (is (= true (:verbose state)))
       (is (= false (:super-brief state)))
       (is (= "Maximum verbosity." output)))))
 
 (deftest v-brief-test
   (testing "v-brief sets verbose and super-brief to false"
-    (let [[output state] (with-captured-output (verbs/v-brief (gs/initial-game-state)))]
+    (let [[output state] (with-captured-output (verbs-meta/v-brief (gs/initial-game-state)))]
       (is (= false (:verbose state)))
       (is (= false (:super-brief state)))
       (is (= "Brief descriptions." output)))))
 
 (deftest v-super-brief-test
   (testing "v-super-brief sets super-brief to true"
-    (let [[output state] (with-captured-output (verbs/v-super-brief (gs/initial-game-state)))]
+    (let [[output state] (with-captured-output (verbs-meta/v-super-brief (gs/initial-game-state)))]
       (is (= true (:super-brief state)))
       (is (= "Superbrief descriptions." output)))))
 
@@ -93,7 +97,7 @@
 (deftest v-inventory-empty-test
   (testing "v-inventory with empty inventory shows 'You are empty-handed.'"
     (let [gs (make-test-state)
-          [output _] (with-captured-output (verbs/v-inventory gs))]
+          [output _] (with-captured-output (verbs-meta/v-inventory gs))]
       (is (= "You are empty-handed." output)))))
 
 (deftest v-inventory-with-items-test
@@ -106,7 +110,7 @@
                  (gs/add-object {:id :leaflet
                                  :in :adventurer
                                  :desc "leaflet"}))
-          [output _] (with-captured-output (verbs/v-inventory gs))]
+          [output _] (with-captured-output (verbs-meta/v-inventory gs))]
       (is (clojure.string/includes? output "You are carrying:"))
       (is (clojure.string/includes? output "brass lantern"))
       (is (clojure.string/includes? output "leaflet")))))
@@ -138,35 +142,35 @@
 (deftest v-diagnose-perfect-health-test
   (testing "v-diagnose with no wounds shows 'You are in perfect health.'"
     (let [gs (make-test-state)
-          [output _] (with-captured-output (verbs/v-diagnose gs))]
+          [output _] (with-captured-output (verbs-health/v-diagnose gs))]
       (is (clojure.string/includes? output "You are in perfect health.")))))
 
 (deftest v-diagnose-light-wound-test
   (testing "v-diagnose with light wound reports it"
     (let [gs (-> (make-test-state)
                  (assoc-in [:objects :adventurer :strength] -1))
-          [output _] (with-captured-output (verbs/v-diagnose gs))]
+          [output _] (with-captured-output (verbs-health/v-diagnose gs))]
       (is (clojure.string/includes? output "a light wound")))))
 
 (deftest v-diagnose-serious-wound-test
   (testing "v-diagnose with serious wound reports it"
     (let [gs (-> (make-test-state)
                  (assoc-in [:objects :adventurer :strength] -2))
-          [output _] (with-captured-output (verbs/v-diagnose gs))]
+          [output _] (with-captured-output (verbs-health/v-diagnose gs))]
       (is (clojure.string/includes? output "a serious wound")))))
 
 (deftest v-diagnose-several-wounds-test
   (testing "v-diagnose with several wounds reports it"
     (let [gs (-> (make-test-state)
                  (assoc-in [:objects :adventurer :strength] -3))
-          [output _] (with-captured-output (verbs/v-diagnose gs))]
+          [output _] (with-captured-output (verbs-health/v-diagnose gs))]
       (is (clojure.string/includes? output "several wounds")))))
 
 (deftest v-diagnose-deaths-test
   (testing "v-diagnose reports death count when > 0"
     (let [gs (-> (make-test-state)
                  (assoc :deaths 1))
-          [output _] (with-captured-output (verbs/v-diagnose gs))]
+          [output _] (with-captured-output (verbs-health/v-diagnose gs))]
       (is (clojure.string/includes? output "You have been killed once.")))))
 
 (deftest diagnose-vocabulary-test
@@ -188,7 +192,7 @@
 (deftest v-score-initial-test
   (testing "v-score shows initial score of 0 and rank of Beginner"
     (let [gs (make-test-state)
-          [output _] (with-captured-output (verbs/v-score gs))]
+          [output _] (with-captured-output (verbs-health/v-score gs))]
       (is (clojure.string/includes? output "Your score is 0"))
       (is (clojure.string/includes? output "total of 350 points"))
       (is (clojure.string/includes? output "0 moves"))
@@ -199,7 +203,7 @@
     (let [gs (-> (make-test-state)
                  (assoc :score 150)
                  (assoc :moves 42))
-          [output _] (with-captured-output (verbs/v-score gs))]
+          [output _] (with-captured-output (verbs-health/v-score gs))]
       (is (clojure.string/includes? output "Your score is 150"))
       (is (clojure.string/includes? output "42 moves"))
       (is (clojure.string/includes? output "Junior Adventurer")))))
@@ -207,47 +211,47 @@
 (deftest v-score-ranks-test
   (testing "v-score shows correct ranks at different score levels"
     ;; Beginner (0-25)
-    (let [[output _] (with-captured-output (verbs/v-score (assoc (make-test-state) :score 10)))]
+    (let [[output _] (with-captured-output (verbs-health/v-score (assoc (make-test-state) :score 10)))]
       (is (clojure.string/includes? output "Beginner")))
     ;; Amateur Adventurer (26-50)
-    (let [[output _] (with-captured-output (verbs/v-score (assoc (make-test-state) :score 30)))]
+    (let [[output _] (with-captured-output (verbs-health/v-score (assoc (make-test-state) :score 30)))]
       (is (clojure.string/includes? output "Amateur Adventurer")))
     ;; Novice Adventurer (51-100)
-    (let [[output _] (with-captured-output (verbs/v-score (assoc (make-test-state) :score 75)))]
+    (let [[output _] (with-captured-output (verbs-health/v-score (assoc (make-test-state) :score 75)))]
       (is (clojure.string/includes? output "Novice Adventurer")))
     ;; Junior Adventurer (101-200)
-    (let [[output _] (with-captured-output (verbs/v-score (assoc (make-test-state) :score 150)))]
+    (let [[output _] (with-captured-output (verbs-health/v-score (assoc (make-test-state) :score 150)))]
       (is (clojure.string/includes? output "Junior Adventurer")))
     ;; Adventurer (201-300)
-    (let [[output _] (with-captured-output (verbs/v-score (assoc (make-test-state) :score 250)))]
+    (let [[output _] (with-captured-output (verbs-health/v-score (assoc (make-test-state) :score 250)))]
       (is (clojure.string/includes? output "Adventurer")))
     ;; Master (301-330)
-    (let [[output _] (with-captured-output (verbs/v-score (assoc (make-test-state) :score 320)))]
+    (let [[output _] (with-captured-output (verbs-health/v-score (assoc (make-test-state) :score 320)))]
       (is (clojure.string/includes? output "Master")))
     ;; Wizard (331-349)
-    (let [[output _] (with-captured-output (verbs/v-score (assoc (make-test-state) :score 340)))]
+    (let [[output _] (with-captured-output (verbs-health/v-score (assoc (make-test-state) :score 340)))]
       (is (clojure.string/includes? output "Wizard")))
     ;; Master Adventurer (350)
-    (let [[output _] (with-captured-output (verbs/v-score (assoc (make-test-state) :score 350)))]
+    (let [[output _] (with-captured-output (verbs-health/v-score (assoc (make-test-state) :score 350)))]
       (is (clojure.string/includes? output "Master Adventurer")))))
 
 (deftest v-score-move-singular-test
   (testing "v-score uses singular 'move' for 1 move"
     (let [gs (-> (make-test-state)
                  (assoc :moves 1))
-          [output _] (with-captured-output (verbs/v-score gs))]
+          [output _] (with-captured-output (verbs-health/v-score gs))]
       (is (clojure.string/includes? output "1 move.")))))
 
 (deftest score-upd-test
   (testing "score-upd adds to both score and base-score"
     (let [gs (-> (make-test-state)
-                 (verbs/score-upd 10))]
+                 (verbs-health/score-upd 10))]
       (is (= 10 (:score gs)))
       (is (= 10 (:base-score gs)))))
   (testing "score-upd can subtract points"
     (let [gs (-> (make-test-state)
                  (assoc :score 50 :base-score 50)
-                 (verbs/score-upd -10))]
+                 (verbs-health/score-upd -10))]
       (is (= 40 (:score gs)))
       (is (= 40 (:base-score gs))))))
 
@@ -255,19 +259,19 @@
   (testing "score-obj scores an object's value and sets it to 0"
     (let [gs (-> (make-test-state)
                  (gs/add-object {:id :diamond :value 10})
-                 (verbs/score-obj :diamond))]
+                 (verbs-health/score-obj :diamond))]
       (is (= 10 (:score gs)))
       (is (= 0 (get-in gs [:objects :diamond :value])))))
   (testing "score-obj does nothing if object has no value"
     (let [gs (-> (make-test-state)
                  (gs/add-object {:id :rock :value 0})
-                 (verbs/score-obj :rock))]
+                 (verbs-health/score-obj :rock))]
       (is (= 0 (:score gs)))))
   (testing "score-obj only scores object once"
     (let [gs (-> (make-test-state)
                  (gs/add-object {:id :diamond :value 10})
-                 (verbs/score-obj :diamond)
-                 (verbs/score-obj :diamond))]
+                 (verbs-health/score-obj :diamond)
+                 (verbs-health/score-obj :diamond))]
       (is (= 10 (:score gs))))))
 
 (deftest room-entry-scoring-test
@@ -280,7 +284,7 @@
                  (assoc :here :hallway)
                  (assoc-in [:objects :adventurer :in] :hallway)
                  (assoc-in [:parser :prso] :north))
-          [_ result] (with-captured-output (verbs/v-walk gs))]
+          [_ result] (with-captured-output (verbs-movement/v-walk gs))]
       (is (= 50 (:score result)) "Entering room with :value should award points")
       (is (= 0 (get-in result [:rooms :treasure-vault :value]))
           "Room :value should be set to 0 after scoring")))
@@ -295,14 +299,14 @@
                  (assoc-in [:objects :adventurer :in] :hallway)
                  (assoc-in [:parser :prso] :north))
           ;; First entry
-          [_ result1] (with-captured-output (verbs/v-walk gs))
+          [_ result1] (with-captured-output (verbs-movement/v-walk gs))
           ;; Go back and enter again
           [_ result2] (with-captured-output
-                        (verbs/v-walk (-> result1
+                        (verbs-movement/v-walk (-> result1
                                           (assoc :here :treasure-vault)
                                           (assoc-in [:parser :prso] :south))))
           [_ result3] (with-captured-output
-                        (verbs/v-walk (-> result2
+                        (verbs-movement/v-walk (-> result2
                                           (assoc :here :hallway)
                                           (assoc-in [:parser :prso] :north))))]
       (is (= 50 (:score result1)) "First entry should award 50 points")
@@ -313,7 +317,7 @@
                  (assoc :here :west-of-house)
                  (assoc-in [:objects :adventurer :in] :west-of-house)
                  (assoc-in [:parser :prso] :south))
-          [_ result] (with-captured-output (verbs/v-walk gs))]
+          [_ result] (with-captured-output (verbs-movement/v-walk gs))]
       (is (= 0 (:score result)) "Entering room without :value should not change score"))))
 
 ;;; ---------------------------------------------------------------------------
@@ -330,7 +334,7 @@
                                  :value 5})
                  (assoc :here :west-of-house)
                  (assoc-in [:parser :prso] [:egg]))
-          [_ result] (with-captured-output (verbs/v-take gs))]
+          [_ result] (with-captured-output (verbs-inv/v-take gs))]
       (is (= 5 (:score result)) "Taking treasure should award its :value in points")
       (is (= 0 (get-in result [:objects :egg :value]))
           "Object :value should be set to 0 after scoring")))
@@ -342,7 +346,7 @@
                                  :flags #{:take}})
                  (assoc :here :west-of-house)
                  (assoc-in [:parser :prso] [:rock]))
-          [_ result] (with-captured-output (verbs/v-take gs))]
+          [_ result] (with-captured-output (verbs-inv/v-take gs))]
       (is (= 0 (:score result)) "Taking non-treasure should not award points")))
 
   (testing "taking the same treasure twice only scores once"
@@ -354,12 +358,12 @@
                  (assoc :here :west-of-house)
                  (assoc-in [:parser :prso] [:diamond]))
           ;; Take it once
-          [_ result1] (with-captured-output (verbs/v-take gs))
+          [_ result1] (with-captured-output (verbs-inv/v-take gs))
           ;; Drop it and take again
           dropped (-> result1
                       (assoc-in [:objects :diamond :in] :west-of-house)
                       (assoc-in [:parser :prso] [:diamond]))
-          [_ result2] (with-captured-output (verbs/v-take dropped))]
+          [_ result2] (with-captured-output (verbs-inv/v-take dropped))]
       (is (= 10 (:score result1)) "First take should award points")
       (is (= 10 (:score result2)) "Second take should not award more points"))))
 
@@ -381,40 +385,40 @@
 
 (deftest v-quit-confirmed-test
   (testing "v-quit with 'y' response sets :quit to true"
-    (binding [verbs/*read-input-fn* (constantly "y")]
+    (binding [verbs-health/*read-input-fn* (constantly "y")]
       (let [gs (make-test-state)
-            [output result] (with-captured-output (verbs/v-quit gs))]
+            [output result] (with-captured-output (verbs-health/v-quit gs))]
         (is (true? (:quit result)))
         ;; Should show score first
         (is (clojure.string/includes? output "Your score is"))))))
 
 (deftest v-quit-confirmed-yes-test
   (testing "v-quit with 'yes' response sets :quit to true"
-    (binding [verbs/*read-input-fn* (constantly "yes")]
+    (binding [verbs-health/*read-input-fn* (constantly "yes")]
       (let [gs (make-test-state)
-            [_ result] (with-captured-output (verbs/v-quit gs))]
+            [_ result] (with-captured-output (verbs-health/v-quit gs))]
         (is (true? (:quit result)))))))
 
 (deftest v-quit-confirmed-uppercase-test
   (testing "v-quit with 'Y' response (uppercase) sets :quit to true"
-    (binding [verbs/*read-input-fn* (constantly "Y")]
+    (binding [verbs-health/*read-input-fn* (constantly "Y")]
       (let [gs (make-test-state)
-            [_ result] (with-captured-output (verbs/v-quit gs))]
+            [_ result] (with-captured-output (verbs-health/v-quit gs))]
         (is (true? (:quit result)))))))
 
 (deftest v-quit-declined-test
   (testing "v-quit with 'n' response does not set :quit"
-    (binding [verbs/*read-input-fn* (constantly "n")]
+    (binding [verbs-health/*read-input-fn* (constantly "n")]
       (let [gs (make-test-state)
-            [output result] (with-captured-output (verbs/v-quit gs))]
+            [output result] (with-captured-output (verbs-health/v-quit gs))]
         (is (nil? (:quit result)))
         (is (clojure.string/includes? output "Ok."))))))
 
 (deftest v-quit-declined-empty-test
   (testing "v-quit with empty response does not set :quit"
-    (binding [verbs/*read-input-fn* (constantly "")]
+    (binding [verbs-health/*read-input-fn* (constantly "")]
       (let [gs (make-test-state)
-            [output result] (with-captured-output (verbs/v-quit gs))]
+            [output result] (with-captured-output (verbs-health/v-quit gs))]
         (is (nil? (:quit result)))
         (is (clojure.string/includes? output "Ok."))))))
 
@@ -587,7 +591,7 @@
                                  :desc "wooden chest"
                                  :flags #{:cont}})
                  (assoc-in [:parser :prso] :chest))
-          [output result] (with-captured-output (verbs/v-open gs))]
+          [output result] (with-captured-output (verbs-containers/v-open gs))]
       (is (= "Opened." output))
       (is (contains? (get-in result [:objects :chest :flags]) :open))
       (is (contains? (get-in result [:objects :chest :flags]) :touch)))))
@@ -603,7 +607,7 @@
                                  :in :chest
                                  :desc "gold coin"})
                  (assoc-in [:parser :prso] :chest))
-          [output result] (with-captured-output (verbs/v-open gs))]
+          [output result] (with-captured-output (verbs-containers/v-open gs))]
       (is (clojure.string/includes? output "Opening the wooden chest reveals"))
       (is (clojure.string/includes? output "gold coin"))
       (is (contains? (get-in result [:objects :chest :flags]) :open)))))
@@ -616,7 +620,7 @@
                                  :desc "front door"
                                  :flags #{:door}})
                  (assoc-in [:parser :prso] :front-door))
-          [output result] (with-captured-output (verbs/v-open gs))]
+          [output result] (with-captured-output (verbs-containers/v-open gs))]
       (is (= "The front door opens." output))
       (is (contains? (get-in result [:objects :front-door :flags]) :open)))))
 
@@ -628,7 +632,7 @@
                                  :desc "wooden chest"
                                  :flags #{:cont :open}})
                  (assoc-in [:parser :prso] :chest))
-          [output _] (with-captured-output (verbs/v-open gs))]
+          [output _] (with-captured-output (verbs-containers/v-open gs))]
       (is (= "It is already open." output)))))
 
 (deftest v-open-already-open-door-test
@@ -639,7 +643,7 @@
                                  :desc "front door"
                                  :flags #{:door :open}})
                  (assoc-in [:parser :prso] :front-door))
-          [output _] (with-captured-output (verbs/v-open gs))]
+          [output _] (with-captured-output (verbs-containers/v-open gs))]
       (is (= "It is already open." output)))))
 
 (deftest v-open-not-openable-test
@@ -650,7 +654,7 @@
                                  :desc "rock"
                                  :flags #{}})
                  (assoc-in [:parser :prso] :rock))
-          [output _] (with-captured-output (verbs/v-open gs))]
+          [output _] (with-captured-output (verbs-containers/v-open gs))]
       (is (= "You must tell me how to do that to a rock." output)))))
 
 (deftest v-open-transparent-container-test
@@ -661,7 +665,7 @@
                                  :desc "glass box"
                                  :flags #{:cont :trans}})
                  (assoc-in [:parser :prso] :glass-box))
-          [output result] (with-captured-output (verbs/v-open gs))]
+          [output result] (with-captured-output (verbs-containers/v-open gs))]
       (is (= "Opened." output))
       (is (contains? (get-in result [:objects :glass-box :flags]) :open)))))
 
@@ -692,7 +696,7 @@
                                  :desc "leaflet"
                                  :text "WELCOME TO ZORK!"})
                  (assoc-in [:parser :prso] :leaflet))
-          [output _] (with-captured-output (verbs/v-examine gs))]
+          [output _] (with-captured-output (verbs-containers/v-examine gs))]
       (is (= "WELCOME TO ZORK!" output)))))
 
 (deftest v-examine-container-open-with-contents-test
@@ -706,7 +710,7 @@
                                  :in :chest
                                  :desc "gold coin"})
                  (assoc-in [:parser :prso] :chest))
-          [output _] (with-captured-output (verbs/v-examine gs))]
+          [output _] (with-captured-output (verbs-containers/v-examine gs))]
       (is (clojure.string/includes? output "wooden chest contains"))
       (is (clojure.string/includes? output "gold coin")))))
 
@@ -718,7 +722,7 @@
                                  :desc "wooden chest"
                                  :flags #{:cont :open}})
                  (assoc-in [:parser :prso] :chest))
-          [output _] (with-captured-output (verbs/v-examine gs))]
+          [output _] (with-captured-output (verbs-containers/v-examine gs))]
       (is (= "The wooden chest is empty." output)))))
 
 (deftest v-examine-container-closed-test
@@ -729,7 +733,7 @@
                                  :desc "wooden chest"
                                  :flags #{:cont}})
                  (assoc-in [:parser :prso] :chest))
-          [output _] (with-captured-output (verbs/v-examine gs))]
+          [output _] (with-captured-output (verbs-containers/v-examine gs))]
       (is (= "The wooden chest is closed." output)))))
 
 (deftest v-examine-container-transparent-test
@@ -743,7 +747,7 @@
                                  :in :glass-box
                                  :desc "diamond"})
                  (assoc-in [:parser :prso] :glass-box))
-          [output _] (with-captured-output (verbs/v-examine gs))]
+          [output _] (with-captured-output (verbs-containers/v-examine gs))]
       (is (clojure.string/includes? output "glass box contains"))
       (is (clojure.string/includes? output "diamond")))))
 
@@ -755,7 +759,7 @@
                                  :desc "front door"
                                  :flags #{:door :open}})
                  (assoc-in [:parser :prso] :front-door))
-          [output _] (with-captured-output (verbs/v-examine gs))]
+          [output _] (with-captured-output (verbs-containers/v-examine gs))]
       (is (= "The front door is open, but I can't tell what's beyond it." output)))))
 
 (deftest v-examine-door-closed-test
@@ -766,7 +770,7 @@
                                  :desc "front door"
                                  :flags #{:door}})
                  (assoc-in [:parser :prso] :front-door))
-          [output _] (with-captured-output (verbs/v-examine gs))]
+          [output _] (with-captured-output (verbs-containers/v-examine gs))]
       (is (= "The front door is closed." output)))))
 
 (deftest v-examine-nothing-special-test
@@ -776,7 +780,7 @@
                                  :in :west-of-house
                                  :desc "rock"})
                  (assoc-in [:parser :prso] :rock))
-          [output _] (with-captured-output (verbs/v-examine gs))]
+          [output _] (with-captured-output (verbs-containers/v-examine gs))]
       (is (= "There's nothing special about the rock." output)))))
 
 (deftest examine-vocabulary-test
@@ -805,7 +809,7 @@
                                  :in :chest
                                  :desc "gold coin"})
                  (assoc-in [:parser :prso] :chest))
-          [output _] (with-captured-output (verbs/v-look-inside gs))]
+          [output _] (with-captured-output (verbs-containers/v-look-inside gs))]
       (is (clojure.string/includes? output "wooden chest contains"))
       (is (clojure.string/includes? output "gold coin")))))
 
@@ -816,7 +820,7 @@
                                  :in :west-of-house
                                  :desc "rock"})
                  (assoc-in [:parser :prso] :rock))
-          [output _] (with-captured-output (verbs/v-look-inside gs))]
+          [output _] (with-captured-output (verbs-containers/v-look-inside gs))]
       (is (= "You can't look inside a rock." output)))))
 
 (deftest v-look-inside-actor-test
@@ -827,7 +831,7 @@
                                  :desc "troll"
                                  :flags #{:cont :actor}})
                  (assoc-in [:parser :prso] :troll))
-          [output _] (with-captured-output (verbs/v-look-inside gs))]
+          [output _] (with-captured-output (verbs-containers/v-look-inside gs))]
       (is (= "There is nothing special to be seen." output)))))
 
 (deftest look-inside-vocabulary-test

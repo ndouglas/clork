@@ -1,7 +1,7 @@
 (ns clork.core
   (:gen-class)
   (:require [clork.game-state :as game-state]
-            [clork.verbs :as verbs]
+            [clork.verbs-meta :as verbs-meta]
             [clork.utils :as utils]
             [clork.rooms :as rooms]
             [clork.objects :as objects]
@@ -22,7 +22,7 @@
   (if (game-state/set-here-flag? game-state :touch)
     game-state
     (-> game-state
-        (verbs/v-version)
+        (verbs-meta/v-version)
         (utils/crlf))))
 
 (defn go

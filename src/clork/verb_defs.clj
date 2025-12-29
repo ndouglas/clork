@@ -2,7 +2,11 @@
   "Verb definitions - single source of truth for vocabulary, syntax, and handlers."
   (:require [clork.utils :as utils]
             [clork.game-state :as game-state]
-            [clork.verbs :as verbs]
+            [clork.verbs-meta :as verbs-meta]
+            [clork.verbs-health :as verbs-health]
+            [clork.verbs-inventory :as verbs-inv]
+            [clork.verbs-containers :as verbs-containers]
+            [clork.verbs-movement :as verbs-movement]
             [clork.verbs-look :as verbs-look]
             [clork.debug.trace :as trace]))
 
@@ -53,31 +57,31 @@
   {;; === Meta/System Verbs ===
    :verbose    {:words   ["verbose"]
                 :syntax  {:num-objects 0}
-                :handler verbs/v-verbose}
+                :handler verbs-meta/v-verbose}
 
    :brief      {:words   ["brief"]
                 :syntax  {:num-objects 0}
-                :handler verbs/v-brief}
+                :handler verbs-meta/v-brief}
 
    :super-brief {:words   ["superbrief" "super-brief"]
                  :syntax  {:num-objects 0}
-                 :handler verbs/v-super-brief}
+                 :handler verbs-meta/v-super-brief}
 
    :version    {:words   ["version"]
                 :syntax  {:num-objects 0}
-                :handler verbs/v-version}
+                :handler verbs-meta/v-version}
 
    :diagnose   {:words   ["diagnose"]
                 :syntax  {:num-objects 0}
-                :handler verbs/v-diagnose}
+                :handler verbs-health/v-diagnose}
 
    :score      {:words   ["score"]
                 :syntax  {:num-objects 0}
-                :handler verbs/v-score}
+                :handler verbs-health/v-score}
 
    :quit       {:words   ["quit" "q"]
                 :syntax  {:num-objects 0}
-                :handler verbs/v-quit}
+                :handler verbs-health/v-quit}
 
    ;; === Observation Verbs ===
    :look       {:words   ["look" "l"]
@@ -86,7 +90,7 @@
 
    :inventory  {:words   ["inventory" "i"]
                 :syntax  {:num-objects 0}
-                :handler verbs/v-inventory}
+                :handler verbs-meta/v-inventory}
 
    ;; === Manipulation Verbs ===
    ;; ZIL: TAKE has multiple syntaxes:
@@ -110,32 +114,32 @@
                            :prep2 :off
                            :loc1 #{:carried :in-room :many}
                            :loc2 #{:on-ground}}]
-                :handler verbs/v-take}
+                :handler verbs-inv/v-take}
 
    :read       {:words   ["read" "skim"]
                 :syntax  {:num-objects 1
                           :loc1 #{:held :carried :in-room :on-ground :take}}
-                :handler verbs/v-read}
+                :handler verbs-inv/v-read}
 
    :drop       {:words   ["drop" "throw" "discard"]
                 :syntax  {:num-objects 1
                           :loc1 #{:held :many :have}}
-                :handler verbs/v-drop}
+                :handler verbs-inv/v-drop}
 
    :open       {:words   ["open"]
                 :syntax  {:num-objects 1
                           :loc1 #{:held :in-room :on-ground :carried}}
-                :handler verbs/v-open}
+                :handler verbs-containers/v-open}
 
    :examine    {:words   ["examine" "x" "describe" "what" "whats"]
                 :syntax  {:num-objects 1
                           :loc1 #{:held :carried :in-room :on-ground :many}}
-                :handler verbs/v-examine}
+                :handler verbs-containers/v-examine}
 
    :look-inside {:words   ["search"]
                  :syntax  {:num-objects 1
                            :loc1 #{:held :carried :in-room :on-ground}}
-                 :handler verbs/v-look-inside}
+                 :handler verbs-containers/v-look-inside}
 
    ;; === Movement Verbs ===
    ;; Walk has multiple syntax patterns routing to different handlers.
@@ -166,7 +170,7 @@
                            :prep1 :through
                            :loc1 #{:in-room :on-ground}
                            :action :through}]
-                :handler verbs/v-walk}
+                :handler verbs-movement/v-walk}
 
    ;; ZIL: <SYNTAX ENTER = V-ENTER> (bare enter goes to :in direction)
    ;;      <SYNTAX ENTER OBJECT = V-THROUGH>
@@ -174,14 +178,14 @@
    :through    {:words   ["enter" "through"]
                 :syntax  {:num-objects 1
                           :loc1 #{:in-room :on-ground}}
-                :handler verbs/v-through}
+                :handler verbs-movement/v-through}
 
    ;; Handler for walk-around - used when WALK AROUND OBJECT is parsed
    ;; The verb words aren't used directly since this routes through :walk
    :walk-around {:words   []  ; No direct words - reached via :walk syntax
                  :syntax  {:num-objects 1
                            :loc1 #{:in-room :on-ground}}
-                 :handler verbs/v-walk-around}
+                 :handler verbs-movement/v-walk-around}
 
    ;; === Manipulation Verbs (continued) ===
    ;; ZIL: <SYNTAX MOVE OBJECT (ON-GROUND IN-ROOM) = V-MOVE PRE-MOVE>
@@ -190,7 +194,7 @@
    :move       {:words   ["move" "pull" "roll" "push" "slide" "shift"]
                 :syntax  {:num-objects 1
                           :loc1 #{:in-room :on-ground}}
-                :handler verbs/v-move}
+                :handler verbs-movement/v-move}
 
    ;; === Climb Verbs ===
    ;; ZIL: <SYNTAX CLIMB UP OBJECT (FIND CLIMBBIT) (ON-GROUND IN-ROOM) = V-CLIMB-UP>
@@ -201,22 +205,22 @@
    :climb-up   {:words   []  ; Reached via :climb syntax with "up" prep
                 :syntax  {:num-objects 1
                           :loc1 #{:in-room :on-ground}}
-                :handler verbs/v-climb-up}
+                :handler verbs-movement/v-climb-up}
 
    :climb-down {:words   []  ; Reached via :climb syntax with "down" prep
                 :syntax  {:num-objects 1
                           :loc1 #{:in-room :on-ground}}
-                :handler verbs/v-climb-down}
+                :handler verbs-movement/v-climb-down}
 
    :climb-foo  {:words   []  ; Reached via :climb syntax without direction
                 :syntax  {:num-objects 1
                           :loc1 #{:in-room :on-ground}}
-                :handler verbs/v-climb-foo}
+                :handler verbs-movement/v-climb-foo}
 
    :climb-on   {:words   []  ; Reached via :climb syntax with "on" prep
                 :syntax  {:num-objects 1
                           :loc1 #{:in-room :on-ground}}
-                :handler verbs/v-climb-on}
+                :handler verbs-movement/v-climb-on}
 
    ;; Main climb verb with multiple syntaxes
    ;; ZIL: <SYNTAX CLIMB UP OBJECT (FIND RMUNGBIT) = V-CLIMB-UP>
@@ -286,7 +290,7 @@
                            :prep1 :with
                            :loc1 #{:in-room :on-ground}
                            :action :through}]
-                :handler verbs/v-climb-foo}})
+                :handler verbs-movement/v-climb-foo}})
 
 ;;; ---------------------------------------------------------------------------
 ;;; DIRECTION VOCABULARY
