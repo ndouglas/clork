@@ -83,6 +83,7 @@
   (println "  --input FILE, -i FILE  Read commands from FILE")
   (println "  --seed N               Set random seed for reproducibility")
   (println "  --ml                   Run in ML training mode (JSON lines on stdin/stdout)")
+  (println "  --ml-rewards           Include reward signals in ML mode output")
   (println "  --help, -h             Show this help message")
   (println "")
   (println "ML Mode:")
@@ -90,7 +91,12 @@
   (println "  - Outputs game state as JSON after each action")
   (println "  - Reads actions as JSON from stdin")
   (println "  - Action format: {\"verb\": \"look\"} or {\"verb\": \"go\", \"direction\": \"north\"}")
-  (println "  - Special actions: {\"verb\": \"quit\"}, {\"verb\": \"reset\"}")
+  (println "  - Special actions: {\"verb\": \"quit\"}, {\"verb\": \"reset\"}, {\"verb\": \"stats\"}")
+  (println "")
+  (println "  With --ml-rewards, output includes:")
+  (println "  - Reward signals (score_delta, novel_room, novel_message, etc.)")
+  (println "  - Composite reward (weighted sum of signals)")
+  (println "  - Session statistics (rooms discovered, objects collected, etc.)")
   (println "")
   (println "Exit codes:")
   (println "  0 - Success (normal quit or game won)")
@@ -116,14 +122,17 @@
     (let [seed-idx (.indexOf (vec args) "--seed")
           seed (when (and (>= seed-idx 0) (< (inc seed-idx) (count args)))
                  (try (Long/parseLong (nth args (inc seed-idx)))
-                      (catch Exception _ nil)))]
+                      (catch Exception _ nil)))
+          use-rewards? (some #{"--ml-rewards"} args)]
       ;; Initialize random number generator
       (if seed
         (random/init! seed)
         (random/init!))
-      ;; Run ML mode
+      ;; Run ML mode (with or without rewards)
       (try
-        (ml/json-line-mode init-game)
+        (if use-rewards?
+          (ml/json-line-mode-with-rewards init-game)
+          (ml/json-line-mode init-game))
         (System/exit 0)
         (catch Exception e
           (binding [*out* *err*]

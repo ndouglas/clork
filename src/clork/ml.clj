@@ -464,6 +464,347 @@
                parsed))))
 
 ;;; ---------------------------------------------------------------------------
+;;; SESSION TRACKING (for reward shaping)
+;;; ---------------------------------------------------------------------------
+;;;
+;;; A "session" tracks cumulative state across multiple actions for an ML agent.
+;;; This enables reward shaping based on novelty (new rooms, new messages, etc.)
+
+(defn initial-session
+  "Create a fresh session state for tracking cumulative metrics.
+
+   Session tracks:
+   - :rooms-visited      - Set of room IDs visited this session
+   - :messages-seen      - Set of message hashes seen (for novelty)
+   - :objects-taken      - Objects ever picked up
+   - :objects-examined   - Objects ever examined
+   - :containers-opened  - Containers/doors ever opened
+   - :max-score          - Highest score achieved
+   - :total-deaths       - Cumulative death count
+   - :total-moves        - Total moves taken
+   - :start-time         - Session start timestamp"
+  []
+  {:rooms-visited #{}
+   :messages-seen #{}
+   :objects-taken #{}
+   :objects-examined #{}
+   :containers-opened #{}
+   :puzzles-solved #{}
+   :max-score 0
+   :total-deaths 0
+   :total-moves 0
+   :valid-actions 0
+   :invalid-actions 0
+   :start-time (System/currentTimeMillis)})
+
+(defn- extract-action-type
+  "Extract the general action type from an action for tracking."
+  [action]
+  (let [verb (:verb action)]
+    (cond
+      (#{:take :get :grab} verb) :take
+      (#{:examine :x :look-inside} verb) :examine
+      (#{:open} verb) :open
+      (#{:go :walk :north :south :east :west} verb) :move
+      :else verb)))
+
+(defn- compute-reward-signals
+  "Compute reward signals by comparing before/after states and session.
+
+   Returns a map of individual reward signals:
+   - :score-delta       - Change in game score (direct from game)
+   - :novel-room?       - True if this room wasn't visited before
+   - :novel-message?    - True if message hash is new
+   - :inventory-delta   - Change in inventory item count
+   - :death?            - True if player died
+   - :container-opened? - True if a new container was opened
+   - :object-taken?     - True if a new object was acquired
+   - :valid-action?     - True if action produced meaningful output"
+  [before-gs after-gs session action message]
+  (let [before-score (:score before-gs 0)
+        after-score (:score after-gs 0)
+        before-deaths (:deaths before-gs 0)
+        after-deaths (:deaths after-gs 0)
+        before-room (:here before-gs)
+        after-room (:here after-gs)
+        before-inv-count (count (get-inventory before-gs))
+        after-inv-count (count (get-inventory after-gs))
+
+        ;; Message novelty
+        msg-hash (when (seq message) (hash message))
+        novel-message? (and msg-hash
+                            (not (contains? (:messages-seen session) msg-hash)))
+
+        ;; Room novelty
+        novel-room? (and (not= before-room after-room)
+                         (not (contains? (:rooms-visited session) after-room)))
+
+        ;; Action-specific novelty
+        action-type (extract-action-type action)
+        direct-obj (:direct-object action)
+
+        object-taken? (and (= action-type :take)
+                           direct-obj
+                           (> after-inv-count before-inv-count)
+                           (not (contains? (:objects-taken session) direct-obj)))
+
+        container-opened? (and (= action-type :open)
+                               direct-obj
+                               (not (contains? (:containers-opened session) direct-obj))
+                               ;; Check if it's actually open now
+                               (gs/set-thing-flag? after-gs direct-obj :open))
+
+        ;; Valid action detection (message isn't an error/nothing happened)
+        valid-action? (and (seq message)
+                           (not (re-find #"(?i)don't understand|can't do that|not here" message)))]
+
+    {:score-delta (- after-score before-score)
+     :novel-room? novel-room?
+     :novel-message? novel-message?
+     :room-changed? (not= before-room after-room)
+     :inventory-delta (- after-inv-count before-inv-count)
+     :death? (> after-deaths before-deaths)
+     :object-taken? object-taken?
+     :container-opened? container-opened?
+     :valid-action? valid-action?
+     :message-hash msg-hash}))
+
+(defn- compute-composite-reward
+  "Compute a weighted composite reward from individual signals.
+
+   Default weights (can be overridden):
+   - score-delta:      1.0  (direct game score)
+   - novel-room:       5.0  (exploration bonus)
+   - novel-message:    0.5  (variety bonus)
+   - object-taken:     2.0  (acquisition bonus)
+   - container-opened: 1.5  (discovery bonus)
+   - death:          -10.0  (death penalty)
+   - invalid-action:  -0.1  (discourage spam)"
+  [signals & {:keys [weights]
+              :or {weights {:score-delta 1.0
+                            :novel-room 5.0
+                            :novel-message 0.5
+                            :object-taken 2.0
+                            :container-opened 1.5
+                            :death -10.0
+                            :invalid-action -0.1}}}]
+  (let [{:keys [score-delta novel-room? novel-message? object-taken?
+                container-opened? death? valid-action?]} signals]
+    (+ (* score-delta (:score-delta weights))
+       (if novel-room? (:novel-room weights) 0)
+       (if novel-message? (:novel-message weights) 0)
+       (if object-taken? (:object-taken weights) 0)
+       (if container-opened? (:container-opened weights) 0)
+       (if death? (:death weights) 0)
+       (if (not valid-action?) (:invalid-action weights) 0))))
+
+(defn update-session
+  "Update session state based on action results and reward signals.
+   Returns updated session."
+  [session after-gs signals action]
+  (let [{:keys [novel-room? novel-message? object-taken? container-opened?
+                death? valid-action? message-hash]} signals
+        current-room (:here after-gs)
+        direct-obj (:direct-object action)]
+    (cond-> session
+      ;; Always increment moves
+      true
+      (update :total-moves inc)
+
+      ;; Track room visits
+      novel-room?
+      (update :rooms-visited conj current-room)
+
+      ;; Track message novelty
+      (and novel-message? message-hash)
+      (update :messages-seen conj message-hash)
+
+      ;; Track object acquisition
+      (and object-taken? direct-obj)
+      (update :objects-taken conj direct-obj)
+
+      ;; Track container opens
+      (and container-opened? direct-obj)
+      (update :containers-opened conj direct-obj)
+
+      ;; Track examinations
+      (and (= (extract-action-type action) :examine) direct-obj)
+      (update :objects-examined conj direct-obj)
+
+      ;; Track max score
+      (> (:score after-gs 0) (:max-score session 0))
+      (assoc :max-score (:score after-gs 0))
+
+      ;; Track deaths
+      death?
+      (update :total-deaths inc)
+
+      ;; Track valid/invalid actions
+      valid-action?
+      (update :valid-actions inc)
+
+      (not valid-action?)
+      (update :invalid-actions inc))))
+
+(defn session-stats
+  "Get summary statistics from a session."
+  [session]
+  (let [elapsed-ms (- (System/currentTimeMillis) (:start-time session))
+        total-actions (+ (:valid-actions session) (:invalid-actions session))]
+    {:rooms-discovered (count (:rooms-visited session))
+     :unique-messages (count (:messages-seen session))
+     :objects-collected (count (:objects-taken session))
+     :containers-opened (count (:containers-opened session))
+     :max-score (:max-score session)
+     :total-deaths (:total-deaths session)
+     :total-moves (:total-moves session)
+     :valid-action-rate (if (pos? total-actions)
+                          (/ (:valid-actions session) total-actions)
+                          0.0)
+     :elapsed-seconds (/ elapsed-ms 1000.0)}))
+
+;;; ---------------------------------------------------------------------------
+;;; ENHANCED ACTION EXECUTION (with rewards)
+;;; ---------------------------------------------------------------------------
+
+(defn execute-action-with-rewards
+  "Execute an action and compute reward signals.
+
+   Like execute-action, but also takes a session and returns reward information.
+
+   Returns:
+   {:game-state    - New game state after action
+    :message       - Text output from action
+    :snapshot      - State snapshot for ML agent
+    :rewards       - Map of individual reward signals
+    :composite     - Single composite reward value
+    :session       - Updated session state}"
+  [before-gs session action & {:keys [reward-weights]}]
+  (let [;; Execute the action (before-gs is the state BEFORE the action)
+        {:keys [game-state message snapshot]} (execute-action before-gs action)
+
+        ;; Compute rewards comparing before and after
+        signals (compute-reward-signals before-gs game-state session action message)
+
+        ;; Compute composite reward
+        composite (if reward-weights
+                    (compute-composite-reward signals :weights reward-weights)
+                    (compute-composite-reward signals))
+
+        ;; Update session
+        new-session (update-session session game-state signals action)]
+
+    {:game-state game-state
+     :message message
+     :snapshot snapshot
+     :rewards signals
+     :composite-reward composite
+     :session new-session}))
+
+;;; ---------------------------------------------------------------------------
+;;; REWARD-AWARE JSON-LINES MODE
+;;; ---------------------------------------------------------------------------
+
+(defn json-line-mode-with-rewards
+  "JSON-lines mode with reward tracking for RL training.
+
+   Like json-line-mode, but includes reward signals in each response.
+
+   Output format (after each action):
+   {
+     \"score\": 10,
+     \"rewards\": {
+       \"score_delta\": 10,
+       \"novel_room\": true,
+       \"composite\": 15.5
+     },
+     \"session\": {
+       \"rooms_discovered\": 5,
+       \"total_moves\": 12
+     },
+     \"valid_actions\": [...],
+     ...
+   }
+
+   Special actions:
+   - {\"verb\": \"quit\"} - Exit and return final stats
+   - {\"verb\": \"reset\"} - Restart game (keeps session stats for comparison)
+   - {\"verb\": \"stats\"} - Return session statistics without taking action"
+  [init-fn & {:keys [reward-weights]}]
+  (let [reader (BufferedReader. *in*)]
+    (loop [game-state (init-fn)
+           session (-> (initial-session)
+                       ;; Add starting room to visited
+                       (update :rooms-visited conj (:here game-state)))
+           last-message ""
+           last-rewards nil]
+
+      ;; Build output with rewards
+      (let [snapshot (state-snapshot game-state :message last-message)
+            output (cond-> snapshot
+                     last-rewards
+                     (assoc :rewards last-rewards
+                            :composite-reward (if reward-weights
+                                                (compute-composite-reward last-rewards :weights reward-weights)
+                                                (compute-composite-reward last-rewards)))
+                     true
+                     (assoc :session-stats (session-stats session)))]
+        (println (snapshot->json output))
+        (flush))
+
+      ;; Read action from stdin
+      (if-let [line (.readLine reader)]
+        (let [action (try
+                       (action<-json line)
+                       (catch Exception e
+                         {:verb :invalid :error (.getMessage e)}))]
+          (cond
+            ;; Invalid JSON
+            (= (:verb action) :invalid)
+            (do
+              (println (json/write-str {"error" (:error action)}))
+              (flush)
+              (recur game-state session "" nil))
+
+            ;; Quit - return final session stats
+            (= (:verb action) :quit)
+            (do
+              (println (json/write-str {"final_stats" (keyword->string (session-stats session))}))
+              (flush)
+              game-state)
+
+            ;; Stats - return session stats without action
+            (= (:verb action) :stats)
+            (do
+              (println (json/write-str {"session_stats" (keyword->string (session-stats session))}))
+              (flush)
+              (recur game-state session last-message last-rewards))
+
+            ;; Reset - restart game but preserve session for comparison
+            (= (:verb action) :reset)
+            (let [new-gs (init-fn)
+                  ;; Optionally reset session or keep for episode comparison
+                  new-session (-> (initial-session)
+                                  (update :rooms-visited conj (:here new-gs)))]
+              (recur new-gs new-session "" nil))
+
+            ;; Execute action with rewards
+            :else
+            (let [result (execute-action-with-rewards
+                          game-state session action
+                          :reward-weights reward-weights)]
+              (recur (:game-state result)
+                     (:session result)
+                     (:message result)
+                     (:rewards result)))))
+
+        ;; EOF - return final stats
+        (do
+          (println (json/write-str {"final_stats" (keyword->string (session-stats session))}))
+          (flush)
+          game-state)))))
+
+;;; ---------------------------------------------------------------------------
 ;;; JSON-LINES MODE (for subprocess communication)
 ;;; ---------------------------------------------------------------------------
 

@@ -123,3 +123,100 @@
     (let [action (ml/action<-json "{\"verb\": \"take\", \"direct-object\": \"lamp\"}")]
       (is (= :take (:verb action)))
       (is (= :lamp (:direct-object action))))))
+
+;;; ---------------------------------------------------------------------------
+;;; REWARD SHAPING TESTS
+;;; ---------------------------------------------------------------------------
+
+(deftest test-initial-session
+  (testing "initial session has correct structure"
+    (let [session (ml/initial-session)]
+      (is (set? (:rooms-visited session)))
+      (is (empty? (:rooms-visited session)))
+      (is (set? (:messages-seen session)))
+      (is (= 0 (:total-moves session)))
+      (is (= 0 (:max-score session)))
+      (is (number? (:start-time session))))))
+
+(deftest test-session-stats
+  (testing "session-stats computes correct values"
+    (let [session (-> (ml/initial-session)
+                      (update :rooms-visited conj :west-of-house :north-of-house)
+                      (update :messages-seen conj 12345 67890 11111)
+                      (update :objects-taken conj :lamp :sword)
+                      (assoc :max-score 25)
+                      (assoc :total-moves 10)
+                      (assoc :valid-actions 8)
+                      (assoc :invalid-actions 2))
+          stats (ml/session-stats session)]
+      (is (= 2 (:rooms-discovered stats)))
+      (is (= 3 (:unique-messages stats)))
+      (is (= 2 (:objects-collected stats)))
+      (is (= 25 (:max-score stats)))
+      (is (= 10 (:total-moves stats)))
+      (is (== 0.8 (:valid-action-rate stats))))))
+
+(deftest test-execute-action-with-rewards
+  (testing "execute-action-with-rewards returns reward signals"
+    (let [state (init-test-state)
+          session (-> (ml/initial-session)
+                      (update :rooms-visited conj (:here state)))
+          action {:verb :go :direction :north}
+          result (ml/execute-action-with-rewards state session action)]
+      ;; Should have all expected keys
+      (is (contains? result :game-state))
+      (is (contains? result :message))
+      (is (contains? result :rewards))
+      (is (contains? result :composite-reward))
+      (is (contains? result :session))
+      ;; Rewards should have signal keys
+      (let [rewards (:rewards result)]
+        (is (contains? rewards :score-delta))
+        (is (contains? rewards :novel-room?))
+        (is (contains? rewards :novel-message?))
+        (is (contains? rewards :valid-action?)))
+      ;; Session should be updated
+      (is (>= (:total-moves (:session result)) 1)))))
+
+(deftest test-novel-room-detection
+  (testing "novel room gives exploration bonus"
+    (let [state (init-test-state)
+          ;; Session starts with only west-of-house visited
+          session (-> (ml/initial-session)
+                      (update :rooms-visited conj :west-of-house))
+          ;; Move to a new room
+          action {:verb :go :direction :north}
+          result (ml/execute-action-with-rewards state session action)]
+      ;; Should detect novel room if we actually moved
+      (when (not= (:here state) (:here (:game-state result)))
+        (is (:novel-room? (:rewards result)))
+        ;; Novel room should be added to session
+        (is (contains? (:rooms-visited (:session result))
+                       (:here (:game-state result))))))))
+
+(deftest test-message-novelty-tracking
+  (testing "new messages are tracked in session"
+    (let [state (init-test-state)
+          session (ml/initial-session)
+          ;; Look command should produce a message
+          action {:verb :look}
+          result (ml/execute-action-with-rewards state session action)]
+      ;; Should have a message
+      (when (seq (:message result))
+        ;; Should detect as novel (first time seeing this message)
+        (is (:novel-message? (:rewards result)))
+        ;; Message hash should be added to session
+        (is (pos? (count (:messages-seen (:session result)))))))))
+
+(deftest test-composite-reward-calculation
+  (testing "composite reward combines signals correctly"
+    (let [state (init-test-state)
+          session (ml/initial-session)
+          ;; Simple action
+          action {:verb :look}
+          result (ml/execute-action-with-rewards state session action)]
+      ;; Composite reward should be a number
+      (is (number? (:composite-reward result)))
+      ;; Novel message should contribute positive reward
+      (when (:novel-message? (:rewards result))
+        (is (pos? (:composite-reward result)))))))

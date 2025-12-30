@@ -102,3 +102,72 @@ The brass lantern is now on.
 Cellar
 You are in a dark and damp cellar with a narrow passageway leading north, and a crawlway to the south. On the west is the bottom of a steep metal ramp which is unclimbable.
 ```
+
+## ML Training API
+
+Clork includes a structured API for training machine learning agents to play the game. Instead of generating free-form text, agents interact via structured actions and receive rich state observations.
+
+### Quick Start
+
+```bash
+# Run in ML mode (JSON lines on stdin/stdout)
+lein run --ml
+
+# With reward signals for RL training
+lein run --ml --ml-rewards
+```
+
+### Python Wrapper
+
+A Python wrapper provides an OpenAI Gym-style interface:
+
+```python
+from clork_env import ClorkEnv
+
+env = ClorkEnv(use_rewards=True)
+obs = env.reset()
+
+while not obs['game_over']:
+    actions = env.valid_actions()  # No text generation needed!
+    action = agent.select(actions)  # Your agent here
+    obs, reward, done, info = env.step(action)
+
+env.close()
+```
+
+### Action Format
+
+Actions are structured data, not free-form text:
+
+```python
+{"verb": "go", "direction": "north"}
+{"verb": "take", "direct-object": "lamp"}
+{"verb": "put", "direct-object": "egg", "prep": "in", "indirect-object": "nest"}
+```
+
+### Reward Signals
+
+With `--ml-rewards`, the API provides shaped rewards for training:
+
+| Signal             | Default Weight | Description               |
+| ------------------ | -------------- | ------------------------- |
+| `score_delta`      | 1.0            | Change in game score      |
+| `novel_room`       | 5.0            | First visit to a room     |
+| `novel_message`    | 0.5            | New unique game output    |
+| `object_taken`     | 2.0            | New object acquired       |
+| `container_opened` | 1.5            | New container/door opened |
+| `death`            | -10.0          | Player died               |
+
+### Example: Random Agent
+
+```bash
+cd python
+PYTHONPATH=. python example_random_agent.py --episodes 5 --steps 100
+
+# Output:
+# Episode 1: Reward=41.5, Rooms=8, Score=0
+# Episode 2: Reward=35.0, Rooms=6, Score=0
+# ...
+```
+
+See `python/clork_env.py` for the full API documentation.

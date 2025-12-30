@@ -37,7 +37,9 @@
    :max-turns          nil     ; Maximum turns before forced exit (nil = unlimited)
    :quiet              false   ; Suppress game output
    :input-file         nil     ; File to read commands from (nil = stdin)
-   :seed               nil})   ; Random seed for reproducibility (nil = random)
+   :seed               nil     ; Random seed for reproducibility (nil = random)
+   :ml-mode            false   ; Run in ML training mode (JSON line protocol)
+   :ml-rewards         false}) ; Include reward signals in ML mode
 
 (defn parse-args
   "Parse command-line arguments into a script config map.
@@ -49,7 +51,9 @@
      --max-turns N          Limit to N turns
      --quiet, -q            Suppress game output
      --input FILE, -i FILE  Read commands from FILE
-     --seed N               Set random seed for reproducibility"
+     --seed N               Set random seed for reproducibility
+     --ml                   Run in ML training mode (JSON line protocol)
+     --ml-rewards           Include reward signals in ML mode output"
   [args]
   (loop [args args
          config default-config]
@@ -99,6 +103,12 @@
             (do (binding [*out* *err*]
                   (println "Error: --seed requires a number"))
                 (assoc config :error "Missing argument for --seed")))
+
+          "--ml"
+          (recur rest-args (assoc config :ml-mode true))
+
+          "--ml-rewards"
+          (recur rest-args (assoc config :ml-rewards true))
 
           ;; Unknown argument - could be game-specific, ignore for now
           (recur rest-args config))))))
