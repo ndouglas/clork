@@ -274,23 +274,36 @@
                            with-fdesc)
 
              ;; Second pass: remaining objects
+             ;; Separate into describable (no :ndesc) and ndesc containers
              describable (remove (fn [id] (has-flag? game-state id :ndesc))
-                                 without-fdesc)]
+                                 without-fdesc)
+             ;; ZIL: Objects with NDESCBIT that have visible contents still
+             ;; get their contents described (lines 1827-1830 in gverbs.zil)
+             ndesc-containers (filter (fn [id]
+                                        (and (has-flag? game-state id :ndesc)
+                                             (see-inside? game-state id)
+                                             (seq (gs/get-contents game-state id))))
+                                      without-fdesc)]
 
-         (if (empty? describable)
-           state
-           ;; Print header for container (but not for room floor at level -1)
-           (let [state (if (and (not= obj-id (:here game-state))
-                                (>= level 0))
-                         (firster state obj-id level)
-                         state)
-                 ;; Room floor (level -1) -> describe at level 0
-                 ;; Container (level >= 0) -> describe at level+1
-                 new-level (if (< level 0) 0 (inc level))]
-             (reduce (fn [st id]
-                       (describe-object st id verbose? new-level))
-                     state
-                     describable))))))))
+         ;; First describe ndesc containers' contents
+         (let [state (reduce (fn [st id]
+                               (print-cont st id verbose? (if (< level 0) 0 level)))
+                             state
+                             ndesc-containers)]
+           (if (empty? describable)
+             state
+             ;; Print header for container (but not for room floor at level -1)
+             (let [state (if (and (not= obj-id (:here game-state))
+                                  (>= level 0))
+                           (firster state obj-id level)
+                           state)
+                   ;; Room floor (level -1) -> describe at level 0
+                   ;; Container (level >= 0) -> describe at level+1
+                   new-level (if (< level 0) 0 (inc level))]
+               (reduce (fn [st id]
+                         (describe-object st id verbose? new-level))
+                       state
+                       describable)))))))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; DESCRIBE-OBJECTS
