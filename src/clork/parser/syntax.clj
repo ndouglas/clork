@@ -15,7 +15,8 @@
   (:require [clork.utils :as utils]
             [clork.game-state :as game-state]
             [clork.verb-defs :as verb-defs]
-            [clork.parser.state :as parser-state]))
+            [clork.parser.state :as parser-state]
+            [clork.parser.objects :as objects]))
 
 ;;;; ============================================================================
 ;;;; PARSER SYNTAX - Syntax Checking and GWIM
@@ -229,30 +230,38 @@
      :game-state game-state}
 
     ;; Normal case: search for matching objects
-    (let [_ (assoc-in game-state [:parser :gwimbit] gwim-flag)
-          _ (assoc-in game-state [:parser :slocbits] loc-bits)
-          ;; TODO: Implement actual object search using get-object
-          matches []]  ; Placeholder
+    ;; ZIL: <SETG P-GWIMBIT .GBIT> <SETG P-SLOCBITS .LBIT> <GET-OBJECT ,P-MERGE <>>
+    (let [;; Thread state properly - set gwimbit and clear nam/adj for flag-only search
+          gs (-> game-state
+                 (assoc-in [:parser :gwimbit] gwim-flag)
+                 (assoc-in [:parser :slocbits] loc-bits)
+                 (assoc-in [:parser :nam] nil)    ; Clear noun - we want flag match only
+                 (assoc-in [:parser :adj] nil))   ; Clear adjective
+
+          ;; Actually call get-object to search for objects with this flag
+          result (objects/get-object gs [] false)  ; false = don't print errors
+          matches (when (:success result) (:matches result))
+          gs-after (:game-state result)]
 
       (cond
-        ;; Exactly one match - use it
+        ;; Exactly one match - use it with feedback message
         (= (count matches) 1)
-        (let [obj (first matches)]
+        (let [obj (first matches)
+              ;; Print inference message: "(the brass lantern)"
+              gs-with-msg (-> gs-after
+                              (utils/tell "(")
+                              (cond-> (and prep (not (get-in gs-after [:parser :end-on-prep])))
+                                (utils/tell (str (name prep) " ")))
+                              (utils/tell (str "the " (game-state/thing-name gs-after obj)))
+                              (utils/tell ")\n"))]
           {:found true
            :object obj
-           :game-state (do
-                         ;; Print inference message: "(the brass lantern)"
-                         (utils/tell game-state "(")
-                         (when (and prep (not (get-in game-state [:parser :end-on-prep])))
-                           (utils/tell game-state (str (name prep) " ")))
-                         (utils/tell game-state (str "the " (game-state/thing-name game-state obj)))
-                         (utils/tell game-state ")\n")
-                         game-state)})
+           :game-state gs-with-msg})
 
         ;; Zero or multiple matches - fail
         :else
         {:found false
-         :game-state (-> game-state
+         :game-state (-> gs-after
                          (assoc-in [:parser :gwimbit] nil))}))))
 
 (defn try-gwim
@@ -265,10 +274,11 @@
   (let [ncn (parser-state/get-ncn game-state)]
     (loop [remaining patterns]
       (if (empty? remaining)
-        ;; No pattern worked with GWIM
+        ;; No pattern worked with GWIM - couldn't find object with required flag
         {:success false
          :game-state game-state
-         :error {:type :need-object}}
+         :error {:type :need-object
+                 :message "You can't see any such thing."}}
         (let [pattern (first remaining)
               ;; Determine which object is missing
               missing-first? (and (zero? ncn)

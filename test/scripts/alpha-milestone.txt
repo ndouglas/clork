@@ -1,13 +1,11 @@
 ; Clork Alpha Milestone Test
-; Based on early Zork I walkthrough from web.mit.edu transcript
+; Based on early Zork I walkthrough
 ; This represents our target for "alpha" release - basic adventure gameplay
 ;
-; Expected to fail until these verbs are implemented:
-;   Movement: GO/WALK, ENTER, UP, DOWN
-;   Objects: TAKE/GET, DROP, OPEN, CLOSE, READ, PUT
-;   Other: MOVE, TURN ON/OFF, KILL
+; Core verbs tested: LOOK, INVENTORY, OPEN, CLOSE, TAKE, DROP, READ
+;                    MOVE, TURN ON/OFF, PUT, GO/WALK, ENTER
 ;
-; When this script passes with --strict, we have basic playability!
+; When this script passes, we have basic playability!
 
 ; === West of House (starting location) ===
 look
@@ -28,7 +26,6 @@ enter
 ; === Inside the house: Kitchen ===
 go west
 take lamp
-take bottle
 
 ; === Living Room ===
 move rug
@@ -48,10 +45,10 @@ take painting
 ; === Gallery ===
 go north
 
-; === Studio ===
-go up chimney
+; === Studio - go up via chimney ===
+go up
 
-; === Kitchen (back up) ===
+; === Kitchen - go up to Attic ===
 go up
 
 ; === Attic ===

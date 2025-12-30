@@ -256,6 +256,7 @@
    :too-dark         "It's too dark to see!"
    :dont-have        "You don't have that!"
    :not-here         "You can't see any such thing."
+   :need-object      "You can't see any such thing."
    :cant-orphan      "\"I don't understand! What are you referring to?\""})
 
 (defn parser-say

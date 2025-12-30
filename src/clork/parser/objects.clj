@@ -267,9 +267,12 @@
    (let [gflags (get-in game-state [:parser :getflags] 0)
          nam (get-in game-state [:parser :nam])
          adj (get-in game-state [:parser :adj])
-         ;; Check if current room is lit (has :lit or :on flag)
+         ;; Check if current room is lit
+         ;; Either the global :lit flag (set by goto based on room + light sources)
+         ;; OR the room's native :lit/:on flag
          here (:here game-state)
-         lit? (or (game-state/set-thing-flag? game-state here :lit)
+         lit? (or (:lit game-state)
+                  (game-state/set-thing-flag? game-state here :lit)
                   (game-state/set-thing-flag? game-state here :on))
          player (:player game-state)
          ;; Trace the search parameters
@@ -323,14 +326,21 @@
              ;; This is important for AND clauses where we accumulate matches
              incoming-count (match-table-count match-table)
 
-             ;; Search player inventory (if lit)
+             ;; GWIMBIT allows searching in darkness (FIND clause in ZIL syntax)
+             ;; e.g., "turn on lamp" has (FIND LIGHTBIT) which sets gwimbit
+             gwimbit (get-in gs [:parser :gwimbit])
+             search-in-dark? (some? gwimbit)
+
+             ;; Search player inventory (if lit OR gwimbit set)
+             ;; ZIL: Player always knows what they're carrying, and FIND clause
+             ;; allows finding objects with specific flags even in darkness
              matches-after-player
-             (if lit?
+             (if (or lit? search-in-dark?)
                (do-sl gs player match-table
                       (:held game-state/search-bits) (:carried game-state/search-bits))
                match-table)
 
-             ;; Search room contents (if lit)
+             ;; Search room contents (only if lit - can't see room contents in dark)
              matches-after-room
              (if lit?
                (do-sl gs here matches-after-player

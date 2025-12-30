@@ -166,13 +166,13 @@
 
    A room is lit if:
    - ALWAYS-LIT is set (debug mode), OR
-   - The room has the ON flag (inherently lit), OR
+   - The room has the :lit flag (inherently lit), OR
    - There's a light source in the room/player that's ON
 
    Arguments:
      game-state - current state
      room-id - room to check
-     check-room-flag? - if true, also check room's ONBIT
+     check-room-flag? - if true, also check room's :lit flag
 
    Returns: true if the room is lit"
   ([game-state room-id]
@@ -188,37 +188,20 @@
           (= (:winner game-state) (:player game-state)))
      true
 
-     ;; Room is inherently lit
+     ;; Room is inherently lit (check :lit flag, not :on)
      (and check-room-flag?
-          (game-state/set-thing-flag? game-state room-id :on))
+          (game-state/set-thing-flag? game-state room-id :lit))
      true
 
-     ;; Search for light source
+     ;; Direct check: player carries a light source that is on
+     ;; This is simpler and more reliable than the GWIMBIT search
      :else
-     (let [;; Save and set GWIMBIT to search for lit objects
-           gs (-> game-state
-                  (assoc-in [:parser :gwimbit] :on)
-                  (assoc-in [:parser :slocbits] -1))
-           winner (:winner game-state)
-           player (:player game-state)
-           old-here (:here game-state)
-
-           ;; Temporarily set HERE for the search
-           gs (assoc gs :here room-id)
-
-           ;; Search winner's inventory
-           matches (objects/do-sl gs winner [] 1 1)
-
-           ;; Also search player if different from winner and in room
-           matches (if (and (not= winner player)
-                            (= (game-state/get-thing-location gs player) room-id))
-                     (objects/do-sl gs player matches 1 1)
-                     matches)
-
-           ;; Search the room
-           matches (objects/do-sl gs room-id matches 1 1)]
-
-       (pos? (count matches))))))
+     (let [winner (:winner game-state)
+           contents (game-state/get-contents game-state winner)]
+       (some (fn [obj-id]
+               (and (game-state/set-thing-flag? game-state obj-id :light)
+                    (game-state/set-thing-flag? game-state obj-id :on)))
+             contents)))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; MANY-CHECK

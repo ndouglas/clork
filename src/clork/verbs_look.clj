@@ -58,7 +58,9 @@
   ([game-state] (describe-room game-state (gs/get-winner-loc game-state) false))
   ([game-state location is-verbose?]
    (let [is-verbose? (or is-verbose? (gs/verbose? game-state))
-         lit? (gs/set-here-flag? game-state :lit)
+         ;; Check global :lit flag (set by goto based on room + light sources)
+         ;; OR the room's native :lit flag
+         lit? (or (:lit game-state) (gs/set-here-flag? game-state :lit))
          maze? (gs/set-here-flag? game-state :maze)
          is-verbose? (if maze? is-verbose? true)
          vehicle? (get-in location [:flags :vehicle] false)

@@ -24,27 +24,25 @@
 (defn room-lit?
   "Check if a room is lit (simple version for movement).
 
-   A room is lit if it has the :lit flag in its :flags set.
-   This is a simplified check - the full LIT? in validation.clj
-   also searches for light sources, but that creates a cyclic dependency.
+   A room is lit if:
+   1. It has the :lit flag in its :flags set
+   2. The player carries a light source that is on
 
    Note: parser/validation.clj has a more complete lit? that also
    checks for carried light sources. That version is used during parsing."
   [game-state room-id]
-  (let [room (gs/get-thing game-state room-id)
-        room-flags (or (:flags room) #{})]
-    (or (contains? room-flags :lit)
-        (contains? room-flags :on)
-        (gs/flag? game-state :rooms room-id :lit)
-        ;; Also check for carried light source (simple check)
-        (let [winner (:winner game-state)
-              contents (gs/get-contents game-state winner)]
-          (some (fn [obj-id]
-                  (let [obj (gs/get-thing game-state obj-id)
-                        obj-flags (or (:flags obj) #{})]
-                    (and (contains? obj-flags :light)
-                         (contains? obj-flags :on))))
-                contents)))))
+  (let [;; Check room's :lit flag - handle missing rooms gracefully
+        room (gs/get-thing game-state room-id)
+        room-lit (when room
+                   (or (contains? (:flags room) :lit)
+                       (gs/flag? game-state :rooms room-id :lit)))
+        winner (:winner game-state)
+        contents (gs/get-contents game-state winner)
+        has-light-on (some (fn [obj-id]
+                             (and (gs/set-thing-flag? game-state obj-id :light)
+                                  (gs/set-thing-flag? game-state obj-id :on)))
+                           contents)]
+    (or room-lit has-light-on)))
 
 (defn goto
   "Move the player to a new room and describe it.
@@ -145,6 +143,25 @@
           ;; Unknown exit type
           :else
           (utils/tell game-state "You can't go that way."))))))
+
+;;; ---------------------------------------------------------------------------
+;;; ENTER COMMAND
+;;; ---------------------------------------------------------------------------
+;;; ZIL: V-ENTER in gverbs.zil
+
+(defn v-enter
+  "Enter (bare command) - walk in the :in direction.
+
+   ZIL: V-ENTER in gverbs.zil (lines 636-637):
+   <ROUTINE V-ENTER ()
+     <DO-WALK ,P?IN>>
+
+   Simply walks in the :in direction, which is typically used to enter
+   buildings, vehicles, etc."
+  [game-state]
+  ;; Set the direction to :in and call v-walk
+  (let [gs (assoc-in game-state [:parser :prso] [:in])]
+    (v-walk gs)))
 
 ;;; ---------------------------------------------------------------------------
 ;;; THROUGH COMMAND

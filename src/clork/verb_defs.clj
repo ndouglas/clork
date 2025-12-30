@@ -8,6 +8,8 @@
             [clork.verbs-containers :as verbs-containers]
             [clork.verbs-movement :as verbs-movement]
             [clork.verbs-look :as verbs-look]
+            [clork.verbs-light :as verbs-light]
+            [clork.verbs-put :as verbs-put]
             [clork.debug.trace :as trace]))
 
 ;;;; ============================================================================
@@ -158,6 +160,53 @@
                           :loc1 #{:held :many :have}}
                 :handler verbs-inv/v-drop}
 
+   ;; ZIL: <SYNTAX PUT OBJECT (HELD MANY HAVE) IN OBJECT = V-PUT PRE-PUT>
+   ;;      <SYNTAX PUT OBJECT (HELD MANY HAVE) ON OBJECT = V-PUT-ON PRE-PUT>
+   ;;      <SYNTAX PUT OBJECT (HELD HAVE) UNDER OBJECT = V-PUT-UNDER>
+   ;;      <SYNTAX PUT OBJECT (HELD MANY HAVE) BEHIND OBJECT = V-PUT-BEHIND>
+   :put        {:words   ["put" "place" "insert" "stuff"]
+                :syntax  [;; PUT OBJECT IN OBJECT
+                          {:num-objects 2
+                           :prep2 :in
+                           :loc1 #{:held :carried :many :have}
+                           :loc2 #{:held :carried :in-room :on-ground}
+                           :action :put}
+
+                          ;; PUT OBJECT ON OBJECT
+                          {:num-objects 2
+                           :prep2 :on
+                           :loc1 #{:held :carried :many :have}
+                           :loc2 #{:held :carried :in-room :on-ground}
+                           :action :put-on}
+
+                          ;; PUT OBJECT UNDER OBJECT
+                          {:num-objects 2
+                           :prep2 :under
+                           :loc1 #{:held :have}
+                           :loc2 #{:held :carried :in-room :on-ground}
+                           :action :put-under}
+
+                          ;; PUT OBJECT BEHIND OBJECT
+                          {:num-objects 2
+                           :prep2 :behind
+                           :loc1 #{:held :carried :many :have}
+                           :loc2 #{:held :carried :in-room :on-ground}
+                           :action :put-behind}]
+                :handler verbs-put/v-put}
+
+   ;; Action handlers for PUT variants (called by dispatcher based on :action)
+   :put-on     {:words   []  ; No direct words, routed via :action
+                :syntax  {:num-objects 0}  ; Not used directly
+                :handler verbs-put/v-put-on}
+
+   :put-under  {:words   []
+                :syntax  {:num-objects 0}
+                :handler verbs-put/v-put-under}
+
+   :put-behind {:words   []
+                :syntax  {:num-objects 0}
+                :handler verbs-put/v-put-behind}
+
    :open       {:words   ["open"]
                 :syntax  {:num-objects 1
                           :loc1 #{:held :in-room :on-ground :carried}}
@@ -208,9 +257,19 @@
    ;;      <SYNTAX ENTER OBJECT = V-THROUGH>
    ;; Go through a door, window, or other passageway
    :through    {:words   ["enter" "through"]
-                :syntax  {:num-objects 1
-                          :loc1 #{:in-room :on-ground}}
+                :syntax  [;; ENTER (bare) - walk in :in direction
+                          {:num-objects 0
+                           :action :enter}
+
+                          ;; ENTER OBJECT / THROUGH OBJECT - go through passageway
+                          {:num-objects 1
+                           :loc1 #{:in-room :on-ground}}]
                 :handler verbs-movement/v-through}
+
+   ;; Handler for bare enter - reached via :through syntax with 0 objects
+   :enter      {:words   []  ; No direct words - reached via :through syntax
+                :syntax  {:num-objects 0}
+                :handler verbs-movement/v-enter}
 
    ;; Handler for walk-around - used when WALK AROUND OBJECT is parsed
    ;; The verb words aren't used directly since this routes through :walk
@@ -322,7 +381,54 @@
                            :prep1 :with
                            :loc1 #{:in-room :on-ground}
                            :action :through}]
-                :handler verbs-movement/v-climb-foo}})
+                :handler verbs-movement/v-climb-foo}
+
+   ;; === Light Source Verbs ===
+   ;; ZIL: <SYNTAX TURN ON OBJECT (FIND LIGHTBIT) (HELD CARRIED ON-GROUND IN-ROOM) = V-LAMP-ON>
+   ;;      <SYNTAX TURN OFF OBJECT (FIND ONBIT) (HELD CARRIED ON-GROUND IN-ROOM TAKE HAVE) = V-LAMP-OFF>
+   ;;      <SYNTAX TURN OBJECT (FIND TURNBIT) (HELD CARRIED ON-GROUND IN-ROOM) WITH OBJECT = V-TURN>
+   ;; The "turn" verb routes to different handlers based on preposition (on/off/with)
+   ;; Note: :gwim1 :light allows finding light sources even in darkness (FIND LIGHTBIT)
+   :turn       {:words   ["turn" "switch"]
+                :syntax  [;; TURN ON OBJECT (FIND LIGHTBIT) - turn on lamp
+                          {:num-objects 1
+                           :prep1 :on
+                           :gwim1 :light  ; FIND LIGHTBIT - can find in dark
+                           :loc1 #{:held :carried :in-room :on-ground}
+                           :action :lamp-on}
+
+                          ;; TURN OFF OBJECT (FIND ONBIT) - turn off lamp
+                          {:num-objects 1
+                           :prep1 :off
+                           :gwim1 :on  ; FIND ONBIT - can find lit objects in dark
+                           :loc1 #{:held :carried :in-room :on-ground}
+                           :action :lamp-off}]
+                :handler verbs-light/v-lamp-on}  ; default, but routes via :action
+
+   ;; Additional words for lamp-on
+   ;; ZIL: <SYNTAX LIGHT OBJECT (FIND LIGHTBIT) (HELD CARRIED ON-GROUND IN-ROOM TAKE HAVE) = V-LAMP-ON>
+   ;;      <SYNTAX ACTIVATE OBJECT (FIND LIGHTBIT) (HELD CARRIED ON-GROUND IN-ROOM) = V-LAMP-ON>
+   :lamp-on    {:words   ["light" "activate"]
+                :syntax  [{;; LIGHT OBJECT (FIND LIGHTBIT) - light lamp
+                           :num-objects 1
+                           :gwim1 :light  ; FIND LIGHTBIT - can find in dark
+                           :loc1 #{:held :carried :in-room :on-ground}}
+
+                          ;; LIGHT OBJECT WITH OBJECT - light candle with match
+                          {:num-objects 2
+                           :prep2 :with
+                           :gwim1 :light
+                           :loc1 #{:held :carried :in-room :on-ground}
+                           :loc2 #{:held :carried}}]
+                :handler verbs-light/v-lamp-on}
+
+   ;; ZIL: <SYNTAX EXTINGUISH OBJECT (FIND ONBIT) (HELD CARRIED ON-GROUND IN-ROOM) = V-LAMP-OFF>
+   ;;      <SYNTAX DOUSE OBJECT (FIND ONBIT) (HELD CARRIED ON-GROUND IN-ROOM) = V-LAMP-OFF>
+   :lamp-off   {:words   ["extinguish" "douse"]
+                :syntax  {:num-objects 1
+                          :gwim1 :on  ; FIND ONBIT - can find lit objects in dark
+                          :loc1 #{:held :carried :in-room :on-ground}}
+                :handler verbs-light/v-lamp-off}})
 
 ;;; ---------------------------------------------------------------------------
 ;;; DIRECTION VOCABULARY

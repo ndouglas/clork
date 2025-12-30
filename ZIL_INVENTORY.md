@@ -64,8 +64,8 @@ These are out-of-game commands that don't advance time.
 | [x]    | EXAMINE/DESCRIBE | V-EXAMINE     | Examine object closely        |
 | [x]    | TAKE/GET/GRAB    | V-TAKE        | Pick up object                |
 | [x]    | DROP             | V-DROP        | Drop object                   |
-| [ ]    | PUT/INSERT       | V-PUT         | Put object in container       |
-| [ ]    | PUT ON           | V-PUT-ON      | Put object on surface         |
+| [x]    | PUT/INSERT       | V-PUT         | Put object in container       |
+| [x]    | PUT ON           | V-PUT-ON      | Put object on surface         |
 | [x]    | OPEN             | V-OPEN        | Open container/door           |
 | [ ]    | CLOSE            | V-CLOSE       | Close container/door          |
 | [x]    | READ             | V-READ        | Read text                     |
@@ -83,8 +83,8 @@ These are out-of-game commands that don't advance time.
 
 | Status | Verb                | Handler    | Description           |
 | ------ | ------------------- | ---------- | --------------------- |
-| [ ]    | LIGHT/TURN ON       | V-LAMP-ON  | Turn on light source  |
-| [ ]    | EXTINGUISH/TURN OFF | V-LAMP-OFF | Turn off light source |
+| [x]    | LIGHT/TURN ON       | V-LAMP-ON  | Turn on light source  |
+| [x]    | EXTINGUISH/TURN OFF | V-LAMP-OFF | Turn off light source |
 
 ### Combat
 
@@ -709,11 +709,11 @@ These are out-of-game commands that don't advance time.
 | ------ | ------------ | ------------------- |
 | [ ]    | ACCESSIBLE?  | Can reach object    |
 | [ ]    | GLOBAL-CHECK | Global object       |
-| [ ]    | GWIM         | "Get What I Mean"   |
+| [x]    | GWIM         | "Get What I Mean"   |
 | [ ]    | TAKE-CHECK   | Can take object     |
 | [ ]    | ITAKE-CHECK  | Internal take check |
 | [ ]    | META-LOC     | Object location     |
-| [ ]    | THIS-IT?     | Pronoun resolution  |
+| [x]    | THIS-IT?     | Pronoun resolution  |
 | [ ]    | LIT?         | Light check         |
 
 ### Error Handling
