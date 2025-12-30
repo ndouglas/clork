@@ -67,7 +67,7 @@ These are out-of-game commands that don't advance time.
 | [x]    | PUT/INSERT       | V-PUT         | Put object in container       |
 | [x]    | PUT ON           | V-PUT-ON      | Put object on surface         |
 | [x]    | OPEN             | V-OPEN        | Open container/door           |
-| [ ]    | CLOSE            | V-CLOSE       | Close container/door          |
+| [x]    | CLOSE            | V-CLOSE       | Close container/door          |
 | [x]    | READ             | V-READ        | Read text                     |
 | [x]    | SEARCH           | V-SEARCH      | Search object (v-look-inside) |
 | [x]    | LOOK IN          | V-LOOK-INSIDE | Look inside container         |
@@ -825,7 +825,7 @@ These are out-of-game commands that don't advance time.
 - [x] Meta-verbs (version, verbose, brief, inventory)
 - [x] Look command
 - [x] Movement commands
-- [~] Core interaction (take, drop, open, close)
+- [x] Core interaction (take, drop, open, close)
 
 ### Phase 2: Core Gameplay
 - [~] Light system (lamp, darkness, grue)

@@ -1023,3 +1023,84 @@
   (testing "unscript is registered in vocabulary as a verb"
     (is (= true (parser/wt? "unscript" :verb)))
     (is (= :unscript (parser/wt? "unscript" :verb true)))))
+
+;;; ---------------------------------------------------------------------------
+;;; CLOSE VERB TESTS
+;;; ---------------------------------------------------------------------------
+;;; ZIL: V-CLOSE in gverbs.zil (line 352)
+
+(deftest v-close-container-test
+  (testing "v-close on open container clears :open flag and shows 'Closed.'"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :chest
+                                 :in :west-of-house
+                                 :desc "wooden chest"
+                                 :flags #{:cont :open}})
+                 (assoc-in [:parser :prso] :chest))
+          [output result] (with-captured-output (verbs-containers/v-close gs))]
+      (is (= "Closed." output))
+      (is (not (contains? (get-in result [:objects :chest :flags]) :open))))))
+
+(deftest v-close-container-already-closed-test
+  (testing "v-close on already-closed container shows 'It is already closed.'"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :chest
+                                 :in :west-of-house
+                                 :desc "wooden chest"
+                                 :flags #{:cont}})
+                 (assoc-in [:parser :prso] :chest))
+          [output _] (with-captured-output (verbs-containers/v-close gs))]
+      (is (= "It is already closed." output)))))
+
+(deftest v-close-door-test
+  (testing "v-close on open door clears :open flag and shows 'The [door] is now closed.'"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :front-door
+                                 :in :west-of-house
+                                 :desc "front door"
+                                 :flags #{:door :open}})
+                 (assoc-in [:parser :prso] :front-door))
+          [output result] (with-captured-output (verbs-containers/v-close gs))]
+      (is (= "The front door is now closed." output))
+      (is (not (contains? (get-in result [:objects :front-door :flags]) :open))))))
+
+(deftest v-close-door-already-closed-test
+  (testing "v-close on already-closed door shows 'It is already closed.'"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :front-door
+                                 :in :west-of-house
+                                 :desc "front door"
+                                 :flags #{:door}})
+                 (assoc-in [:parser :prso] :front-door))
+          [output _] (with-captured-output (verbs-containers/v-close gs))]
+      (is (= "It is already closed." output)))))
+
+(deftest v-close-not-closable-test
+  (testing "v-close on non-closable object shows error message"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :rock
+                                 :in :west-of-house
+                                 :desc "rock"
+                                 :flags #{}})
+                 (assoc-in [:parser :prso] :rock))
+          [output _] (with-captured-output (verbs-containers/v-close gs))]
+      (is (= "You must tell me how to do that to a rock." output)))))
+
+(deftest v-close-surface-test
+  (testing "v-close on surface shows 'You cannot close that.'"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :table
+                                 :in :west-of-house
+                                 :desc "table"
+                                 :flags #{:cont :surface}})
+                 (assoc-in [:parser :prso] :table))
+          [output _] (with-captured-output (verbs-containers/v-close gs))]
+      (is (= "You cannot close that." output)))))
+
+(deftest close-vocabulary-test
+  (testing "close is registered in vocabulary as a verb"
+    (is (= true (parser/wt? "close" :verb)))
+    (is (= :close (parser/wt? "close" :verb true))))
+  (testing "shut is a synonym for close"
+    (is (= true (parser/wt? "shut" :verb)))
+    (is (= :close (parser/wt? "shut" :verb true)))))

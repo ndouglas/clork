@@ -212,6 +212,12 @@
                           :loc1 #{:held :in-room :on-ground :carried}}
                 :handler verbs-containers/v-open}
 
+   ;; ZIL: <SYNTAX CLOSE OBJECT (FIND DOORBIT) (HELD CARRIED ON-GROUND IN-ROOM) = V-CLOSE>
+   :close      {:words   ["close" "shut"]
+                :syntax  {:num-objects 1
+                          :loc1 #{:held :in-room :on-ground :carried}}
+                :handler verbs-containers/v-close}
+
    :examine    {:words   ["examine" "x" "describe" "what" "whats"]
                 :syntax  {:num-objects 1
                           :loc1 #{:held :carried :in-room :on-ground :many}}

@@ -29,6 +29,12 @@
   (let [current-flags (get-in game-state [:objects obj-id :flags] #{})]
     (assoc-in game-state [:objects obj-id :flags] (conj current-flags flag))))
 
+(defn remove-flag
+  "Remove a flag from an object's flag set in game-state."
+  [game-state obj-id flag]
+  (let [current-flags (get-in game-state [:objects obj-id :flags] #{})]
+    (assoc-in game-state [:objects obj-id :flags] (disj current-flags flag))))
+
 (defn container?
   "Returns true if the object is a container."
   [obj]
@@ -38,6 +44,16 @@
   "Returns true if the object is transparent."
   [obj]
   (contains? (or (:flags obj) #{}) :trans))
+
+(defn surface?
+  "Returns true if the object is a surface (like a table)."
+  [obj]
+  (contains? (or (:flags obj) #{}) :surface))
+
+(defn door?
+  "Returns true if the object is a door."
+  [obj]
+  (contains? (or (:flags obj) #{}) :door))
 
 (defn describe-contents
   "Describe the contents of a container that was just opened."
@@ -228,3 +244,71 @@
         :else
         (let [state (add-flag game-state prso :open)]
           (utils/tell state (str "The " desc " opens.")))))))
+
+;;; ---------------------------------------------------------------------------
+;;; CLOSE COMMAND
+;;; ---------------------------------------------------------------------------
+;;; ZIL: V-CLOSE in gverbs.zil
+
+(defn v-close
+  "Close a container or door.
+
+   ZIL: V-CLOSE in gverbs.zil (line 352)
+     <ROUTINE V-CLOSE ()
+       <COND (<AND <NOT <FSET? ,PRSO ,CONTBIT>>
+                   <NOT <FSET? ,PRSO ,DOORBIT>>>
+              <TELL \"You must tell me how to do that to a \" D ,PRSO \".\" CR>)
+             (<AND <NOT <FSET? ,PRSO ,SURFACEBIT>>
+                   <NOT <EQUAL? <GETP ,PRSO ,P?CAPACITY> 0>>>
+              <COND (<FSET? ,PRSO ,OPENBIT>
+                     <FCLEAR ,PRSO ,OPENBIT>
+                     <TELL \"Closed.\" CR>
+                     <COND (<AND ,LIT <NOT <SETG LIT <LIT? ,HERE>>>>
+                            <TELL \"It is now pitch black.\" CR>)>
+                     <RTRUE>)
+                    (T
+                     <TELL \"It is already closed.\" CR>)>)
+             (<FSET? ,PRSO ,DOORBIT>
+              <COND (<FSET? ,PRSO ,OPENBIT>
+                     <FCLEAR ,PRSO ,OPENBIT>
+                     <TELL \"The \" D ,PRSO \" is now closed.\" CR>)
+                    (T
+                     <TELL \"It is already closed.\" CR>)>)
+             (T
+              <TELL \"You cannot close that.\" CR>)>>"
+  [game-state]
+  (let [prso (parser-state/get-prso game-state)
+        obj (gs/get-thing game-state prso)
+        desc (:desc obj)
+        action-fn (:action obj)]
+    ;; First try the object's action handler
+    (if-let [result (when action-fn (action-fn game-state))]
+      result
+      ;; Object didn't handle it - default behavior
+      (cond
+        ;; Not closable (neither container nor door)
+        (not (openable? obj))
+        (utils/tell game-state (str "You must tell me how to do that to a " desc "."))
+
+        ;; Surface - can't close a surface like a table
+        (surface? obj)
+        (utils/tell game-state "You cannot close that.")
+
+        ;; Container (not a surface)
+        (container? obj)
+        (if (already-open? obj)
+          (let [state (remove-flag game-state prso :open)]
+            ;; TODO: Check if room becomes dark and add "It is now pitch black."
+            (utils/tell state "Closed."))
+          (utils/tell game-state "It is already closed."))
+
+        ;; Door
+        (door? obj)
+        (if (already-open? obj)
+          (let [state (remove-flag game-state prso :open)]
+            (utils/tell state (str "The " desc " is now closed.")))
+          (utils/tell game-state "It is already closed."))
+
+        ;; Fallback (shouldn't reach here given openable? check)
+        :else
+        (utils/tell game-state "You cannot close that.")))))
