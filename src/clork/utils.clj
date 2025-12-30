@@ -53,13 +53,23 @@
 
 (defn tell
   "Tell the player something, and return the game state.
-   Also writes to transcript if scripting is enabled."
+   Also writes to transcript if scripting is enabled.
+
+   If :output-buffer is set in game-state (an atom), appends message there
+   instead of printing. This allows ML mode to capture output."
   [game-state message]
-  (print message)
-  (flush)
-  ;; Also write to transcript if enabled
-  (write-to-transcript message)
-  game-state)
+  (if-let [buffer (:output-buffer game-state)]
+    ;; ML mode: capture to buffer
+    (do
+      (swap! buffer conj message)
+      game-state)
+    ;; Normal mode: print to stdout
+    (do
+      (print message)
+      (flush)
+      ;; Also write to transcript if enabled
+      (write-to-transcript message)
+      game-state)))
 
 (defn crlf
   "Print a carriage return and line feed."

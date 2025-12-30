@@ -11,6 +11,7 @@
             [clork.readline :as readline]
             [clork.script :as script]
             [clork.random :as random]
+            [clork.ml :as ml]
             [clojure.java.io :as io]))
 
 ;; Re-export the essential API for creating and running games
@@ -24,6 +25,27 @@
     (-> game-state
         (verbs-meta/v-version)
         (utils/crlf))))
+
+(defn init-game
+  "Initialize game state without starting the main loop.
+   Returns a ready-to-play game state.
+
+   This is used by ML mode and can be used for testing."
+  ([]
+   (init-game nil))
+  ([config]
+   (let [gs (-> (game-state/initial-game-state)
+                (assoc :script-config config)
+                (game-state/add-rooms rooms/all-rooms)
+                (game-state/add-objects objects/all-objects))]
+     ;; Register object vocabulary for parser
+     (verb-defs/register-object-vocabulary! (:objects gs))
+     ;; Initialize the game state and store a copy for restart
+     (let [init-gs (-> gs
+                       (utils/this-is-it :mailbox)
+                       (game-state/set-here-flag :lit))]
+       ;; Store initial state for restart
+       (assoc init-gs :restart-state init-gs)))))
 
 (defn go
   "The GO routine."
@@ -60,7 +82,15 @@
   (println "  --quiet, -q            Suppress game output (for CI)")
   (println "  --input FILE, -i FILE  Read commands from FILE")
   (println "  --seed N               Set random seed for reproducibility")
+  (println "  --ml                   Run in ML training mode (JSON lines on stdin/stdout)")
   (println "  --help, -h             Show this help message")
+  (println "")
+  (println "ML Mode:")
+  (println "  In ML mode, the game communicates via JSON lines:")
+  (println "  - Outputs game state as JSON after each action")
+  (println "  - Reads actions as JSON from stdin")
+  (println "  - Action format: {\"verb\": \"look\"} or {\"verb\": \"go\", \"direction\": \"north\"}")
+  (println "  - Special actions: {\"verb\": \"quit\"}, {\"verb\": \"reset\"}")
   (println "")
   (println "Exit codes:")
   (println "  0 - Success (normal quit or game won)")
@@ -80,6 +110,26 @@
   (when (some #{"--help" "-h"} args)
     (print-usage)
     (System/exit 0))
+
+  ;; Check for ML mode
+  (when (some #{"--ml"} args)
+    (let [seed-idx (.indexOf (vec args) "--seed")
+          seed (when (and (>= seed-idx 0) (< (inc seed-idx) (count args)))
+                 (try (Long/parseLong (nth args (inc seed-idx)))
+                      (catch Exception _ nil)))]
+      ;; Initialize random number generator
+      (if seed
+        (random/init! seed)
+        (random/init!))
+      ;; Run ML mode
+      (try
+        (ml/json-line-mode init-game)
+        (System/exit 0)
+        (catch Exception e
+          (binding [*out* *err*]
+            (println (str "Fatal error: " (.getMessage e)))
+            (.printStackTrace e))
+          (System/exit (:exception script/exit-codes))))))
 
   (let [config (script/parse-args args)]
     ;; Handle config parse errors
