@@ -14,6 +14,7 @@
             [clork.ml :as ml]
             [clork.daemon :as daemon]
             [clork.combat :as combat]
+            [clork.sword :as sword]
             [clojure.java.io :as io]))
 
 ;; Re-export the essential API for creating and running games
@@ -47,7 +48,10 @@
                        (utils/this-is-it :mailbox)
                        (game-state/set-here-flag :lit)
                        ;; Register combat daemon (runs each turn)
-                       (daemon/register-daemon :i-fight combat/combat-daemon :tick -1))]
+                       (daemon/register-daemon :i-fight combat/combat-daemon :tick -1)
+                       ;; Register sword glow daemon (checks for nearby enemies)
+                       ;; ZIL: <QUEUE I-SWORD -1> in 1dungeon.zil line 2653
+                       (daemon/register-daemon :i-sword sword/i-sword :tick -1))]
        ;; Store initial state for restart
        (assoc init-gs :restart-state init-gs)))))
 
@@ -67,7 +71,10 @@
                        (utils/this-is-it :mailbox)
                        (game-state/set-here-flag :lit)
                        ;; Register combat daemon (runs each turn)
-                       (daemon/register-daemon :i-fight combat/combat-daemon :tick -1))
+                       (daemon/register-daemon :i-fight combat/combat-daemon :tick -1)
+                       ;; Register sword glow daemon (checks for nearby enemies)
+                       ;; ZIL: <QUEUE I-SWORD -1> in 1dungeon.zil line 2653
+                       (daemon/register-daemon :i-sword sword/i-sword :tick -1))
            ;; Store initial state for restart (before version/look output)
            gs-with-restart (assoc init-gs :restart-state init-gs)]
        (-> gs-with-restart

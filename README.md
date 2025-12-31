@@ -66,7 +66,7 @@ You are behind the white house. A path leads into the forest to the east. In one
 >open window
 With great effort, you open the window far enough to allow entry.
 
->enter
+>w
 Kitchen
 You are in the kitchen of the white house. A table seems to have been used recently for the preparation of food. A passage leads to the west and a dark staircase can be seen leading upward. A dark chimney leads down and to the east is a small window which is open.
 On the table is an elongated brown sack, smelling of hot peppers.
@@ -82,9 +82,9 @@ A battery-powered brass lantern is on the trophy case.
 Above the trophy case hangs an elvish sword of great antiquity.
 
 
->take sword and lamp
-sword: Taken.
+>take lamp and sword
 brass lantern: Taken.
+sword: Taken.
 
 
 >move rug
@@ -96,11 +96,33 @@ The door reluctantly opens to reveal a rickety staircase descending into darknes
 >d
 It is pitch black. You are likely to be eaten by a grue.
 
+Your sword is glowing with a faint blue glow.
 
 >turn on lamp
 The brass lantern is now on.
 Cellar
 You are in a dark and damp cellar with a narrow passageway leading north, and a crawlway to the south. On the west is the bottom of a steep metal ramp which is unclimbable.
+
+
+>n
+The Troll Room
+This is a small room with passages to the east and south and a forbidding hole leading west. Bloodstains and deep scratches (perhaps made by an axe) mar the walls.
+A nasty-looking troll, brandishing a bloody axe, blocks all passages out of the room.
+
+Your sword has begun to glow very brightly.
+
+>kill troll with sword
+Clang! Crash! The troll parries.
+The troll's axe barely misses your ear.
+
+>g
+You charge, but the troll jumps nimbly aside.
+The troll swings his axe, and it nicks your arm as you dodge.
+
+>g
+The fatal blow strikes the troll square in the heart: He dies.
+Almost as soon as the troll breathes his last breath, a cloud of sinister black fog envelops him, and when the fog lifts, the carcass has disappeared.
+Your sword is no longer glowing.
 ```
 
 ## ML Training API

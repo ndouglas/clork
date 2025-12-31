@@ -397,7 +397,7 @@ These are out-of-game commands that don't advance time.
 
 | Status | Object ID   | Description  |
 | ------ | ----------- | ------------ |
-| [~]    | SWORD       | Elvish Sword |
+| [x]    | SWORD       | Elvish Sword |
 | [~]    | KNIFE       | Nasty Knife  |
 | [ ]    | RUSTY-KNIFE | Rusty Knife  |
 | [x]    | AXE         | Bloody Axe   |
@@ -599,7 +599,7 @@ These are out-of-game commands that don't advance time.
 | [ ]    | TROPHY-CASE-FCN  | TROPHY-CASE | Score deposit       |
 | [ ]    | BOTTLE-FUNCTION  | BOTTLE      | Bottle liquid       |
 | [ ]    | ROPE-FUNCTION    | ROPE        | Rope tying          |
-| [ ]    | SWORD-FCN        | SWORD       | Glowing sword       |
+| [x]    | SWORD-FCN        | SWORD       | Glowing sword       |
 | [ ]    | LANTERN          | LAMP        | Lantern usage       |
 | [ ]    | CANDLES-FCN      | CANDLES     | Candle burning      |
 | [ ]    | MATCH-FUNCTION   | MATCH       | Match lighting      |
@@ -645,7 +645,7 @@ These are out-of-game commands that don't advance time.
 | [ ]    | I-CANDLES     | Candle timer         |
 | [ ]    | I-MATCH       | Match burning        |
 | [ ]    | I-THIEF       | Thief wandering      |
-| [ ]    | I-SWORD       | Sword glowing        |
+| [x]    | I-SWORD       | Sword glowing        |
 | [ ]    | I-CYCLOPS     | Cyclops behavior     |
 | [ ]    | I-CURE        | Healing timer        |
 | [ ]    | I-FOREST-ROOM | Forest wandering     |

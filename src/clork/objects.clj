@@ -5,7 +5,8 @@
             [clork.game-state :as gs]
             [clork.parser.state :as parser-state]
             [clork.verbs-look :as verbs-look]
-            [clork.random :as random]))
+            [clork.random :as random]
+            [clork.sword :as sword]))
 
 ;; <OBJECT MAILBOX
 ;;	(IN WEST-OF-HOUSE)
@@ -538,7 +539,7 @@
 ;;	(FDESC "Above the trophy case hangs an elvish sword of great antiquity.")
 ;;	(SIZE 30)
 ;;	(TVALUE 0)>
-(def sword
+(def sword-obj
   {:id :sword
    :in :living-room
    :synonym ["sword" "orcrist" "glamdring" "blade"]
@@ -547,7 +548,8 @@
    :flags (flags/flags :take :trytake :weapon)
    :fdesc "Above the trophy case hangs an elvish sword of great antiquity."
    :size 30
-   :tvalue 0})
+   :tvalue 0
+   :action sword/sword-action})
 
 ;; <OBJECT RUG
 ;;	(IN LIVING-ROOM)
@@ -977,7 +979,7 @@
    water
    brass-lantern
    trophy-case
-   sword
+   sword-obj
    rug
    attic-table
    rope
