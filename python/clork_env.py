@@ -10,7 +10,7 @@ Usage:
     env = ClorkEnv()
     obs = env.reset()
 
-    while not obs['game_over']:
+    while not obs['game-over']:
         # Get valid actions
         actions = env.valid_actions()
 
@@ -55,12 +55,12 @@ class Action:
 
     @classmethod
     def from_dict(cls, d: Dict[str, Any]) -> "Action":
-        """Create from dict (handles both Python and JSON key formats)."""
+        """Create from dict."""
         return cls(
             verb=d.get("verb"),
             direction=d.get("direction"),
-            direct_object=d.get("direct-object") or d.get("direct_object"),
-            indirect_object=d.get("indirect-object") or d.get("indirect_object"),
+            direct_object=d.get("direct-object"),
+            indirect_object=d.get("indirect-object"),
             prep=d.get("prep"),
         )
 
@@ -138,13 +138,13 @@ class ClorkEnv:
     def default_reward_weights(self) -> Dict[str, float]:
         """Default reward weights used by Clork."""
         return {
-            "score_delta": 1.0,
-            "novel_room": 5.0,
-            "novel_message": 0.5,
-            "object_taken": 2.0,
-            "container_opened": 1.5,
+            "score-delta": 1.0,
+            "novel-room": 5.0,
+            "novel-message": 0.5,
+            "object-taken": 2.0,
+            "container-opened": 1.5,
             "death": -10.0,
-            "invalid_action": -0.1,
+            "invalid-action": -0.1,
         }
 
     def _start_process(self):
@@ -189,20 +189,7 @@ class ClorkEnv:
             stderr = self._process.stderr.read()
             raise RuntimeError(f"Clork process died unexpectedly: {stderr}")
 
-        return self._convert_keys(json.loads(response_line))
-
-    @staticmethod
-    def _convert_keys(obj: Any) -> Any:
-        """Recursively convert kebab-case keys to snake_case."""
-        if isinstance(obj, dict):
-            return {
-                k.replace("-", "_"): ClorkEnv._convert_keys(v)
-                for k, v in obj.items()
-            }
-        elif isinstance(obj, list):
-            return [ClorkEnv._convert_keys(item) for item in obj]
-        else:
-            return obj
+        return json.loads(response_line)
 
     def _read_initial_state(self) -> Dict[str, Any]:
         """Read the initial state after starting the process."""
@@ -214,7 +201,7 @@ class ClorkEnv:
             stderr = self._process.stderr.read()
             raise RuntimeError(f"Failed to read initial state: {stderr}")
 
-        return self._convert_keys(json.loads(response_line))
+        return json.loads(response_line)
 
     def reset(self) -> Dict[str, Any]:
         """
@@ -266,25 +253,25 @@ class ClorkEnv:
         self._observation = response
 
         # Extract reward
-        if self.use_rewards and "composite_reward" in response:
-            reward = response["composite_reward"]
-        elif "rewards" in response and "score_delta" in response["rewards"]:
-            reward = response["rewards"]["score_delta"]
+        if self.use_rewards and "composite-reward" in response:
+            reward = response["composite-reward"]
+        elif "rewards" in response and "score-delta" in response["rewards"]:
+            reward = response["rewards"]["score-delta"]
         else:
             reward = 0.0
 
         self._last_reward = reward
 
         # Check if done
-        done = response.get("game_over", False)
+        done = response.get("game-over", False)
         self._done = done
 
         # Build info dict
         info = {}
         if "rewards" in response:
             info["rewards"] = response["rewards"]
-        if "session_stats" in response:
-            info["session_stats"] = response["session_stats"]
+        if "session-stats" in response:
+            info["session-stats"] = response["session-stats"]
         if "message" in response:
             info["message"] = response["message"]
 
@@ -346,10 +333,10 @@ class ClorkEnv:
             raise RuntimeError("No observation available. Call reset() first.")
 
         actions = []
-        va = self._observation.get("valid_actions", {})
+        va = self._observation.get("valid-actions", {})
 
         # Meta verbs (look, inventory, etc.)
-        for verb in va.get("meta_verbs", []):
+        for verb in va.get("meta-verbs", []):
             if include_dangerous or verb not in self.EXCLUDED_META_VERBS:
                 actions.append(Action(verb=verb))
 
@@ -359,18 +346,18 @@ class ClorkEnv:
             actions.append(Action(verb="go", direction=direction))
 
         # Object actions
-        object_actions = va.get("object_actions", {})
+        object_actions = va.get("object-actions", {})
         for obj_id, obj_info in object_actions.items():
             for verb in obj_info.get("verbs", []):
                 actions.append(Action(verb=verb, direct_object=obj_id))
 
         # Two-object actions
-        for two_obj in va.get("two_object_actions", []):
+        for two_obj in va.get("two-object-actions", []):
             actions.append(Action(
                 verb=two_obj.get("verb"),
-                direct_object=two_obj.get("direct_object"),
+                direct_object=two_obj.get("direct-object"),
                 prep=two_obj.get("prep"),
-                indirect_object=two_obj.get("indirect_object"),
+                indirect_object=two_obj.get("indirect-object"),
             ))
 
         return actions
@@ -426,7 +413,7 @@ class ClorkEnv:
         """List of items in inventory."""
         if self._observation is None:
             return []
-        va = self._observation.get("valid_actions", {})
+        va = self._observation.get("valid-actions", {})
         return [item["id"] for item in va.get("inventory", [])]
 
     @property
@@ -434,14 +421,14 @@ class ClorkEnv:
         """Session statistics (if using rewards mode)."""
         if self._observation is None:
             return {}
-        return self._observation.get("session_stats", {})
+        return self._observation.get("session-stats", {})
 
     def get_stats(self) -> Dict[str, Any]:
         """Request current session statistics."""
         if self._process is None:
             return {}
         response = self._send_action({"verb": "stats"})
-        return response.get("session_stats", {})
+        return response.get("session-stats", {})
 
     def close(self):
         """Close the environment and cleanup subprocess."""

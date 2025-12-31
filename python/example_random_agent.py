@@ -54,7 +54,7 @@ def run_episode(env: ClorkEnv, max_steps: int, verbose: bool = False) -> dict:
             print(f"\n[{step+1}] {action}")
             if reward != 0:
                 print(f"     Reward: {reward:.2f}")
-            if info.get("rewards", {}).get("novel_room?"):
+            if info.get("rewards", {}).get("novel-room?"):
                 print(f"     NEW ROOM: {env.room_name}")
             if info.get("message"):
                 msg = info["message"][:100].replace("\n", " ")
@@ -101,9 +101,9 @@ def main():
             print(f"\nEpisode {ep+1} Results:")
             print(f"  Steps: {stats['steps']}")
             print(f"  Total Reward: {stats['total_reward']:.2f}")
-            print(f"  Rooms Discovered: {stats.get('rooms_discovered', 'N/A')}")
-            print(f"  Max Score: {stats.get('max_score', 'N/A')}")
-            print(f"  Valid Action Rate: {stats.get('valid_action_rate', 0):.1%}")
+            print(f"  Rooms Discovered: {stats.get('rooms-discovered', 'N/A')}")
+            print(f"  Max Score: {stats.get('max-score', 'N/A')}")
+            print(f"  Valid Action Rate: {stats.get('valid-action-rate', 0):.1%}")
 
     # Summary statistics
     if len(all_stats) > 1:
@@ -112,8 +112,8 @@ def main():
         print(f"{'='*60}")
 
         avg_reward = sum(s["total_reward"] for s in all_stats) / len(all_stats)
-        avg_rooms = sum(s.get("rooms_discovered", 0) for s in all_stats) / len(all_stats)
-        max_score = max(s.get("max_score", 0) for s in all_stats)
+        avg_rooms = sum(s.get("rooms-discovered", 0) for s in all_stats) / len(all_stats)
+        max_score = max(s.get("max-score", 0) for s in all_stats)
 
         print(f"Average Reward: {avg_reward:.2f}")
         print(f"Average Rooms: {avg_rooms:.1f}")
