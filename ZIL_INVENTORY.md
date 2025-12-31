@@ -90,9 +90,9 @@ These are out-of-game commands that don't advance time.
 
 | Status | Verb             | Handler  | Description                   |
 | ------ | ---------------- | -------- | ----------------------------- |
-| [ ]    | ATTACK/FIGHT/HIT | V-ATTACK | Attack creature               |
-| [ ]    | KILL/MURDER      | V-ATTACK | Kill creature (synonym)       |
-| [ ]    | STAB             | V-STAB   | Stab without weapon specified |
+| [x]    | ATTACK/FIGHT/HIT | V-ATTACK | Attack creature               |
+| [x]    | KILL/MURDER      | V-ATTACK | Kill creature (synonym)       |
+| [x]    | STAB             | V-STAB   | Stab without weapon specified |
 | [ ]    | SWING            | V-SWING  | Swing weapon                  |
 | [ ]    | THROW AT         | V-THROW  | Throw at target               |
 
@@ -400,7 +400,7 @@ These are out-of-game commands that don't advance time.
 | [~]    | SWORD       | Elvish Sword |
 | [~]    | KNIFE       | Nasty Knife  |
 | [ ]    | RUSTY-KNIFE | Rusty Knife  |
-| [ ]    | AXE         | Bloody Axe   |
+| [x]    | AXE         | Bloody Axe   |
 | [ ]    | STILETTO    | Stiletto     |
 
 ### Tools
@@ -519,7 +519,7 @@ These are out-of-game commands that don't advance time.
 | Status | Object ID  | Description      |
 | ------ | ---------- | ---------------- |
 | [~]    | ADVENTURER | Player character |
-| [ ]    | TROLL      | Troll            |
+| [x]    | TROLL      | Troll            |
 | [ ]    | THIEF      | Thief            |
 | [ ]    | CYCLOPS    | Cyclops          |
 | [ ]    | BAT        | Vampire Bat      |
@@ -579,7 +579,7 @@ These are out-of-game commands that don't advance time.
 
 | Status | Routine             | NPC      | Description           |
 | ------ | ------------------- | -------- | --------------------- |
-| [ ]    | TROLL-FCN           | TROLL    | Troll combat/behavior |
+| [x]    | TROLL-FCN           | TROLL    | Troll combat/behavior |
 | [ ]    | THIEF-IN-TREASURE   | THIEF    | Thief in lair         |
 | [ ]    | THIEF-VS-ADVENTURER | THIEF    | Thief combat          |
 | [ ]    | ROBBER-FUNCTION     | THIEF    | Thief stealing        |
@@ -625,15 +625,15 @@ These are out-of-game commands that don't advance time.
 
 | Status | Routine          | Description          |
 | ------ | ---------------- | -------------------- |
-| [ ]    | DO-FIGHT         | Main combat loop     |
-| [ ]    | I-FIGHT          | Fight interrupt      |
-| [ ]    | HERO-BLOW        | Player attacks       |
-| [ ]    | VILLAIN-BLOW     | Enemy attacks        |
-| [ ]    | VILLAIN-RESULT   | Combat result        |
-| [ ]    | WINNER-RESULT    | Combat outcome       |
-| [ ]    | FIGHT-STRENGTH   | Strength calculation |
-| [ ]    | VILLAIN-STRENGTH | Enemy strength       |
-| [ ]    | FIND-WEAPON      | Weapon selection     |
+| [x]    | DO-FIGHT         | Main combat loop     |
+| [x]    | I-FIGHT          | Fight interrupt      |
+| [x]    | HERO-BLOW        | Player attacks       |
+| [x]    | VILLAIN-BLOW     | Enemy attacks        |
+| [x]    | VILLAIN-RESULT   | Combat result        |
+| [x]    | WINNER-RESULT    | Combat outcome       |
+| [x]    | FIGHT-STRENGTH   | Strength calculation |
+| [x]    | VILLAIN-STRENGTH | Enemy strength       |
+| [x]    | FIND-WEAPON      | Weapon selection     |
 | [ ]    | WEAPON-FUNCTION  | Weapon handling      |
 | [ ]    | JIGS-UP          | Player death         |
 
@@ -772,8 +772,8 @@ These are out-of-game commands that don't advance time.
 
 | Status | Global          | Description       |
 | ------ | --------------- | ----------------- |
-| [ ]    | TROLL-FLAG      | Troll state       |
-| [ ]    | TROLL-MELEE     | Troll in combat   |
+| [x]    | TROLL-FLAG      | Troll state       |
+| [x]    | TROLL-MELEE     | Troll in combat   |
 | [ ]    | THIEF-HERE      | Thief present     |
 | [ ]    | THIEF-ENGROSSED | Thief distracted  |
 | [ ]    | THIEF-MELEE     | Thief in combat   |
@@ -840,10 +840,10 @@ These are out-of-game commands that don't advance time.
 - [~] Object descriptions
 
 ### Phase 4: NPCs and Combat
-- [ ] Troll encounter
+- [x] Troll encounter
 - [ ] Thief AI
 - [ ] Cyclops puzzle
-- [ ] Combat system
+- [x] Combat system
 
 ### Phase 5: Puzzles
 - [ ] Dam/reservoir puzzle
