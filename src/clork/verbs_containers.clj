@@ -312,3 +312,85 @@
         ;; Fallback (shouldn't reach here given openable? check)
         :else
         (utils/tell game-state "You cannot close that.")))))
+
+;;; ---------------------------------------------------------------------------
+;;; LOOK UNDER COMMAND
+;;; ---------------------------------------------------------------------------
+;;; ZIL: V-LOOK-UNDER in gverbs.zil
+
+(defn v-look-under
+  "Look under an object.
+
+   ZIL: V-LOOK-UNDER in gverbs.zil (line 915)
+     <ROUTINE V-LOOK-UNDER ()
+       <TELL \"There is nothing but dust there.\" CR>>
+
+   Note: The default implementation just shows a generic message.
+   Specific objects can override this via their action handlers."
+  [game-state]
+  (let [prso (parser-state/get-prso game-state)
+        obj (gs/get-thing game-state prso)
+        action-fn (:action obj)]
+    ;; First try the object's action handler
+    (if-let [result (when action-fn (action-fn game-state))]
+      result
+      ;; Default behavior
+      (utils/tell game-state "There is nothing but dust there."))))
+
+;;; ---------------------------------------------------------------------------
+;;; LOOK BEHIND COMMAND
+;;; ---------------------------------------------------------------------------
+;;; ZIL: V-LOOK-BEHIND in gverbs.zil
+
+(defn v-look-behind
+  "Look behind an object.
+
+   ZIL: V-LOOK-BEHIND in gverbs.zil (line 878)
+     <ROUTINE V-LOOK-BEHIND ()
+       <TELL \"There is nothing behind the \" D ,PRSO \".\" CR>>
+
+   Note: The default implementation just shows a generic message.
+   Specific objects can override this via their action handlers."
+  [game-state]
+  (let [prso (parser-state/get-prso game-state)
+        obj (gs/get-thing game-state prso)
+        desc (:desc obj)
+        action-fn (:action obj)]
+    ;; First try the object's action handler
+    (if-let [result (when action-fn (action-fn game-state))]
+      result
+      ;; Default behavior
+      (utils/tell game-state (str "There is nothing behind the " desc ".")))))
+
+;;; ---------------------------------------------------------------------------
+;;; LOOK ON COMMAND
+;;; ---------------------------------------------------------------------------
+;;; ZIL: V-LOOK-ON in gverbs.zil
+
+(defn v-look-on
+  "Look on top of an object (surface).
+
+   ZIL: V-LOOK-ON in gverbs.zil (line 908)
+     <ROUTINE V-LOOK-ON ()
+       <COND (<FSET? ,PRSO ,SURFACEBIT>
+              <PERFORM ,V?LOOK-INSIDE ,PRSO>
+              <RTRUE>)
+             (T
+              <TELL \"Look on a \" D ,PRSO \"???\" CR>)>>
+
+   If the object is a surface, delegates to v-look-inside.
+   Otherwise shows a confused message."
+  [game-state]
+  (let [prso (parser-state/get-prso game-state)
+        obj (gs/get-thing game-state prso)
+        desc (:desc obj)
+        action-fn (:action obj)]
+    ;; First try the object's action handler
+    (if-let [result (when action-fn (action-fn game-state))]
+      result
+      ;; Default behavior
+      (if (surface? obj)
+        ;; Surface - delegate to v-look-inside
+        (v-look-inside game-state)
+        ;; Not a surface - confused message
+        (utils/tell game-state (str "Look on a " desc "???"))))))

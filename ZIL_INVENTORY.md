@@ -54,7 +54,7 @@ These are out-of-game commands that don't advance time.
 | [x]    | CLIMB       | V-CLIMB-FOO  | Climb object                       |
 | [x]    | CLIMB UP    | V-CLIMB-UP   | Climb up                           |
 | [x]    | CLIMB DOWN  | V-CLIMB-DOWN | Climb down                         |
-| [ ]    | BACK        | V-BACK       | Return to previous room            |
+| [x]    | BACK        | V-BACK       | Return to previous room            |
 
 ### Core Interaction Verbs
 
@@ -71,9 +71,9 @@ These are out-of-game commands that don't advance time.
 | [x]    | READ             | V-READ        | Read text                     |
 | [x]    | SEARCH           | V-SEARCH      | Search object (v-look-inside) |
 | [x]    | LOOK IN          | V-LOOK-INSIDE | Look inside container         |
-| [ ]    | LOOK UNDER       | V-LOOK-UNDER  | Look under object             |
-| [ ]    | LOOK BEHIND      | V-LOOK-BEHIND | Look behind object            |
-| [ ]    | LOOK ON          | V-LOOK-ON     | Look on surface               |
+| [x]    | LOOK UNDER       | V-LOOK-UNDER  | Look under object             |
+| [x]    | LOOK BEHIND      | V-LOOK-BEHIND | Look behind object            |
+| [x]    | LOOK ON          | V-LOOK-ON     | Look on surface               |
 
 ---
 

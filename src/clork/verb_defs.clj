@@ -118,9 +118,57 @@
                 :handler verbs-health/v-verify}
 
    ;; === Observation Verbs ===
+   ;; ZIL: <SYNTAX LOOK = V-LOOK>
+   ;;      <SYNTAX LOOK ON OBJECT = V-LOOK-ON>
+   ;;      <SYNTAX LOOK UNDER OBJECT = V-LOOK-UNDER>
+   ;;      <SYNTAX LOOK BEHIND OBJECT = V-LOOK-BEHIND>
+   ;;      <SYNTAX LOOK IN OBJECT = V-LOOK-INSIDE>
    :look       {:words   ["look" "l"]
-                :syntax  {:num-objects 0}
+                :syntax  [;; LOOK (bare) - describe room
+                          {:num-objects 0}
+
+                          ;; LOOK UNDER OBJECT
+                          {:num-objects 1
+                           :prep1 :under
+                           :loc1 #{:held :carried :in-room :on-ground}
+                           :action :look-under}
+
+                          ;; LOOK BEHIND OBJECT
+                          {:num-objects 1
+                           :prep1 :behind
+                           :loc1 #{:held :carried :in-room :on-ground}
+                           :action :look-behind}
+
+                          ;; LOOK ON OBJECT
+                          {:num-objects 1
+                           :prep1 :on
+                           :loc1 #{:held :carried :in-room :on-ground}
+                           :action :look-on}
+
+                          ;; LOOK IN OBJECT
+                          {:num-objects 1
+                           :prep1 :in
+                           :loc1 #{:held :carried :in-room :on-ground}
+                           :action :look-inside}]
                 :handler verbs-look/v-look}
+
+   ;; Handler for LOOK UNDER (routed via :look syntax)
+   :look-under {:words   []
+                :syntax  {:num-objects 1
+                          :loc1 #{:held :carried :in-room :on-ground}}
+                :handler verbs-containers/v-look-under}
+
+   ;; Handler for LOOK BEHIND (routed via :look syntax)
+   :look-behind {:words   []
+                 :syntax  {:num-objects 1
+                           :loc1 #{:held :carried :in-room :on-ground}}
+                 :handler verbs-containers/v-look-behind}
+
+   ;; Handler for LOOK ON (routed via :look syntax)
+   :look-on    {:words   []
+                :syntax  {:num-objects 1
+                          :loc1 #{:held :carried :in-room :on-ground}}
+                :handler verbs-containers/v-look-on}
 
    :inventory  {:words   ["inventory" "i"]
                 :syntax  {:num-objects 0}
@@ -283,6 +331,12 @@
                  :syntax  {:num-objects 1
                            :loc1 #{:in-room :on-ground}}
                  :handler verbs-movement/v-walk-around}
+
+   ;; ZIL: <SYNTAX BACK = V-BACK>
+   ;; Note: Original Zork I doesn't track previous room - just shows error
+   :back        {:words   ["back" "return"]
+                 :syntax  {:num-objects 0}
+                 :handler verbs-movement/v-back}
 
    ;; === Manipulation Verbs (continued) ===
    ;; ZIL: <SYNTAX MOVE OBJECT (ON-GROUND IN-ROOM) = V-MOVE PRE-MOVE>

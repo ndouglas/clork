@@ -402,3 +402,20 @@
         ;; Not a vehicle - can't climb onto it
         :else
         (utils/tell game-state (str "You can't climb onto the " desc "."))))))
+
+;;; ---------------------------------------------------------------------------
+;;; BACK COMMAND
+;;; ---------------------------------------------------------------------------
+;;; ZIL: V-BACK in gverbs.zil
+
+(defn v-back
+  "Go back to the previous room.
+
+   ZIL: V-BACK in gverbs.zil (line 211)
+     <ROUTINE V-BACK ()
+       <TELL \"Sorry, my memory is poor. Please give a direction.\" CR>>
+
+   Note: The original Zork I doesn't actually track the previous room.
+   It just prints an apologetic message asking for a direction instead."
+  [game-state]
+  (utils/tell game-state "Sorry, my memory is poor. Please give a direction."))

@@ -1104,3 +1104,101 @@
   (testing "shut is a synonym for close"
     (is (= true (parser/wt? "shut" :verb)))
     (is (= :close (parser/wt? "shut" :verb true)))))
+
+;;; ---------------------------------------------------------------------------
+;;; BACK VERB TESTS
+;;; ---------------------------------------------------------------------------
+;;; ZIL: V-BACK in gverbs.zil (line 211)
+;;; Note: Original Zork I doesn't track previous room - just shows error message
+
+(deftest v-back-test
+  (testing "v-back shows 'Sorry, my memory is poor' message"
+    (let [gs (make-test-state)
+          [output _] (with-captured-output (verbs-movement/v-back gs))]
+      (is (= "Sorry, my memory is poor. Please give a direction." output)))))
+
+(deftest back-vocabulary-test
+  (testing "back is registered in vocabulary as a verb"
+    (is (= true (parser/wt? "back" :verb)))
+    (is (= :back (parser/wt? "back" :verb true))))
+  (testing "return is a synonym for back"
+    (is (= true (parser/wt? "return" :verb)))
+    (is (= :back (parser/wt? "return" :verb true)))))
+
+;;; ---------------------------------------------------------------------------
+;;; LOOK UNDER VERB TESTS
+;;; ---------------------------------------------------------------------------
+;;; ZIL: V-LOOK-UNDER in gverbs.zil (line 915)
+
+(deftest v-look-under-test
+  (testing "v-look-under shows 'There is nothing but dust there.'"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :table
+                                 :in :west-of-house
+                                 :desc "table"})
+                 (assoc-in [:parser :prso] :table))
+          [output _] (with-captured-output (verbs-containers/v-look-under gs))]
+      (is (= "There is nothing but dust there." output)))))
+
+(deftest look-under-vocabulary-test
+  (testing "look-under action is reachable via 'look under' syntax"
+    ;; The verb 'look' with prep 'under' routes to :look-under
+    (is (= true (parser/wt? "look" :verb)))
+    (is (= :look (parser/wt? "look" :verb true)))))
+
+;;; ---------------------------------------------------------------------------
+;;; LOOK BEHIND VERB TESTS
+;;; ---------------------------------------------------------------------------
+;;; ZIL: V-LOOK-BEHIND in gverbs.zil (line 878)
+
+(deftest v-look-behind-test
+  (testing "v-look-behind shows 'There is nothing behind the <object>.'"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :couch
+                                 :in :west-of-house
+                                 :desc "couch"})
+                 (assoc-in [:parser :prso] :couch))
+          [output _] (with-captured-output (verbs-containers/v-look-behind gs))]
+      (is (= "There is nothing behind the couch." output)))))
+
+;;; ---------------------------------------------------------------------------
+;;; LOOK ON VERB TESTS
+;;; ---------------------------------------------------------------------------
+;;; ZIL: V-LOOK-ON in gverbs.zil (line 908)
+
+(deftest v-look-on-surface-test
+  (testing "v-look-on on surface delegates to v-look-inside"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :table
+                                 :in :west-of-house
+                                 :desc "table"
+                                 :flags #{:cont :surface :open}})
+                 (gs/add-object {:id :vase
+                                 :in :table
+                                 :desc "vase"})
+                 (assoc-in [:parser :prso] :table))
+          [output _] (with-captured-output (verbs-containers/v-look-on gs))]
+      ;; Should show contents like v-look-inside does
+      (is (clojure.string/includes? output "table contains"))
+      (is (clojure.string/includes? output "vase")))))
+
+(deftest v-look-on-surface-empty-test
+  (testing "v-look-on on empty surface shows 'empty'"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :table
+                                 :in :west-of-house
+                                 :desc "table"
+                                 :flags #{:cont :surface :open}})
+                 (assoc-in [:parser :prso] :table))
+          [output _] (with-captured-output (verbs-containers/v-look-on gs))]
+      (is (= "The table is empty." output)))))
+
+(deftest v-look-on-non-surface-test
+  (testing "v-look-on on non-surface shows 'Look on a <object>???'"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :rock
+                                 :in :west-of-house
+                                 :desc "rock"})
+                 (assoc-in [:parser :prso] :rock))
+          [output _] (with-captured-output (verbs-containers/v-look-on gs))]
+      (is (= "Look on a rock???" output)))))
