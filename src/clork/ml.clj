@@ -10,6 +10,7 @@
   (:require [clork.game-state :as gs]
             [clork.verb-defs :as verb-defs]
             [clork.utils :as utils]
+            [clork.daemon :as daemon]
             [clojure.data.json :as json])
   (:import [java.io BufferedReader]))
 
@@ -50,12 +51,30 @@
       []
       direct-contents))))
 
+(defn- get-global-objects-in-room
+  "Get global objects (local-globals) visible from the current room.
+   Returns a vector of maps with :id, :container nil, :depth 0."
+  [game-state]
+  (let [here (:here game-state)
+        room (gs/get-thing game-state here)
+        globals (or (:globals room) #{})]
+    ;; Find all objects with :in :local-globals that are in this room's globals
+    (->> (:objects game-state)
+         vals
+         (filter #(and (= (:in %) :local-globals)
+                       (contains? globals (:id %))))
+         (map (fn [obj] {:id (:id obj) :container nil :depth 0}))
+         vec)))
+
 (defn get-visible-objects
-  "Get all objects visible in the current room, including nested containers.
+  "Get all objects visible in the current room, including nested containers
+   and global objects (local-globals) visible from this room.
    Returns a vector of maps with :id, :container (parent), and :depth."
   [game-state]
-  (let [here (:here game-state)]
-    (get-visible-objects-in game-state here 0 nil)))
+  (let [here (:here game-state)
+        room-objects (get-visible-objects-in game-state here 0 nil)
+        global-objects (get-global-objects-in-room game-state)]
+    (into room-objects global-objects)))
 
 (defn get-inventory
   "Get all objects in player's inventory, including nested containers.
@@ -381,6 +400,10 @@
 
         ;; Execute the action
         result-gs (verb-defs/perform gs-with-output)
+
+        ;; Run daemons (combat, sword glow, etc.)
+        ;; Output buffer stays attached so daemon messages are captured
+        result-gs (daemon/clocker result-gs)
 
         ;; Get captured output from atom
         message (apply str @output-buffer)

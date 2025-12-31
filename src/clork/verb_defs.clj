@@ -118,6 +118,13 @@
                 :syntax  {:num-objects 0}
                 :handler verbs-health/v-verify}
 
+   ;; ZIL: <SYNTAX WAIT = V-WAIT>
+   ;;      <SYNONYM WAIT Z>
+   ;; Wait passes time, running daemons for several turns.
+   :wait       {:words   ["wait" "z"]
+                :syntax  {:num-objects 0}
+                :handler verbs-meta/v-wait}
+
    ;; === Observation Verbs ===
    ;; ZIL: <SYNTAX LOOK = V-LOOK>
    ;;      <SYNTAX LOOK ON OBJECT = V-LOOK-ON>

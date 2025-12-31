@@ -1,9 +1,10 @@
 (ns clork.verbs-meta
-  "Meta-verb handlers: version, verbosity settings, inventory.
+  "Meta-verb handlers: version, verbosity settings, inventory, wait.
 
-   ZIL Reference: gverbs.zil contains V-VERSION, V-VERBOSE, V-BRIEF, V-SUPER-BRIEF."
+   ZIL Reference: gverbs.zil contains V-VERSION, V-VERBOSE, V-BRIEF, V-SUPER-BRIEF, V-WAIT."
   (:require [clork.utils :as utils]
-            [clork.game-state :as gs]))
+            [clork.game-state :as gs]
+            [clork.daemon :as daemon]))
 
 ;;; ---------------------------------------------------------------------------
 ;;; META-VERB HANDLERS
@@ -81,3 +82,42 @@
                   (utils/tell state (str "  A " obj-name "\n"))))
               (utils/tell game-state "You are carrying:\n")
               contents))))
+
+(defn v-wait
+  "Wait/pass time. Runs daemons for several turns.
+
+   ZIL: V-WAIT in gverbs.zil lines 1530-1535
+     <ROUTINE V-WAIT (\"OPTIONAL\" (NUM 3))
+       <TELL \"Time passes...\" CR>
+       <REPEAT ()
+         <COND (<L? <SET NUM <- .NUM 1>> 0> <RETURN>)
+               (<CLOCKER> <RETURN>)>>
+       <SETG CLOCK-WAIT T>>
+
+   Waits for 3 turns by default, calling CLOCKER each turn.
+   If something 'interesting' happens (combat, death, etc.), stops early.
+   Sets CLOCK-WAIT to prevent the normal post-action CLOCKER from running."
+  ([game-state]
+   (v-wait game-state 3))
+  ([game-state num-turns]
+   (let [gs (utils/tell game-state "Time passes...")]
+     (loop [gs gs
+            remaining num-turns]
+       (if (<= remaining 0)
+         ;; Done waiting - set clock-wait flag to skip post-action clocker
+         (assoc gs :clock-wait true)
+         ;; Run clocker for this turn
+         (let [old-moves (:moves gs 0)
+               gs-after-clocker (-> gs
+                                    (update :moves inc)  ; Increment turn counter
+                                    daemon/clocker)
+               ;; Check if something "interesting" happened
+               ;; ZIL checks if CLOCKER returned true (something happened)
+               ;; We detect this by checking if player died or moved rooms
+               interesting? (or (:dead gs-after-clocker)
+                                (not= (:here gs) (:here gs-after-clocker)))]
+           (if interesting?
+             ;; Something happened - stop waiting
+             (assoc gs-after-clocker :clock-wait true)
+             ;; Continue waiting
+             (recur gs-after-clocker (dec remaining)))))))))

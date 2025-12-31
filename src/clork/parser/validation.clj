@@ -417,10 +417,12 @@
 (defn room-has-global?
   "Check if a room has a specific local-global object.
 
-   Local globals are scenery objects listed in a room's GLOBAL property."
+   Local globals are scenery objects listed in a room's :globals property.
+   ZIL: GLOBAL property on rooms lists visible scenery like FOREST, WHITE-HOUSE."
   [game-state room-id obj-id]
-  ;; TODO: Implement when rooms have global lists
-  false)
+  (let [room (game-state/get-thing game-state room-id)
+        globals (or (:globals room) #{})]
+    (contains? globals obj-id)))
 
 (defn room?
   "Check if an object ID is a room."

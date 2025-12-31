@@ -158,7 +158,7 @@ These are out-of-game commands that don't advance time.
 
 | Status | Verb        | Handler   | Description        |
 | ------ | ----------- | --------- | ------------------ |
-| [ ]    | WAIT/Z      | V-WAIT    | Wait/pass time     |
+| [x]    | WAIT/Z      | V-WAIT    | Wait/pass time     |
 | [ ]    | JUMP/LEAP   | V-LEAP    | Jump               |
 | [ ]    | SWIM        | V-SWIM    | Swim               |
 | [ ]    | LISTEN      | V-LISTEN  | Listen to sounds   |

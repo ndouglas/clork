@@ -26,6 +26,7 @@
   {:id :west-of-house
    :desc "West of House"
    :flags #{:lit}
+   :globals #{:white-house}  ; ZIL: (GLOBAL WHITE-HOUSE BOARD FOREST)
    :exits {:north :north-of-house
            :south :south-of-house
            :ne :north-of-house
@@ -62,6 +63,7 @@
    :desc "North of House"
    :ldesc "You are facing the north side of a white house. There is no door here, and all the windows are boarded up. To the north a narrow path winds through the trees."
    :flags #{:lit}
+   :globals #{:white-house}  ; ZIL: (GLOBAL BOARDED-WINDOW BOARD WHITE-HOUSE FOREST)
    :exits {:sw :west-of-house
            :se :behind-house
            :west :west-of-house
@@ -88,6 +90,7 @@
    :desc "South of House"
    :ldesc "You are facing the south side of a white house. There is no door here, and all the windows are boarded."
    :flags #{:lit}
+   :globals #{:white-house}  ; ZIL: (GLOBAL BOARDED-WINDOW BOARD WHITE-HOUSE FOREST)
    :exits {:west :west-of-house
            :east :behind-house
            :ne :behind-house
@@ -113,6 +116,7 @@
   {:id :behind-house
    :desc "Behind House"
    :flags #{:lit}
+   :globals #{:white-house :kitchen-window}  ; ZIL: (GLOBAL WHITE-HOUSE KITCHEN-WINDOW FOREST)
    :exits {:north :north-of-house
            :south :south-of-house
            :sw :south-of-house
@@ -151,6 +155,7 @@
    :desc "Forest"
    :ldesc "This is a forest, with trees in all directions. To the east, there appears to be sunlight."
    :flags #{:lit}
+   :globals #{:tree :white-house}  ; ZIL: (GLOBAL TREE SONGBIRD WHITE-HOUSE FOREST)
    :exits {:up "There is no tree here suitable for climbing."
            :north "TODO: This exit leads to GRATING-CLEARING."
            :east :forest-path
@@ -176,6 +181,7 @@
    :desc "Forest"
    :ldesc "This is a dimly lit forest, with large trees all around."
    :flags #{:lit}
+   :globals #{:tree :white-house}  ; ZIL: (GLOBAL TREE SONGBIRD WHITE-HOUSE FOREST)
    :exits {:up "There is no tree here suitable for climbing."
            :north :clearing
            :east "The rank undergrowth prevents eastward movement."
@@ -203,6 +209,7 @@
    :desc "Forest Path"
    :ldesc "This is a path winding through a dimly lit forest. The path heads north-south here. One particularly large tree with some low branches stands at the edge of the path."
    :flags #{:lit}
+   :globals #{:tree :white-house}  ; ZIL: (GLOBAL TREE SONGBIRD WHITE-HOUSE FOREST)
    :exits {:up :up-a-tree
            :north "TODO: This exit leads to GRATING-CLEARING."
            :east "TODO: This exit leads to FOREST-2."
@@ -228,6 +235,7 @@
    :desc "Clearing"
    :ldesc "You are in a small clearing in a well marked forest path that extends to the east and west."
    :flags #{:lit}
+   :globals #{:tree :white-house}  ; ZIL: (GLOBAL TREE SONGBIRD WHITE-HOUSE FOREST)
    :exits {:up "There is no tree here suitable for climbing."
            :east "TODO: This exit leads to CANYON-VIEW."
            :north "TODO: This exit leads to FOREST-2."
@@ -248,6 +256,7 @@
    :desc "Up a Tree"
    :ldesc "You are about 10 feet above the ground nestled among some large branches. The nearest branch above you is above your reach. Beside you on the branch is a small bird's nest."
    :flags #{:lit}
+   :globals #{:tree :white-house}  ; ZIL: (GLOBAL TREE FOREST SONGBIRD WHITE-HOUSE)
    :exits {:down :forest-path
            :up "You cannot climb any higher."}})
 
@@ -272,6 +281,7 @@
   {:id :kitchen
    :desc "Kitchen"
    :flags #{:lit}
+   :globals #{:kitchen-window}  ; ZIL: (GLOBAL KITCHEN-WINDOW CHIMNEY STAIRS)
    :value 10   ; ZIL: (VALUE 10) - points for entering house first time
    :exits {:west :living-room
            :up :attic

@@ -38,6 +38,37 @@
       (is (= true (:super-brief state)))
       (is (= "Superbrief descriptions." output)))))
 
+(deftest v-wait-test
+  (testing "v-wait prints 'Time passes...' message"
+    (let [gs (gs/initial-game-state)
+          [output state] (with-captured-output (verbs-meta/v-wait gs))]
+      (is (.contains output "Time passes..."))))
+
+  (testing "v-wait sets clock-wait flag"
+    (let [gs (gs/initial-game-state)
+          [_ state] (with-captured-output (verbs-meta/v-wait gs))]
+      (is (= true (:clock-wait state)))))
+
+  (testing "v-wait increments moves counter"
+    (let [gs (assoc (gs/initial-game-state) :moves 10)
+          [_ state] (with-captured-output (verbs-meta/v-wait gs))]
+      ;; Waits 3 turns by default, so moves should increase by 3
+      (is (= 13 (:moves state)))))
+
+  (testing "v-wait with custom turn count"
+    (let [gs (assoc (gs/initial-game-state) :moves 5)
+          [_ state] (with-captured-output (verbs-meta/v-wait gs 5))]
+      ;; Waits 5 turns, so moves should increase by 5
+      (is (= 10 (:moves state))))))
+
+(deftest wait-verb-vocabulary-test
+  (testing "wait is registered in vocabulary as a verb"
+    (is (= true (parser/wt? "wait" :verb)))
+    (is (= :wait (parser/wt? "wait" :verb true))))
+  (testing "z is registered as synonym for wait"
+    (is (= true (parser/wt? "z" :verb)))
+    (is (= :wait (parser/wt? "z" :verb true)))))
+
 ;;; ---------------------------------------------------------------------------
 ;;; VERB REGISTRATION TESTS (vocabulary + syntax + dispatch)
 ;;; ---------------------------------------------------------------------------

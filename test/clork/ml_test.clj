@@ -4,7 +4,10 @@
             [clork.game-state :as gs]
             [clork.rooms :as rooms]
             [clork.objects :as objects]
-            [clork.verb-defs :as verb-defs]))
+            [clork.verb-defs :as verb-defs]
+            [clork.daemon :as daemon]
+            [clork.sword :as sword]
+            [clork.combat :as combat]))
 
 (defn init-test-state
   "Create a fresh game state for testing."
@@ -220,3 +223,30 @@
       ;; Novel message should contribute positive reward
       (when (:novel-message? (:rewards result))
         (is (pos? (:composite-reward result)))))))
+
+;;; ---------------------------------------------------------------------------
+;;; DAEMON INTEGRATION TESTS
+;;; ---------------------------------------------------------------------------
+
+(defn init-test-state-with-daemons
+  "Create a game state with daemons registered (like real game)."
+  []
+  (-> (init-test-state)
+      (daemon/register-daemon :i-fight combat/combat-daemon :tick -1)
+      (daemon/register-daemon :i-sword sword/i-sword :tick -1)))
+
+(deftest test-daemon-output-captured
+  (testing "daemon output is captured in execute-action message"
+    ;; Set up a state where sword is in inventory and we're adjacent to troll
+    (let [state (-> (init-test-state-with-daemons)
+                    (assoc-in [:objects :sword :in] :adventurer)
+                    (assoc-in [:objects :sword :tvalue] 0)  ;; No glow yet
+                    (assoc :here :cellar))  ;; Adjacent to troll room
+          ;; Execute any action (look) to trigger daemon
+          result (ml/execute-action state {:verb :look})]
+      ;; The sword daemon should have run and updated tvalue
+      (is (= 1 (get-in (:game-state result) [:objects :sword :tvalue]))
+          "Sword glow level should be 1 (adjacent to troll)")
+      ;; The message should contain the sword glow text
+      (is (re-find #"faint blue glow" (:message result))
+          "Daemon message should be captured in output"))))
