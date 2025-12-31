@@ -12,6 +12,8 @@
             [clork.script :as script]
             [clork.random :as random]
             [clork.ml :as ml]
+            [clork.daemon :as daemon]
+            [clork.combat :as combat]
             [clojure.java.io :as io]))
 
 ;; Re-export the essential API for creating and running games
@@ -43,7 +45,9 @@
      ;; Initialize the game state and store a copy for restart
      (let [init-gs (-> gs
                        (utils/this-is-it :mailbox)
-                       (game-state/set-here-flag :lit))]
+                       (game-state/set-here-flag :lit)
+                       ;; Register combat daemon (runs each turn)
+                       (daemon/register-daemon :i-fight combat/combat-daemon :tick -1))]
        ;; Store initial state for restart
        (assoc init-gs :restart-state init-gs)))))
 
@@ -61,7 +65,9 @@
      ;; Initialize the game state and store a copy for restart
      (let [init-gs (-> gs
                        (utils/this-is-it :mailbox)
-                       (game-state/set-here-flag :lit))
+                       (game-state/set-here-flag :lit)
+                       ;; Register combat daemon (runs each turn)
+                       (daemon/register-daemon :i-fight combat/combat-daemon :tick -1))
            ;; Store initial state for restart (before version/look output)
            gs-with-restart (assoc init-gs :restart-state init-gs)]
        (-> gs-with-restart

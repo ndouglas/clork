@@ -4,7 +4,8 @@
             [clork.flags :as flags]
             [clork.game-state :as gs]
             [clork.parser.state :as parser-state]
-            [clork.verbs-look :as verbs-look]))
+            [clork.verbs-look :as verbs-look]
+            [clork.random :as random]))
 
 ;; <OBJECT MAILBOX
 ;;	(IN WEST-OF-HOUSE)
@@ -775,6 +776,188 @@
    :tvalue 5})
 
 ;;; ---------------------------------------------------------------------------
+;;; TROLL AND AXE
+;;; ---------------------------------------------------------------------------
+
+;; <OBJECT TROLL
+;;	(IN TROLL-ROOM)
+;;	(SYNONYM TROLL)
+;;	(ADJECTIVE NASTY)
+;;	(DESC "troll")
+;;	(FLAGS ACTORBIT OPENBIT TRYTAKEBIT)
+;;	(ACTION TROLL-FCN)
+;;	(LDESC "A nasty-looking troll, brandishing a bloody axe, blocks all
+;;          passages out of the room.")
+;;	(STRENGTH 2)>
+
+(defn troll-action
+  "Troll action handler.
+
+   ZIL: TROLL-FCN (1actions.zil line 653-777)
+
+   Modes:
+   :f-busy?      - Check if troll is busy (recovering weapon)
+   :f-dead       - Troll has been killed
+   :f-unconscious - Troll knocked unconscious
+   :f-conscious  - Troll wakes up
+   :f-first?     - Should troll attack first? (33% chance)
+   nil           - Normal verb handling"
+  [game-state & [mode]]
+  (let [prsa (parser-state/get-prsa game-state)
+        prso (parser-state/get-prso game-state)
+        prsi (parser-state/get-prsi game-state)
+        here (:here game-state)
+        troll-here? (= (gs/get-thing-loc-id game-state :troll) here)
+        axe-in-troll? (= (gs/get-thing-loc-id game-state :axe) :troll)
+        axe-in-room? (= (gs/get-thing-loc-id game-state :axe) here)]
+    (case mode
+      ;; F-BUSY? - Check if troll is recovering weapon
+      :f-busy?
+      (cond
+        ;; Already has axe - not busy
+        axe-in-troll?
+        game-state
+
+        ;; Axe is in room - 75% chance to recover it
+        (and axe-in-room? (< (random/rand-int* 100) 75))
+        (-> game-state
+            (gs/set-thing-flag :axe :ndesc)
+            (gs/unset-thing-flag :axe :weapon)
+            (assoc-in [:objects :axe :in] :troll)
+            (assoc-in [:objects :troll :ldesc]
+                      "A nasty-looking troll, brandishing a bloody axe, blocks all passages out of the room.")
+            (cond-> troll-here?
+              (utils/tell "The troll, angered and humiliated, recovers his weapon. He appears to have an axe to grind with you.")))
+
+        ;; Troll is disarmed, pathetic
+        troll-here?
+        (-> game-state
+            (assoc-in [:objects :troll :ldesc]
+                      "A pathetically babbling troll is here.")
+            (utils/tell "The troll, disarmed, cowers in terror, pleading for his life in the guttural tongue of the trolls."))
+
+        :else
+        game-state)
+
+      ;; F-DEAD - Troll killed
+      :f-dead
+      (-> game-state
+          ;; Drop axe if holding it
+          (cond-> axe-in-troll?
+            (-> (assoc-in [:objects :axe :in] here)
+                (gs/unset-thing-flag :axe :ndesc)
+                (gs/set-thing-flag :axe :weapon)))
+          ;; Set troll-flag to open passages
+          (assoc :troll-flag true))
+
+      ;; F-UNCONSCIOUS - Troll knocked out
+      :f-unconscious
+      (-> game-state
+          (gs/unset-thing-flag :troll :fight)
+          ;; Drop axe if holding it
+          (cond-> axe-in-troll?
+            (-> (assoc-in [:objects :axe :in] here)
+                (gs/unset-thing-flag :axe :ndesc)
+                (gs/set-thing-flag :axe :weapon)))
+          ;; Update description
+          (assoc-in [:objects :troll :ldesc]
+                    "An unconscious troll is sprawled on the floor. All passages out of the room are open.")
+          ;; Open passages
+          (assoc :troll-flag true))
+
+      ;; F-CONSCIOUS - Troll wakes up
+      :f-conscious
+      (let [gs (-> game-state
+                   ;; If troll in room, resume fighting
+                   (cond-> troll-here?
+                     (-> (gs/set-thing-flag :troll :fight)
+                         (utils/tell "The troll stirs, quickly resuming a fighting stance."))))]
+        (cond
+          ;; Has axe already
+          (= (gs/get-thing-loc-id gs :axe) :troll)
+          (-> gs
+              (assoc-in [:objects :troll :ldesc]
+                        "A nasty-looking troll, brandishing a bloody axe, blocks all passages out of the room.")
+              (assoc :troll-flag false))
+
+          ;; Axe is in troll room - pick it up
+          (= (gs/get-thing-loc-id gs :axe) :troll-room)
+          (-> gs
+              (gs/set-thing-flag :axe :ndesc)
+              (gs/unset-thing-flag :axe :weapon)
+              (assoc-in [:objects :axe :in] :troll)
+              (assoc-in [:objects :troll :ldesc]
+                        "A nasty-looking troll, brandishing a bloody axe, blocks all passages out of the room.")
+              (assoc :troll-flag false))
+
+          ;; No axe available
+          :else
+          (-> gs
+              (assoc-in [:objects :troll :ldesc] "A troll is here.")
+              (assoc :troll-flag false))))
+
+      ;; F-FIRST? - Should troll strike first? (33% chance)
+      :f-first?
+      (when (< (random/rand-int* 100) 33)
+        (-> game-state
+            (gs/set-thing-flag :troll :fight)))
+
+      ;; Default - verb handling
+      nil
+      (cond
+        ;; EXAMINE - show long description
+        (= prsa :examine)
+        (utils/tell game-state (get-in game-state [:objects :troll :ldesc]))
+
+        ;; LISTEN
+        (= prsa :listen)
+        (utils/tell game-state "Every so often the troll says something, probably uncomplimentary, in his guttural tongue.")
+
+        ;; HELLO when troll is dead
+        (and (= prsa :hello) (:troll-flag game-state))
+        (utils/tell game-state "Unfortunately, the troll can't hear you.")
+
+        ;; TAKE/MOVE troll
+        (#{:take :move} prsa)
+        (utils/tell game-state "The troll spits in your face, grunting \"Better luck next time\" in a rather barbarous accent.")
+
+        ;; Default - no special handling
+        :else
+        nil)
+
+      ;; Unknown mode - return unchanged
+      game-state)))
+
+(def troll
+  {:id :troll
+   :in :troll-room
+   :synonym ["troll"]
+   :adjective ["nasty"]
+   :desc "troll"
+   :flags (flags/flags :actor :open :trytake)
+   :ldesc "A nasty-looking troll, brandishing a bloody axe, blocks all passages out of the room."
+   :strength 2
+   :action troll-action})
+
+;; <OBJECT AXE
+;;	(IN TROLL)
+;;	(SYNONYM AXE AX)
+;;	(ADJECTIVE BLOODY)
+;;	(DESC "bloody axe")
+;;	(FLAGS WEAPONBIT TRYTAKEBIT TAKEBIT NDESCBIT)
+;;	(ACTION AXE-F)
+;;	(SIZE 25)>
+
+(def axe
+  {:id :axe
+   :in :troll
+   :synonym ["axe" "ax"]
+   :adjective ["bloody"]
+   :desc "bloody axe"
+   :flags (flags/flags :weapon :trytake :take :ndesc)
+   :size 25})
+
+;;; ---------------------------------------------------------------------------
 ;;; ALL OBJECTS LIST
 ;;; ---------------------------------------------------------------------------
 
@@ -802,4 +985,6 @@
    painting
    tree
    nest
-   egg])
+   egg
+   troll
+   axe])

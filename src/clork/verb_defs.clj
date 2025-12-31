@@ -10,6 +10,7 @@
             [clork.verbs-look :as verbs-look]
             [clork.verbs-light :as verbs-light]
             [clork.verbs-put :as verbs-put]
+            [clork.verbs-combat :as verbs-combat]
             [clork.debug.trace :as trace]))
 
 ;;;; ============================================================================
@@ -488,7 +489,48 @@
                 :syntax  {:num-objects 1
                           :gwim1 :on  ; FIND ONBIT - can find lit objects in dark
                           :loc1 #{:held :carried :in-room :on-ground}}
-                :handler verbs-light/v-lamp-off}})
+                :handler verbs-light/v-lamp-off}
+
+   ;; === Combat Verbs ===
+   ;; ZIL: <SYNTAX ATTACK OBJECT (FIND ACTORBIT) (ON-GROUND IN-ROOM)
+   ;;              WITH OBJECT (FIND WEAPONBIT) (HELD CARRIED HAVE) = V-ATTACK>
+   ;;      <SYNONYM ATTACK FIGHT HURT INJURE HIT>
+   :attack     {:words   ["attack" "fight" "hurt" "injure" "hit"]
+                :syntax  {:num-objects 2
+                          :prep2 :with
+                          :gwim1 :actor  ; FIND ACTORBIT - find actors
+                          :gwim2 :weapon ; FIND WEAPONBIT - find weapons
+                          :loc1 #{:in-room :on-ground}
+                          :loc2 #{:held :carried :have}}
+                :handler verbs-combat/v-attack}
+
+   ;; ZIL: <SYNTAX KILL OBJECT (FIND ACTORBIT) (ON-GROUND IN-ROOM)
+   ;;              WITH OBJECT (FIND WEAPONBIT) (HELD CARRIED HAVE) = V-ATTACK>
+   ;;      <SYNONYM KILL MURDER SLAY DISPATCH>
+   :kill       {:words   ["kill" "murder" "slay" "dispatch"]
+                :syntax  {:num-objects 2
+                          :prep2 :with
+                          :gwim1 :actor
+                          :gwim2 :weapon
+                          :loc1 #{:in-room :on-ground}
+                          :loc2 #{:held :carried :have}}
+                :handler verbs-combat/v-attack}
+
+   ;; ZIL: <SYNTAX STAB OBJECT (FIND ACTORBIT) (ON-GROUND IN-ROOM) = V-STAB>
+   ;;      (Stab without specifying weapon)
+   :stab       {:words   ["stab"]
+                :syntax  [{;; STAB OBJECT - auto-find weapon
+                           :num-objects 1
+                           :gwim1 :actor
+                           :loc1 #{:in-room :on-ground}}
+                          ;; STAB OBJECT WITH WEAPON
+                          {:num-objects 2
+                           :prep2 :with
+                           :gwim1 :actor
+                           :gwim2 :weapon
+                           :loc1 #{:in-room :on-ground}
+                           :loc2 #{:held :carried :have}}]
+                :handler verbs-combat/v-stab}})
 
 ;;; ---------------------------------------------------------------------------
 ;;; DIRECTION VOCABULARY

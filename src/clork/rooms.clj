@@ -360,14 +360,25 @@
 ;;       (FLAGS RLANDBIT)
 ;;       (ACTION TROLL-ROOM-F)>
 
+;; <ROOM TROLL-ROOM
+;;       ...
+;;       (EAST TO E-W-PASSAGE IF TROLL-FLAG ELSE "The troll fends you off with a menacing gesture.")
+;;       (WEST TO MAZE-1 IF TROLL-FLAG ELSE "The troll fends you off with a menacing gesture.")
+;;       (FLAGS RLANDBIT)
+;;       (ACTION TROLL-ROOM-F)>
+
 (def troll-room
   {:id :troll-room
    :desc "The Troll Room"
    :ldesc "This is a small room with passages to the east and south and a forbidding hole leading west. Bloodstains and deep scratches (perhaps made by an axe) mar the walls."
    :flags #{}  ; Underground
    :exits {:south :cellar
-           :east :east-west-passage
-           :west :maze-1}})
+           :east {:to :east-west-passage
+                  :if :troll-flag
+                  :else "The troll fends you off with a menacing gesture."}
+           :west {:to :maze-1
+                  :if :troll-flag
+                  :else "The troll fends you off with a menacing gesture."}}})
 
 ;; <ROOM EAST-OF-CHASM
 ;;       (IN ROOMS)

@@ -56,6 +56,8 @@
    :base-score 0
    :score-max 350
    :moves 0
+   ;; Combat flags - ZIL: TROLL-FLAG
+   :troll-flag false
    :parser (parser-state/initial-parser-state)
     ;; Undo system state
    :undo-stack []
