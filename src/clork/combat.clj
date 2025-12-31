@@ -14,7 +14,8 @@
   (:require [clork.random :as random]
             [clork.game-state :as gs]
             [clork.verbs-health :as health]
-            [clork.utils :as utils]))
+            [clork.utils :as utils]
+            [clork.death :as death]))
 
 ;;; ---------------------------------------------------------------------------
 ;;; COMBAT RESULT CONSTANTS
@@ -442,7 +443,7 @@
 
    ZIL: WINNER-RESULT (1actions.zil line 3565-3576)
 
-   Updates player's P?STRENGTH and handles death.
+   Updates player's P?STRENGTH and handles death via JIGS-UP.
    Negative strength indicates wounds; when too negative, player dies."
   [game-state new-def result orig-def]
   (let [winner (:winner game-state)
@@ -453,10 +454,8 @@
         gs (update-in game-state [:objects winner :strength]
                       (fn [s] (+ (or s 0) wound-modifier)))]
     (if (zero? new-def)
-      ;; Player died
-      (-> gs
-          (assoc :dead true)
-          (utils/tell "\nIt appears that that last blow was too much for you. I'm afraid you are dead."))
+      ;; Player died - call JIGS-UP with death message
+      (death/jigs-up gs "It appears that that last blow was too much for you. I'm afraid you are dead.")
       gs)))
 
 ;;; ---------------------------------------------------------------------------

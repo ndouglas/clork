@@ -635,7 +635,7 @@ These are out-of-game commands that don't advance time.
 | [x]    | VILLAIN-STRENGTH | Enemy strength       |
 | [x]    | FIND-WEAPON      | Weapon selection     |
 | [ ]    | WEAPON-FUNCTION  | Weapon handling      |
-| [ ]    | JIGS-UP          | Player death         |
+| [x]    | JIGS-UP          | Player death         |
 
 ### Daemon/Interrupt System
 
@@ -678,7 +678,7 @@ These are out-of-game commands that don't advance time.
 | [ ]    | THIS-IS-IT       | Set pronoun               |
 | [ ]    | REMOVE-CAREFULLY | Remove without triggering |
 | [ ]    | REMARK           | Random message            |
-| [ ]    | FINISH           | Game end                  |
+| [x]    | FINISH           | Game end                  |
 | [ ]    | YES?             | Y/N prompt                |
 
 ---
