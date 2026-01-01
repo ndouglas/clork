@@ -44,10 +44,23 @@
         (utils/tell (str/join ", " (sort (map name (keys (:rooms game-state))))))
         (utils/tell "\n"))
     (let [room-id (parse-keyword (first args))
-          room (get-in game-state [:rooms room-id])]
+          room (get-in game-state [:rooms room-id])
+          winner (:winner game-state)]
       (if room
         (-> game-state
+            ;; Move the player object to the new room
+            (assoc-in [:objects winner :in] room-id)
+            ;; Update HERE
             (assoc :here room-id)
+            ;; Update LIT flag based on room and carried light sources
+            (as-> gs
+                (let [room-lit (contains? (or (:flags room) #{}) :lit)
+                      contents (gs/get-contents gs winner)
+                      has-light-on (some (fn [obj-id]
+                                           (and (gs/set-thing-flag? gs obj-id :light)
+                                                (gs/set-thing-flag? gs obj-id :on)))
+                                         contents)]
+                  (assoc gs :lit (or room-lit has-light-on))))
             (tell-action (str "Teleported to " room-id " (" (:desc room) ")")))
         (utils/tell game-state (str "Unknown room: " room-id "\n"))))))
 

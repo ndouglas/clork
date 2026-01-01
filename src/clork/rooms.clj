@@ -126,12 +126,15 @@
            :west {:to :kitchen :door :kitchen-window}
            :in {:to :kitchen :door :kitchen-window}}
    :action (fn [game-state rarg]
-             (when (= rarg :look)
+             (case rarg
+               :look
                (let [window-open? (gs/set-thing-flag? game-state :kitchen-window :open)
                      window-state (if window-open? "open" "slightly ajar")]
                  (-> game-state
                      (utils/tell (str "You are behind the white house. A path leads into the forest to the east. In one corner of the house there is a small window which is " window-state "."))
-                     (utils/crlf)))))})
+                     (utils/crlf)))
+               ;; Default - return unchanged for :m-enter etc.
+               game-state))})
 
 ;;; ---------------------------------------------------------------------------
 ;;; ABOVE GROUND - FOREST
@@ -291,7 +294,7 @@
              ;; ZIL: CLEARING-FCN in 1actions.zil (lines 828-844)
              (case rarg
                ;; M-ENTER: When entering, make grate invisible if not revealed
-               :enter
+               :m-enter
                (if (not (get game-state :grate-revealed false))
                  (gs/set-thing-flag game-state :grate :invisible)
                  game-state)
@@ -365,16 +368,21 @@
    :value 10   ; ZIL: (VALUE 10) - points for entering house first time
    :exits {:west :living-room
            :up :attic
-           :down :studio  ; via chimney, but only if small
+           ;; ZIL: (DOWN TO STUDIO IF FALSE-FLAG ELSE "Only Santa Claus climbs down chimneys.")
+           ;; FALSE-FLAG is never set, so this always fails
+           :down "Only Santa Claus climbs down chimneys."
            :east {:to :behind-house :door :kitchen-window}
            :out {:to :behind-house :door :kitchen-window}}
    :action (fn [game-state rarg]
-             (when (= rarg :look)
+             (case rarg
+               :look
                (let [window-open? (gs/set-thing-flag? game-state :kitchen-window :open)
                      window-state (if window-open? "open" "slightly ajar")]
                  (-> game-state
                      (utils/tell (str "You are in the kitchen of the white house. A table seems to have been used recently for the preparation of food. A passage leads to the west and a dark staircase can be seen leading upward. A dark chimney leads down and to the east is a small window which is " window-state "."))
-                     (utils/crlf)))))})
+                     (utils/crlf)))
+               ;; Default - return unchanged for :m-enter etc.
+               game-state))})
 
 ;; <ROOM LIVING-ROOM
 ;;       (IN ROOMS)
@@ -427,6 +435,17 @@
 ;;       (VALUE 25)
 ;;       (GLOBAL TRAP-DOOR SLIDE STAIRS)>
 
+;; ZIL: CELLAR-FCN (1actions.zil lines 544-556)
+;; <ROUTINE CELLAR-FCN (RARG)
+;;   (<EQUAL? .RARG ,M-LOOK>
+;;    <TELL "You are in a dark and damp cellar..." CR>)
+;;   (<EQUAL? .RARG ,M-ENTER>
+;;    <COND (<AND <FSET? ,TRAP-DOOR ,OPENBIT>
+;;                <NOT <FSET? ,TRAP-DOOR ,TOUCHBIT>>>
+;;           <FCLEAR ,TRAP-DOOR ,OPENBIT>
+;;           <FSET ,TRAP-DOOR ,TOUCHBIT>
+;;           <TELL "The trap door crashes shut, and you hear someone barring it." CR CR>)>)>>
+
 (def cellar
   {:id :cellar
    :desc "Cellar"
@@ -436,7 +455,21 @@
    :exits {:north :troll-room
            :south :east-of-chasm
            :up {:to :living-room :door :trap-door}
-           :west "You try to ascend the ramp, but it is impossible, and you slide back down."}})
+           :west "You try to ascend the ramp, but it is impossible, and you slide back down."}
+   :action (fn [game-state rarg]
+             (case rarg
+               ;; M-ENTER: Close trap door on first descent
+               :m-enter
+               (let [trap-door-open? (gs/set-thing-flag? game-state :trap-door :open)
+                     trap-door-touched? (gs/set-thing-flag? game-state :trap-door :touch)]
+                 (if (and trap-door-open? (not trap-door-touched?))
+                   (-> game-state
+                       (gs/unset-thing-flag :trap-door :open)
+                       (gs/set-thing-flag :trap-door :touch)
+                       (utils/tell "The trap door crashes shut, and you hear someone barring it.\n\n"))
+                   game-state))
+               ;; Default - return unchanged
+               game-state))})
 
 ;; <ROOM TROLL-ROOM
 ;;       (IN ROOMS)
@@ -530,7 +563,8 @@
    :ldesc "This appears to have been an artist's studio. The walls and floors are splattered with paints of 69 different colors. Strangely enough, nothing of value is hanging here. At the south end of the room is an open door (also covered with paint). A dark and narrow chimney leads up from a fireplace; although you might be able to get up it, it seems unlikely you could get back down."
    :flags #{}  ; Underground
    :exits {:south :gallery
-           :up :kitchen  ; via chimney
+           ;; ZIL: (UP PER UP-CHIMNEY-FUNCTION) - special exit that clears TOUCHBIT
+           :up {:per :up-chimney-function}
            :north :dark-area}})
 
 ;; <ROOM EW-PASSAGE
@@ -901,7 +935,8 @@
    :exits {:sw :maze-11
            :up {:to :grating-clearing :door :grate :else "The grating is closed."}}
    :action (fn [game-state rarg]
-             (when (= rarg :look)
+             (case rarg
+               :look
                (let [grate-open? (gs/set-thing-flag? game-state :grate :open)]
                  (-> game-state
                      (utils/tell "You are in a small room near the maze. There are twisty passages in the immediate vicinity.")
@@ -916,7 +951,9 @@
                      (cond-> (and (not grate-open?)
                                   (not (get game-state :grunlock false)))
                        (-> (utils/tell "Above you is a grating locked with a skull-and-crossbones lock.")
-                           (utils/crlf)))))))})
+                           (utils/crlf)))))
+               ;; Default - return unchanged for :m-enter etc.
+               game-state))})
 
 ;; <ROOM MAZE-12
 ;;       (IN ROOMS)

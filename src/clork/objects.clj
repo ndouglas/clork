@@ -315,24 +315,25 @@
                    is-open? (gs/set-thing-flag? game-state :trap-door :open)]
                (cond
                  ;; RAISE -> same as OPEN
+                 ;; ZIL: OPEN-CLOSE sets OPENBIT but NOT TOUCHBIT
+                 ;; TOUCHBIT is set by CELLAR-FCN when door crashes shut on first descent
                  (= verb :raise)
                  (if is-open?
                    (utils/tell game-state "It is already open.")
                    (-> game-state
                        (gs/set-thing-flag :trap-door :open)
-                       (gs/set-thing-flag :trap-door :touch)
                        (utils/tell "The door reluctantly opens to reveal a rickety staircase descending into darkness.")))
 
                  ;; OPEN/CLOSE from living-room
                  (and (#{:open :close} verb) (= here :living-room))
                  (cond
                    ;; OPEN
+                   ;; ZIL: OPEN-CLOSE sets OPENBIT but NOT TOUCHBIT
                    (= verb :open)
                    (if is-open?
                      (utils/tell game-state "It is already open.")
                      (-> game-state
                          (gs/set-thing-flag :trap-door :open)
-                         (gs/set-thing-flag :trap-door :touch)
                          (utils/tell "The door reluctantly opens to reveal a rickety staircase descending into darkness.")))
                    ;; CLOSE
                    (= verb :close)

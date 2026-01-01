@@ -57,10 +57,53 @@
       :else
       {:destination :grating-room})))
 
+(defn up-chimney-function
+  "Exit up the chimney from the studio to the kitchen.
+
+   ZIL: UP-CHIMNEY-FUNCTION routine in 1actions.zil (lines 566-578)
+
+   Conditions to climb:
+   - Must not be empty-handed (need something to hold onto)
+   - Can only carry 1-2 items, and must have the lamp
+   - If trap door is closed, clear TOUCHBIT (allows it to close again on next descent)
+
+   Returns {:destination :kitchen} on success, {:blocked true :message ...} on failure."
+  [game-state]
+  (let [winner (:winner game-state)
+        contents (gs/get-contents game-state winner)
+        item-count (count contents)
+        has-lamp? (some #{:brass-lantern} contents)]
+    (cond
+      ;; Empty-handed
+      (zero? item-count)
+      {:blocked true
+       :message "Going up empty-handed is a bad idea."}
+
+      ;; Too many items (more than 2, or 2 without the lamp)
+      (or (> item-count 2)
+          (and (= item-count 2) (not has-lamp?)))
+      {:blocked true
+       :message "You can't get up there with what you're carrying."}
+
+      ;; Must have the lamp
+      (not has-lamp?)
+      {:blocked true
+       :message "You can't get up there with what you're carrying."}
+
+      ;; Success - can climb up
+      ;; ZIL: If trap door is closed, clear TOUCHBIT so it can close again
+      :else
+      (let [trap-door-open? (gs/set-thing-flag? game-state :trap-door :open)]
+        {:destination :kitchen
+         :side-effect (when (not trap-door-open?)
+                        ;; Clear TOUCHBIT so trap door can close again on next descent
+                        (fn [gs] (gs/unset-thing-flag gs :trap-door :touch)))}))))
+
 (def per-functions
   "Map of :per function names to their implementations."
   {:maze-diodes maze-diodes
-   :grating-exit grating-exit})
+   :grating-exit grating-exit
+   :up-chimney-function up-chimney-function})
 
 ;;; ---------------------------------------------------------------------------
 ;;; MOVEMENT HELPERS
@@ -105,6 +148,7 @@
    - Update HERE global
    - Update LIT flag
    - Score the room (if it has a value)
+   - Call room action with M-ENTER
    - Call V-FIRST-LOOK to describe room
 
    Returns updated game-state."
@@ -124,6 +168,11 @@
              (-> gs
                  (verbs-health/score-upd room-value)
                  (assoc-in [:rooms room-id :value] 0))
+             gs)
+        ;; Call room action with M-ENTER (ZIL: room actions get called on entry)
+        room-action (:action room)
+        gs (if room-action
+             (room-action gs :m-enter)
              gs)]
     ;; Describe the room (V-FIRST-LOOK)
     ;; ZIL: V-FIRST-LOOK only calls DESCRIBE-OBJECTS if room is lit
@@ -210,13 +259,17 @@
                         (assoc gs :it (:set-it result))
                         gs))
 
-                    ;; Can go through - optionally print message, then move
+                    ;; Can go through - optionally print message, apply side-effect, then move
                     (:destination result)
                     (let [gs (if (:message result)
                                (-> game-state
                                    (utils/tell (:message result))
                                    (utils/crlf))
-                               game-state)]
+                               game-state)
+                          ;; Apply side-effect function if present (e.g., clear TOUCHBIT)
+                          gs (if-let [side-effect (:side-effect result)]
+                               (side-effect gs)
+                               gs)]
                       (goto gs (:destination result)))
 
                     ;; Unknown result
