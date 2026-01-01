@@ -16,6 +16,7 @@
             [clork.combat :as combat]
             [clork.sword :as sword]
             [clork.thief :as thief]
+            [clork.cyclops :as cyclops]
             [clojure.java.io :as io]))
 
 ;; Re-export the essential API for creating and running games
@@ -55,7 +56,10 @@
                        (daemon/register-daemon :i-sword sword/i-sword :tick -1)
                        ;; Register thief wandering daemon
                        ;; ZIL: <ENABLE <QUEUE I-THIEF -1>> in 1dungeon.zil line 2656
-                       (daemon/register-daemon :i-thief thief/i-thief :tick -1))]
+                       (daemon/register-daemon :i-thief thief/i-thief :tick -1)
+                       ;; Register cyclops daemon (starts disabled, enabled when player enters room)
+                       ;; ZIL: I-CYCLOPS in 1actions.zil lines 1609-1627
+                       (daemon/register-daemon :i-cyclops cyclops/i-cyclops :tick -1 :enabled false))]
        ;; Store initial state for restart
        (assoc init-gs :restart-state init-gs)))))
 
@@ -81,7 +85,10 @@
                        (daemon/register-daemon :i-sword sword/i-sword :tick -1)
                        ;; Register thief wandering daemon
                        ;; ZIL: <ENABLE <QUEUE I-THIEF -1>> in 1dungeon.zil line 2656
-                       (daemon/register-daemon :i-thief thief/i-thief :tick -1))
+                       (daemon/register-daemon :i-thief thief/i-thief :tick -1)
+                       ;; Register cyclops daemon (starts disabled, enabled when player enters room)
+                       ;; ZIL: I-CYCLOPS in 1actions.zil lines 1609-1627
+                       (daemon/register-daemon :i-cyclops cyclops/i-cyclops :tick -1 :enabled false))
            ;; Store initial state for restart (before version/look output)
            gs-with-restart (assoc init-gs :restart-state init-gs)]
        (-> gs-with-restart

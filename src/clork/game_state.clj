@@ -56,8 +56,11 @@
    :base-score 0
    :score-max 350
    :moves 0
-   ;; Combat flags - ZIL: TROLL-FLAG
+   ;; Combat flags - ZIL: TROLL-FLAG, CYCLOPS-FLAG, MAGIC-FLAG, CYCLOWRATH
    :troll-flag false
+   :cyclops-flag false  ; Cyclops asleep/defeated
+   :magic-flag false    ; East wall opened (cyclops fled)
+   :cyclowrath 0        ; Cyclops anger level
    :parser (parser-state/initial-parser-state)
     ;; Undo system state
    :undo-stack []

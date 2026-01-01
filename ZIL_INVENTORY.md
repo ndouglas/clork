@@ -181,7 +181,7 @@ These are out-of-game commands that don't advance time.
 
 | Status | Verb             | Handler    | Description         |
 | ------ | ---------------- | ---------- | ------------------- |
-| [ ]    | ODYSSEUS/ULYSSES | V-ODYSSEUS | Cyclops puzzle      |
+| [x]    | ODYSSEUS/ULYSSES | V-ODYSSEUS | Cyclops puzzle      |
 | [ ]    | PLUGH/XYZZY      | V-ADVENT   | Adventure reference |
 | [ ]    | FROBOZZ          | V-FROBOZZ  | Frobozz reference   |
 | [ ]    | ZORK             | V-ZORK     | Meta-reference      |
@@ -521,7 +521,7 @@ These are out-of-game commands that don't advance time.
 | [~]    | ADVENTURER | Player character |
 | [x]    | TROLL      | Troll            |
 | [x]    | THIEF      | Thief            |
-| [ ]    | CYCLOPS    | Cyclops          |
+| [x]    | CYCLOPS    | Cyclops          |
 | [ ]    | BAT        | Vampire Bat      |
 | [ ]    | SONGBIRD   | Songbird         |
 | [ ]    | GHOSTS     | Spirits          |
@@ -558,11 +558,11 @@ These are out-of-game commands that don't advance time.
 | [ ]    | KITCHEN-FCN       | KITCHEN       | Kitchen logic             |
 | [ ]    | LIVING-ROOM-FCN   | LIVING-ROOM   | Living room logic         |
 | [ ]    | CELLAR-FCN        | CELLAR        | Cellar behavior           |
+| [x]    | CYCLOPS-ROOM-FCN  | CYCLOPS-ROOM  | Cyclops room              |
 | [ ]    | TROLL-ROOM-F      | TROLL-ROOM    | Troll room logic          |
 | [ ]    | LOUD-ROOM-FCN     | LOUD-ROOM     | Echo puzzle               |
 | [ ]    | DAM-ROOM-FCN      | DAM-ROOM      | Dam controls              |
 | [ ]    | RESERVOIR-FCN     | RESERVOIR     | Reservoir water           |
-| [ ]    | CYCLOPS-ROOM-FCN  | CYCLOPS-ROOM  | Cyclops room              |
 | [ ]    | TREASURE-ROOM-FCN | TREASURE-ROOM | Treasure room             |
 | [ ]    | TORCH-ROOM-FCN    | TORCH-ROOM    | Torch room                |
 | [ ]    | MIRROR-ROOM       | MIRROR-ROOM-* | Mirror rooms              |
@@ -583,7 +583,7 @@ These are out-of-game commands that don't advance time.
 | [x]    | THIEF-IN-TREASURE   | THIEF    | Thief in lair         |
 | [x]    | THIEF-VS-ADVENTURER | THIEF    | Thief combat          |
 | [x]    | ROBBER-FUNCTION     | THIEF    | Thief stealing        |
-| [ ]    | CYCLOPS-FCN         | CYCLOPS  | Cyclops behavior      |
+| [x]    | CYCLOPS-FCN         | CYCLOPS  | Cyclops behavior      |
 | [ ]    | BAT-F               | BAT      | Bat behavior          |
 | [ ]    | BAT-D               | BAT      | Bat daemon            |
 | [ ]    | GHOSTS-F            | GHOSTS   | Spirits behavior      |
@@ -646,7 +646,7 @@ These are out-of-game commands that don't advance time.
 | [ ]    | I-MATCH       | Match burning        |
 | [x]    | I-THIEF       | Thief wandering      |
 | [x]    | I-SWORD       | Sword glowing        |
-| [ ]    | I-CYCLOPS     | Cyclops behavior     |
+| [x]    | I-CYCLOPS     | Cyclops behavior     |
 | [ ]    | I-CURE        | Healing timer        |
 | [ ]    | I-FOREST-ROOM | Forest wandering     |
 | [ ]    | I-RIVER       | River flow           |
@@ -842,7 +842,7 @@ These are out-of-game commands that don't advance time.
 ### Phase 4: NPCs and Combat
 - [x] Troll encounter
 - [x] Thief AI
-- [ ] Cyclops puzzle
+- [x] Cyclops puzzle
 - [x] Combat system
 
 ### Phase 5: Puzzles

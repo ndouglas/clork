@@ -2,7 +2,8 @@
   "Room definitions for Clork."
   (:require [clork.utils :as utils]
             [clork.game-state :as gs]
-            [clork.thief :as thief]))
+            [clork.thief :as thief]
+            [clork.cyclops :as cyclops]))
 
 ;;; ---------------------------------------------------------------------------
 ;;; ABOVE GROUND - HOUSE EXTERIOR
@@ -1066,7 +1067,7 @@
 (def cyclops-room
   {:id :cyclops-room
    :desc "Cyclops Room"
-   :ldesc "This room has an exit on the northwest, and a staircase leading up."
+   ;; Note: ldesc is handled by cyclops-room-action for dynamic descriptions
    :flags #{}  ; Underground, not lit
    :exits {:nw :maze-15
            :east {:to :strange-passage
@@ -1074,7 +1075,8 @@
                   :else "The east wall is solid rock."}
            :up {:to :treasure-room
                 :if :cyclops-flag
-                :else "The cyclops doesn't look like he'll let you past."}}})
+                :else "The cyclops doesn't look like he'll let you past."}}
+   :action cyclops/cyclops-room-action})
 
 ;; <ROOM TREASURE-ROOM
 ;;       (IN ROOMS)

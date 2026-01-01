@@ -7,7 +7,8 @@
             [clork.verbs-look :as verbs-look]
             [clork.random :as random]
             [clork.sword :as sword]
-            [clork.thief :as thief]))
+            [clork.thief :as thief]
+            [clork.cyclops :as cyclops]))
 
 ;; <OBJECT MAILBOX
 ;;	(IN WEST-OF-HOUSE)
@@ -1031,6 +1032,25 @@
    :strength 5
    :action thief/thief-action})
 
+;; <OBJECT CYCLOPS
+;;	(IN CYCLOPS-ROOM)
+;;	(SYNONYM CYCLOPS MONSTER EYE)
+;;	(ADJECTIVE HUNGRY GIANT)
+;;	(DESC "cyclops")
+;;	(FLAGS ACTORBIT NDESCBIT TRYTAKEBIT)
+;;	(ACTION CYCLOPS-FCN)
+;;	(STRENGTH 10000)>
+
+(def cyclops
+  {:id :cyclops
+   :in :cyclops-room
+   :synonym ["cyclops" "monster" "eye"]
+   :adjective ["hungry" "giant"]
+   :desc "cyclops"
+   :flags (flags/flags :actor :ndesc :trytake)
+   :strength 10000
+   :action cyclops/cyclops-action})
+
 ;;; ---------------------------------------------------------------------------
 ;;; MAZE OBJECTS
 ;;; ---------------------------------------------------------------------------
@@ -1344,6 +1364,8 @@
    stiletto
    large-bag
    thief
+   ;; Cyclops
+   cyclops
    ;; Maze objects
    skeleton
    burned-out-lantern

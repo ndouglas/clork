@@ -11,6 +11,7 @@
             [clork.verbs-light :as verbs-light]
             [clork.verbs-put :as verbs-put]
             [clork.verbs-combat :as verbs-combat]
+            [clork.cyclops :as cyclops]
             [clork.debug.trace :as trace]))
 
 ;;;; ============================================================================
@@ -537,7 +538,15 @@
                            :gwim2 :weapon
                            :loc1 #{:in-room :on-ground}
                            :loc2 #{:held :carried :have}}]
-                :handler verbs-combat/v-stab}})
+                :handler verbs-combat/v-stab}
+
+   ;; === Special/Easter Egg Verbs ===
+   ;; ZIL: <SYNTAX ODYSSEUS = V-ODYSSEUS>
+   ;;      <SYNONYM ODYSSEUS ULYSSES>
+   ;; Saying "Odysseus" or "Ulysses" scares the cyclops (his father's nemesis)
+   :odysseus   {:words   ["odysseus" "ulysses"]
+                :syntax  {:num-objects 0}
+                :handler cyclops/v-odysseus}})
 
 ;;; ---------------------------------------------------------------------------
 ;;; DIRECTION VOCABULARY
