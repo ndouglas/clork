@@ -169,3 +169,20 @@
           result (binding [death/*read-input-fn* (constantly "restart")]
                    (death/finish gs))]
       (is (= true (:restart result))))))
+
+;;; ---------------------------------------------------------------------------
+;;; BUG: NIL DEATHS COUNTER
+;;; ---------------------------------------------------------------------------
+;;; When :deaths is nil (instead of 0), jigs-up crashes with NPE on line 227:
+;;;   (update gs :deaths inc) -> inc called on nil
+;;;
+;;; This can happen when game state is corrupted or not properly initialized.
+
+(deftest ^:pending jigs-up-nil-deaths-bug-test
+  (testing "BUG: jigs-up should handle nil :deaths without crashing"
+    (let [gs (-> (make-death-test-state)
+                 (dissoc :deaths))  ; Simulate corrupted state with nil :deaths
+          result (binding [death/*read-input-fn* (constantly "")]
+                   (death/jigs-up gs "You have been slain."))]
+      ;; Should not throw NPE - should treat nil as 0
+      (is (= 1 (:deaths result))))))

@@ -520,7 +520,7 @@ These are out-of-game commands that don't advance time.
 | ------ | ---------- | ---------------- |
 | [~]    | ADVENTURER | Player character |
 | [x]    | TROLL      | Troll            |
-| [ ]    | THIEF      | Thief            |
+| [x]    | THIEF      | Thief            |
 | [ ]    | CYCLOPS    | Cyclops          |
 | [ ]    | BAT        | Vampire Bat      |
 | [ ]    | SONGBIRD   | Songbird         |
@@ -580,9 +580,9 @@ These are out-of-game commands that don't advance time.
 | Status | Routine             | NPC      | Description           |
 | ------ | ------------------- | -------- | --------------------- |
 | [x]    | TROLL-FCN           | TROLL    | Troll combat/behavior |
-| [ ]    | THIEF-IN-TREASURE   | THIEF    | Thief in lair         |
-| [ ]    | THIEF-VS-ADVENTURER | THIEF    | Thief combat          |
-| [ ]    | ROBBER-FUNCTION     | THIEF    | Thief stealing        |
+| [x]    | THIEF-IN-TREASURE   | THIEF    | Thief in lair         |
+| [x]    | THIEF-VS-ADVENTURER | THIEF    | Thief combat          |
+| [x]    | ROBBER-FUNCTION     | THIEF    | Thief stealing        |
 | [ ]    | CYCLOPS-FCN         | CYCLOPS  | Cyclops behavior      |
 | [ ]    | BAT-F               | BAT      | Bat behavior          |
 | [ ]    | BAT-D               | BAT      | Bat daemon            |
@@ -644,7 +644,7 @@ These are out-of-game commands that don't advance time.
 | [ ]    | I-LANTERN     | Lantern timer        |
 | [ ]    | I-CANDLES     | Candle timer         |
 | [ ]    | I-MATCH       | Match burning        |
-| [ ]    | I-THIEF       | Thief wandering      |
+| [x]    | I-THIEF       | Thief wandering      |
 | [x]    | I-SWORD       | Sword glowing        |
 | [ ]    | I-CYCLOPS     | Cyclops behavior     |
 | [ ]    | I-CURE        | Healing timer        |
@@ -841,7 +841,7 @@ These are out-of-game commands that don't advance time.
 
 ### Phase 4: NPCs and Combat
 - [x] Troll encounter
-- [ ] Thief AI
+- [x] Thief AI
 - [ ] Cyclops puzzle
 - [x] Combat system
 

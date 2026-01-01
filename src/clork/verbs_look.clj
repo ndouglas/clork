@@ -79,10 +79,20 @@
                        (gs/set-here-flag :touch)
                        (cond-> maze? (gs/unset-here-flag :touch))
                        (cond-> vehicle? (utils/tell (str "(You are in the " (:desc location) ".)"))))
+             ;; ZIL pattern: action returns nil/RFALSE to signal "use default handling"
+             ;; If action returns nil or doesn't exist, fall back to :ldesc
              state (cond
-                     (and is-verbose? (some? act)) (act state :look)
+                     ;; Verbose mode with action - try action first, fall back to ldesc
+                     (and is-verbose? (some? act))
+                     (if-let [result (act state :look)]
+                       result
+                       (if-let [ldesc (:ldesc here)]
+                         (-> state (utils/tell ldesc) (utils/crlf))
+                         state))
+                     ;; Verbose mode without action - use ldesc
                      is-verbose? (-> state (utils/tell (:ldesc here)) (utils/crlf))
-                     (some? act) (act state :flash)
+                     ;; Non-verbose with action - try flash (no ldesc fallback for flash)
+                     (some? act) (or (act state :flash) state)
                      :else state)
              state (if (and vehicle? (some? act) (not= (:id location) (:id here)))
                      (act state :look)

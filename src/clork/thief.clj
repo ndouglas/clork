@@ -654,11 +654,14 @@
       (trace/trace-thief gs "Skipping - player dead")
 
       ;; If thief is in treasure room alone, deposit booty and hack treasures
-      (if (and in-treasure-room? (not thief-in-player-room?))
-        (-> gs
-            (trace/trace-thief "In lair alone - depositing booty and revealing treasures")
-            (deposit-booty :treasure-room)
-            (hack-treasures))
+      ;; NOTE: Unlike player encounters, this does NOT return early - thief continues
+      ;; to movement logic below. ZIL doesn't RTRUE here, it falls through.
+      (let [gs (if (and in-treasure-room? (not thief-in-player-room?))
+                 (-> gs
+                     (trace/trace-thief "In lair alone - depositing booty and revealing treasures")
+                     (deposit-booty :treasure-room)
+                     (hack-treasures))
+                 gs)]
 
       ;; Check for player encounter
       (if (and thief-in-player-room?
@@ -723,4 +726,4 @@
                     dropped-gs))
                 moved-gs))
             ;; No valid room found - stay put
-            (trace/trace-thief gs "No valid room found - staying put"))))))))  ; Extra paren for treasure room if
+            (trace/trace-thief gs "No valid room found - staying put"))))))))  ; Extra paren for treasure room let

@@ -133,8 +133,8 @@
                  (-> game-state
                      (utils/tell (str "You are behind the white house. A path leads into the forest to the east. In one corner of the house there is a small window which is " window-state "."))
                      (utils/crlf)))
-               ;; Default - return unchanged for :m-enter etc.
-               game-state))})
+               ;; Default - return nil to signal "use default handling"
+               nil))})
 
 ;;; ---------------------------------------------------------------------------
 ;;; ABOVE GROUND - FOREST
@@ -381,8 +381,8 @@
                  (-> game-state
                      (utils/tell (str "You are in the kitchen of the white house. A table seems to have been used recently for the preparation of food. A passage leads to the west and a dark staircase can be seen leading upward. A dark chimney leads down and to the east is a small window which is " window-state "."))
                      (utils/crlf)))
-               ;; Default - return unchanged for :m-enter etc.
-               game-state))})
+               ;; Default - return nil to signal "use default handling"
+               nil))})
 
 ;; <ROOM LIVING-ROOM
 ;;       (IN ROOMS)
@@ -468,8 +468,8 @@
                        (gs/set-thing-flag :trap-door :touch)
                        (utils/tell "The trap door crashes shut, and you hear someone barring it.\n\n"))
                    game-state))
-               ;; Default - return unchanged
-               game-state))})
+               ;; Default - return nil to signal "use ldesc"
+               nil))})
 
 ;; <ROOM TROLL-ROOM
 ;;       (IN ROOMS)
@@ -952,8 +952,8 @@
                                   (not (get game-state :grunlock false)))
                        (-> (utils/tell "Above you is a grating locked with a skull-and-crossbones lock.")
                            (utils/crlf)))))
-               ;; Default - return unchanged for :m-enter etc.
-               game-state))})
+               ;; Default - return nil to signal "use default handling"
+               nil))})
 
 ;; <ROOM MAZE-12
 ;;       (IN ROOMS)
