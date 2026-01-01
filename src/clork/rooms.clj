@@ -402,7 +402,9 @@
    :ldesc "You are in the living room. There is a doorway to the east, a wooden door with strange gothic lettering to the west, which appears to be nailed shut, a trophy case, and a large oriental rug in the center of the room."
    :flags #{:lit :sacred}
    :exits {:east :kitchen
-           :west "The door is nailed shut."
+           :west {:to :strange-passage
+                  :if :magic-flag
+                  :else "The door is nailed shut."}
            :down {:to :cellar :door :trap-door}}})
 
 ;; <ROOM ATTIC
@@ -1078,6 +1080,26 @@
                 :else "The cyclops doesn't look like he'll let you past."}}
    :action cyclops/cyclops-room-action})
 
+;; <ROOM STRANGE-PASSAGE
+;;       (IN ROOMS)
+;;       (LDESC "This is a long passage. To the west is one entrance. On the
+;;               east there is an old wooden door, with a large opening in it (about
+;;               cyclops sized).")
+;;       (DESC "Strange Passage")
+;;       (WEST TO CYCLOPS-ROOM)
+;;       (IN TO CYCLOPS-ROOM)
+;;       (EAST TO LIVING-ROOM)
+;;       (FLAGS RLANDBIT)>
+
+(def strange-passage
+  {:id :strange-passage
+   :desc "Strange Passage"
+   :ldesc "This is a long passage. To the west is one entrance. On the east there is an old wooden door, with a large opening in it (about cyclops sized)."
+   :flags #{}  ; Underground, not lit (RLANDBIT means on-land, no light)
+   :exits {:west :cyclops-room
+           :in :cyclops-room
+           :east :living-room}})
+
 ;; <ROOM TREASURE-ROOM
 ;;       (IN ROOMS)
 ;;       (LDESC "This is a large room, whose east wall is solid granite. A number
@@ -1176,6 +1198,7 @@
    dead-end-4
    grating-room
    cyclops-room
+   strange-passage
    treasure-room
    dark-area
    stone-barrow])
