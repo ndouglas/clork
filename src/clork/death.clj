@@ -239,6 +239,8 @@
                   (assoc :always-lit true)
                   ;; Would go to :entrance-to-hades, but use :forest-1 for now
                   (assoc :here :forest-1)
+                  (assoc-in [:objects (:adventurer gs) :in] :forest-1)
+                  (assoc :lit true)
                   ;; Clear trap door touch bit (if exists)
                   (safe-unset-flag :trap-door :touch)
                   (randomize-objects)
@@ -249,8 +251,10 @@
 
               ;; Normal forest resurrection
               (-> gs
-                  (utils/tell "Now, let's take a look here...\nWell, you probably deserve another chance. I can't quite fix you\nup completely, but you can't have everything.\n\n")
-                  (assoc :here :forest-1)
+                    (utils/tell "Now, let's take a look here...\nWell, you probably deserve another chance. I can't quite fix you\nup completely, but you can't have everything.\n\n")
+                    (assoc :here :forest-1)
+                  (assoc-in [:objects (:adventurer gs) :in] :forest-1)
+                  (assoc :lit true)
                   ;; Clear trap door touch bit (if exists)
                   (safe-unset-flag :trap-door :touch)
                   (randomize-objects)

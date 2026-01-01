@@ -110,6 +110,69 @@
       (is (re-find #"small mailbox: It is securely anchored\." (:output result))
           (str "take all should find and report on the mailbox. Output:\n" (:output result))))))
 
+;;; ---------------------------------------------------------------------------
+;;; STATE INTEGRITY TESTS
+;;; ---------------------------------------------------------------------------
+;;; Tests that validate game state remains intact through various operations.
+;;; Added after bug where room actions returning nil corrupted state.
+
+(deftest state-integrity-after-room-transition-test
+  (testing "state remains valid after moving through rooms with actions"
+    ;; Walk through multiple rooms, including behind-house which has an action
+    ;; that returns nil for :m-enter. This was the root cause of the bug.
+    (let [script "open window\nenter\nw\ne\nn\n$quit\n"
+          result (run-script script :strict true)]
+      (is (= 0 (:exit-code result))
+          "Should complete without errors")
+      ;; Validate state integrity
+      (let [gs (:game-state result)
+            validation (game-state/validate-state gs)]
+        (is (:valid? validation)
+            (str "Game state should be valid after room transitions. Errors: "
+                 (:errors validation)))
+        (is (pos? (count (:rooms gs)))
+            "Rooms map should not be empty")
+        (is (pos? (count (:objects gs)))
+            "Objects map should not be empty")))))
+
+(deftest death-resurrection-movement-test
+  ;; This is the exact scenario that uncovered the bug:
+  ;; After dying from a grue, the resurrection should place the player
+  ;; in a lit room where they can move without immediately dying again.
+  (testing "after death and resurrection, player can look and move"
+    ;; Navigate to dark area and get killed by grue, then verify recovery
+    ;; Using a specific seed that will trigger grue death
+    (let [script (str "open window\n"    ; open window
+                      "enter\n"           ; enter kitchen
+                      "w\n"               ; go west to living room
+                      "open trap door\n"  ; open trap door
+                      "d\n"               ; go down into dark
+                      "w\n"               ; walk west in dark (may die)
+                      "look\n"            ; after resurrection, look
+                      "$quit\n")
+          result (run-script script :seed 42)]
+      ;; Verify state is still valid
+      (let [gs (:game-state result)
+            validation (game-state/validate-state gs)]
+        (is (:valid? validation)
+            (str "Game state should be valid after death/resurrection. Errors: "
+                 (:errors validation))))
+      ;; Output should NOT contain nil from room descriptions
+      (is (not (re-find #"\nnil\n" (:output result)))
+          "Output should not contain 'nil' from room description"))))
+
+(deftest room-action-nil-return-test
+  (testing "rooms with actions that return nil for unknown rargs don't corrupt state"
+    ;; Test specifically that entering behind-house (which has an action
+    ;; that returns nil for :m-enter) doesn't corrupt state
+    (let [script "n\nn\ne\n$quit\n"  ; west-of-house -> north -> north -> behind-house
+          result (run-script script :strict true)]
+      (let [gs (:game-state result)
+            validation (game-state/validate-state gs)]
+        (is (:valid? validation)
+            (str "Game state should be valid after entering behind-house. Errors: "
+                 (:errors validation)))))))
+
 (deftest move-counting-test
   (testing "game actions increment move count"
     ;; open, read, drop are game actions that should count as moves

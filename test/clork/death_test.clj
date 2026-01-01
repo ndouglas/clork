@@ -100,6 +100,18 @@
                    (death/jigs-up gs "You have been slain."))]
       (is (= :forest-1 (:here result)))))
 
+  (testing "first death sets adventurer :in field to forest-1"
+    (let [gs (make-death-test-state)
+          result (binding [death/*read-input-fn* (constantly "")]
+                   (death/jigs-up gs "You have been slain."))]
+      (is (= :forest-1 (get-in result [:objects :adventurer :in])))))
+
+  (testing "first death sets :lit flag to true"
+    (let [gs (make-death-test-state)
+          result (binding [death/*read-input-fn* (constantly "")]
+                   (death/jigs-up gs "You have been slain."))]
+      (is (= true (:lit result)))))
+
   (testing "first death shows death message and resurrection message"
     (let [gs (make-death-test-state)
           [output result] (with-captured-output
@@ -107,7 +119,18 @@
                               (death/jigs-up gs "You have been slain.")))]
       (is (.contains output "You have been slain."))
       (is (.contains output "****  You have died  ****"))
-      (is (.contains output "you probably deserve another chance")))))
+      (is (.contains output "you probably deserve another chance"))))
+
+  (testing "first death shows forest room description after resurrection"
+    (let [gs (make-death-test-state)
+          [output result] (with-captured-output
+                            (binding [death/*read-input-fn* (constantly "")]
+                              (death/jigs-up gs "You have been slain.")))]
+      ;; Should NOT contain "nil" in output
+      (is (not (.contains output "\nnil")))
+      ;; Should contain room description
+      (is (.contains output "Forest"))
+      (is (.contains output "there appears to be sunlight")))))
 
 (deftest jigs-up-second-death-test
   (testing "second death still allows resurrection"

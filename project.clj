@@ -14,5 +14,6 @@
   :test-selectors {:default (complement :pending)
                    :pending :pending
                    :all (constantly true)}
-  :profiles {:uberjar {:aot :all
+  :profiles {:dev {:dependencies [[org.clojure/test.check "1.1.1"]]}
+             :uberjar {:aot :all
                        :jvm-opts ["-Dclojure.compiler.direct-linking=true"]}})

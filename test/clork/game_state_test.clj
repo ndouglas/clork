@@ -118,3 +118,47 @@
       (is (= [:sack :bottle] kitchen-contents))
       ;; Bottle should have water
       (is (= [:water] bottle-contents)))))
+
+;; State validation tests
+
+(deftest validate-state-test
+  (testing "validate-state returns valid for proper game state"
+    (let [gs {:rooms {:kitchen {:id :kitchen}}
+              :objects {:lamp {:id :lamp}}
+              :here :kitchen
+              :winner :lamp
+              :player :lamp}
+          result (gs/validate-state gs)]
+      (is (:valid? result))))
+
+  (testing "validate-state catches nil game state"
+    (let [result (gs/validate-state nil)]
+      (is (not (:valid? result)))
+      (is (some #(clojure.string/includes? % "nil") (:errors result)))))
+
+  (testing "validate-state catches missing :rooms"
+    (let [gs {:objects {:lamp {}} :here :kitchen}
+          result (gs/validate-state gs)]
+      (is (not (:valid? result)))
+      (is (some #(clojure.string/includes? % ":rooms") (:errors result)))))
+
+  (testing "validate-state catches empty :rooms"
+    (let [gs {:rooms {} :objects {:lamp {}} :here :kitchen}
+          result (gs/validate-state gs)]
+      (is (not (:valid? result)))
+      (is (some #(clojure.string/includes? % "not a non-empty map") (:errors result)))))
+
+  (testing "validate-state catches :here not in :rooms"
+    (let [gs {:rooms {:kitchen {}} :objects {:lamp {}} :here :nonexistent}
+          result (gs/validate-state gs)]
+      (is (not (:valid? result)))
+      (is (some #(clojure.string/includes? % ":here") (:errors result))))))
+
+(deftest assert-valid-state-test
+  (testing "assert-valid-state returns state when valid"
+    (let [gs {:rooms {:kitchen {}} :objects {:lamp {}} :here :kitchen :winner :lamp}]
+      (is (= gs (gs/assert-valid-state gs)))))
+
+  (testing "assert-valid-state throws when invalid"
+    (is (thrown-with-msg? clojure.lang.ExceptionInfo #"Invalid game state"
+                          (gs/assert-valid-state nil)))))

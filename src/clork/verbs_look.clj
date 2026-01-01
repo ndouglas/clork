@@ -79,23 +79,32 @@
                        (gs/set-here-flag :touch)
                        (cond-> maze? (gs/unset-here-flag :touch))
                        (cond-> vehicle? (utils/tell (str "(You are in the " (:desc location) ".)"))))
-             ;; ZIL pattern: action returns nil/RFALSE to signal "use default handling"
-             ;; If action returns nil or doesn't exist, fall back to :ldesc
+             ;; ZIL pattern: action returns game-state with :use-default-handling to signal fallback
+             ;; If action signals use-default or doesn't exist, fall back to :ldesc
              state (cond
                      ;; Verbose mode with action - try action first, fall back to ldesc
                      (and is-verbose? (some? act))
-                     (if-let [result (act state :look)]
-                       result
-                       (if-let [ldesc (:ldesc here)]
-                         (-> state (utils/tell ldesc) (utils/crlf))
-                         state))
-                     ;; Verbose mode without action - use ldesc
-                     is-verbose? (-> state (utils/tell (:ldesc here)) (utils/crlf))
+                     (let [result (act state :look)]
+                       (if (gs/use-default? result)
+                         (if-let [ldesc (:ldesc here)]
+                           (-> (gs/clear-use-default result) (utils/tell ldesc) (utils/crlf))
+                           (gs/clear-use-default result))
+                         result))
+                     ;; Verbose mode without action - use ldesc (guard against nil ldesc)
+                     (and is-verbose? (:ldesc here))
+                     (-> state (utils/tell (:ldesc here)) (utils/crlf))
                      ;; Non-verbose with action - try flash (no ldesc fallback for flash)
-                     (some? act) (or (act state :flash) state)
+                     (some? act)
+                     (let [result (act state :flash)]
+                       (if (gs/use-default? result)
+                         (gs/clear-use-default result)
+                         result))
                      :else state)
              state (if (and vehicle? (some? act) (not= (:id location) (:id here)))
-                     (act state :look)
+                     (let [result (act state :look)]
+                       (if (gs/use-default? result)
+                         (gs/clear-use-default result)
+                         result))
                      state)]
          state)))))
 

@@ -287,3 +287,101 @@
     :rooms
     true
     (meta-location game-state (:in thing))))
+
+;;; ---------------------------------------------------------------------------
+;;; STATE VALIDATION
+;;; ---------------------------------------------------------------------------
+;;; Functions to validate game state integrity. Useful for debugging.
+
+(defn validate-state
+  "Validate that game state has required structure and data.
+   Returns {:valid? true} if valid, or {:valid? false :errors [...]} if invalid.
+
+   Checks:
+   - Required keys exist (:rooms, :objects, :here, :winner, :player)
+   - :rooms and :objects are non-empty maps
+   - :here refers to an existing room
+   - :winner and :player refer to existing objects"
+  [game-state]
+  (let [errors (cond-> []
+                 ;; Check game-state is not nil
+                 (nil? game-state)
+                 (conj "Game state is nil")
+
+                 ;; Check required keys
+                 (and (some? game-state) (not (contains? game-state :rooms)))
+                 (conj "Missing :rooms key")
+
+                 (and (some? game-state) (not (contains? game-state :objects)))
+                 (conj "Missing :objects key")
+
+                 (and (some? game-state) (not (contains? game-state :here)))
+                 (conj "Missing :here key")
+
+                 ;; Check :rooms is a non-empty map
+                 (and (some? game-state)
+                      (contains? game-state :rooms)
+                      (or (not (map? (:rooms game-state)))
+                          (empty? (:rooms game-state))))
+                 (conj (str ":rooms is not a non-empty map (got: "
+                           (type (:rooms game-state))
+                           " with " (count (:rooms game-state)) " entries)"))
+
+                 ;; Check :objects is a non-empty map
+                 (and (some? game-state)
+                      (contains? game-state :objects)
+                      (or (not (map? (:objects game-state)))
+                          (empty? (:objects game-state))))
+                 (conj (str ":objects is not a non-empty map (got: "
+                           (type (:objects game-state))
+                           " with " (count (:objects game-state)) " entries)"))
+
+                 ;; Check :here refers to existing room
+                 (and (some? game-state)
+                      (:here game-state)
+                      (map? (:rooms game-state))
+                      (not (contains? (:rooms game-state) (:here game-state))))
+                 (conj (str ":here (" (:here game-state) ") not found in :rooms"))
+
+                 ;; Check :winner refers to existing object
+                 (and (some? game-state)
+                      (:winner game-state)
+                      (map? (:objects game-state))
+                      (not (contains? (:objects game-state) (:winner game-state))))
+                 (conj (str ":winner (" (:winner game-state) ") not found in :objects")))]
+    (if (empty? errors)
+      {:valid? true}
+      {:valid? false :errors errors})))
+
+(defn assert-valid-state
+  "Assert that game state is valid. Throws exception with details if invalid.
+   Returns game-state unchanged if valid (for use in threading)."
+  [game-state]
+  (let [{:keys [valid? errors]} (validate-state game-state)]
+    (when-not valid?
+      (throw (ex-info "Invalid game state" {:errors errors :state game-state})))
+    game-state))
+
+;;; ---------------------------------------------------------------------------
+;;; ACTION RETURN CONVENTION
+;;; ---------------------------------------------------------------------------
+;;; Room and object actions can return game-state with :use-default-handling
+;;; set to true to signal that the caller should apply default handling.
+;;; This is safer than returning nil, which can corrupt state if propagated.
+
+(defn use-default
+  "Signal that the action didn't handle the request and default handling should be used.
+   Use this instead of returning nil from action handlers."
+  [game-state]
+  (assoc game-state :use-default-handling true))
+
+(defn use-default?
+  "Check if an action result signals that default handling should be used."
+  [game-state]
+  (and (map? game-state)
+       (:use-default-handling game-state)))
+
+(defn clear-use-default
+  "Clear the :use-default-handling flag from game-state."
+  [game-state]
+  (dissoc game-state :use-default-handling))

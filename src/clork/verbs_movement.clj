@@ -7,7 +7,8 @@
             [clork.parser.state :as parser-state]
             [clork.verbs-look :as verbs-look]
             [clork.verbs-health :as verbs-health]
-            [clork.verbs-inventory :as verbs-inv]))
+            [clork.verbs-inventory :as verbs-inv]
+            [clork.debug.trace :as trace]))
 
 ;;; ---------------------------------------------------------------------------
 ;;; SPECIAL EXIT FUNCTIONS (PER routines)
@@ -153,9 +154,10 @@
 
    Returns updated game-state."
   [game-state room-id]
-  (let [winner (:winner game-state)
+  (let [gs (trace/trace-enter game-state :verbs "goto" {:room room-id})
+        winner (:winner gs)
         ;; Move the winner to the new room
-        gs (assoc-in game-state [:objects winner :in] room-id)
+        gs (assoc-in gs [:objects winner :in] room-id)
         ;; Update HERE
         gs (assoc gs :here room-id)
         ;; Update LIT flag
@@ -170,13 +172,19 @@
                  (assoc-in [:rooms room-id :value] 0))
              gs)
         ;; Call room action with M-ENTER (ZIL: room actions get called on entry)
+        ;; Room action may return game-state with :use-default-handling flag
         room-action (:action room)
         gs (if room-action
-             (room-action gs :m-enter)
+             (let [result (room-action gs :m-enter)]
+               (if (gs/use-default? result)
+                 (gs/clear-use-default result)
+                 result))
              gs)]
     ;; Describe the room (V-FIRST-LOOK)
     ;; ZIL: V-FIRST-LOOK only calls DESCRIBE-OBJECTS if room is lit
-    (verbs-look/v-first-look gs)))
+    (-> gs
+        (verbs-look/v-first-look)
+        (trace/trace-return :verbs "goto"))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; GRUE ATTACK

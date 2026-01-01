@@ -326,17 +326,82 @@
                (utils/tell gs (str "  Rooms: " (str/join ", " (map format-keyword matching-rooms)) "\n")))))))))
 
 ;;; ---------------------------------------------------------------------------
+;;; $debug validate
+;;; ---------------------------------------------------------------------------
+
+;; Atom to track whether auto-validation is enabled
+(def ^:dynamic *validate-state-enabled* (atom false))
+
+(defn validate-state-enabled?
+  "Check if automatic state validation is enabled."
+  []
+  @*validate-state-enabled*)
+
+(defn set-validate-state!
+  "Enable or disable automatic state validation."
+  [enabled?]
+  (reset! *validate-state-enabled* enabled?))
+
+(defn cmd-debug-validate
+  "Validate current game state or toggle auto-validation."
+  [game-state args]
+  (cond
+    ;; Toggle on
+    (and (seq args) (= (first args) "on"))
+    (do
+      (set-validate-state! true)
+      (utils/tell game-state "State validation ENABLED. Checking after each command.\n"))
+
+    ;; Toggle off
+    (and (seq args) (= (first args) "off"))
+    (do
+      (set-validate-state! false)
+      (utils/tell game-state "State validation DISABLED.\n"))
+
+    ;; Check current state
+    :else
+    (let [{:keys [valid? errors]} (gs/validate-state game-state)]
+      (if valid?
+        (-> game-state
+            (utils/tell "Game state is VALID.\n")
+            (utils/tell (str "Auto-validation is " (if @*validate-state-enabled* "ON" "OFF")
+                             " (use $debug validate on/off)\n")))
+        (-> game-state
+            (utils/tell "Game state is INVALID!\n")
+            (utils/tell "Errors:\n")
+            ((fn [gs]
+               (reduce (fn [g err]
+                         (utils/tell g (str "  - " err "\n")))
+                       gs
+                       errors))))))))
+
+(defn validate-state-middleware
+  "Validate game state if auto-validation is enabled.
+   Called from main-loop-once after each command.
+   Returns game-state (with validation error message if invalid)."
+  [game-state]
+  (if (and @*validate-state-enabled* (some? game-state))
+    (let [{:keys [valid? errors]} (gs/validate-state game-state)]
+      (if valid?
+        game-state
+        (-> game-state
+            (utils/tell "\n*** STATE VALIDATION FAILED ***\n")
+            (utils/tell (str "Errors:\n" (str/join "\n" (map #(str "  - " %) errors)) "\n")))))
+    game-state))
+
+;;; ---------------------------------------------------------------------------
 ;;; MAIN DEBUG DISPATCHER
 ;;; ---------------------------------------------------------------------------
 
 (def subcommands
-  {:state  {:handler cmd-debug-state  :help "High-level game state overview"}
-   :here   {:handler cmd-debug-here   :help "Current room in detail"}
-   :object {:handler cmd-debug-object :help "Show object details"}
-   :room   {:handler cmd-debug-room   :help "Show room details"}
-   :tree   {:handler cmd-debug-tree   :help "Object containment hierarchy"}
-   :flags  {:handler cmd-debug-flags  :help "Show flags on object/room"}
-   :find   {:handler cmd-debug-find   :help "Search by name/synonym"}})
+  {:state    {:handler cmd-debug-state    :help "High-level game state overview"}
+   :here     {:handler cmd-debug-here     :help "Current room in detail"}
+   :object   {:handler cmd-debug-object   :help "Show object details"}
+   :room     {:handler cmd-debug-room     :help "Show room details"}
+   :tree     {:handler cmd-debug-tree     :help "Object containment hierarchy"}
+   :flags    {:handler cmd-debug-flags    :help "Show flags on object/room"}
+   :find     {:handler cmd-debug-find     :help "Search by name/synonym"}
+   :validate {:handler cmd-debug-validate :help "Validate state (or toggle: on/off}"}})
 
 (defn cmd-debug
   "Main $debug command dispatcher."
@@ -354,3 +419,72 @@
       (if sub-info
         ((:handler sub-info) game-state sub-args)
         (utils/tell game-state (str "Unknown subcommand: " (first args) "\nType $debug for list.\n"))))))
+
+;;; ---------------------------------------------------------------------------
+;;; $state - Quick state inspection
+;;; ---------------------------------------------------------------------------
+
+(defn cmd-state
+  "Quick state inspection command.
+
+   Usage:
+     $state          - Show available keys
+     $state rooms    - Show room count and list
+     $state objects  - Show object count and list
+     $state <key>    - Show value of a specific key in game-state
+     $state :key     - Same as above (colon optional)"
+  [game-state args]
+  (if (empty? args)
+    ;; Show available top-level keys
+    (let [keys-list (sort (keys game-state))]
+      (-> game-state
+          (utils/tell "Game state keys:\n")
+          (utils/tell (str "  " (str/join ", " (map format-keyword keys-list)) "\n"))
+          (utils/tell "\nUsage: $state <key> to inspect\n")
+          (utils/tell "Examples: $state rooms, $state here, $state daemons\n")))
+    ;; Inspect specific key
+    (let [key-str (first args)
+          k (parse-thing-id key-str)
+          value (get game-state k)]
+      (cond
+        ;; Special handling for :rooms
+        (= k :rooms)
+        (let [room-ids (sort (keys (:rooms game-state)))]
+          (-> game-state
+              (utils/tell (str "Rooms (" (count room-ids) " total):\n"))
+              (utils/tell (str "  " (str/join ", " (map format-keyword room-ids)) "\n"))))
+
+        ;; Special handling for :objects
+        (= k :objects)
+        (let [obj-ids (sort (keys (:objects game-state)))]
+          (-> game-state
+              (utils/tell (str "Objects (" (count obj-ids) " total):\n"))
+              (utils/tell (str "  " (str/join ", " (map format-keyword obj-ids)) "\n"))))
+
+        ;; Special handling for :daemons
+        (= k :daemons)
+        (let [daemons (:daemons game-state {})]
+          (if (empty? daemons)
+            (utils/tell game-state "No active daemons.\n")
+            (reduce (fn [gs [daemon-id daemon-info]]
+                      (utils/tell gs (str "  " (format-keyword daemon-id)
+                                          ": tick=" (:tick daemon-info)
+                                          ", enabled=" (:enabled daemon-info true)
+                                          "\n")))
+                    (utils/tell game-state (str "Active daemons (" (count daemons) "):\n"))
+                    (sort-by first daemons))))
+
+        ;; Key not found
+        (nil? value)
+        (utils/tell game-state (str "Key not found: " k "\n"))
+
+        ;; Simple value - just print it
+        (or (keyword? value) (string? value) (number? value) (boolean? value))
+        (utils/tell game-state (str k ": " value "\n"))
+
+        ;; Collection - use pprint
+        :else
+        (let [output (with-out-str (pp/pprint value))]
+          (-> game-state
+              (utils/tell (str k ":\n"))
+              (utils/tell output)))))))

@@ -165,6 +165,63 @@
   (trace-log game-state :thief message))
 
 ;;; ---------------------------------------------------------------------------
+;;; RETURN VALUE TRACING
+;;; ---------------------------------------------------------------------------
+
+(defn trace-return
+  "Trace function return with key state info.
+   Shows function name and key details about the returned state.
+
+   Usage:
+     (-> game-state
+         (some-function)
+         (trace-return :verbs \"some-function\"))"
+  [game-state category fn-name & [extra-info]]
+  (if (trace-enabled? game-state category)
+    (let [room-count (count (:rooms game-state {}))
+          obj-count (count (:objects game-state {}))
+          here (:here game-state)
+          valid? (and (some? game-state)
+                      (pos? room-count)
+                      (pos? obj-count))]
+      (utils/tell game-state
+                  (str "\n[TRACE:" (name category) "] <- " fn-name
+                       " {rooms: " room-count
+                       ", objects: " obj-count
+                       ", here: " here
+                       (when-not valid? " *** INVALID ***")
+                       (when extra-info (str ", " extra-info))
+                       "}")))
+    game-state))
+
+(defn trace-enter
+  "Trace function entry with arguments.
+
+   Usage:
+     (-> game-state
+         (trace-enter :verbs \"goto\" {:room-id room-id})
+         (goto-impl room-id))"
+  [game-state category fn-name args-map]
+  (if (trace-enabled? game-state category)
+    (let [args-str (str/join ", " (map (fn [[k v]] (str (name k) "=" v)) args-map))]
+      (utils/tell game-state
+                  (str "\n[TRACE:" (name category) "] -> " fn-name " {" args-str "}")))
+    game-state))
+
+(defmacro with-trace
+  "Wrap a body with entry and return tracing.
+
+   Usage:
+     (with-trace game-state :verbs \"goto\" {:room room-id}
+       (-> game-state
+           (assoc :here room-id)
+           (do-stuff)))"
+  [game-state category fn-name args-map & body]
+  `(let [gs# (trace-enter ~game-state ~category ~fn-name ~args-map)
+         result# (do ~@body)]
+     (trace-return result# ~category ~fn-name)))
+
+;;; ---------------------------------------------------------------------------
 ;;; DEBUG COMMANDS
 ;;; ---------------------------------------------------------------------------
 

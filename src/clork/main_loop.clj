@@ -5,6 +5,7 @@
             [clork.parser.input :as parser-input]
             [clork.verb-defs :as verb-defs]
             [clork.debug :as debug]
+            [clork.debug.state :as debug-state]
             [clork.undo :as undo]
             [clork.readline :as readline]
             [clork.daemon :as daemon]
@@ -242,6 +243,7 @@
                 (verb-defs/perform)
                 (increment-moves-if-needed)
                 (daemon/clocker)
+                (debug-state/validate-state-middleware)
                 (utils/crlf))))))))
 
 (defn- max-turns-exceeded?

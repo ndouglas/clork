@@ -203,7 +203,10 @@
   ;; Thief observation commands
   (register-command! :thief debug-thief/cmd-thief
                      "Thief observation and control"
-                     :subcommands debug-thief/subcommands))
+                     :subcommands debug-thief/subcommands)
+  ;; Quick state inspection
+  (register-command! :state debug-state/cmd-state
+                     "Quick state inspection ($state <key>)"))
 
 ;; Auto-initialize on namespace load
 (init-commands!)
