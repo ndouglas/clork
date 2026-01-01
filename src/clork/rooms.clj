@@ -1,7 +1,8 @@
 (ns clork.rooms
   "Room definitions for Clork."
   (:require [clork.utils :as utils]
-            [clork.game-state :as gs]))
+            [clork.game-state :as gs]
+            [clork.thief :as thief]))
 
 ;;; ---------------------------------------------------------------------------
 ;;; ABOVE GROUND - HOUSE EXTERIOR
@@ -25,7 +26,7 @@
 (def west-of-house
   {:id :west-of-house
    :desc "West of House"
-   :flags #{:lit}
+   :flags #{:lit :sacred}
    :globals #{:white-house}  ; ZIL: (GLOBAL WHITE-HOUSE BOARD FOREST)
    :exits {:north :north-of-house
            :south :south-of-house
@@ -62,7 +63,7 @@
   {:id :north-of-house
    :desc "North of House"
    :ldesc "You are facing the north side of a white house. There is no door here, and all the windows are boarded up. To the north a narrow path winds through the trees."
-   :flags #{:lit}
+   :flags #{:lit :sacred}
    :globals #{:white-house}  ; ZIL: (GLOBAL BOARDED-WINDOW BOARD WHITE-HOUSE FOREST)
    :exits {:sw :west-of-house
            :se :behind-house
@@ -89,7 +90,7 @@
   {:id :south-of-house
    :desc "South of House"
    :ldesc "You are facing the south side of a white house. There is no door here, and all the windows are boarded."
-   :flags #{:lit}
+   :flags #{:lit :sacred}
    :globals #{:white-house}  ; ZIL: (GLOBAL BOARDED-WINDOW BOARD WHITE-HOUSE FOREST)
    :exits {:west :west-of-house
            :east :behind-house
@@ -115,7 +116,7 @@
 (def behind-house
   {:id :behind-house
    :desc "Behind House"
-   :flags #{:lit}
+   :flags #{:lit :sacred}
    :globals #{:white-house :kitchen-window}  ; ZIL: (GLOBAL WHITE-HOUSE KITCHEN-WINDOW FOREST)
    :exits {:north :north-of-house
            :south :south-of-house
@@ -154,7 +155,7 @@
   {:id :forest-1
    :desc "Forest"
    :ldesc "This is a forest, with trees in all directions. To the east, there appears to be sunlight."
-   :flags #{:lit}
+   :flags #{:lit :sacred}
    :globals #{:tree :white-house}  ; ZIL: (GLOBAL TREE SONGBIRD WHITE-HOUSE FOREST)
    :exits {:up "There is no tree here suitable for climbing."
            :north :grating-clearing
@@ -180,7 +181,7 @@
   {:id :forest-3
    :desc "Forest"
    :ldesc "This is a dimly lit forest, with large trees all around."
-   :flags #{:lit}
+   :flags #{:lit :sacred}
    :globals #{:tree :white-house}  ; ZIL: (GLOBAL TREE SONGBIRD WHITE-HOUSE FOREST)
    :exits {:up "There is no tree here suitable for climbing."
            :north :clearing
@@ -208,7 +209,7 @@
   {:id :forest-path
    :desc "Forest Path"
    :ldesc "This is a path winding through a dimly lit forest. The path heads north-south here. One particularly large tree with some low branches stands at the edge of the path."
-   :flags #{:lit}
+   :flags #{:lit :sacred}
    :globals #{:tree :white-house}  ; ZIL: (GLOBAL TREE SONGBIRD WHITE-HOUSE FOREST)
    :exits {:up :up-a-tree
            :north :grating-clearing
@@ -234,7 +235,7 @@
   {:id :clearing
    :desc "Clearing"
    :ldesc "You are in a small clearing in a well marked forest path that extends to the east and west."
-   :flags #{:lit}
+   :flags #{:lit :sacred}
    :globals #{:tree :white-house}  ; ZIL: (GLOBAL TREE SONGBIRD WHITE-HOUSE FOREST)
    :exits {:up "There is no tree here suitable for climbing."
            :east "TODO: This exit leads to CANYON-VIEW."
@@ -255,7 +256,7 @@
   {:id :up-a-tree
    :desc "Up a Tree"
    :ldesc "You are about 10 feet above the ground nestled among some large branches. The nearest branch above you is above your reach. Beside you on the branch is a small bird's nest."
-   :flags #{:lit}
+   :flags #{:lit :sacred}
    :globals #{:tree :white-house}  ; ZIL: (GLOBAL TREE FOREST SONGBIRD WHITE-HOUSE)
    :exits {:down :forest-path
            :up "You cannot climb any higher."}})
@@ -279,7 +280,7 @@
   {:id :grating-clearing
    :desc "Clearing"
    ;; No :ldesc - CLEARING-FCN provides dynamic description via :look action
-   :flags #{:lit}
+   :flags #{:lit :sacred}
    :globals #{:white-house :grate}
    :exits {:north "The forest becomes impenetrable to the north."
            :east :forest-2
@@ -331,7 +332,7 @@
   {:id :forest-2
    :desc "Forest"
    :ldesc "This is a dimly lit forest, with large trees all around."
-   :flags #{:lit}
+   :flags #{:lit :sacred}
    :globals #{:tree :white-house}
    :exits {:up "There is no tree here suitable for climbing."
            :north "The forest becomes impenetrable to the north."
@@ -359,7 +360,7 @@
 (def kitchen
   {:id :kitchen
    :desc "Kitchen"
-   :flags #{:lit}
+   :flags #{:lit :sacred}
    :globals #{:kitchen-window}  ; ZIL: (GLOBAL KITCHEN-WINDOW CHIMNEY STAIRS)
    :value 10   ; ZIL: (VALUE 10) - points for entering house first time
    :exits {:west :living-room
@@ -390,7 +391,7 @@
   {:id :living-room
    :desc "Living Room"
    :ldesc "You are in the living room. There is a doorway to the east, a wooden door with strange gothic lettering to the west, which appears to be nailed shut, a trophy case, and a large oriental rug in the center of the room."
-   :flags #{:lit}
+   :flags #{:lit :sacred}
    :exits {:east :kitchen
            :west "The door is nailed shut."
            :down {:to :cellar :door :trap-door}}})
@@ -407,7 +408,7 @@
   {:id :attic
    :desc "Attic"
    :ldesc "This is the attic. The only exit is a stairway leading down. A large coil of rope is lying in the corner. On a table is a nasty-looking knife."
-   :flags #{:lit}
+   :flags #{:lit :sacred}
    :exits {:down :kitchen}})
 
 ;;; ---------------------------------------------------------------------------
@@ -1009,7 +1010,55 @@
    :flags #{:maze}
    :exits {:west :maze-14
            :south :maze-7
-           :se "TODO: This exit leads to CYCLOPS-ROOM."}})
+           :se :cyclops-room}})
+
+;;; ---------------------------------------------------------------------------
+;;; CYCLOPS AND THIEF'S HIDEAWAY
+;;; ---------------------------------------------------------------------------
+
+;; <ROOM CYCLOPS-ROOM
+;;       (IN ROOMS)
+;;       (DESC "Cyclops Room")
+;;       (NW TO MAZE-15)
+;;       (EAST TO STRANGE-PASSAGE IF MAGIC-FLAG ELSE "The east wall is solid rock.")
+;;       (UP TO TREASURE-ROOM IF CYCLOPS-FLAG ELSE "The cyclops doesn't look like he'll let you past.")
+;;       (ACTION CYCLOPS-ROOM-FCN)
+;;       (FLAGS RLANDBIT)
+;;       (GLOBAL STAIRS)>
+
+(def cyclops-room
+  {:id :cyclops-room
+   :desc "Cyclops Room"
+   :ldesc "This room has an exit on the northwest, and a staircase leading up."
+   :flags #{}  ; Underground, not lit
+   :exits {:nw :maze-15
+           :east {:to :strange-passage
+                  :if :magic-flag
+                  :else "The east wall is solid rock."}
+           :up {:to :treasure-room
+                :if :cyclops-flag
+                :else "The cyclops doesn't look like he'll let you past."}}})
+
+;; <ROOM TREASURE-ROOM
+;;       (IN ROOMS)
+;;       (LDESC "This is a large room, whose east wall is solid granite. A number
+;;               of discarded bags, which crumble at your touch, are scattered about
+;;               on the floor. There is an exit down a staircase.")
+;;       (DESC "Treasure Room")
+;;       (DOWN TO CYCLOPS-ROOM)
+;;       (ACTION TREASURE-ROOM-FCN)
+;;       (FLAGS RLANDBIT)
+;;       (VALUE 25)
+;;       (GLOBAL STAIRS)>
+
+(def treasure-room
+  {:id :treasure-room
+   :desc "Treasure Room"
+   :ldesc "This is a large room, whose east wall is solid granite. A number of discarded bags, which crumble at your touch, are scattered about on the floor. There is an exit down a staircase."
+   :flags #{}  ; Underground, not lit
+   :value 25   ; Points for entering first time
+   :exits {:down :cyclops-room}
+   :action thief/treasure-room-action})
 
 ;; Note: dark-area is a placeholder for unlit areas, not a specific ZIL room.
 ;; When the player enters an unlit room without a light source, they see
@@ -1035,7 +1084,7 @@
   {:id :stone-barrow
    :desc "Stone Barrow"
    :ldesc "You are standing in front of a massive barrow of stone. In the east face is a huge stone door which is open. You cannot see into the dark of the tomb."
-   :flags #{:lit}
+   :flags #{:lit :sacred}
    :exits {:ne :west-of-house}})
 
 ;;; ---------------------------------------------------------------------------
@@ -1087,5 +1136,7 @@
    dead-end-3
    dead-end-4
    grating-room
+   cyclops-room
+   treasure-room
    dark-area
    stone-barrow])

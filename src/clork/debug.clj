@@ -19,6 +19,7 @@
             [clork.debug.trace :as debug-trace]
             [clork.debug.daemon :as debug-daemon]
             [clork.debug.test :as debug-test]
+            [clork.debug.thief :as debug-thief]
             [clork.undo :as undo]))
 
 ;;; ---------------------------------------------------------------------------
@@ -198,7 +199,11 @@
   ;; Test commands
   (register-command! :test debug-test/cmd-test
                      "Test object actions and behaviors"
-                     :subcommands debug-test/subcommands))
+                     :subcommands debug-test/subcommands)
+  ;; Thief observation commands
+  (register-command! :thief debug-thief/cmd-thief
+                     "Thief observation and control"
+                     :subcommands debug-thief/subcommands))
 
 ;; Auto-initialize on namespace load
 (init-commands!)

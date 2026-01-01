@@ -228,6 +228,55 @@
    sitting-duck
    [["Conquering his fears, the troll puts you to death."]]})
 
+(def thief-melee
+  "Messages for thief attacks. ZIL: THIEF-MELEE (1actions.zil line 3748)
+   Indexed by result constant (1-9), each containing variant messages."
+  {missed
+   [["The thief stabs nonchalantly with his stiletto and misses."]
+    ["You dodge as the thief comes in low."]
+    ["You parry a lightning thrust, and the thief salutes you with a grim nod."]
+    ["The thief tries to sneak past your guard, but you twist away."]]
+
+   unconscious
+   [["Shifting in the midst of a thrust, the thief knocks you unconscious with the haft of his stiletto."]
+    ["The thief knocks you out."]]
+
+   killed
+   [["Finishing you off, the thief inserts his blade into your heart."]
+    ["The thief comes in from the side, feints, and inserts the blade into your ribs."]
+    ["The thief bows formally, raises his stiletto, and with a wry grin, ends the battle and your life."]]
+
+   light-wound
+   [["A quick thrust pinks your left arm, and blood starts to trickle down."]
+    ["The thief draws blood, raking his stiletto across your arm."]
+    ["The stiletto flashes faster than you can follow, and blood wells from your leg."]
+    ["The thief slowly approaches, strikes like a snake, and leaves you wounded."]]
+
+   serious-wound
+   [["The thief strikes like a snake! The resulting wound is serious."]
+    ["The thief stabs a deep cut in your upper arm."]
+    ["The stiletto touches your forehead, and the blood obscures your vision."]
+    ["The thief strikes at your wrist, and suddenly your grip is slippery with blood."]]
+
+   stagger
+   [["The butt of his stiletto cracks you on the skull, and you stagger back."]
+    ["The thief rams the haft of his blade into your stomach, leaving you out of breath."]
+    ["The thief attacks, and you fall back desperately."]]
+
+   lose-weapon
+   [["A long, theatrical slash. You catch it on your " :f-wep ", but the thief twists his knife, and the " :f-wep " goes flying."]
+    ["The thief neatly flips your " :f-wep " out of your hands, and it drops to the floor."]
+    ["You parry a low thrust, and your " :f-wep " slips out of your hand."]]
+
+   hesitate
+   [["The thief, a man of superior breeding, pauses for a moment to consider the propriety of finishing you off."]
+    ["The thief amuses himself by searching your pockets."]
+    ["The thief entertains himself by rifling your pack."]]
+
+   sitting-duck
+   [["The thief, forgetting his essentially genteel upbringing, cuts your throat."]
+    ["The thief, a pragmatist, dispatches you as a threat to his livelihood."]]})
+
 ;;; ---------------------------------------------------------------------------
 ;;; STRENGTH CALCULATIONS
 ;;; ---------------------------------------------------------------------------
@@ -473,7 +522,16 @@
    2. If villain staggered, they recover instead of attacking
    3. Calculate attack/defense strengths
    4. Roll for result
-   5. Apply damage to player"
+   5. Apply damage to player
+
+   NOTE: Original ZIL quirk - VILLAIN-BLOW doesn't check if the villain has a
+   weapon before attacking. If a villain is disarmed (LOSE-WEAPON result from
+   HERO-BLOW), they can still attack on the same turn with messages that
+   reference their weapon (e.g., 'The troll swings his axe'). However, on the
+   NEXT turn when the player attacks, HERO-BLOW checks FIND-WEAPON and
+   auto-kills the unarmed villain ('The unarmed troll cannot defend himself:
+   He dies.'). This creates a one-turn window where the messaging is
+   inconsistent. Preserved for fidelity to original."
   [game-state villain-entry out?]
   (let [villain-id (:villain-id villain-entry)
         messages (:messages villain-entry)
@@ -693,7 +751,12 @@
            :best-weapon :sword
            :best-adv 1
            :wake-prob 0
-           :messages troll-melee}})
+           :messages troll-melee}
+   :thief {:villain-id :thief
+           :best-weapon :knife
+           :best-adv 1
+           :wake-prob 0
+           :messages thief-melee}})
 
 (defn combat-daemon
   "Combat daemon wrapper for the daemon system.

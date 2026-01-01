@@ -6,7 +6,8 @@
             [clork.parser.state :as parser-state]
             [clork.verbs-look :as verbs-look]
             [clork.random :as random]
-            [clork.sword :as sword]))
+            [clork.sword :as sword]
+            [clork.thief :as thief]))
 
 ;; <OBJECT MAILBOX
 ;;	(IN WEST-OF-HOUSE)
@@ -960,6 +961,66 @@
    :size 25})
 
 ;;; ---------------------------------------------------------------------------
+;;; THIEF AND ASSOCIATED OBJECTS
+;;; ---------------------------------------------------------------------------
+
+;; <OBJECT STILETTO
+;;	(IN THIEF)
+;;	(SYNONYM STILETTO)
+;;	(ADJECTIVE VICIOUS)
+;;	(DESC "stiletto")
+;;	(ACTION STILETTO-FUNCTION)
+;;	(FLAGS WEAPONBIT TRYTAKEBIT TAKEBIT NDESCBIT)
+;;	(SIZE 10)>
+
+(def stiletto
+  {:id :stiletto
+   :in :thief
+   :synonym ["stiletto"]
+   :adjective ["vicious"]
+   :desc "stiletto"
+   :flags (flags/flags :weapon :trytake :take :ndesc)
+   :size 10})
+
+;; <OBJECT LARGE-BAG
+;;	(IN THIEF)
+;;	(SYNONYM BAG)
+;;	(ADJECTIVE LARGE THIEFS)
+;;	(DESC "large bag")
+;;	(ACTION LARGE-BAG-F)
+;;	(FLAGS TRYTAKEBIT NDESCBIT)>
+
+(def large-bag
+  {:id :large-bag
+   :in :thief
+   :synonym ["bag"]
+   :adjective ["large" "thiefs" "thief's"]
+   :desc "large bag"
+   :flags (flags/flags :trytake :ndesc)})
+
+;; <OBJECT THIEF
+;;	(IN ROUND-ROOM)
+;;	(SYNONYM THIEF ROBBER MAN PERSON)
+;;	(ADJECTIVE SHADY SUSPICIOUS SEEDY)
+;;	(DESC "thief")
+;;	(FLAGS ACTORBIT INVISIBLE CONTBIT OPENBIT TRYTAKEBIT)
+;;	(ACTION ROBBER-FUNCTION)
+;;	(LDESC "There is a suspicious-looking individual, holding a large bag, leaning
+;;          against one wall. He is armed with a deadly stiletto.")
+;;	(STRENGTH 5)>
+
+(def thief
+  {:id :thief
+   :in :round-room
+   :synonym ["thief" "robber" "man" "person" "individual"]
+   :adjective ["shady" "suspicious" "seedy"]
+   :desc "thief"
+   :flags (flags/flags :actor :invisible :cont :open :trytake)
+   :ldesc "There is a suspicious-looking individual, holding a large bag, leaning against one wall. He is armed with a deadly stiletto."
+   :strength 5
+   :action thief/thief-action})
+
+;;; ---------------------------------------------------------------------------
 ;;; MAZE OBJECTS
 ;;; ---------------------------------------------------------------------------
 
@@ -1268,6 +1329,10 @@
    egg
    troll
    axe
+   ;; Thief and associated objects
+   stiletto
+   large-bag
+   thief
    ;; Maze objects
    skeleton
    burned-out-lantern

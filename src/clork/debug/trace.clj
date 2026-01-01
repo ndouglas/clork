@@ -48,7 +48,8 @@
   (assoc game-state :trace {:verbs true
                             :parser true
                             :actions true
-                            :daemons true}))
+                            :daemons true
+                            :thief true}))
 
 (defn disable-all-traces
   "Disable all trace categories."
@@ -56,7 +57,8 @@
   (assoc game-state :trace {:verbs false
                             :parser false
                             :actions false
-                            :daemons false}))
+                            :daemons false
+                            :thief false}))
 
 ;;; ---------------------------------------------------------------------------
 ;;; TRACE OUTPUT
@@ -71,7 +73,7 @@
      (trace-log game-state :parser \"Lexer input: 'take lamp'\")"
   [game-state category message]
   (if (trace-enabled? game-state category)
-    (utils/tell game-state (str "[TRACE:" (name category) "] " message "\n"))
+    (utils/tell game-state (str "\n[TRACE:" (name category) "] " message))
     game-state))
 
 (defn trace-verb
@@ -157,11 +159,16 @@
   (trace-log game-state :daemons
              (str (name daemon-id) ": " message)))
 
+(defn trace-thief
+  "Log thief behavior trace."
+  [game-state message]
+  (trace-log game-state :thief message))
+
 ;;; ---------------------------------------------------------------------------
 ;;; DEBUG COMMANDS
 ;;; ---------------------------------------------------------------------------
 
-(def ^:private trace-categories [:verbs :parser :actions :daemons])
+(def ^:private trace-categories [:verbs :parser :actions :daemons :thief])
 
 (defn- cmd-trace-on
   "Enable all traces."
@@ -228,5 +235,7 @@
              :help "Toggle room/object action tracing"}
    :daemons {:handler (fn [gs _] (cmd-trace-toggle gs "daemons"))
              :help "Toggle daemon execution tracing"}
+   :thief {:handler (fn [gs _] (cmd-trace-toggle gs "thief"))
+           :help "Toggle thief behavior tracing"}
    :status {:handler (fn [gs _] (cmd-trace-status gs))
             :help "Show which traces are active"}})
