@@ -244,26 +244,26 @@ These are out-of-game commands that don't advance time.
 | Status | Room ID      | Description |
 | ------ | ------------ | ----------- |
 | [x]    | MAZE-1       | Maze        |
-| [ ]    | MAZE-2       | Maze        |
-| [ ]    | MAZE-3       | Maze        |
-| [ ]    | MAZE-4       | Maze        |
-| [ ]    | MAZE-5       | Maze        |
-| [ ]    | MAZE-6       | Maze        |
-| [ ]    | MAZE-7       | Maze        |
-| [ ]    | MAZE-8       | Maze        |
-| [ ]    | MAZE-9       | Maze        |
-| [ ]    | MAZE-10      | Maze        |
-| [ ]    | MAZE-11      | Maze        |
-| [ ]    | MAZE-12      | Maze        |
-| [ ]    | MAZE-13      | Maze        |
-| [ ]    | MAZE-14      | Maze        |
-| [ ]    | MAZE-15      | Maze        |
-| [ ]    | DEAD-END-1   | Dead End    |
-| [ ]    | DEAD-END-2   | Dead End    |
-| [ ]    | DEAD-END-3   | Dead End    |
-| [ ]    | DEAD-END-4   | Dead End    |
+| [x]    | MAZE-2       | Maze        |
+| [x]    | MAZE-3       | Maze        |
+| [x]    | MAZE-4       | Maze        |
+| [x]    | MAZE-5       | Maze        |
+| [x]    | MAZE-6       | Maze        |
+| [x]    | MAZE-7       | Maze        |
+| [x]    | MAZE-8       | Maze        |
+| [x]    | MAZE-9       | Maze        |
+| [x]    | MAZE-10      | Maze        |
+| [x]    | MAZE-11      | Maze        |
+| [x]    | MAZE-12      | Maze        |
+| [x]    | MAZE-13      | Maze        |
+| [x]    | MAZE-14      | Maze        |
+| [x]    | MAZE-15      | Maze        |
+| [x]    | DEAD-END-1   | Dead End    |
+| [x]    | DEAD-END-2   | Dead End    |
+| [x]    | DEAD-END-3   | Dead End    |
+| [x]    | DEAD-END-4   | Dead End    |
 | [ ]    | DEAD-END-5   | Dead End    |
-| [ ]    | GRATING-ROOM | Grate Room  |
+| [x]    | GRATING-ROOM | Grate Room  |
 
 ### Underground - Dam Area
 
@@ -382,7 +382,7 @@ These are out-of-game commands that don't advance time.
 | [ ]    | TRIDENT      | Crystal Trident     | 4      |
 | [ ]    | TRUNK        | Trunk of Jewels     | 15     |
 | [ ]    | CANARY       | Clockwork Canary    | 6      |
-| [ ]    | BAG-OF-COINS | Bag of Coins        | 5      |
+| [x]    | BAG-OF-COINS | Bag of Coins        | 5      |
 
 ### Light Sources
 
@@ -399,20 +399,20 @@ These are out-of-game commands that don't advance time.
 | ------ | ----------- | ------------ |
 | [x]    | SWORD       | Elvish Sword |
 | [~]    | KNIFE       | Nasty Knife  |
-| [ ]    | RUSTY-KNIFE | Rusty Knife  |
+| [x]    | RUSTY-KNIFE | Rusty Knife  |
 | [x]    | AXE         | Bloody Axe   |
 | [ ]    | STILETTO    | Stiletto     |
 
 ### Tools
 
-| Status | Object ID   | Description |
-| ------ | ----------- | ----------- |
-| [ ]    | SHOVEL      | Shovel      |
-| [ ]    | KEYS        | Set of Keys |
-| [ ]    | SCREWDRIVER | Screwdriver |
-| [ ]    | WRENCH      | Wrench      |
-| [~]    | ROPE        | Rope        |
-| [ ]    | PUTTY       | Gunk/Putty  |
+| Status | Object ID   | Description  |
+| ------ | ----------- | ------------ |
+| [ ]    | SHOVEL      | Shovel       |
+| [x]    | KEYS        | Skeleton Key |
+| [ ]    | SCREWDRIVER | Screwdriver  |
+| [ ]    | WRENCH      | Wrench       |
+| [~]    | ROPE        | Rope         |
+| [ ]    | PUTTY       | Gunk/Putty   |
 
 ### Containers
 
@@ -467,7 +467,7 @@ These are out-of-game commands that don't advance time.
 | [ ]    | FRONT-DOOR     | Front Door     |
 | [~]    | KITCHEN-WINDOW | Kitchen Window |
 | [~]    | TRAP-DOOR      | Trap Door      |
-| [ ]    | GRATE          | Grating        |
+| [x]    | GRATE          | Grating        |
 | [ ]    | CHIMNEY        | Chimney        |
 | [ ]    | LEAVES         | Pile of Leaves |
 | [ ]    | DAM            | Dam            |
@@ -500,7 +500,7 @@ These are out-of-game commands that don't advance time.
 | [ ]    | BELL               | Brass Bell         |
 | [ ]    | HOT-BELL           | Red-hot Bell       |
 | [ ]    | SKULL              | Skull              |
-| [ ]    | BONES              | Pile of Bones      |
+| [x]    | BONES              | Skeleton           |
 | [ ]    | BODIES             | Bodies             |
 | [ ]    | COAL               | Lump of Coal       |
 | [ ]    | SAND               | Pile of Sand       |
@@ -512,7 +512,7 @@ These are out-of-game commands that don't advance time.
 | [ ]    | BROKEN-EGG         | Broken Egg         |
 | [ ]    | BROKEN-CANARY      | Broken Canary      |
 | [ ]    | BROKEN-LAMP        | Broken Lamp        |
-| [ ]    | BURNED-OUT-LANTERN | Burned-out Lantern |
+| [x]    | BURNED-OUT-LANTERN | Burned-out Lantern |
 
 ### NPCs/Actors
 

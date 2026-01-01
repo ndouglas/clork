@@ -960,6 +960,213 @@
    :size 25})
 
 ;;; ---------------------------------------------------------------------------
+;;; MAZE OBJECTS
+;;; ---------------------------------------------------------------------------
+
+;; <OBJECT BONES
+;;	(IN MAZE-5)
+;;	(SYNONYM BONES SKELETON BODY)
+;;	(DESC "skeleton")
+;;	(FLAGS TRYTAKEBIT NDESCBIT)
+;;	(ACTION SKELETON)>
+;;
+;; Note: The skeleton is scenery that appears in the MAZE-5 description.
+;; It has TRYTAKEBIT (try to take) and NDESCBIT (not described separately).
+
+(def skeleton
+  {:id :skeleton
+   :in :maze-5
+   :synonym ["bones" "skeleton" "body"]
+   :desc "skeleton"
+   :flags (flags/flags :trytake :ndesc)
+   :action (fn [game-state]
+             ;; ZIL: SKELETON action in 1actions.zil handles EXAMINE
+             (when (= (parser-state/get-prsa game-state) :examine)
+               (utils/tell game-state "A skeleton lies here, its fleshless hand clutching a rusty knife.")))})
+
+;; <OBJECT BURNED-OUT-LANTERN
+;;	(IN MAZE-5)
+;;	(SYNONYM LANTERN LAMP)
+;;	(ADJECTIVE RUSTY BURNED DEAD USELESS)
+;;	(DESC "burned-out lantern")
+;;	(FLAGS TAKEBIT)
+;;	(FDESC "The deceased adventurer's useless lantern is here.")
+;;	(SIZE 20)>
+
+(def burned-out-lantern
+  {:id :burned-out-lantern
+   :in :maze-5
+   :synonym ["lantern" "lamp"]
+   :adjective ["rusty" "burned" "dead" "useless"]
+   :desc "burned-out lantern"
+   :flags (flags/flags :take)
+   :fdesc "The deceased adventurer's useless lantern is here."
+   :size 20})
+
+;; <OBJECT BAG-OF-COINS
+;;	(IN MAZE-5)
+;;	(SYNONYM BAG COINS TREASURE)
+;;	(ADJECTIVE OLD LEATHER)
+;;	(DESC "leather bag of coins")
+;;	(FLAGS TAKEBIT)
+;;	(LDESC "An old leather bag, bulging with coins, is here.")
+;;	(ACTION BAG-OF-COINS-F)
+;;	(SIZE 15)
+;;	(VALUE 10)
+;;	(TVALUE 5)>
+
+(def bag-of-coins
+  {:id :bag-of-coins
+   :in :maze-5
+   :synonym ["bag" "coins" "treasure"]
+   :adjective ["old" "leather"]
+   :desc "leather bag of coins"
+   :flags (flags/flags :take)
+   :ldesc "An old leather bag, bulging with coins, is here."
+   :size 15
+   :value 10   ; base value
+   :tvalue 5}) ; trophy case value
+
+;; <OBJECT RUSTY-KNIFE
+;;	(IN MAZE-5)
+;;	(SYNONYM KNIVES KNIFE)
+;;	(ADJECTIVE RUSTY)
+;;	(DESC "rusty knife")
+;;	(FLAGS TAKEBIT TRYTAKEBIT WEAPONBIT TOOLBIT)
+;;	(ACTION RUSTY-KNIFE-FCN)
+;;	(FDESC "Beside the skeleton is a rusty knife.")
+;;	(SIZE 20)>
+;;
+;; ZIL: RUSTY-KNIFE-FCN has special behavior:
+;; - When taken while holding the elvish sword, the sword glows
+;; - If used as a weapon, it turns and slits the player's throat
+
+(def rusty-knife
+  {:id :rusty-knife
+   :in :maze-5
+   :synonym ["knives" "knife"]
+   :adjective ["rusty"]
+   :desc "rusty knife"
+   :flags (flags/flags :take :trytake :weapon :tool)
+   :fdesc "Beside the skeleton is a rusty knife."
+   :size 20
+   :action (fn [game-state]
+             (let [prsa (parser-state/get-prsa game-state)
+                   prso (parser-state/get-prso game-state)
+                   prsi (parser-state/get-prsi game-state)
+                   has-sword? (= (gs/get-thing-loc-id game-state :sword) :adventurer)]
+               (cond
+                 ;; Taking the rusty knife while carrying the sword
+                 (and (= prsa :take)
+                      has-sword?)
+                 (-> game-state
+                     (utils/tell "As you touch the rusty knife, your sword gives a single pulse of blinding blue light."))
+
+                 ;; Trying to use the rusty knife as a weapon is fatal
+                 ;; ZIL: <OR <AND <EQUAL? ,PRSI ,RUSTY-KNIFE> <VERB? ATTACK>>
+                 ;;         <AND <VERB? SWING> <EQUAL? ,PRSO ,RUSTY-KNIFE> ,PRSI>>
+                 (or (and (= prsi :rusty-knife) (= prsa :attack))
+                     (and (= prsa :swing) (= prso :rusty-knife) prsi))
+                 (let [jigs-up (requiring-resolve 'clork.verbs-health/jigs-up)]
+                   (jigs-up game-state "As the knife approaches its victim, your mind is submerged by an overmastering will. Slowly, your hand turns, until the rusty blade is an inch from your neck. The knife seems to sing as it savagely slits your throat."))
+
+                 ;; Default - no special handling
+                 :else nil)))})
+
+;; <OBJECT KEYS
+;;	(IN MAZE-5)
+;;	(SYNONYM KEY)
+;;	(ADJECTIVE SKELETON)
+;;	(DESC "skeleton key")
+;;	(FLAGS TAKEBIT TOOLBIT)
+;;	(SIZE 10)>
+
+(def skeleton-key
+  {:id :skeleton-key
+   :in :maze-5
+   :synonym ["key" "keys"]
+   :adjective ["skeleton"]
+   :desc "skeleton key"
+   :flags (flags/flags :take :tool)
+   :size 10})
+
+;; <OBJECT GRATE
+;;	(IN LOCAL-GLOBALS)
+;;	(SYNONYM GRATING GRATE)
+;;	(DESC "grating")
+;;	(FLAGS NDESCBIT DOORBIT)
+;;	(ACTION GRATE-FUNCTION)>
+;;
+;; The grate connects the grating-room (underground) to the grating-clearing (above ground).
+;; It starts locked with a skull-and-crossbones lock.
+
+(def grate
+  {:id :grate
+   :in :local-globals
+   :synonym ["grating" "grate"]
+   :desc "grating"
+   :flags (flags/flags :ndesc :door)  ; starts closed and locked
+   :action (fn [game-state]
+             (let [prsa (parser-state/get-prsa game-state)
+                   prsi (parser-state/get-prsi game-state)
+                   here (:here game-state)
+                   grunlock (get game-state :grunlock false)
+                   grate-open? (gs/set-thing-flag? game-state :grate :open)]
+               (cond
+                 ;; OPEN with KEYS -> perform UNLOCK
+                 (and (= prsa :open) (= prsi :skeleton-key))
+                 (if (= here :grating-room)
+                   (-> game-state
+                       (assoc :grunlock true)
+                       (utils/tell "The grate is unlocked."))
+                   (utils/tell game-state "You can't reach the lock from here."))
+
+                 ;; UNLOCK with KEYS
+                 (and (= prsa :unlock) (= prsi :skeleton-key))
+                 (cond
+                   (= here :grating-room)
+                   (-> game-state
+                       (assoc :grunlock true)
+                       (utils/tell "The grate is unlocked."))
+                   (= here :grating-clearing)
+                   (utils/tell game-state "You can't reach the lock from here.")
+                   :else
+                   (utils/tell game-state (str "Can you unlock a grating with a " (:desc (gs/get-thing game-state prsi)) "?")))
+
+                 ;; LOCK
+                 (= prsa :lock)
+                 (cond
+                   (= here :grating-room)
+                   (-> game-state
+                       (assoc :grunlock false)
+                       (utils/tell "The grate is locked."))
+                   (= here :grating-clearing)
+                   (utils/tell game-state "You can't lock it from this side."))
+
+                 ;; OPEN/CLOSE
+                 (#{:open :close} prsa)
+                 (if grunlock
+                   (cond
+                     (= prsa :open)
+                     (if grate-open?
+                       (utils/tell game-state "It is already open.")
+                       (let [gs (gs/set-thing-flag game-state :grate :open)]
+                         (if (= here :grating-clearing)
+                           (utils/tell gs "The grating opens.")
+                           (-> gs
+                               (utils/tell "The grating opens to reveal trees above you.")))))
+                     (= prsa :close)
+                     (if grate-open?
+                       (-> game-state
+                           (gs/unset-thing-flag :grate :open)
+                           (utils/tell "The grating is closed."))
+                       (utils/tell game-state "It is already closed.")))
+                   (utils/tell game-state "The grating is locked."))
+
+                 ;; Default - no special handling
+                 :else nil)))})
+
+;;; ---------------------------------------------------------------------------
 ;;; ALL OBJECTS LIST
 ;;; ---------------------------------------------------------------------------
 
@@ -989,4 +1196,11 @@
    nest
    egg
    troll
-   axe])
+   axe
+   ;; Maze objects
+   skeleton
+   burned-out-lantern
+   bag-of-coins
+   rusty-knife
+   skeleton-key
+   grate])

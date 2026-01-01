@@ -10,6 +10,31 @@
             [clork.verbs-inventory :as verbs-inv]))
 
 ;;; ---------------------------------------------------------------------------
+;;; SPECIAL EXIT FUNCTIONS (PER routines)
+;;; ---------------------------------------------------------------------------
+
+(defn maze-diodes
+  "One-way passages in the maze. Print warning and return destination.
+
+   ZIL: MAZE-DIODES routine in 1actions.zil (lines 911-918)
+   These are chutes that you can go down but not back up."
+  [game-state]
+  (let [here (:here game-state)
+        destination (case here
+                      :maze-2 :maze-4
+                      :maze-7 :dead-end-1
+                      :maze-9 :maze-11
+                      :maze-12 :maze-5
+                      nil)]
+    (when destination
+      {:destination destination
+       :message "You won't be able to get back up to the tunnel you are going through when it gets to the next room."})))
+
+(def per-functions
+  "Map of :per function names to their implementations."
+  {:maze-diodes maze-diodes})
+
+;;; ---------------------------------------------------------------------------
 ;;; MOVEMENT HELPERS
 ;;; ---------------------------------------------------------------------------
 
@@ -114,9 +139,20 @@
 
           ;; Exit is a map with conditions
           (map? exit)
-          (let [{:keys [to if door]} exit
+          (let [{:keys [to if door per]} exit
                 door-obj (when door (gs/get-thing game-state door))]
             (cond
+              ;; PER function - special exit handler (like MAZE-DIODES)
+              per
+              (if-let [per-fn (get per-functions per)]
+                (if-let [result (per-fn game-state)]
+                  (-> game-state
+                      (utils/tell (:message result))
+                      (utils/crlf)
+                      (goto (:destination result)))
+                  (utils/tell game-state "You can't go that way."))
+                (utils/tell game-state "You can't go that way."))
+
               ;; Conditional on a flag
               (and if (not (get game-state if)))
               (if-let [else-msg (:else exit)]
