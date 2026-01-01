@@ -178,8 +178,8 @@
 ;;;
 ;;; This can happen when game state is corrupted or not properly initialized.
 
-(deftest ^:pending jigs-up-nil-deaths-bug-test
-  (testing "BUG: jigs-up should handle nil :deaths without crashing"
+(deftest jigs-up-nil-deaths-bug-test
+  (testing "jigs-up should handle nil :deaths without crashing"
     (let [gs (-> (make-death-test-state)
                  (dissoc :deaths))  ; Simulate corrupted state with nil :deaths
           result (binding [death/*read-input-fn* (constantly "")]

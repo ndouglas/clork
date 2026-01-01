@@ -224,7 +224,7 @@
 
           ;; Resurrection
           (let [;; Increment death count
-                gs (update gs :deaths inc)
+                gs (update gs :deaths (fnil inc 0))
                 ;; Check if visited SOUTH-TEMPLE (for Hades resurrection)
                 ;; Only check if the room exists in the game state
                 visited-temple? (and (contains? (:rooms gs) :south-temple)
