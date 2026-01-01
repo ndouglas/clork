@@ -157,7 +157,7 @@
    :flags #{:lit}
    :globals #{:tree :white-house}  ; ZIL: (GLOBAL TREE SONGBIRD WHITE-HOUSE FOREST)
    :exits {:up "There is no tree here suitable for climbing."
-           :north "TODO: This exit leads to GRATING-CLEARING."
+           :north :grating-clearing
            :east :forest-path
            :south :forest-3
            :west "You would need a machete to go further west."}})
@@ -211,8 +211,8 @@
    :flags #{:lit}
    :globals #{:tree :white-house}  ; ZIL: (GLOBAL TREE SONGBIRD WHITE-HOUSE FOREST)
    :exits {:up :up-a-tree
-           :north "TODO: This exit leads to GRATING-CLEARING."
-           :east "TODO: This exit leads to FOREST-2."
+           :north :grating-clearing
+           :east :forest-2
            :south :north-of-house
            :west :forest-1}})
 
@@ -238,7 +238,7 @@
    :globals #{:tree :white-house}  ; ZIL: (GLOBAL TREE SONGBIRD WHITE-HOUSE FOREST)
    :exits {:up "There is no tree here suitable for climbing."
            :east "TODO: This exit leads to CANYON-VIEW."
-           :north "TODO: This exit leads to FOREST-2."
+           :north :forest-2
            :south :forest-3
            :west :behind-house}})
 
@@ -259,6 +259,85 @@
    :globals #{:tree :white-house}  ; ZIL: (GLOBAL TREE FOREST SONGBIRD WHITE-HOUSE)
    :exits {:down :forest-path
            :up "You cannot climb any higher."}})
+
+;; <ROOM GRATING-CLEARING
+;;       (IN ROOMS)
+;;       (DESC "Clearing")
+;;       (NORTH "The forest becomes impenetrable to the north.")
+;;       (EAST TO FOREST-2)
+;;       (WEST TO FOREST-1)
+;;       (SOUTH TO PATH)
+;;       (DOWN PER GRATING-EXIT)
+;;       (ACTION CLEARING-FCN)
+;;       (FLAGS RLANDBIT ONBIT SACREDBIT)
+;;       (GLOBAL WHITE-HOUSE GRATE)>
+;;
+;; ZIL: CLEARING-FCN in 1actions.zil (lines 828-844)
+;; This room has a dynamic description based on the grate state.
+
+(def grating-clearing
+  {:id :grating-clearing
+   :desc "Clearing"
+   ;; No :ldesc - CLEARING-FCN provides dynamic description via :look action
+   :flags #{:lit}
+   :globals #{:white-house :grate}
+   :exits {:north "The forest becomes impenetrable to the north."
+           :east :forest-2
+           :west :forest-1
+           :south :forest-path
+           :down {:per :grating-exit}}
+   :action (fn [game-state rarg]
+             ;; ZIL: CLEARING-FCN in 1actions.zil (lines 828-844)
+             (case rarg
+               ;; M-ENTER: When entering, make grate invisible if not revealed
+               :enter
+               (if (not (get game-state :grate-revealed false))
+                 (gs/set-thing-flag game-state :grate :invisible)
+                 game-state)
+
+               ;; M-LOOK: Dynamic room description based on grate state
+               :look
+               (let [grate-open? (gs/set-thing-flag? game-state :grate :open)
+                     grate-revealed? (get game-state :grate-revealed false)]
+                 (-> game-state
+                     (utils/tell "You are in a clearing, with a forest surrounding you on all sides. A path leads south.")
+                     (cond->
+                       grate-open?
+                       (-> (utils/crlf)
+                           (utils/tell "There is an open grating, descending into darkness."))
+
+                       (and grate-revealed? (not grate-open?))
+                       (-> (utils/crlf)
+                           (utils/tell "There is a grating securely fastened into the ground.")))
+                     (utils/crlf)))
+
+               ;; Default - no special handling
+               nil))})
+
+;; <ROOM FOREST-2
+;;       (IN ROOMS)
+;;       (LDESC "This is a dimly lit forest, with large trees all around.")
+;;       (DESC "Forest")
+;;       (UP "There is no tree here suitable for climbing.")
+;;       (NORTH "The forest becomes impenetrable to the north.")
+;;       (EAST TO MOUNTAINS)
+;;       (SOUTH TO CLEARING)
+;;       (WEST TO PATH)
+;;       (ACTION FOREST-ROOM)
+;;       (FLAGS RLANDBIT ONBIT SACREDBIT)
+;;       (GLOBAL TREE SONGBIRD WHITE-HOUSE FOREST)>
+
+(def forest-2
+  {:id :forest-2
+   :desc "Forest"
+   :ldesc "This is a dimly lit forest, with large trees all around."
+   :flags #{:lit}
+   :globals #{:tree :white-house}
+   :exits {:up "There is no tree here suitable for climbing."
+           :north "The forest becomes impenetrable to the north."
+           :east "TODO: This exit leads to MOUNTAINS."
+           :south :clearing
+           :west :forest-path}})
 
 ;;; ---------------------------------------------------------------------------
 ;;; INSIDE THE HOUSE
@@ -970,9 +1049,11 @@
    south-of-house
    behind-house
    forest-1
+   forest-2
    forest-3
    forest-path
    clearing
+   grating-clearing
    up-a-tree
    kitchen
    living-room

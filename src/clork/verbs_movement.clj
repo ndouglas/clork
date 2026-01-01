@@ -30,9 +30,37 @@
       {:destination destination
        :message "You won't be able to get back up to the tunnel you are going through when it gets to the next room."})))
 
+(defn grating-exit
+  "Exit through the grating in GRATING-CLEARING.
+
+   ZIL: GRATING-EXIT routine in 1dungeon.zil (lines 1400-1408)
+
+   - If grate not revealed: \"You can't go that way.\"
+   - If grate revealed but closed: \"The grating is closed!\" + set IT to grate
+   - If grate revealed and open: move to GRATING-ROOM"
+  [game-state]
+  (let [grate-revealed? (get game-state :grate-revealed false)
+        grate-open? (gs/set-thing-flag? game-state :grate :open)]
+    (cond
+      ;; Grate not revealed - hidden under leaves
+      (not grate-revealed?)
+      {:blocked true
+       :message "You can't go that way."}
+
+      ;; Grate revealed but closed
+      (not grate-open?)
+      {:blocked true
+       :message "The grating is closed!"
+       :set-it :grate}
+
+      ;; Grate revealed and open - can go through
+      :else
+      {:destination :grating-room})))
+
 (def per-functions
   "Map of :per function names to their implementations."
-  {:maze-diodes maze-diodes})
+  {:maze-diodes maze-diodes
+   :grating-exit grating-exit})
 
 ;;; ---------------------------------------------------------------------------
 ;;; MOVEMENT HELPERS
@@ -167,14 +195,33 @@
           (let [{:keys [to if door per]} exit
                 door-obj (when door (gs/get-thing game-state door))]
             (cond
-              ;; PER function - special exit handler (like MAZE-DIODES)
+              ;; PER function - special exit handler (like MAZE-DIODES, GRATING-EXIT)
               per
               (if-let [per-fn (get per-functions per)]
                 (if-let [result (per-fn game-state)]
-                  (-> game-state
-                      (utils/tell (:message result))
-                      (utils/crlf)
-                      (goto (:destination result)))
+                  (cond
+                    ;; Blocked - just print message
+                    (:blocked result)
+                    (let [gs (if (:message result)
+                               (utils/tell game-state (:message result))
+                               game-state)]
+                      ;; ZIL: THIS-IS-IT sets the pronoun reference
+                      (if (:set-it result)
+                        (assoc gs :it (:set-it result))
+                        gs))
+
+                    ;; Can go through - optionally print message, then move
+                    (:destination result)
+                    (let [gs (if (:message result)
+                               (-> game-state
+                                   (utils/tell (:message result))
+                                   (utils/crlf))
+                               game-state)]
+                      (goto gs (:destination result)))
+
+                    ;; Unknown result
+                    :else
+                    (utils/tell game-state "You can't go that way."))
                   (utils/tell game-state "You can't go that way."))
                 (utils/tell game-state "You can't go that way."))
 

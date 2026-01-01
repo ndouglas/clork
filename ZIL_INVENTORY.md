@@ -203,11 +203,11 @@ These are out-of-game commands that don't advance time.
 | [x]    | EAST-OF-HOUSE      | Behind House                      |
 | [x]    | CLEARING           | Forest Clearing                   |
 | [x]    | FOREST-1           | Forest                            |
-| [ ]    | FOREST-2           | Forest                            |
+| [x]    | FOREST-2           | Forest                            |
 | [x]    | FOREST-3           | Forest                            |
 | [x]    | PATH               | Forest Path                       |
 | [x]    | UP-A-TREE          | Up a Tree                         |
-| [ ]    | GRATING-CLEARING   | Clearing with Grating             |
+| [x]    | GRATING-CLEARING   | Clearing with Grating             |
 | [ ]    | MOUNTAINS          | Mountains                         |
 | [ ]    | END-OF-RAINBOW     | End of Rainbow                    |
 | [ ]    | ON-RAINBOW         | On the Rainbow                    |
@@ -469,7 +469,7 @@ These are out-of-game commands that don't advance time.
 | [~]    | TRAP-DOOR      | Trap Door      |
 | [x]    | GRATE          | Grating        |
 | [ ]    | CHIMNEY        | Chimney        |
-| [ ]    | LEAVES         | Pile of Leaves |
+| [x]    | LEAVES         | Pile of Leaves |
 | [ ]    | DAM            | Dam            |
 | [ ]    | RAINBOW        | Rainbow        |
 | [ ]    | MIRROR-1       | Mirror         |
@@ -554,7 +554,7 @@ These are out-of-game commands that don't advance time.
 | [ ]    | FOREST-ROOM       | FOREST-*      | Forest room behavior      |
 | [ ]    | FOREST-F          | FOREST        | Forest object             |
 | [ ]    | TREE-ROOM         | UP-A-TREE     | Tree climbing             |
-| [ ]    | CLEARING-FCN      | CLEARING      | Clearing logic            |
+| [x]    | CLEARING-FCN      | CLEARING      | Clearing logic            |
 | [ ]    | KITCHEN-FCN       | KITCHEN       | Kitchen logic             |
 | [ ]    | LIVING-ROOM-FCN   | LIVING-ROOM   | Living room logic         |
 | [ ]    | CELLAR-FCN        | CELLAR        | Cellar behavior           |

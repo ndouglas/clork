@@ -1090,6 +1090,77 @@
    :flags (flags/flags :take :tool)
    :size 10})
 
+;; <OBJECT LEAVES
+;;	(IN GRATING-CLEARING)
+;;	(SYNONYM LEAVES LEAF PILE)
+;;	(DESC "pile of leaves")
+;;	(FLAGS TAKEBIT BURNBIT TRYTAKEBIT)
+;;	(ACTION LEAF-PILE)
+;;	(LDESC "On the ground is a pile of leaves.")
+;;	(SIZE 25)>
+;;
+;; ZIL: LEAF-PILE in 1actions.zil (lines 799-826)
+;; ZIL: LEAVES-APPEAR in 1actions.zil (lines 787-797)
+;; Moving, taking, or burning the leaves reveals the grating underneath.
+
+(defn- leaves-appear
+  "Reveal the grating when leaves are disturbed.
+
+   ZIL: LEAVES-APPEAR in 1actions.zil (lines 787-797)"
+  [game-state verb]
+  (let [grate-open? (gs/set-thing-flag? game-state :grate :open)
+        grate-revealed? (get game-state :grate-revealed false)]
+    (if (and (not grate-open?) (not grate-revealed?))
+      (-> game-state
+          (utils/tell (if (#{:move :take} verb)
+                        "In disturbing the pile of leaves, a grating is revealed."
+                        "With the leaves moved, a grating is revealed."))
+          (gs/unset-thing-flag :grate :invisible)
+          (assoc :grate-revealed true))
+      game-state)))
+
+(def leaves
+  {:id :leaves
+   :in :grating-clearing
+   :synonym ["leaves" "leaf" "pile"]
+   :desc "pile of leaves"
+   :ldesc "On the ground is a pile of leaves."
+   :flags (flags/flags :take)  ; BURNBIT not yet implemented
+   :size 25
+   :action (fn [game-state]
+             ;; ZIL: LEAF-PILE in 1actions.zil (lines 799-826)
+             (let [prsa (parser-state/get-prsa game-state)
+                   grate-revealed? (get game-state :grate-revealed false)]
+               (cond
+                 ;; COUNT
+                 (= prsa :count)
+                 (utils/tell game-state "There are 69,105 leaves here.")
+
+                 ;; MOVE - reveal grating if not already revealed
+                 (= prsa :move)
+                 (-> game-state
+                     (utils/tell "Done.")
+                     (leaves-appear :move))
+
+                 ;; TAKE - reveal grating if not already revealed, then let default take happen
+                 (= prsa :take)
+                 (if grate-revealed?
+                   nil  ; let default take happen
+                   (leaves-appear game-state :take))
+
+                 ;; LOOK-UNDER - peek under the leaves
+                 (and (= prsa :look-under) (not grate-revealed?))
+                 (utils/tell game-state "Underneath the pile of leaves is a grating. As you release the leaves, the grating is once again concealed from view.")
+
+                 ;; CUT - rustle leaves, reveal grating
+                 (= prsa :cut)
+                 (-> game-state
+                     (utils/tell "You rustle the leaves around, making quite a mess.")
+                     (leaves-appear :cut))
+
+                 ;; Default - no special handling
+                 :else nil)))})
+
 ;; <OBJECT GRATE
 ;;	(IN LOCAL-GLOBALS)
 ;;	(SYNONYM GRATING GRATE)
@@ -1105,7 +1176,7 @@
    :in :local-globals
    :synonym ["grating" "grate"]
    :desc "grating"
-   :flags (flags/flags :ndesc :door)  ; starts closed and locked
+   :flags (flags/flags :ndesc :door :invisible)  ; starts closed, locked, and hidden under leaves
    :action (fn [game-state]
              (let [prsa (parser-state/get-prsa game-state)
                    prsi (parser-state/get-prsi game-state)
@@ -1203,4 +1274,6 @@
    bag-of-coins
    rusty-knife
    skeleton-key
+   ;; Grating area objects
+   leaves
    grate])
