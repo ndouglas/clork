@@ -73,6 +73,15 @@
 ;;; ---------------------------------------------------------------------------
 ;;; ZIL: <ROUTINE V-PUT ()> in gverbs.zil (lines 1101-1130)
 
+(defn- score-put
+  "Score an object being put in a container.
+   Scores :value for any container, and additionally :tvalue for the trophy case."
+  [game-state obj-id container-id]
+  (let [gs (verbs-health/score-obj game-state obj-id)]
+    (if (= container-id :trophy-case)
+      (verbs-health/score-tvalue gs obj-id)
+      gs)))
+
 (defn v-put
   "Put an object inside a container.
 
@@ -134,7 +143,7 @@
           (-> take-result
               (assoc-in [:objects prso :in] prsi)
               (gs/set-thing-flag prso :touch)
-              (verbs-health/score-obj prso)
+              (score-put prso prsi)
               (utils/tell "Done."))
           ;; Couldn't take it
           take-result))
@@ -145,7 +154,7 @@
       (-> game-state
           (assoc-in [:objects prso :in] prsi)
           (gs/set-thing-flag prso :touch)
-          (verbs-health/score-obj prso)
+          (score-put prso prsi)
           (utils/tell "Done.")))))
 
 ;;; ---------------------------------------------------------------------------

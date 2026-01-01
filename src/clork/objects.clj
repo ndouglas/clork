@@ -522,6 +522,11 @@
 ;;	(ACTION TROPHY-CASE-FCN)
 ;;	(CAPACITY 10000)>
 
+;; ZIL: TROPHY-CASE-FCN in 1actions.zil (lines 455-458)
+;; <ROUTINE TROPHY-CASE-FCN ()
+;;     <COND (<AND <VERB? TAKE> <EQUAL? ,PRSO ,TROPHY-CASE>>
+;;            <TELL "The trophy case is securely fastened to the wall." CR>)>>
+
 (def trophy-case
   {:id :trophy-case
    :in :living-room
@@ -529,7 +534,12 @@
    :adjective ["trophy"]
    :desc "trophy case"
    :flags (flags/flags :cont :ndesc :trans :trytake :search)
-   :capacity 10000})
+   :capacity 10000
+   :action (fn [game-state]
+             ;; ZIL: TROPHY-CASE-FCN - only handles TAKE verb
+             (when (and (= (parser-state/get-prsa game-state) :take)
+                        (= (parser-state/get-prso game-state) :trophy-case))
+               (utils/tell game-state "The trophy case is securely fastened to the wall.")))})
 
 ;; <OBJECT SWORD
 ;;	(IN LIVING-ROOM)

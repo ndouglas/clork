@@ -210,6 +210,23 @@
           (assoc-in [:objects obj-id :value] 0))
       game-state)))
 
+(defn score-tvalue
+  "Score an object's trophy case value (if any) and set its tvalue to 0.
+
+   This is called when putting treasures in the trophy case. The :tvalue
+   property represents additional points awarded for depositing treasures
+   in the case (separate from the :value awarded on first interaction).
+
+   Objects can only be scored once - after scoring, their :tvalue is set to 0.
+   Returns the updated game-state."
+  [game-state obj-id]
+  (let [tvalue (get-in game-state [:objects obj-id :tvalue] 0)]
+    (if (pos? tvalue)
+      (-> game-state
+          (score-upd tvalue)
+          (assoc-in [:objects obj-id :tvalue] 0))
+      game-state)))
+
 ;;; ---------------------------------------------------------------------------
 ;;; QUIT COMMAND
 ;;; ---------------------------------------------------------------------------

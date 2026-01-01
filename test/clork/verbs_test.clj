@@ -8,9 +8,12 @@
             [clork.verbs-containers :as verbs-containers]
             [clork.verbs-movement :as verbs-movement]
             [clork.verbs-look :as verbs-look]
+            [clork.verbs-put :as verbs-put]
             [clork.verb-defs :as verb-defs]
             [clork.parser :as parser]
             [clork.game-state :as gs]
+            [clork.objects :as objects]
+            [clork.rooms :as rooms]
             [clork.utils :as utils]
             [clork.utils-test :refer [with-captured-output make-test-state parse-test-input]]))
 
@@ -1234,3 +1237,84 @@
                  (assoc-in [:parser :prso] :rock))
           [output _] (with-captured-output (verbs-containers/v-look-on gs))]
       (is (= "Look on a rock???" output)))))
+
+;;; ---------------------------------------------------------------------------
+;;; TROPHY CASE TESTS
+;;; ---------------------------------------------------------------------------
+;;; ZIL: TROPHY-CASE-FCN in 1actions.zil (lines 455-458)
+
+(defn- make-trophy-case-state
+  "Create a game state with trophy case, living room, and a treasure."
+  []
+  (-> (gs/initial-game-state)
+      (gs/add-rooms [rooms/living-room])
+      (gs/add-objects [objects/adventurer objects/trophy-case objects/bag-of-coins])
+      (assoc :here :living-room)))
+
+(deftest trophy-case-take-test
+  (testing "Taking trophy case shows 'securely fastened' message"
+    (let [gs (-> (make-trophy-case-state)
+                 (assoc-in [:parser :prsa] :take)
+                 (assoc-in [:parser :prso] :trophy-case))
+          action (get-in gs [:objects :trophy-case :action])
+          [output _] (with-captured-output (action gs))]
+      (is (= "The trophy case is securely fastened to the wall." output)))))
+
+(deftest trophy-case-tvalue-scoring-test
+  (testing "Putting treasure in trophy case scores both :value and :tvalue"
+    ;; Bag of coins has VALUE 10 and TVALUE 5
+    (let [gs (-> (make-trophy-case-state)
+                 ;; Put bag in player's inventory
+                 (assoc-in [:objects :bag-of-coins :in] :adventurer)
+                 ;; Open the trophy case
+                 (gs/set-thing-flag :trophy-case :open)
+                 ;; Set up parser for "put bag in case"
+                 (assoc-in [:parser :prso] :bag-of-coins)
+                 (assoc-in [:parser :prsi] :trophy-case))
+          [_ result] (with-captured-output (verbs-put/v-put gs))]
+      ;; Score should be VALUE (10) + TVALUE (5) = 15
+      (is (= 15 (:score result)))
+      ;; Object should now be in trophy case
+      (is (= :trophy-case (get-in result [:objects :bag-of-coins :in])))
+      ;; Both value and tvalue should be zeroed out
+      (is (= 0 (get-in result [:objects :bag-of-coins :value])))
+      (is (= 0 (get-in result [:objects :bag-of-coins :tvalue]))))))
+
+(deftest trophy-case-only-scores-tvalue-for-case-test
+  (testing "Putting treasure in other containers only scores :value, not :tvalue"
+    (let [gs (-> (make-trophy-case-state)
+                 ;; Add a different container (sack)
+                 (gs/add-object {:id :sack
+                                 :in :living-room
+                                 :desc "sack"
+                                 :flags #{:cont :open}
+                                 :capacity 100})
+                 ;; Put bag in player's inventory
+                 (assoc-in [:objects :bag-of-coins :in] :adventurer)
+                 ;; Set up parser for "put bag in sack"
+                 (assoc-in [:parser :prso] :bag-of-coins)
+                 (assoc-in [:parser :prsi] :sack))
+          [_ result] (with-captured-output (verbs-put/v-put gs))]
+      ;; Score should only be VALUE (10), not TVALUE
+      (is (= 10 (:score result)))
+      ;; Object should be in sack
+      (is (= :sack (get-in result [:objects :bag-of-coins :in])))
+      ;; VALUE should be zeroed, but TVALUE should remain for later trophy case deposit
+      (is (= 0 (get-in result [:objects :bag-of-coins :value])))
+      (is (= 5 (get-in result [:objects :bag-of-coins :tvalue]))))))
+
+(deftest score-tvalue-test
+  (testing "score-tvalue adds tvalue to score and zeroes it out"
+    (let [gs (-> (make-trophy-case-state)
+                 (verbs-health/score-tvalue :bag-of-coins))]
+      ;; Should have added TVALUE (5) to score
+      (is (= 5 (:score gs)))
+      ;; TVALUE should now be 0
+      (is (= 0 (get-in gs [:objects :bag-of-coins :tvalue])))))
+
+  (testing "score-tvalue with zero tvalue does nothing"
+    (let [gs (-> (make-trophy-case-state)
+                 (assoc-in [:objects :bag-of-coins :tvalue] 0)
+                 (verbs-health/score-tvalue :bag-of-coins))]
+      ;; Score should remain 0
+      (is (= 0 (:score gs))))))

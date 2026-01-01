@@ -419,7 +419,7 @@ These are out-of-game commands that don't advance time.
 | Status | Object ID    | Description   |
 | ------ | ------------ | ------------- |
 | [~]    | MAILBOX      | Small Mailbox |
-| [~]    | TROPHY-CASE  | Trophy Case   |
+| [x]    | TROPHY-CASE  | Trophy Case   |
 | [ ]    | TOOL-CHEST   | Tool Chest    |
 | [ ]    | LARGE-BAG    | Large Bag     |
 | [~]    | SANDWICH-BAG | Brown Sack    |
@@ -596,7 +596,7 @@ These are out-of-game commands that don't advance time.
 | [ ]    | MAILBOX-F        | MAILBOX     | Mailbox interaction |
 | [ ]    | TRAP-DOOR-FCN    | TRAP-DOOR   | Trap door logic     |
 | [ ]    | GRATE-FUNCTION   | GRATE       | Grating logic       |
-| [ ]    | TROPHY-CASE-FCN  | TROPHY-CASE | Score deposit       |
+| [x]    | TROPHY-CASE-FCN  | TROPHY-CASE | Score deposit       |
 | [ ]    | BOTTLE-FUNCTION  | BOTTLE      | Bottle liquid       |
 | [ ]    | ROPE-FUNCTION    | ROPE        | Rope tying          |
 | [x]    | SWORD-FCN        | SWORD       | Glowing sword       |
