@@ -102,6 +102,23 @@
     (verbs-look/v-first-look gs)))
 
 ;;; ---------------------------------------------------------------------------
+;;; GRUE ATTACK
+;;; ---------------------------------------------------------------------------
+;;; ZIL: The grue attacks when the player tries to walk in darkness.
+;;; See gverbs.zil lines 1593-1594:
+;;;   <JIGS-UP "Oh, no! You have walked into the slavering fangs of a lurking grue!">
+
+(defn- grue-attack
+  "Kill the player with a grue attack.
+
+   ZIL: Called when player walks in darkness (gverbs.zil line 1594).
+   Uses jigs-up from death module (via requiring-resolve to avoid circular deps)."
+  [game-state]
+  (let [jigs-up (requiring-resolve 'clork.death/jigs-up)]
+    (jigs-up game-state
+             "Oh, no! You have walked into the slavering fangs of a lurking grue!")))
+
+;;; ---------------------------------------------------------------------------
 ;;; WALK COMMAND
 ;;; ---------------------------------------------------------------------------
 ;;; ZIL: V-WALK, DO-WALK in gverbs.zil
@@ -116,15 +133,23 @@
    - Conditional exit: (SW TO BARROW IF WON-FLAG) -> check flag
    - Door exit: (WEST TO ROOM IF DOOR IS OPEN) -> check door
 
-   For now we implement simple and blocked exits."
+   IMPORTANT: If the room is dark, attempting to walk triggers a grue attack!"
   [game-state]
   (let [;; Get direction from parser (stored in prso as a keyword)
         prso (parser-state/get-prso game-state)
-        direction (if (keyword? prso) prso prso)]
+        direction (if (keyword? prso) prso prso)
+        ;; Check if current room is lit
+        here (:here game-state)
+        lit? (room-lit? game-state here)]
     (cond
       ;; No direction specified
       (nil? direction)
       (utils/tell game-state "You must specify a direction to go.")
+
+      ;; ZIL: Walking in darkness triggers grue attack (gverbs.zil line 1593-1594)
+      ;; <NOT ,LIT> -> <JIGS-UP "Oh, no! You have walked into the slavering fangs of a lurking grue!">
+      (not lit?)
+      (grue-attack game-state)
 
       :else
       (let [exit (get-exit game-state direction)]

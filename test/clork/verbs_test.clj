@@ -310,8 +310,9 @@
 (deftest room-entry-scoring-test
   (testing "entering a room with :value awards points"
     ;; Create a minimal game state with a room that has :value
-    (let [test-room {:id :treasure-vault :desc "Vault" :value 50 :exits {}}
-          start-room {:id :hallway :desc "Hallway" :exits {:north :treasure-vault}}
+    ;; Note: rooms must have :lit flag or player will be eaten by grue when walking
+    (let [test-room {:id :treasure-vault :desc "Vault" :value 50 :exits {} :flags #{:lit}}
+          start-room {:id :hallway :desc "Hallway" :exits {:north :treasure-vault} :flags #{:lit}}
           gs (-> (make-test-state)
                  (gs/add-rooms [test-room start-room])
                  (assoc :here :hallway)
@@ -324,8 +325,8 @@
 
   (testing "re-entering the same room doesn't award points again"
     ;; Create a room with value, enter twice
-    (let [test-room {:id :treasure-vault :desc "Vault" :value 50 :exits {:south :hallway}}
-          start-room {:id :hallway :desc "Hallway" :exits {:north :treasure-vault}}
+    (let [test-room {:id :treasure-vault :desc "Vault" :value 50 :exits {:south :hallway} :flags #{:lit}}
+          start-room {:id :hallway :desc "Hallway" :exits {:north :treasure-vault} :flags #{:lit}}
           gs (-> (make-test-state)
                  (gs/add-rooms [test-room start-room])
                  (assoc :here :hallway)

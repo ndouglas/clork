@@ -328,6 +328,30 @@
 ;;; STATE SNAPSHOT
 ;;; ---------------------------------------------------------------------------
 
+(defn- game-over?
+  "Check if the game is in a terminal state.
+
+   Game over conditions:
+   - Player has quit (:quit)
+   - Player has won (:won)
+   - Player has died permanently (3+ deaths)
+   - Player is in 'dead' state (zombified in Hades)"
+  [game-state]
+  (or (:quit game-state)
+      (:won game-state)
+      (>= (:deaths game-state 0) 3)
+      (:dead game-state)))
+
+(defn- game-over-reason
+  "Return the reason for game over, or nil if game is not over."
+  [game-state]
+  (cond
+    (:won game-state) :won
+    (:quit game-state) :quit
+    (>= (:deaths game-state 0) 3) :permanent-death
+    (:dead game-state) :dead-but-playing  ; Hades state - can still play but dead
+    :else nil))
+
 (defn state-snapshot
   "Get a complete snapshot of game state for ML agent.
 
@@ -342,12 +366,16 @@
         va (valid-actions game-state)
         ;; Hash the message for novelty detection
         message-hash (when (seq message)
-                       (hash message))]
+                       (hash message))
+        ;; Detect game-over state
+        is-game-over (game-over? game-state)
+        over-reason (game-over-reason game-state)]
     {:score (:score game-state 0)
      :max-score (:score-max game-state 350)
      :moves (:moves game-state 0)
      :deaths (:deaths game-state 0)
-     :game-over false  ; TODO: detect game over state
+     :game-over is-game-over
+     :game-over-reason over-reason
 
      :room {:id (:here game-state)
             :name (:desc here)

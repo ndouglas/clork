@@ -533,7 +533,7 @@ These are out-of-game commands that don't advance time.
 | [ ]    | GLOBAL-WATER | Global Water        |
 | [ ]    | GROUND       | Ground              |
 | [ ]    | STAIRS       | Stairs              |
-| [ ]    | GRUE         | Grue                |
+| [x]    | GRUE         | Grue                |
 | [ ]    | ME           | Self-reference      |
 | [ ]    | IT           | Pronoun reference   |
 | [ ]    | HANDS        | Bare Hands          |

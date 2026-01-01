@@ -21,6 +21,13 @@
       (assoc :here room-id)
       (assoc-in [:objects :adventurer :in] room-id)))
 
+(defn give-lit-lamp
+  "Give the player a lit lamp so they can navigate dark areas."
+  [game-state]
+  (-> game-state
+      (assoc-in [:objects :brass-lantern :in] :adventurer)
+      (gs/set-thing-flag :brass-lantern :on)))
+
 (defn walk
   "Simulate walking in a direction."
   [game-state direction]
@@ -35,6 +42,7 @@
 (deftest maze-basic-navigation-test
   (testing "can navigate through maze"
     (let [gs (-> (full-game-state)
+                 (give-lit-lamp)
                  (move-to :maze-1))]
       ;; maze-1 north -> maze-1 (loops back)
       (is (= :maze-1 (:here (walk gs :north)))
@@ -56,24 +64,28 @@
   (testing "some maze rooms have loop exits"
     ;; maze-6 west loops back to maze-6
     (let [gs (-> (full-game-state)
+                 (give-lit-lamp)
                  (move-to :maze-6))]
       (is (= :maze-6 (:here (walk gs :west)))
           "maze-6 west should loop back to maze-6"))
 
     ;; maze-8 west loops back to maze-8
     (let [gs (-> (full-game-state)
+                 (give-lit-lamp)
                  (move-to :maze-8))]
       (is (= :maze-8 (:here (walk gs :west)))
           "maze-8 west should loop back to maze-8"))
 
     ;; maze-9 nw loops back to maze-9
     (let [gs (-> (full-game-state)
+                 (give-lit-lamp)
                  (move-to :maze-9))]
       (is (= :maze-9 (:here (walk gs :nw)))
           "maze-9 nw should loop back to maze-9"))
 
     ;; maze-14 nw loops back to maze-14
     (let [gs (-> (full-game-state)
+                 (give-lit-lamp)
                  (move-to :maze-14))]
       (is (= :maze-14 (:here (walk gs :nw)))
           "maze-14 nw should loop back to maze-14"))))
@@ -82,24 +94,28 @@
   (testing "dead ends have correct exits"
     ;; dead-end-1 south -> maze-4
     (let [gs (-> (full-game-state)
+                 (give-lit-lamp)
                  (move-to :dead-end-1))]
       (is (= :maze-4 (:here (walk gs :south)))
           "dead-end-1 south should go to maze-4"))
 
     ;; dead-end-2 west -> maze-5
     (let [gs (-> (full-game-state)
+                 (give-lit-lamp)
                  (move-to :dead-end-2))]
       (is (= :maze-5 (:here (walk gs :west)))
           "dead-end-2 west should go to maze-5"))
 
     ;; dead-end-3 north -> maze-8
     (let [gs (-> (full-game-state)
+                 (give-lit-lamp)
                  (move-to :dead-end-3))]
       (is (= :maze-8 (:here (walk gs :north)))
           "dead-end-3 north should go to maze-8"))
 
     ;; dead-end-4 south -> maze-12
     (let [gs (-> (full-game-state)
+                 (give-lit-lamp)
                  (move-to :dead-end-4))]
       (is (= :maze-12 (:here (walk gs :south)))
           "dead-end-4 south should go to maze-12"))))
@@ -112,6 +128,7 @@
   (testing "maze diodes are one-way passages"
     ;; maze-2 down -> maze-4 (one-way)
     (let [gs (-> (full-game-state)
+                 (give-lit-lamp)
                  (move-to :maze-2))
           result (walk gs :down)]
       (is (= :maze-4 (:here result))
@@ -119,6 +136,7 @@
 
     ;; maze-7 down -> dead-end-1 (one-way)
     (let [gs (-> (full-game-state)
+                 (give-lit-lamp)
                  (move-to :maze-7))
           result (walk gs :down)]
       (is (= :dead-end-1 (:here result))
@@ -126,6 +144,7 @@
 
     ;; maze-9 down -> maze-11 (one-way)
     (let [gs (-> (full-game-state)
+                 (give-lit-lamp)
                  (move-to :maze-9))
           result (walk gs :down)]
       (is (= :maze-11 (:here result))
@@ -133,6 +152,7 @@
 
     ;; maze-12 down -> maze-5 (one-way)
     (let [gs (-> (full-game-state)
+                 (give-lit-lamp)
                  (move-to :maze-12))
           result (walk gs :down)]
       (is (= :maze-5 (:here result))
@@ -146,6 +166,7 @@
   (testing "grating room connects to maze"
     ;; grating-room sw -> maze-11
     (let [gs (-> (full-game-state)
+                 (give-lit-lamp)
                  (move-to :grating-room))]
       (is (= :maze-11 (:here (walk gs :sw)))
           "grating-room sw should go to maze-11"))))
@@ -193,6 +214,7 @@
 (deftest path-to-skeleton-test
   (testing "path from troll room to skeleton exists"
     (let [gs (-> (full-game-state)
+                 (give-lit-lamp)
                  (move-to :troll-room)
                  (assoc :troll-flag true))]  ; troll is defeated
       ;; troll-room west -> maze-1
@@ -208,3 +230,32 @@
             (let [gs4 (walk gs3 :up)]
               (is (= :maze-5 (:here gs4))
                   "should be able to reach maze-5 via troll-room -> maze-1 -> maze-2 -> maze-3 -> maze-5"))))))))
+
+;;; ---------------------------------------------------------------------------
+;;; GRUE ATTACK TESTS
+;;; ---------------------------------------------------------------------------
+
+(deftest grue-attack-test
+  (testing "walking in darkness triggers grue attack"
+    ;; Player in maze without lamp should be eaten by grue when walking
+    (let [gs (-> (full-game-state)
+                 (move-to :maze-1))
+          ;; No lamp, so it's dark
+          result (walk gs :north)]
+      ;; After grue attack, player should be resurrected in forest-1
+      ;; (first death sends you to forest, not permanent death)
+      (is (= :forest-1 (:here result))
+          "grue attack should resurrect player in forest-1")
+      (is (= 1 (:deaths result))
+          "grue attack should increment death count")))
+
+  (testing "walking with lit lamp does not trigger grue"
+    ;; Player with lit lamp should be able to walk safely
+    (let [gs (-> (full-game-state)
+                 (give-lit-lamp)
+                 (move-to :maze-1))
+          result (walk gs :north)]
+      (is (= :maze-1 (:here result))
+          "with lamp, should walk normally (maze-1 north loops to maze-1)")
+      (is (= 0 (:deaths result 0))
+          "should not die with lamp"))))
