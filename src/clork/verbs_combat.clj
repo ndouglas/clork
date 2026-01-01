@@ -12,22 +12,14 @@
 ;;; ---------------------------------------------------------------------------
 ;;; VILLAIN REGISTRY
 ;;; ---------------------------------------------------------------------------
-;;; The villains table stores combat metadata for each enemy.
+;;; Uses combat/villains-registry as the single source of truth.
 ;;; ZIL: VILLAINS global table (1actions.zil line 3814)
 
-(def villains
-  "Villain combat data.
-   ZIL: <GLOBAL VILLAINS <LTABLE ...>>"
-  {:troll {:villain-id :troll
-           :best-weapon :sword
-           :best-adv 1
-           :wake-prob 0
-           :messages combat/troll-melee}})
-
 (defn get-villain-entry
-  "Get the villain entry for an object, or nil if not a villain."
+  "Get the villain entry for an object, or nil if not a villain.
+   Uses combat/villains-registry as the single source of truth."
   [villain-id]
-  (get villains villain-id))
+  (get combat/villains-registry villain-id))
 
 ;; Forward declarations
 (declare villain-result call-villain-action)

@@ -277,6 +277,41 @@
    [["The thief, forgetting his essentially genteel upbringing, cuts your throat."]
     ["The thief, a pragmatist, dispatches you as a threat to his livelihood."]]})
 
+(def cyclops-melee
+  "Messages for cyclops attacks. ZIL: CYCLOPS-MELEE (1actions.zil line 3667)
+   Indexed by result constant (1-9), each containing variant messages."
+  {missed
+   [["The Cyclops misses, but the backwash almost knocks you over."]
+    ["The Cyclops rushes you, but runs into the wall."]]
+
+   unconscious
+   [["The Cyclops sends you crashing to the floor, unconscious."]]
+
+   killed
+   [["The Cyclops breaks your neck with a massive smash."]]
+
+   light-wound
+   [["A quick punch, but it was only a glancing blow."]
+    ["A glancing blow from the Cyclops' fist."]]
+
+   serious-wound
+   [["The monster smashes his huge fist into your chest, breaking several ribs."]
+    ["The Cyclops almost knocks the wind out of you with a quick punch."]]
+
+   stagger
+   [["The Cyclops lands a punch that knocks the wind out of you."]
+    ["Heedless of your weapons, the Cyclops tosses you against the rock wall of the room."]]
+
+   lose-weapon
+   [["The Cyclops grabs your " :f-wep ", tastes it, and throws it to the ground in disgust."]
+    ["The monster grabs you on the wrist, squeezes, and you drop your " :f-wep " in pain."]]
+
+   hesitate
+   [["The Cyclops seems unable to decide whether to broil or stew his dinner."]]
+
+   sitting-duck
+   [["The Cyclops, no sportsman, dispatches his unconscious victim."]]})
+
 ;;; ---------------------------------------------------------------------------
 ;;; STRENGTH CALCULATIONS
 ;;; ---------------------------------------------------------------------------
@@ -745,8 +780,11 @@
 ;;; ---------------------------------------------------------------------------
 
 (def villains-registry
-  "Registry of all villains for the combat daemon.
-   ZIL: VILLAINS global table"
+  "Registry of all villains for combat.
+   ZIL: VILLAINS global table (1actions.zil line 3814)
+
+   This is the single source of truth for villain combat data.
+   Used by both hero-blow (player attacks) and i-fight (villain counter-attacks)."
   {:troll {:villain-id :troll
            :best-weapon :sword
            :best-adv 1
@@ -756,7 +794,12 @@
            :best-weapon :knife
            :best-adv 1
            :wake-prob 0
-           :messages thief-melee}})
+           :messages thief-melee}
+   :cyclops {:villain-id :cyclops
+             :best-weapon nil  ; Cyclops has no best-weapon weakness
+             :best-adv 0
+             :wake-prob 0
+             :messages cyclops-melee}})
 
 (defn combat-daemon
   "Combat daemon wrapper for the daemon system.
