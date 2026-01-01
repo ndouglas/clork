@@ -473,9 +473,78 @@
    :flags #{}
    :value 5    ; ZIL: (VALUE 5) - points for first-time entry
    :exits {:west :troll-room
-           :east "TODO: This exit leads to ROUND-ROOM."
-           :down "TODO: This exit leads to CHASM-ROOM."
-           :north "TODO: This exit leads to CHASM-ROOM."}})
+           :east :round-room
+           :down :chasm-room
+           :north :chasm-room}})
+
+;; <ROOM ROUND-ROOM
+;;       (IN ROOMS)
+;;       (LDESC
+;; "This is a circular stone room with passages in all directions. Several
+;; of them have unfortunately been blocked by cave-ins.")
+;;       (DESC "Round Room")
+;;       (EAST TO LOUD-ROOM)
+;;       (WEST TO EW-PASSAGE)
+;;       (NORTH TO NS-PASSAGE)
+;;       (SOUTH TO NARROW-PASSAGE)
+;;       (SE TO ENGRAVINGS-CAVE)
+;;       (FLAGS RLANDBIT)>
+
+(def round-room
+  {:id :round-room
+   :desc "Round Room"
+   :ldesc "This is a circular stone room with passages in all directions. Several of them have unfortunately been blocked by cave-ins."
+   :flags #{}
+   :exits {:west :east-west-passage
+           :north :ns-passage
+           :east "TODO: This exit leads to LOUD-ROOM."
+           :south "TODO: This exit leads to NARROW-PASSAGE."
+           :se "TODO: This exit leads to ENGRAVINGS-CAVE."}})
+
+;; <ROOM NS-PASSAGE
+;;       (IN ROOMS)
+;;       (LDESC
+;; "This is a high north-south passage, which forks to the northeast.")
+;;       (DESC "North-South Passage")
+;;       (NORTH TO CHASM-ROOM)
+;;       (NE TO DEEP-CANYON)
+;;       (SOUTH TO ROUND-ROOM)
+;;       (FLAGS RLANDBIT)>
+
+(def ns-passage
+  {:id :ns-passage
+   :desc "North-South Passage"
+   :ldesc "This is a high north-south passage, which forks to the northeast."
+   :flags #{}
+   :exits {:north :chasm-room
+           :south :round-room
+           :ne "TODO: This exit leads to DEEP-CANYON."}})
+
+;; <ROOM CHASM-ROOM
+;;       (IN ROOMS)
+;;       (LDESC
+;; "A chasm runs southwest to northeast and the path follows it. You are
+;; on the south side of the chasm, where a crack opens into a passage.")
+;;       (DESC "Chasm")
+;;       (NE TO RESERVOIR-SOUTH)
+;;       (SW TO EW-PASSAGE)
+;;       (UP TO EW-PASSAGE)
+;;       (SOUTH TO NS-PASSAGE)
+;;       (DOWN "Are you out of your mind?")
+;;       (FLAGS RLANDBIT)
+;;       (GLOBAL CRACK STAIRS)
+;;       (PSEUDO "CHASM" CHASM-PSEUDO)>
+
+(def chasm-room
+  {:id :chasm-room
+   :desc "Chasm"
+   :ldesc "A chasm runs southwest to northeast and the path follows it. You are on the south side of the chasm, where a crack opens into a passage."
+   :flags #{}
+   :exits {:sw :east-west-passage
+           :up :east-west-passage
+           :south :ns-passage
+           :down "Are you out of your mind?"
+           :ne "TODO: This exit leads to RESERVOIR-SOUTH."}})
 
 ;; <ROOM MAZE-1
 ;;       (IN ROOMS)
@@ -914,6 +983,9 @@
    gallery
    studio
    east-west-passage
+   round-room
+   ns-passage
+   chasm-room
    maze-1
    maze-2
    maze-3

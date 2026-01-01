@@ -232,9 +232,9 @@ These are out-of-game commands that don't advance time.
 | [x]    | CELLAR        | Cellar              |
 | [x]    | TROLL-ROOM    | Troll Room          |
 | [x]    | EW-PASSAGE    | East-West Passage   |
-| [ ]    | ROUND-ROOM    | Round Room          |
-| [ ]    | NS-PASSAGE    | North-South Passage |
-| [ ]    | CHASM-ROOM    | Chasm               |
+| [x]    | ROUND-ROOM    | Round Room          |
+| [x]    | NS-PASSAGE    | North-South Passage |
+| [x]    | CHASM-ROOM    | Chasm               |
 | [x]    | EAST-OF-CHASM | East of Chasm       |
 | [x]    | GALLERY       | Gallery             |
 | [x]    | STUDIO        | Studio              |

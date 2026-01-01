@@ -259,3 +259,90 @@
           "with lamp, should walk normally (maze-1 north loops to maze-1)")
       (is (= 0 (:deaths result 0))
           "should not die with lamp"))))
+
+;;; ---------------------------------------------------------------------------
+;;; ROUND ROOM CLUSTER TESTS
+;;; ---------------------------------------------------------------------------
+
+(deftest round-room-navigation-test
+  (testing "round room connects correctly"
+    (let [gs (-> (full-game-state)
+                 (give-lit-lamp)
+                 (move-to :round-room))]
+      ;; west -> east-west-passage
+      (is (= :east-west-passage (:here (walk gs :west)))
+          "round-room west should go to east-west-passage")
+
+      ;; north -> ns-passage
+      (is (= :ns-passage (:here (walk gs :north)))
+          "round-room north should go to ns-passage"))))
+
+(deftest ns-passage-navigation-test
+  (testing "ns-passage connects correctly"
+    (let [gs (-> (full-game-state)
+                 (give-lit-lamp)
+                 (move-to :ns-passage))]
+      ;; north -> chasm-room
+      (is (= :chasm-room (:here (walk gs :north)))
+          "ns-passage north should go to chasm-room")
+
+      ;; south -> round-room
+      (is (= :round-room (:here (walk gs :south)))
+          "ns-passage south should go to round-room"))))
+
+(deftest chasm-room-navigation-test
+  (testing "chasm-room connects correctly"
+    (let [gs (-> (full-game-state)
+                 (give-lit-lamp)
+                 (move-to :chasm-room))]
+      ;; sw -> east-west-passage
+      (is (= :east-west-passage (:here (walk gs :sw)))
+          "chasm-room sw should go to east-west-passage")
+
+      ;; up -> east-west-passage
+      (is (= :east-west-passage (:here (walk gs :up)))
+          "chasm-room up should go to east-west-passage")
+
+      ;; south -> ns-passage
+      (is (= :ns-passage (:here (walk gs :south)))
+          "chasm-room south should go to ns-passage"))))
+
+(deftest east-west-passage-to-round-room-test
+  (testing "east-west-passage connects to round room cluster"
+    (let [gs (-> (full-game-state)
+                 (give-lit-lamp)
+                 (move-to :east-west-passage))]
+      ;; east -> round-room
+      (is (= :round-room (:here (walk gs :east)))
+          "east-west-passage east should go to round-room")
+
+      ;; down -> chasm-room
+      (is (= :chasm-room (:here (walk gs :down)))
+          "east-west-passage down should go to chasm-room")
+
+      ;; north -> chasm-room
+      (is (= :chasm-room (:here (walk gs :north)))
+          "east-west-passage north should go to chasm-room"))))
+
+(deftest round-room-cluster-round-trip-test
+  (testing "can navigate round trip through round room cluster"
+    (let [gs (-> (full-game-state)
+                 (give-lit-lamp)
+                 (move-to :troll-room)
+                 (assoc :troll-flag true))]  ; troll is defeated
+      ;; troll-room east -> east-west-passage
+      (let [gs1 (walk gs :east)]
+        (is (= :east-west-passage (:here gs1)))
+        ;; east-west-passage east -> round-room
+        (let [gs2 (walk gs1 :east)]
+          (is (= :round-room (:here gs2)))
+          ;; round-room north -> ns-passage
+          (let [gs3 (walk gs2 :north)]
+            (is (= :ns-passage (:here gs3)))
+            ;; ns-passage north -> chasm-room
+            (let [gs4 (walk gs3 :north)]
+              (is (= :chasm-room (:here gs4)))
+              ;; chasm-room sw -> east-west-passage (back!)
+              (let [gs5 (walk gs4 :sw)]
+                (is (= :east-west-passage (:here gs5))
+                    "should complete round trip through round room cluster")))))))))
