@@ -471,8 +471,20 @@
                            :prep1 :off
                            :gwim1 :on  ; FIND ONBIT - can find lit objects in dark
                            :loc1 #{:held :carried :in-room :on-ground}
-                           :action :lamp-off}]
-                :handler verbs-light/v-lamp-on}  ; default, but routes via :action
+                           :action :lamp-off}
+
+                          ;; TURN OBJECT WITH OBJECT - turn bolt with wrench
+                          ;; ZIL: <SYNTAX TURN OBJECT (FIND TURNBIT) (HELD CARRIED ON-GROUND IN-ROOM) WITH OBJECT = V-TURN>
+                          {:num-objects 2
+                           :prep2 :with
+                           :loc1 #{:held :carried :in-room :on-ground}
+                           :loc2 #{:held :carried}}
+
+                          ;; TURN OBJECT - turn bolt (no "with" preposition)
+                          ;; ZIL: <SYNTAX TURN OBJECT (FIND TURNBIT) (HELD CARRIED ON-GROUND IN-ROOM) = V-TURN>
+                          {:num-objects 1
+                           :loc1 #{:held :carried :in-room :on-ground}}]
+                :handler verbs-movement/v-turn}
 
    ;; Additional words for lamp-on
    ;; ZIL: <SYNTAX LIGHT OBJECT (FIND LIGHTBIT) (HELD CARRIED ON-GROUND IN-ROOM TAKE HAVE) = V-LAMP-ON>

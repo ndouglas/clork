@@ -269,15 +269,15 @@ These are out-of-game commands that don't advance time.
 
 | Status | Room ID          | Description      |
 | ------ | ---------------- | ---------------- |
-| [ ]    | DAM-ROOM         | Dam              |
-| [ ]    | DAM-BASE         | Dam Base         |
-| [ ]    | DAM-LOBBY        | Dam Lobby        |
-| [ ]    | MAINTENANCE-ROOM | Maintenance Room |
-| [ ]    | RESERVOIR        | Reservoir        |
-| [ ]    | RESERVOIR-NORTH  | Reservoir North  |
-| [ ]    | RESERVOIR-SOUTH  | Reservoir South  |
-| [ ]    | STREAM-VIEW      | Stream View      |
-| [ ]    | IN-STREAM        | In Stream        |
+| [x]    | DAM-ROOM         | Dam              |
+| [x]    | DAM-BASE         | Dam Base         |
+| [x]    | DAM-LOBBY        | Dam Lobby        |
+| [x]    | MAINTENANCE-ROOM | Maintenance Room |
+| [x]    | RESERVOIR        | Reservoir        |
+| [x]    | RESERVOIR-NORTH  | Reservoir North  |
+| [x]    | RESERVOIR-SOUTH  | Reservoir South  |
+| [x]    | STREAM-VIEW      | Stream View      |
+| [x]    | IN-STREAM        | In Stream        |
 
 ### Underground - River
 
@@ -470,7 +470,7 @@ These are out-of-game commands that don't advance time.
 | [x]    | GRATE          | Grating        |
 | [ ]    | CHIMNEY        | Chimney        |
 | [x]    | LEAVES         | Pile of Leaves |
-| [ ]    | DAM            | Dam            |
+| [x]    | DAM            | Dam            |
 | [ ]    | RAINBOW        | Rainbow        |
 | [ ]    | MIRROR-1       | Mirror         |
 | [ ]    | MIRROR-2       | Mirror         |
@@ -561,8 +561,8 @@ These are out-of-game commands that don't advance time.
 | [x]    | CYCLOPS-ROOM-FCN  | CYCLOPS-ROOM  | Cyclops room              |
 | [ ]    | TROLL-ROOM-F      | TROLL-ROOM    | Troll room logic          |
 | [ ]    | LOUD-ROOM-FCN     | LOUD-ROOM     | Echo puzzle               |
-| [ ]    | DAM-ROOM-FCN      | DAM-ROOM      | Dam controls              |
-| [ ]    | RESERVOIR-FCN     | RESERVOIR     | Reservoir water           |
+| [x]    | DAM-ROOM-FCN      | DAM-ROOM      | Dam controls              |
+| [x]    | RESERVOIR-FCN     | RESERVOIR     | Reservoir water           |
 | [ ]    | TREASURE-ROOM-FCN | TREASURE-ROOM | Treasure room             |
 | [ ]    | TORCH-ROOM-FCN    | TORCH-ROOM    | Torch room                |
 | [ ]    | MIRROR-ROOM       | MIRROR-ROOM-* | Mirror rooms              |
@@ -607,7 +607,7 @@ These are out-of-game commands that don't advance time.
 | [ ]    | HOT-BELL-F       | HOT-BELL    | Hot bell handling   |
 | [ ]    | EGG-OBJECT       | EGG         | Egg opening         |
 | [ ]    | CANARY-OBJECT    | CANARY      | Clockwork canary    |
-| [ ]    | DAM-FUNCTION     | DAM         | Dam controls        |
+| [x]    | DAM-FUNCTION     | DAM         | Dam controls        |
 | [ ]    | MACHINE-F        | MACHINE     | Coal machine        |
 | [ ]    | RUG-FCN          | RUG         | Hidden trap door    |
 | [ ]    | BASKET-F         | BASKET      | Shaft basket        |
@@ -615,10 +615,10 @@ These are out-of-game commands that don't advance time.
 | [ ]    | PAINTING-FCN     | PAINTING    | Painting handling   |
 | [ ]    | RAINBOW-FCN      | RAINBOW     | Rainbow crossing    |
 | [ ]    | SLIDE-FUNCTION   | SLIDE       | Cellar slide        |
-| [ ]    | LEAK-FUNCTION    | LEAK        | Dam leak            |
+| [x]    | LEAK-FUNCTION    | LEAK        | Dam leak            |
 | [ ]    | LEAF-PILE        | LEAVES      | Leaf pile           |
 | [ ]    | SAND-FUNCTION    | SAND        | Digging sand        |
-| [ ]    | TUBE-FUNCTION    | TUBE        | Tube usage          |
+| [x]    | TUBE-FUNCTION    | TUBE        | Tube usage          |
 | [ ]    | TORCH-OBJECT     | TORCH       | Torch handling      |
 
 ### Combat System
@@ -650,9 +650,9 @@ These are out-of-game commands that don't advance time.
 | [ ]    | I-CURE        | Healing timer        |
 | [ ]    | I-FOREST-ROOM | Forest wandering     |
 | [ ]    | I-RIVER       | River flow           |
-| [ ]    | I-RFILL       | Reservoir filling    |
-| [ ]    | I-REMPTY      | Reservoir emptying   |
-| [ ]    | I-MAINT-ROOM  | Maintenance flooding |
+| [x]    | I-RFILL       | Reservoir filling    |
+| [x]    | I-REMPTY      | Reservoir emptying   |
+| [x]    | I-MAINT-ROOM  | Maintenance flooding |
 
 ### Utility Routines
 
@@ -789,11 +789,11 @@ These are out-of-game commands that don't advance time.
 | [ ]    | KITCHEN-WINDOW-FLAG | Window open          |
 | [ ]    | GRATE-REVEALED      | Grate visible        |
 | [ ]    | DOME-FLAG           | Dome rope            |
-| [ ]    | GATE-FLAG           | Gate state           |
-| [ ]    | GATES-OPEN          | Gates open           |
+| [x]    | GATE-FLAG           | Gate state           |
+| [x]    | GATES-OPEN          | Gates open           |
 | [ ]    | RAINBOW-FLAG        | Rainbow solid        |
-| [ ]    | LOW-TIDE            | Water level          |
-| [ ]    | WATER-LEVEL         | Reservoir level      |
+| [x]    | LOW-TIDE            | Water level          |
+| [x]    | WATER-LEVEL         | Reservoir level      |
 | [ ]    | LOUD-FLAG           | Loud room state      |
 | [ ]    | RUG-MOVED           | Rug moved            |
 | [ ]    | EGG-SOLVE           | Egg opened           |
@@ -846,7 +846,7 @@ These are out-of-game commands that don't advance time.
 - [x] Combat system
 
 ### Phase 5: Puzzles
-- [ ] Dam/reservoir puzzle
+- [x] Dam/reservoir puzzle
 - [ ] Coal machine puzzle
 - [ ] Loud room echo
 - [ ] Hades ceremony

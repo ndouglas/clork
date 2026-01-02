@@ -8,7 +8,8 @@
             [clork.random :as random]
             [clork.sword :as sword]
             [clork.thief :as thief]
-            [clork.cyclops :as cyclops]))
+            [clork.cyclops :as cyclops]
+            [clork.dam :as dam]))
 
 ;; <OBJECT MAILBOX
 ;;	(IN WEST-OF-HOUSE)
@@ -1330,6 +1331,272 @@
                  :else nil)))})
 
 ;;; ---------------------------------------------------------------------------
+;;; DAM/RESERVOIR AREA OBJECTS
+;;; ---------------------------------------------------------------------------
+
+;; <OBJECT DAM
+;;     (IN DAM-ROOM)
+;;     (SYNONYM DAM GATE GATES FCD\#3)
+;;     (DESC "dam")
+;;     (FLAGS NDESCBIT TRYTAKEBIT)
+;;     (ACTION DAM-FUNCTION)>
+
+(def dam-obj
+  {:id :dam
+   :in :dam-room
+   :synonym ["dam" "gate" "gates" "fcd#3"]
+   :desc "dam"
+   :flags (flags/flags :ndesc :trytake)
+   :action dam/dam-obj-action})
+
+;; <OBJECT CONTROL-PANEL
+;;     (IN DAM-ROOM)
+;;     (SYNONYM PANEL)
+;;     (ADJECTIVE CONTROL)
+;;     (DESC "control panel")
+;;     (FLAGS NDESCBIT)>
+
+(def control-panel
+  {:id :control-panel
+   :in :dam-room
+   :synonym ["panel"]
+   :adjective "control"
+   :desc "control panel"
+   :flags (flags/flags :ndesc)})
+
+;; <OBJECT BOLT
+;;     (IN DAM-ROOM)
+;;     (SYNONYM BOLT NUT)
+;;     (ADJECTIVE METAL LARGE)
+;;     (DESC "bolt")
+;;     (FLAGS NDESCBIT TURNBIT TRYTAKEBIT)
+;;     (ACTION BOLT-F)>
+
+(def bolt
+  {:id :bolt
+   :in :dam-room
+   :synonym ["bolt" "nut"]
+   :adjective ["metal" "large"]
+   :desc "bolt"
+   :flags (flags/flags :ndesc :turn :trytake)
+   :action dam/bolt-action})
+
+;; <OBJECT BUBBLE
+;;     (IN DAM-ROOM)
+;;     (SYNONYM BUBBLE)
+;;     (ADJECTIVE SMALL GREEN PLASTIC)
+;;     (DESC "green bubble")
+;;     (FLAGS NDESCBIT TRYTAKEBIT)
+;;     (ACTION BUBBLE-F)>
+
+(def bubble
+  {:id :bubble
+   :in :dam-room
+   :synonym ["bubble"]
+   :adjective ["small" "green" "plastic"]
+   :desc "green bubble"
+   :flags (flags/flags :ndesc :trytake)
+   :action dam/bubble-action})
+
+;; <OBJECT LEAK
+;;     (IN MAINTENANCE-ROOM)
+;;     (SYNONYM LEAK DRIP PIPE)
+;;     (DESC "leak")
+;;     (FLAGS NDESCBIT INVISIBLE)
+;;     (ACTION LEAK-FUNCTION)>
+
+(def leak
+  {:id :leak
+   :in :maintenance-room
+   :synonym ["leak" "drip" "pipe"]
+   :desc "leak"
+   :flags (flags/flags :ndesc :invisible)
+   :action dam/leak-action})
+
+;; <OBJECT TUBE
+;;     (IN MAINTENANCE-ROOM)
+;;     (SYNONYM TUBE TOOTH PASTE)
+;;     (DESC "tube")
+;;     (FLAGS TAKEBIT CONTBIT READBIT)
+;;     (ACTION TUBE-FUNCTION)
+;;     (LDESC "There is an object which looks like a tube of toothpaste here.")
+;;     (CAPACITY 7)
+;;     (SIZE 5)
+;;     (TEXT "---> Frobozz Magic Gunk Company <---\n      All-Purpose Gunk")>
+
+(def tube
+  {:id :tube
+   :in :maintenance-room
+   :synonym ["tube" "toothpaste" "paste"]
+   :desc "tube"
+   :flags (flags/flags :take :cont :read)
+   :ldesc "There is an object which looks like a tube of toothpaste here."
+   :capacity 7
+   :size 5
+   :text "---> Frobozz Magic Gunk Company <---\n      All-Purpose Gunk"
+   :action dam/tube-action})
+
+;; <OBJECT PUTTY
+;;     (IN TUBE)
+;;     (SYNONYM MATERIAL GUNK PUTTY)
+;;     (ADJECTIVE VISCOUS)
+;;     (DESC "viscous material")
+;;     (FLAGS TAKEBIT TOOLBIT)
+;;     (SIZE 6)
+;;     (ACTION PUTTY-FCN)>
+
+(def putty
+  {:id :putty
+   :in :tube
+   :synonym ["material" "gunk" "putty"]
+   :adjective "viscous"
+   :desc "viscous material"
+   :flags (flags/flags :take :tool)
+   :size 6
+   :action dam/putty-action})
+
+;; <OBJECT GUIDE
+;;     (IN DAM-LOBBY)
+;;     (SYNONYM GUIDE BOOK BOOKS GUIDEBOOKS)
+;;     (ADJECTIVE TOUR GUIDE)
+;;     (DESC "tour guidebook")
+;;     (FLAGS READBIT TAKEBIT BURNBIT)
+;;     (FDESC "Some guidebooks entitled \"Flood Control Dam #3\" are on the reception desk.")
+;;     (TEXT "...")>
+
+(def guidebook
+  {:id :guidebook
+   :in :dam-lobby
+   :synonym ["guide" "guidebook" "guidebooks" "book" "books"]
+   :adjective ["tour" "guide"]
+   :desc "tour guidebook"
+   :flags (flags/flags :read :take :burn)
+   :fdesc "Some guidebooks entitled \"Flood Control Dam #3\" are on the reception desk."
+   :text "\"Flood Control Dam #3\n\nFCD#3 was constructed in year 783 of the Great Underground Empire to harness the mighty Frigid River. This work was supported by a grant of 37 million zorkmids from your omnipotent local tyrant Lord Dimwit Flathead the Excessive. This impressive structure is composed of 370,000 cubic feet of concrete, is 256 feet tall at the center, and 193 feet wide at the top. The lake created behind the dam has a volume of 1.7 billion cubic feet, an area of 12 million square feet, and a shore line of 36 thousand feet.\n\nThe construction of FCD#3 took 112 days from ground breaking to the dedication. It required a work force of 384 slaves, 34 slave drivers, 12 engineers, 2 turtle doves, and a partridge in a pear tree. The work was managed by a command team composed of 2345 bureaucrats, 2347 secretaries (at least two of whom could type), 12,256 paper shufflers, 52,469 rubber stampers, 245,193 red tape processors, and nearly one million dead trees.\n\nWe will now point out some of the more interesting features of FCD#3 as we conduct you on a guided tour of the facilities:\n\n1) You start your tour here in the Dam Lobby. You will notice on your right that....\""})
+
+;; <OBJECT MATCH
+;;     (IN DAM-LOBBY)
+;;     (SYNONYM MATCH MATCHES MATCHBOOK)
+;;     (ADJECTIVE MATCH)
+;;     (DESC "matchbook")
+;;     (FLAGS READBIT TAKEBIT)
+;;     (ACTION MATCH-FUNCTION)
+;;     (LDESC "There is a matchbook whose cover says \"Visit Beautiful FCD#3\" here.")
+;;     (SIZE 2)
+;;     (TEXT "...")>
+
+(def matchbook
+  {:id :matchbook
+   :in :dam-lobby
+   :synonym ["match" "matches" "matchbook"]
+   :adjective "match"
+   :desc "matchbook"
+   :flags (flags/flags :read :take)
+   :ldesc "There is a matchbook whose cover says \"Visit Beautiful FCD#3\" here."
+   :size 2
+   :text "(Close cover before striking)\n\nVisit Beautiful FCD#3\n\nThe Greatest Dam in the GUE!"
+   ;; Match action will be implemented later (lighting matches)
+   })
+
+;; <OBJECT WRENCH
+;;     (IN MAINTENANCE-ROOM)
+;;     (SYNONYM WRENCH TOOL TOOLS)
+;;     (DESC "wrench")
+;;     (FLAGS TAKEBIT TOOLBIT)
+;;     (SIZE 10)>
+
+(def wrench
+  {:id :wrench
+   :in :maintenance-room
+   :synonym ["wrench" "tool" "tools"]
+   :desc "wrench"
+   :flags (flags/flags :take :tool)
+   :size 10})
+
+;; <OBJECT YELLOW-BUTTON
+;;     (IN MAINTENANCE-ROOM)
+;;     (SYNONYM BUTTON SWITCH)
+;;     (ADJECTIVE YELLOW)
+;;     (DESC "yellow button")
+;;     (FLAGS NDESCBIT)
+;;     (ACTION BUTTON-F)>
+
+(def yellow-button
+  {:id :yellow-button
+   :in :maintenance-room
+   :synonym ["button" "switch"]
+   :adjective "yellow"
+   :desc "yellow button"
+   :flags (flags/flags :ndesc)
+   :action dam/button-action})
+
+;; <OBJECT BROWN-BUTTON
+;;     (IN MAINTENANCE-ROOM)
+;;     (SYNONYM BUTTON SWITCH)
+;;     (ADJECTIVE BROWN)
+;;     (DESC "brown button")
+;;     (FLAGS NDESCBIT)
+;;     (ACTION BUTTON-F)>
+
+(def brown-button
+  {:id :brown-button
+   :in :maintenance-room
+   :synonym ["button" "switch"]
+   :adjective "brown"
+   :desc "brown button"
+   :flags (flags/flags :ndesc)
+   :action dam/button-action})
+
+;; <OBJECT BLUE-BUTTON
+;;     (IN MAINTENANCE-ROOM)
+;;     (SYNONYM BUTTON SWITCH)
+;;     (ADJECTIVE BLUE)
+;;     (DESC "blue button")
+;;     (FLAGS NDESCBIT)
+;;     (ACTION BUTTON-F)>
+
+(def blue-button
+  {:id :blue-button
+   :in :maintenance-room
+   :synonym ["button" "switch"]
+   :adjective "blue"
+   :desc "blue button"
+   :flags (flags/flags :ndesc)
+   :action dam/button-action})
+
+;; <OBJECT RED-BUTTON
+;;     (IN MAINTENANCE-ROOM)
+;;     (SYNONYM BUTTON SWITCH)
+;;     (ADJECTIVE RED)
+;;     (DESC "red button")
+;;     (FLAGS NDESCBIT)
+;;     (ACTION BUTTON-F)>
+
+(def red-button
+  {:id :red-button
+   :in :maintenance-room
+   :synonym ["button" "switch"]
+   :adjective "red"
+   :desc "red button"
+   :flags (flags/flags :ndesc)
+   :action dam/button-action})
+
+;; <OBJECT PUMP
+;;     (IN RESERVOIR-NORTH)
+;;     (SYNONYM PUMP AIR-PUMP TOOL TOOLS)
+;;     (ADJECTIVE SMALL HAND-HELD)
+;;     (DESC "hand-held air pump")
+;;     (FLAGS TAKEBIT TOOLBIT)>
+
+(def pump
+  {:id :pump
+   :in :reservoir-north
+   :synonym ["pump" "air-pump"]
+   :adjective ["small" "hand-held"]
+   :desc "hand-held air pump"
+   :flags (flags/flags :take :tool)})
+
+;;; ---------------------------------------------------------------------------
 ;;; ALL OBJECTS LIST
 ;;; ---------------------------------------------------------------------------
 
@@ -1374,4 +1641,20 @@
    skeleton-key
    ;; Grating area objects
    leaves
-   grate])
+   grate
+   ;; Dam/Reservoir area objects
+   dam-obj
+   control-panel
+   bolt
+   bubble
+   leak
+   tube
+   putty
+   guidebook
+   matchbook
+   wrench
+   yellow-button
+   brown-button
+   blue-button
+   red-button
+   pump])

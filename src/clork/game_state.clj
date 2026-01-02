@@ -61,6 +61,11 @@
    :cyclops-flag false  ; Cyclops asleep/defeated
    :magic-flag false    ; East wall opened (cyclops fled)
    :cyclowrath 0        ; Cyclops anger level
+   ;; Dam/Reservoir flags - ZIL: LOW-TIDE, GATES-OPEN, GATE-FLAG, WATER-LEVEL
+   :low-tide true       ; Water level low (reservoir empty) - starts true
+   :gates-open false    ; Sluice gates open
+   :gate-flag false     ; Bolt can be turned (set by yellow button)
+   :water-level 0       ; Flooding progress in maintenance room (0-8)
    :parser (parser-state/initial-parser-state)
     ;; Undo system state
    :undo-stack []

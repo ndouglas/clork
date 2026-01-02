@@ -588,3 +588,28 @@
    It just prints an apologetic message asking for a direction instead."
   [game-state]
   (utils/tell game-state "Sorry, my memory is poor. Please give a direction."))
+
+;;; ---------------------------------------------------------------------------
+;;; TURN COMMAND
+;;; ---------------------------------------------------------------------------
+;;; ZIL: V-TURN in gverbs.zil
+
+(defn v-turn
+  "Turn an object (e.g., turn bolt with wrench).
+
+   ZIL: V-TURN in gverbs.zil (line 1521)
+     <ROUTINE V-TURN ()
+       <TELL \"This has no effect.\" CR>>
+
+   First tries the object's action handler (like V-MOVE does).
+   If not handled, outputs 'This has no effect.'"
+  [game-state]
+  (let [prso (parser-state/get-prso game-state)
+        obj (gs/get-thing game-state prso)
+        action-fn (:action obj)]
+    ;; First try the object's action handler
+    (if-let [result (when action-fn (action-fn game-state))]
+      ;; Object handled the verb
+      result
+      ;; Object didn't handle it - default behavior
+      (utils/tell game-state "This has no effect."))))

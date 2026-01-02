@@ -3,7 +3,8 @@
   (:require [clork.utils :as utils]
             [clork.game-state :as gs]
             [clork.thief :as thief]
-            [clork.cyclops :as cyclops]))
+            [clork.cyclops :as cyclops]
+            [clork.dam :as dam]))
 
 ;;; ---------------------------------------------------------------------------
 ;;; ABOVE GROUND - HOUSE EXTERIOR
@@ -661,7 +662,7 @@
            :up :east-west-passage
            :south :ns-passage
            :down "Are you out of your mind?"
-           :ne "TODO: This exit leads to RESERVOIR-SOUTH."}})
+           :ne :reservoir-south}})
 
 ;; <ROOM MAZE-1
 ;;       (IN ROOMS)
@@ -1121,6 +1122,225 @@
    :exits {:down :cyclops-room}
    :action thief/treasure-room-action})
 
+;;; ---------------------------------------------------------------------------
+;;; UNDERGROUND - DAM/RESERVOIR AREA
+;;; ---------------------------------------------------------------------------
+
+;; <ROOM RESERVOIR-SOUTH
+;;       (IN ROOMS)
+;;       (DESC "Reservoir South")
+;;       (SE TO DEEP-CANYON)
+;;       (SW TO CHASM-ROOM)
+;;       (EAST TO DAM-ROOM)
+;;       (WEST TO STREAM-VIEW)
+;;       (NORTH TO RESERVOIR IF LOW-TIDE ELSE "You would drown.")
+;;       (ACTION RESERVOIR-SOUTH-FCN)
+;;       (FLAGS RLANDBIT)
+;;       (GLOBAL GLOBAL-WATER)
+;;       (PSEUDO "LAKE" LAKE-PSEUDO "CHASM" CHASM-PSEUDO)>
+
+(def reservoir-south
+  {:id :reservoir-south
+   :desc "Reservoir South"
+   ;; ldesc is dynamic, handled by action function
+   :flags #{}  ; Underground, not lit
+   :exits {:sw :chasm-room
+           :east :dam-room
+           :west :stream-view
+           :north {:to :reservoir
+                   :if :low-tide
+                   :else "You would drown."}
+           :se "TODO: This exit leads to DEEP-CANYON."}
+   :globals #{:global-water}
+   :action dam/reservoir-south-action})
+
+;; <ROOM RESERVOIR
+;;       (IN ROOMS)
+;;       (DESC "Reservoir")
+;;       (NORTH TO RESERVOIR-NORTH)
+;;       (SOUTH TO RESERVOIR-SOUTH)
+;;       (UP TO IN-STREAM)
+;;       (WEST TO IN-STREAM)
+;;       (DOWN "The dam blocks your way.")
+;;       (ACTION RESERVOIR-FCN)
+;;       (FLAGS NONLANDBIT)
+;;       (PSEUDO "STREAM" STREAM-PSEUDO)
+;;       (GLOBAL GLOBAL-WATER)>
+
+(def reservoir
+  {:id :reservoir
+   :desc "Reservoir"
+   ;; ldesc is dynamic, handled by action function
+   :flags #{:rwater}  ; NONLANDBIT = water room
+   :exits {:north :reservoir-north
+           :south :reservoir-south
+           :up :in-stream
+           :west :in-stream
+           :down "The dam blocks your way."}
+   :globals #{:global-water}
+   :action dam/reservoir-action})
+
+;; <ROOM RESERVOIR-NORTH
+;;       (IN ROOMS)
+;;       (DESC "Reservoir North")
+;;       (NORTH TO ATLANTIS-ROOM)
+;;       (SOUTH TO RESERVOIR IF LOW-TIDE ELSE "You would drown.")
+;;       (ACTION RESERVOIR-NORTH-FCN)
+;;       (FLAGS RLANDBIT)
+;;       (GLOBAL GLOBAL-WATER STAIRS)
+;;       (PSEUDO "LAKE" LAKE-PSEUDO)>
+
+(def reservoir-north
+  {:id :reservoir-north
+   :desc "Reservoir North"
+   ;; ldesc is dynamic, handled by action function
+   :flags #{}  ; Underground, not lit
+   :exits {:south {:to :reservoir
+                   :if :low-tide
+                   :else "You would drown."}
+           :north "TODO: This exit leads to ATLANTIS-ROOM."}
+   :globals #{:global-water}
+   :action dam/reservoir-north-action})
+
+;; <ROOM STREAM-VIEW
+;;       (IN ROOMS)
+;;       (LDESC
+;; "You are standing on a path beside a gently flowing stream. The path
+;; follows the stream, which flows from west to east.")
+;;       (DESC "Stream View")
+;;       (EAST TO RESERVOIR-SOUTH)
+;;       (WEST "The stream emerges from a spot too small for you to enter.")
+;;       (FLAGS RLANDBIT)
+;;       (GLOBAL GLOBAL-WATER)
+;;       (PSEUDO "STREAM" STREAM-PSEUDO)>
+
+(def stream-view
+  {:id :stream-view
+   :desc "Stream View"
+   :ldesc "You are standing on a path beside a gently flowing stream. The path follows the stream, which flows from west to east."
+   :flags #{}  ; Underground, not lit
+   :exits {:east :reservoir-south
+           :west "The stream emerges from a spot too small for you to enter."}
+   :globals #{:global-water}})
+
+;; <ROOM IN-STREAM
+;;       (IN ROOMS)
+;;       (LDESC
+;; "You are on the gently flowing stream. The upstream route is too narrow
+;; to navigate, and the downstream route is invisible due to twisting
+;; walls. There is a narrow beach to land on.")
+;;       (DESC "Stream")
+;;       (UP "The channel is too narrow.")
+;;       (WEST "The channel is too narrow.")
+;;       (LAND TO STREAM-VIEW)
+;;       (DOWN TO RESERVOIR)
+;;       (EAST TO RESERVOIR)
+;;       (FLAGS NONLANDBIT)
+;;       (GLOBAL GLOBAL-WATER)
+;;       (PSEUDO "STREAM" STREAM-PSEUDO)>
+
+(def in-stream
+  {:id :in-stream
+   :desc "Stream"
+   :ldesc "You are on the gently flowing stream. The upstream route is too narrow to navigate, and the downstream route is invisible due to twisting walls. There is a narrow beach to land on."
+   :flags #{:rwater}  ; NONLANDBIT = water room
+   :exits {:up "The channel is too narrow."
+           :west "The channel is too narrow."
+           :land :stream-view
+           :down :reservoir
+           :east :reservoir}
+   :globals #{:global-water}})
+
+;; <ROOM DAM-ROOM	;"was DAM"
+;;       (IN ROOMS)
+;;       (DESC "Dam")
+;;       (SOUTH TO DEEP-CANYON)
+;;       (DOWN TO DAM-BASE)
+;;       (EAST TO DAM-BASE)
+;;       (NORTH TO DAM-LOBBY)
+;;       (WEST TO RESERVOIR-SOUTH)
+;;       (ACTION DAM-ROOM-FCN)
+;;       (FLAGS RLANDBIT ONBIT)
+;;       (GLOBAL GLOBAL-WATER)>
+
+(def dam-room
+  {:id :dam-room
+   :desc "Dam"
+   ;; ldesc is dynamic, handled by action function
+   :flags #{:lit}  ; ONBIT = lit
+   :exits {:west :reservoir-south
+           :north :dam-lobby
+           :down :dam-base
+           :east :dam-base
+           :south "TODO: This exit leads to DEEP-CANYON."}
+   :globals #{:global-water}
+   :action dam/dam-room-action})
+
+;; <ROOM DAM-LOBBY	;"was LOBBY"
+;;       (IN ROOMS)
+;;       (LDESC
+;; "This room appears to have been the waiting room for groups touring
+;; the dam. There are open doorways here to the north and east marked
+;; \"Private\", and there is a path leading south over the top of the dam.")
+;;       (DESC "Dam Lobby")
+;;       (SOUTH TO DAM-ROOM)
+;;       (NORTH TO MAINTENANCE-ROOM)
+;;       (EAST TO MAINTENANCE-ROOM)
+;;       (FLAGS RLANDBIT ONBIT)>
+
+(def dam-lobby
+  {:id :dam-lobby
+   :desc "Dam Lobby"
+   :ldesc "This room appears to have been the waiting room for groups touring the dam. There are open doorways here to the north and east marked \"Private\", and there is a path leading south over the top of the dam."
+   :flags #{:lit}  ; ONBIT = lit
+   :exits {:south :dam-room
+           :north :maintenance-room
+           :east :maintenance-room}})
+
+;; <ROOM MAINTENANCE-ROOM	;"was MAINT"
+;;       (IN ROOMS)
+;;       (LDESC
+;; "This is what appears to have been the maintenance room for Flood
+;; Control Dam #3. Apparently, this room has been ransacked recently, for
+;; most of the valuable equipment is gone. On the wall in front of you is a
+;; group of buttons colored blue, yellow, brown, and red. There are doorways to
+;; the west and south.")
+;;       (DESC "Maintenance Room")
+;;       (SOUTH TO DAM-LOBBY)
+;;       (WEST TO DAM-LOBBY)
+;;       (FLAGS RLANDBIT)>
+
+(def maintenance-room
+  {:id :maintenance-room
+   :desc "Maintenance Room"
+   :ldesc "This is what appears to have been the maintenance room for Flood Control Dam #3. Apparently, this room has been ransacked recently, for most of the valuable equipment is gone. On the wall in front of you is a group of buttons colored blue, yellow, brown, and red. There are doorways to the west and south."
+   :flags #{}  ; Underground, not lit (no ONBIT)
+   :exits {:south :dam-lobby
+           :west :dam-lobby}})
+
+;; <ROOM DAM-BASE	;"was DOCK"
+;;       (IN ROOMS)
+;;       (LDESC
+;; "You are at the base of Flood Control Dam #3, which looms above you
+;; and to the north. The river Frigid is flowing by here. Along the
+;; river are the White Cliffs which seem to form giant walls stretching
+;; from north to south along the shores of the river as it winds its
+;; way downstream.")
+;;       (DESC "Dam Base")
+;;       (NORTH TO DAM-ROOM)
+;;       (UP TO DAM-ROOM)
+;;       (FLAGS RLANDBIT ONBIT SACREDBIT)
+;;       (GLOBAL GLOBAL-WATER RIVER)>
+
+(def dam-base
+  {:id :dam-base
+   :desc "Dam Base"
+   :ldesc "You are at the base of Flood Control Dam #3, which looms above you and to the north. The river Frigid is flowing by here. Along the river are the White Cliffs which seem to form giant walls stretching from north to south along the shores of the river as it winds its way downstream."
+   :flags #{:lit :sacred}  ; ONBIT + SACREDBIT
+   :exits {:north :dam-room
+           :up :dam-room}
+   :globals #{:global-water}})
+
 ;; Note: dark-area is a placeholder for unlit areas, not a specific ZIL room.
 ;; When the player enters an unlit room without a light source, they see
 ;; the "pitch black" message and may be eaten by a grue.
@@ -1200,5 +1420,16 @@
    cyclops-room
    strange-passage
    treasure-room
+   ;; Dam/Reservoir area
+   reservoir-south
+   reservoir
+   reservoir-north
+   stream-view
+   in-stream
+   dam-room
+   dam-lobby
+   maintenance-room
+   dam-base
+   ;; Special rooms
    dark-area
    stone-barrow])
