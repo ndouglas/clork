@@ -1318,3 +1318,179 @@
                  (verbs-health/score-tvalue :bag-of-coins))]
       ;; Score should remain 0
       (is (= 0 (:score gs))))))
+
+;;; ---------------------------------------------------------------------------
+;;; EAT/DRINK VERB TESTS
+;;; ---------------------------------------------------------------------------
+;;; ZIL: V-EAT in gverbs.zil (lines 499-532)
+;;; ZIL: V-DRINK in gverbs.zil (lines 484-485)
+
+(deftest eat-vocabulary-test
+  (testing "eat is registered in vocabulary as a verb"
+    (is (= true (parser/wt? "eat" :verb)))
+    (is (= :eat (parser/wt? "eat" :verb true))))
+  (testing "consume is a synonym for eat"
+    (is (= true (parser/wt? "consume" :verb)))
+    (is (= :eat (parser/wt? "consume" :verb true)))))
+
+(deftest drink-vocabulary-test
+  (testing "drink is registered in vocabulary as a verb"
+    (is (= true (parser/wt? "drink" :verb)))
+    (is (= :drink (parser/wt? "drink" :verb true))))
+  (testing "imbibe is a synonym for drink"
+    (is (= true (parser/wt? "imbibe" :verb)))
+    (is (= :drink (parser/wt? "imbibe" :verb true)))))
+
+(deftest v-eat-food-test
+  (testing "eating food removes it from game"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :lunch
+                                 :in :adventurer
+                                 :desc "lunch"
+                                 :flags #{:take :food}})
+                 (assoc-in [:parser :prsa] :eat)
+                 (assoc-in [:parser :prso] [:lunch]))
+          v-eat (requiring-resolve 'clork.verbs-food/v-eat)
+          [output result] (with-captured-output (v-eat gs))]
+      (is (clojure.string/includes? output "hit the spot"))
+      (is (nil? (get-in result [:objects :lunch :in]))))))
+
+(deftest v-eat-not-holding-test
+  (testing "eating food not held shows 'not holding' message"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :lunch
+                                 :in :west-of-house
+                                 :desc "lunch"
+                                 :flags #{:take :food}})
+                 (assoc-in [:parser :prsa] :eat)
+                 (assoc-in [:parser :prso] [:lunch]))
+          v-eat (requiring-resolve 'clork.verbs-food/v-eat)
+          [output _] (with-captured-output (v-eat gs))]
+      (is (clojure.string/includes? output "not holding")))))
+
+(deftest v-drink-not-food-test
+  (testing "trying to drink food shows 'How can you drink that?'"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :lunch
+                                 :in :adventurer
+                                 :desc "lunch"
+                                 :flags #{:take :food}})
+                 (assoc-in [:parser :prsa] :drink)
+                 (assoc-in [:parser :prso] [:lunch]))
+          v-eat (requiring-resolve 'clork.verbs-food/v-eat)
+          [output _] (with-captured-output (v-eat gs))]
+      (is (clojure.string/includes? output "How can you drink")))))
+
+(deftest v-eat-non-food-test
+  (testing "eating non-food shows 'would not agree' message"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :rock
+                                 :in :adventurer
+                                 :desc "rock"
+                                 :flags #{:take}})
+                 (assoc-in [:parser :prsa] :eat)
+                 (assoc-in [:parser :prso] [:rock]))
+          v-eat (requiring-resolve 'clork.verbs-food/v-eat)
+          [output _] (with-captured-output (v-eat gs))]
+      (is (clojure.string/includes? output "would agree with you")))))
+
+;;; ---------------------------------------------------------------------------
+;;; GIVE VERB TESTS
+;;; ---------------------------------------------------------------------------
+;;; ZIL: V-GIVE in gverbs.zil (lines 729-733)
+
+(deftest give-vocabulary-test
+  (testing "give is registered in vocabulary as a verb"
+    (is (= true (parser/wt? "give" :verb)))
+    (is (= :give (parser/wt? "give" :verb true))))
+  (testing "hand is a synonym for give"
+    (is (= true (parser/wt? "hand" :verb)))
+    (is (= :give (parser/wt? "hand" :verb true)))))
+
+(deftest v-give-to-actor-test
+  (testing "giving to actor shows 'refuses politely' message"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :sword
+                                 :in :adventurer
+                                 :desc "sword"
+                                 :flags #{:take}})
+                 (gs/add-object {:id :troll
+                                 :in :west-of-house
+                                 :desc "troll"
+                                 :flags #{:actor}})
+                 (assoc-in [:parser :prsa] :give)
+                 (assoc-in [:parser :prso] [:sword])
+                 (assoc-in [:parser :prsi] [:troll]))
+          v-give (requiring-resolve 'clork.verbs-food/v-give)
+          [output _] (with-captured-output (v-give gs))]
+      (is (clojure.string/includes? output "refuses it politely")))))
+
+(deftest v-give-to-non-actor-test
+  (testing "giving to non-actor shows 'can't give' message"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :sword
+                                 :in :adventurer
+                                 :desc "sword"
+                                 :flags #{:take}})
+                 (gs/add-object {:id :rock
+                                 :in :west-of-house
+                                 :desc "rock"
+                                 :flags #{:take}})
+                 (assoc-in [:parser :prsa] :give)
+                 (assoc-in [:parser :prso] [:sword])
+                 (assoc-in [:parser :prsi] [:rock]))
+          v-give (requiring-resolve 'clork.verbs-food/v-give)
+          [output _] (with-captured-output (v-give gs))]
+      (is (clojure.string/includes? output "can't give")))))
+
+;;; ---------------------------------------------------------------------------
+;;; LOCK/UNLOCK VERB TESTS
+;;; ---------------------------------------------------------------------------
+;;; ZIL: V-LOCK in gverbs.zil (lines 871-872)
+;;; ZIL: V-UNLOCK in gverbs.zil (lines 1524-1525)
+
+(deftest lock-vocabulary-test
+  (testing "lock is registered in vocabulary as a verb"
+    (is (= true (parser/wt? "lock" :verb)))
+    (is (= :lock (parser/wt? "lock" :verb true)))))
+
+(deftest unlock-vocabulary-test
+  (testing "unlock is registered in vocabulary as a verb"
+    (is (= true (parser/wt? "unlock" :verb)))
+    (is (= :unlock (parser/wt? "unlock" :verb true)))))
+
+(deftest v-lock-default-test
+  (testing "lock on non-lockable shows 'doesn't seem to work' message"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :door
+                                 :in :west-of-house
+                                 :desc "door"
+                                 :flags #{:door}})
+                 (gs/add-object {:id :key
+                                 :in :adventurer
+                                 :desc "key"
+                                 :flags #{:tool :take}})
+                 (assoc-in [:parser :prsa] :lock)
+                 (assoc-in [:parser :prso] [:door])
+                 (assoc-in [:parser :prsi] [:key]))
+          v-lock (requiring-resolve 'clork.verbs-food/v-lock)
+          [output _] (with-captured-output (v-lock gs))]
+      (is (clojure.string/includes? output "doesn't seem to work")))))
+
+(deftest v-unlock-default-test
+  (testing "unlock on non-lockable shows 'doesn't seem to work' message"
+    (let [gs (-> (make-test-state)
+                 (gs/add-object {:id :door
+                                 :in :west-of-house
+                                 :desc "door"
+                                 :flags #{:door}})
+                 (gs/add-object {:id :key
+                                 :in :adventurer
+                                 :desc "key"
+                                 :flags #{:tool :take}})
+                 (assoc-in [:parser :prsa] :unlock)
+                 (assoc-in [:parser :prso] [:door])
+                 (assoc-in [:parser :prsi] [:key]))
+          v-unlock (requiring-resolve 'clork.verbs-food/v-unlock)
+          [output _] (with-captured-output (v-unlock gs))]
+      (is (clojure.string/includes? output "doesn't seem to work")))))

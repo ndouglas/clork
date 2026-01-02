@@ -11,6 +11,7 @@
             [clork.verbs-light :as verbs-light]
             [clork.verbs-put :as verbs-put]
             [clork.verbs-combat :as verbs-combat]
+            [clork.verbs-food :as verbs-food]
             [clork.cyclops :as cyclops]
             [clork.loud-room :as loud-room]
             [clork.debug.trace :as trace]))
@@ -565,7 +566,67 @@
    ;; Saying "echo" in the Loud Room solves the puzzle
    :echo       {:words   ["echo"]
                 :syntax  {:num-objects 0}
-                :handler loud-room/v-echo}})
+                :handler loud-room/v-echo}
+
+   ;; === Food/Drink Verbs ===
+   ;; ZIL: <SYNTAX EAT OBJECT (FIND FOODBIT) (HELD CARRIED ON-GROUND IN-ROOM TAKE) = V-EAT>
+   :eat        {:words   ["eat" "consume" "taste" "bite" "munch"]
+                :syntax  {:num-objects 1
+                          :gwim1 :food  ; FIND FOODBIT
+                          :loc1 #{:held :carried :in-room :on-ground :take}}
+                :handler verbs-food/v-eat}
+
+   ;; ZIL: <SYNTAX DRINK OBJECT (FIND DRINKBIT) (HELD CARRIED ON-GROUND IN-ROOM) = V-DRINK>
+   ;;      <SYNTAX DRINK FROM OBJECT (HELD CARRIED) = V-DRINK-FROM>
+   ;;      <SYNONYM DRINK IMBIBE SWALLOW>
+   :drink      {:words   ["drink" "imbibe" "swallow" "sip" "quaff"]
+                :syntax  [{;; DRINK OBJECT (FIND DRINKBIT)
+                           :num-objects 1
+                           :gwim1 :drink  ; FIND DRINKBIT
+                           :loc1 #{:held :carried :in-room :on-ground}}
+
+                          ;; DRINK FROM OBJECT
+                          {:num-objects 1
+                           :prep1 :from
+                           :loc1 #{:held :carried}
+                           :action :drink-from}]
+                :handler verbs-food/v-drink}
+
+   ;; Handler for DRINK FROM (routed via :drink syntax)
+   :drink-from {:words   []
+                :syntax  {:num-objects 1
+                          :loc1 #{:held :carried}}
+                :handler verbs-food/v-drink-from}
+
+   ;; === Communication Verbs ===
+   ;; ZIL: <SYNTAX GIVE OBJECT (MANY HELD HAVE) TO OBJECT (FIND ACTORBIT) (ON-GROUND) = V-GIVE PRE-GIVE>
+   ;;      <SYNTAX GIVE OBJECT (FIND ACTORBIT) (ON-GROUND) OBJECT (MANY HELD HAVE) = V-SGIVE PRE-SGIVE>
+   :give       {:words   ["give" "hand" "offer" "feed"]
+                :syntax  {:num-objects 2
+                          :prep2 :to
+                          :loc1 #{:held :have :many}
+                          :loc2 #{:in-room :on-ground}
+                          :gwim2 :actor}  ; FIND ACTORBIT
+                :handler verbs-food/v-give}
+
+   ;; === Lock Verbs ===
+   ;; ZIL: <SYNTAX LOCK OBJECT (ON-GROUND IN-ROOM) WITH OBJECT (FIND TOOLBIT) (HELD CARRIED ON-GROUND IN-ROOM TAKE) = V-LOCK>
+   :lock       {:words   ["lock"]
+                :syntax  {:num-objects 2
+                          :prep2 :with
+                          :loc1 #{:in-room :on-ground}
+                          :loc2 #{:held :carried :in-room :on-ground :take}
+                          :gwim2 :tool}  ; FIND TOOLBIT
+                :handler verbs-food/v-lock}
+
+   ;; ZIL: <SYNTAX UNLOCK OBJECT (ON-GROUND IN-ROOM) WITH OBJECT (FIND TOOLBIT) (HELD CARRIED ON-GROUND IN-ROOM TAKE) = V-UNLOCK>
+   :unlock     {:words   ["unlock"]
+                :syntax  {:num-objects 2
+                          :prep2 :with
+                          :loc1 #{:in-room :on-ground}
+                          :loc2 #{:held :carried :in-room :on-ground :take}
+                          :gwim2 :tool}  ; FIND TOOLBIT
+                :handler verbs-food/v-unlock}})
 
 ;;; ---------------------------------------------------------------------------
 ;;; DIRECTION VOCABULARY
