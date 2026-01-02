@@ -266,63 +266,86 @@
    - :meta-verbs     - Always-available verbs (look, inventory, score, etc.)
    - :movement       - Available directions to move
    - :object-actions - Map of object-id -> [applicable verbs]
-   - :two-object     - List of valid two-object commands"
+   - :two-object     - List of valid two-object commands
+   - :special-mode   - If non-nil, indicates a special input mode is active
+
+   Special modes (like :loud-room-mode) restrict available actions."
   [game-state]
-  (let [;; Check if room is lit (affects what we can do)
-        lit? (or (:lit game-state)
-                 (gs/set-here-flag? game-state :lit))
+  ;; Check for special input modes that restrict available actions
+  (if (:loud-room-mode game-state)
+    ;; Loud room special mode - only limited actions available
+    ;; ZIL: LOUD-ROOM-FCN lines 1706-1741
+    {:meta-verbs [:look :quit :save :restore]
+     :movement {:exits {:west :round-room
+                        :east :damp-cave
+                        :up :deep-canyon}
+                :directions [:west :east :up]}
+     :room-objects []
+     :inventory []
+     :object-actions {}
+     :two-object-actions []
+     :lit? true
+     :special-mode :loud-room
+     :special-actions [:echo]  ; The puzzle solution
+     :special-mode-hint "The room is too loud. Say 'echo' or leave via west/east/up."}
 
-        ;; Get visible objects and inventory
-        room-objects (get-visible-objects game-state)
-        inventory (get-inventory game-state)
+    ;; Normal mode - compute all valid actions
+    (let [;; Check if room is lit (affects what we can do)
+          lit? (or (:lit game-state)
+                   (gs/set-here-flag? game-state :lit))
 
-        room-obj-ids (map :id room-objects)
-        inventory-ids (map :id inventory)
+          ;; Get visible objects and inventory
+          room-objects (get-visible-objects game-state)
+          inventory (get-inventory game-state)
 
-        ;; Available exits
-        exits (get-available-exits game-state)
+          room-obj-ids (map :id room-objects)
+          inventory-ids (map :id inventory)
 
-        ;; Meta verbs (always available)
-        meta-verbs [:look :inventory :score :diagnose :verbose :brief
-                    :super-brief :quit :save :restore :restart]
+          ;; Available exits
+          exits (get-available-exits game-state)
 
-        ;; Object-specific actions
-        object-actions
-        (if lit?
-          (merge
-           ;; Room objects
-           (into {}
-                 (for [{:keys [id]} room-objects]
-                   [id {:info (object-info game-state id)
-                        :verbs (valid-verbs-for-object game-state id false)}]))
-           ;; Inventory objects
-           (into {}
-                 (for [{:keys [id]} inventory]
-                   [id {:info (object-info game-state id)
-                        :verbs (valid-verbs-for-object game-state id true)}])))
-          ;; In darkness, can only interact with light sources
-          (let [light-sources (filter
-                               #(gs/set-thing-flag? game-state (:id %) :light)
-                               (concat room-objects inventory))]
-            (into {}
-                  (for [{:keys [id]} light-sources]
-                    (let [in-inv? (some #(= id (:id %)) inventory)]
-                      [id {:info (object-info game-state id)
-                           :verbs (valid-verbs-for-object game-state id in-inv?)}])))))
+          ;; Meta verbs (always available)
+          meta-verbs [:look :inventory :score :diagnose :verbose :brief
+                      :super-brief :quit :save :restore :restart]
 
-        ;; Two-object actions (PUT X IN Y, etc.)
-        two-object-actions
-        (when lit?
-          (valid-two-object-verbs game-state inventory-ids room-obj-ids))]
+          ;; Object-specific actions
+          object-actions
+          (if lit?
+            (merge
+             ;; Room objects
+             (into {}
+                   (for [{:keys [id]} room-objects]
+                     [id {:info (object-info game-state id)
+                          :verbs (valid-verbs-for-object game-state id false)}]))
+             ;; Inventory objects
+             (into {}
+                   (for [{:keys [id]} inventory]
+                     [id {:info (object-info game-state id)
+                          :verbs (valid-verbs-for-object game-state id true)}])))
+            ;; In darkness, can only interact with light sources
+            (let [light-sources (filter
+                                 #(gs/set-thing-flag? game-state (:id %) :light)
+                                 (concat room-objects inventory))]
+              (into {}
+                    (for [{:keys [id]} light-sources]
+                      (let [in-inv? (some #(= id (:id %)) inventory)]
+                        [id {:info (object-info game-state id)
+                             :verbs (valid-verbs-for-object game-state id in-inv?)}])))))
 
-    {:meta-verbs meta-verbs
-     :movement {:exits exits
-                :directions (vec (keys exits))}
-     :room-objects room-objects
-     :inventory inventory
-     :object-actions object-actions
-     :two-object-actions (vec two-object-actions)
-     :lit? lit?}))
+          ;; Two-object actions (PUT X IN Y, etc.)
+          two-object-actions
+          (when lit?
+            (valid-two-object-verbs game-state inventory-ids room-obj-ids))]
+
+      {:meta-verbs meta-verbs
+       :movement {:exits exits
+                  :directions (vec (keys exits))}
+       :room-objects room-objects
+       :inventory inventory
+       :object-actions object-actions
+       :two-object-actions (vec two-object-actions)
+       :lit? lit?
+       :special-mode nil})))
 
 ;;; ---------------------------------------------------------------------------
 ;;; STATE SNAPSHOT
@@ -391,6 +414,96 @@
 ;;; ACTION EXECUTION
 ;;; ---------------------------------------------------------------------------
 
+(defn- loud-room-action-valid?
+  "Check if an action is valid in loud-room special mode."
+  [action]
+  (let [{:keys [verb direction]} action]
+    (or
+     ;; Meta verbs
+     (#{:look :quit :save :restore} verb)
+     ;; Echo (the puzzle solution)
+     (= verb :echo)
+     ;; Movement to valid exits only
+     (and (= verb :go)
+          (#{:west :east :up :w :e :u} direction)))))
+
+(defn- loud-room-execute
+  "Execute an action in loud-room special mode.
+   Returns {:game-state :message :snapshot} like execute-action."
+  [game-state action]
+  (let [{:keys [verb direction]} action]
+    (cond
+      ;; Echo - solve the puzzle
+      (= verb :echo)
+      (let [v-echo (requiring-resolve 'clork.loud-room/v-echo)
+            output-buffer (atom [])
+            gs-with-output (assoc game-state :output-buffer output-buffer)
+            result-gs (v-echo gs-with-output)
+            result-gs (dissoc result-gs :loud-room-mode :output-buffer)
+            message (apply str @output-buffer)]
+        {:game-state result-gs
+         :message message
+         :snapshot (state-snapshot result-gs :message message)})
+
+      ;; Movement - go to specific rooms
+      (= verb :go)
+      (let [dest (case direction
+                   (:west :w) :round-room
+                   (:east :e) :damp-cave
+                   (:up :u) :deep-canyon
+                   nil)
+            v-first-look (requiring-resolve 'clork.verbs-look/v-first-look)]
+        (if dest
+          (let [output-buffer (atom [])
+                gs-with-output (assoc game-state :output-buffer output-buffer)
+                result-gs (-> gs-with-output
+                              (assoc :here dest)
+                              (dissoc :loud-room-mode)
+                              (v-first-look))
+                result-gs (dissoc result-gs :output-buffer)
+                message (apply str @output-buffer)]
+            {:game-state result-gs
+             :message message
+             :snapshot (state-snapshot result-gs :message message)})
+          ;; Invalid direction
+          {:game-state game-state
+           :message "You can't go that way in all this noise."
+           :snapshot (state-snapshot game-state :message "You can't go that way in all this noise.")}))
+
+      ;; Look - show room description
+      (= verb :look)
+      (let [loud-room-action (requiring-resolve 'clork.loud-room/loud-room-action)
+            output-buffer (atom [])
+            gs-with-output (assoc game-state :output-buffer output-buffer)
+            result-gs (loud-room-action gs-with-output :look)
+            result-gs (dissoc result-gs :output-buffer)
+            message (apply str @output-buffer)]
+        {:game-state result-gs
+         :message message
+         :snapshot (state-snapshot result-gs :message message)})
+
+      ;; Meta verbs that pass through
+      (#{:quit :save :restore} verb)
+      (let [output-buffer (atom [])
+            gs-with-output (assoc game-state :output-buffer output-buffer)
+            parser-state {:prsa verb}
+            gs-with-parser (assoc gs-with-output :parser
+                                  (merge (:parser gs-with-output) parser-state))
+            result-gs (verb-defs/perform gs-with-parser)
+            result-gs (dissoc result-gs :output-buffer)
+            message (apply str @output-buffer)]
+        {:game-state result-gs
+         :message message
+         :snapshot (state-snapshot result-gs :message message)})
+
+      ;; Invalid action - echo it back
+      :else
+      (let [verb-str (name verb)
+            message (str verb-str " " verb-str " ...")]
+        {:game-state game-state
+         :message message
+         :snapshot (state-snapshot game-state :message message)}))))
+
 (defn execute-action
   "Execute a structured action and return new state + response.
 
@@ -400,50 +513,59 @@
    - {:verb :take :direct-object :lamp}               ; single object
    - {:verb :put :direct-object :egg :prep :in :indirect-object :nest}
 
-   Returns {:game-state new-state :message output-text :snapshot state-info}"
+   Returns {:game-state new-state :message output-text :snapshot state-info}
+
+   Note: Special input modes (like :loud-room-mode) restrict available actions.
+   Invalid actions in special modes will be rejected with appropriate messages."
   [game-state action]
-  (let [{:keys [verb direction direct-object indirect-object]} action
+  ;; Check for special input modes
+  (if (:loud-room-mode game-state)
+    ;; Loud room special mode - limited actions only
+    (loud-room-execute game-state action)
 
-        ;; Convert to parser state format
-        parser-state (cond-> {:prsa verb}
-                       direct-object
-                       (assoc :prso [direct-object])
+    ;; Normal execution
+    (let [{:keys [verb direction direct-object indirect-object]} action
 
-                       indirect-object
-                       (assoc :prsi indirect-object))
+          ;; Convert to parser state format
+          parser-state (cond-> {:prsa verb}
+                         direct-object
+                         (assoc :prso [direct-object])
 
-        ;; Special handling for movement
-        final-parser-state
-        (if (= verb :go)
-          (assoc parser-state :prsa :walk :prso [direction])
-          parser-state)
+                         indirect-object
+                         (assoc :prsi indirect-object))
 
-        ;; Set up game state with parser info
-        gs-with-parser (assoc game-state :parser
-                              (merge (:parser game-state) final-parser-state))
+          ;; Special handling for movement
+          final-parser-state
+          (if (= verb :go)
+            (assoc parser-state :prsa :walk :prso [direction])
+            parser-state)
 
-        ;; Capture output via atom
-        output-buffer (atom [])
-        gs-with-output (assoc gs-with-parser :output-buffer output-buffer)
+          ;; Set up game state with parser info
+          gs-with-parser (assoc game-state :parser
+                                (merge (:parser game-state) final-parser-state))
 
-        ;; Execute the action
-        result-gs (verb-defs/perform gs-with-output)
+          ;; Capture output via atom
+          output-buffer (atom [])
+          gs-with-output (assoc gs-with-parser :output-buffer output-buffer)
 
-        ;; Run daemons (combat, sword glow, etc.)
-        ;; Output buffer stays attached so daemon messages are captured
-        result-gs (daemon/clocker result-gs)
+          ;; Execute the action
+          result-gs (verb-defs/perform gs-with-output)
 
-        ;; Get captured output from atom
-        message (apply str @output-buffer)
+          ;; Run daemons (combat, sword glow, etc.)
+          ;; Output buffer stays attached so daemon messages are captured
+          result-gs (daemon/clocker result-gs)
 
-        ;; Clean up and increment moves
-        final-gs (-> result-gs
-                     (dissoc :output-buffer)
-                     (update :moves (fnil inc 0)))]
+          ;; Get captured output from atom
+          message (apply str @output-buffer)
 
-    {:game-state final-gs
-     :message message
-     :snapshot (state-snapshot final-gs :message message)}))
+          ;; Clean up and increment moves
+          final-gs (-> result-gs
+                       (dissoc :output-buffer)
+                       (update :moves (fnil inc 0)))]
+
+      {:game-state final-gs
+       :message message
+       :snapshot (state-snapshot final-gs :message message)})))
 
 ;;; ---------------------------------------------------------------------------
 ;;; CONVENIENCE: FLAT ACTION LIST
@@ -456,7 +578,7 @@
    Useful for agents that want to sample from available actions."
   [game-state]
   (let [va (valid-actions game-state)
-        {:keys [meta-verbs movement object-actions two-object-actions]} va]
+        {:keys [meta-verbs movement object-actions two-object-actions special-actions]} va]
     (vec
      (concat
       ;; Meta verbs
@@ -466,6 +588,10 @@
       ;; Movement
       (for [dir (:directions movement)]
         {:verb :go :direction dir})
+
+      ;; Special actions (e.g., :echo in loud room)
+      (for [v (or special-actions [])]
+        {:verb v})
 
       ;; Single-object actions
       (for [[obj-id {:keys [verbs]}] object-actions
