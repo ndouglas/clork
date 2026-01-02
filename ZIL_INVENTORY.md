@@ -100,12 +100,12 @@ These are out-of-game commands that don't advance time.
 
 | Status | Verb       | Handler | Description        |
 | ------ | ---------- | ------- | ------------------ |
-| [ ]    | MOVE       | V-MOVE  | Move object        |
-| [ ]    | PUSH       | V-PUSH  | Push object        |
-| [ ]    | PULL/TUG   | V-MOVE  | Pull object        |
+| [x]    | MOVE       | V-MOVE  | Move object        |
+| [x]    | PUSH       | V-PUSH  | Push object        |
+| [x]    | PULL/TUG   | V-MOVE  | Pull object        |
 | [ ]    | RAISE/LIFT | V-RAISE | Raise object       |
 | [ ]    | LOWER      | V-LOWER | Lower object       |
-| [ ]    | TURN       | V-TURN  | Turn/rotate object |
+| [x]    | TURN       | V-TURN  | Turn/rotate object |
 | [ ]    | SHAKE      | V-SHAKE | Shake container    |
 | [ ]    | WAVE       | V-WAVE  | Wave object        |
 | [ ]    | RUB/TOUCH  | V-RUB   | Rub/touch object   |
@@ -116,8 +116,8 @@ These are out-of-game commands that don't advance time.
 
 | Status | Verb        | Handler   | Description     |
 | ------ | ----------- | --------- | --------------- |
-| [ ]    | UNLOCK      | V-UNLOCK  | Unlock with key |
-| [ ]    | LOCK        | V-LOCK    | Lock with key   |
+| [x]    | UNLOCK      | V-UNLOCK  | Unlock with key |
+| [x]    | LOCK        | V-LOCK    | Lock with key   |
 | [ ]    | DIG         | V-DIG     | Dig with shovel |
 | [ ]    | CUT/SLICE   | V-CUT     | Cut with blade  |
 | [ ]    | BURN/IGNITE | V-BURN    | Burn with fire  |
@@ -133,8 +133,8 @@ These are out-of-game commands that don't advance time.
 
 | Status | Verb        | Handler | Description  |
 | ------ | ----------- | ------- | ------------ |
-| [ ]    | EAT/CONSUME | V-EAT   | Eat food     |
-| [ ]    | DRINK       | V-DRINK | Drink liquid |
+| [x]    | EAT/CONSUME | V-EAT   | Eat food     |
+| [x]    | DRINK       | V-DRINK | Drink liquid |
 
 ### Communication
 
@@ -145,6 +145,7 @@ These are out-of-game commands that don't advance time.
 | [ ]    | ANSWER/REPLY | V-ANSWER | Answer question |
 | [ ]    | HELLO/HI     | V-HELLO  | Greet           |
 | [ ]    | YELL/SCREAM  | V-YELL   | Yell loudly     |
+| [x]    | GIVE/OFFER   | V-GIVE   | Give to NPC     |
 
 ### Vehicle/Boat
 
@@ -173,8 +174,7 @@ These are out-of-game commands that don't advance time.
 | [ ]    | RING        | V-RING    | Ring bell          |
 | [x]    | ECHO        | V-ECHO    | Say "echo"         |
 | [ ]    | CROSS       | V-CROSS   | Cross bridge/chasm |
-| [ ]    | GIVE/OFFER  | V-GIVE    | Give to NPC        |
-| [ ]    | THROUGH     | V-THROUGH | Go through         |
+| [x]    | THROUGH     | V-THROUGH | Go through         |
 | [ ]    | STAND       | V-STAND   | Stand up           |
 
 ### Special/Easter Egg Verbs
@@ -452,9 +452,9 @@ These are out-of-game commands that don't advance time.
 
 | Status | Object ID | Description       |
 | ------ | --------- | ----------------- |
-| [ ]    | LUNCH     | Lunch             |
-| [ ]    | GARLIC    | Clove of Garlic   |
-| [ ]    | WATER     | Quantity of Water |
+| [x]    | LUNCH     | Lunch             |
+| [x]    | GARLIC    | Clove of Garlic   |
+| [x]    | WATER     | Quantity of Water |
 
 ### Scenery/Fixed Objects
 
@@ -774,20 +774,20 @@ These are out-of-game commands that don't advance time.
 | ------ | --------------- | ----------------- |
 | [x]    | TROLL-FLAG      | Troll state       |
 | [x]    | TROLL-MELEE     | Troll in combat   |
-| [ ]    | THIEF-HERE      | Thief present     |
-| [ ]    | THIEF-ENGROSSED | Thief distracted  |
-| [ ]    | THIEF-MELEE     | Thief in combat   |
-| [ ]    | CYCLOPS-FLAG    | Cyclops state     |
-| [ ]    | CYCLOMAD        | Cyclops angry     |
-| [ ]    | CYCLOWRATH      | Cyclops attacking |
-| [ ]    | CYCLOPS-MELEE   | Cyclops in combat |
+| [x]    | THIEF-HERE      | Thief present     |
+| [x]    | THIEF-ENGROSSED | Thief distracted  |
+| [x]    | THIEF-MELEE     | Thief in combat   |
+| [x]    | CYCLOPS-FLAG    | Cyclops state     |
+| [x]    | CYCLOMAD        | Cyclops angry     |
+| [x]    | CYCLOWRATH      | Cyclops attacking |
+| [x]    | CYCLOPS-MELEE   | Cyclops in combat |
 
 ### Puzzle State
 
 | Status | Global              | Description          |
 | ------ | ------------------- | -------------------- |
 | [ ]    | KITCHEN-WINDOW-FLAG | Window open          |
-| [ ]    | GRATE-REVEALED      | Grate visible        |
+| [x]    | GRATE-REVEALED      | Grate visible        |
 | [ ]    | DOME-FLAG           | Dome rope            |
 | [x]    | GATE-FLAG           | Gate state           |
 | [x]    | GATES-OPEN          | Gates open           |
@@ -798,7 +798,7 @@ These are out-of-game commands that don't advance time.
 | [ ]    | RUG-MOVED           | Rug moved            |
 | [ ]    | EGG-SOLVE           | Egg opened           |
 | [ ]    | COFFIN-CURE         | Coffin taken         |
-| [ ]    | MAGIC-FLAG          | In thief's lair      |
+| [x]    | MAGIC-FLAG          | In thief's lair      |
 | [ ]    | BUOY-FLAG           | Buoy opened          |
 | [ ]    | LLD-FLAG            | Land of dead visited |
 | [ ]    | MIRROR-MUNG         | Mirror broken        |
@@ -848,7 +848,7 @@ These are out-of-game commands that don't advance time.
 ### Phase 5: Puzzles
 - [x] Dam/reservoir puzzle
 - [ ] Coal machine puzzle
-- [ ] Loud room echo
+- [x] Loud room echo
 - [ ] Hades ceremony
 - [ ] Mirror rooms
 - [ ] Rainbow/pot of gold
