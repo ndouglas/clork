@@ -10,7 +10,8 @@
             [clork.readline :as readline]
             [clork.daemon :as daemon]
             [clork.verbs-look :as verbs-look]
-            [clork.verbs-meta :as verbs-meta]))
+            [clork.verbs-meta :as verbs-meta]
+            [clork.loud-room :as loud-room]))
 
 ;;; ---------------------------------------------------------------------------
 ;;; MOVE COUNTING
@@ -202,6 +203,32 @@
       (recur (parser-input/parser-read-command gs))
       gs)))
 
+(defn- handle-normal-input
+  "Handle normal input processing (parsing, performing, daemons)."
+  [gs input]
+  ;; Check for $ debug command
+  (if (debug/debug-command? input)
+    ;; Handle debug command - bypass normal parser
+    ;; Don't push to undo stack for debug commands
+    ;; Debug commands don't count as moves
+    (-> gs
+        (debug/dispatch input)
+        (utils/crlf))
+    ;; Normal parsing
+    ;; Push to undo stack BEFORE modifying state
+    (let [gs (undo/push-undo gs input)
+          gs (parser/parser-from-input gs)]
+      (if (parser/get-parser-error gs)
+        ;; Parsing failed - error already displayed by parser
+        gs
+        ;; Parsing succeeded - perform the action, then run daemons
+        (-> gs
+            (verb-defs/perform)
+            (increment-moves-if-needed)
+            (daemon/clocker)
+            (debug-state/validate-state-middleware)
+            (utils/crlf))))))
+
 (defn main-loop-once
   "Execute one iteration of the main loop.
 
@@ -209,11 +236,12 @@
 
    This function:
    1. Reads input from the player
-   2. Pushes state to undo stack (for non-debug commands)
-   3. Checks for $ debug commands (intercepted early)
-   4. If normal command, calls the parser
-   5. If parsing succeeded, calls perform to execute the action
-   6. Returns the updated game-state"
+   2. Checks for special input modes (e.g., loud room)
+   3. Pushes state to undo stack (for non-debug commands)
+   4. Checks for $ debug commands (intercepted early)
+   5. If normal command, calls the parser
+   6. If parsing succeeded, calls perform to execute the action
+   7. Returns the updated game-state"
   [game-state]
   ;; Update state atom for tab completion before reading input
   (reset! current-state-atom game-state)
@@ -223,28 +251,19 @@
     ;; Handle EOF (nil input)
     (if (nil? input)
       (assoc gs :quit true)
-      ;; Phase 2: Check for $ debug command
-      (if (debug/debug-command? input)
-        ;; Handle debug command - bypass normal parser
-        ;; Don't push to undo stack for debug commands
-        ;; Debug commands don't count as moves
-        (-> gs
-            (debug/dispatch input)
-            (utils/crlf))
-        ;; Phase 3: Normal parsing
-        ;; Push to undo stack BEFORE modifying state
-        (let [gs (undo/push-undo gs input)
-              gs (parser/parser-from-input gs)]
-          (if (parser/get-parser-error gs)
-            ;; Parsing failed - error already displayed by parser
-            gs
-            ;; Parsing succeeded - perform the action, then run daemons
-            (-> gs
-                (verb-defs/perform)
-                (increment-moves-if-needed)
-                (daemon/clocker)
-                (debug-state/validate-state-middleware)
-                (utils/crlf))))))))
+      ;; Phase 2: Check for special input modes
+      (if (:loud-room-mode gs)
+        ;; Loud room special mode - only limited commands work
+        ;; ZIL: LOUD-ROOM-FCN lines 1700-1741
+        (let [[new-gs handled?] (loud-room/handle-special-input gs input)]
+          (if handled?
+            ;; Special handler processed the input
+            (-> new-gs
+                (utils/crlf))
+            ;; Pass through to normal handling (debug commands, save/restore/quit)
+            (handle-normal-input new-gs input)))
+        ;; Phase 3: Normal input handling
+        (handle-normal-input gs input)))))
 
 (defn- max-turns-exceeded?
   "Check if max turns has been exceeded (for script mode)."

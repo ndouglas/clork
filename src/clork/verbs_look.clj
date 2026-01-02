@@ -126,20 +126,18 @@
 ;;        <AND <NOT <FSET? .OBJ ,INVISIBLE>>
 ;;             <OR <FSET? .OBJ ,TRANSBIT> <FSET? .OBJ ,OPENBIT>>>>
 (defn see-inside?
-  "Returns true if we can see inside an object (transparent or open, not invisible)."
+  "Returns true if we can see inside an object (transparent or open, not invisible).
+   Uses gs/set-thing-flag? which checks both direct keys and the :flags set."
   [game-state obj-id]
-  (let [obj (gs/get-thing game-state obj-id)
-        flags (or (:flags obj) #{})]
-    (and (not (contains? flags :invisible))
-         (or (contains? flags :trans)
-             (contains? flags :open)))))
+  (and (not (gs/set-thing-flag? game-state obj-id :invisible))
+       (or (gs/set-thing-flag? game-state obj-id :trans)
+           (gs/set-thing-flag? game-state obj-id :open))))
 
 (defn- has-flag?
-  "Check if an object has a specific flag."
+  "Check if an object has a specific flag.
+   Uses gs/set-thing-flag? which checks both direct keys and the :flags set."
   [game-state obj-id flag]
-  (let [obj (gs/get-thing game-state obj-id)
-        flags (or (:flags obj) #{})]
-    (contains? flags flag)))
+  (gs/set-thing-flag? game-state obj-id flag))
 
 (defn- get-article
   "Get the appropriate article for an object."

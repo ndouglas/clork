@@ -5,6 +5,11 @@
    gates are open, the rushing water makes the room deafeningly loud.
    The solution is to say 'echo' which silences the room.
 
+   Special Input Mode:
+   When the room is loud (but not deafening), a special input mode is activated
+   that only accepts limited commands: movement (W/E/U), ECHO, SAVE, RESTORE, QUIT.
+   All other input is echoed back as if the room is repeating it.
+
    ZIL Reference:
    - LOUD-ROOM-FCN in 1actions.zil (lines 1673-1741)
    - DEEP-CANYON-F in 1actions.zil (lines 1743-1758)
@@ -13,7 +18,8 @@
   (:require [clork.utils :as utils]
             [clork.game-state :as gs]
             [clork.parser.state :as parser-state]
-            [clork.debug.trace :as trace]))
+            [clork.debug.trace :as trace]
+            [clojure.string :as str]))
 
 ;;; ---------------------------------------------------------------------------
 ;;; CONSTANTS
@@ -48,6 +54,17 @@
   [game-state]
   (and (:gates-open game-state)
        (not (:low-tide game-state))))
+
+(defn special-mode-required?
+  "Check if the special input mode should be active.
+   Special mode is required when:
+   - Room is NOT quiet (puzzle not solved, water not drained)
+   - Room is NOT deafening (player isn't being kicked out)
+
+   This is the 'loud but bearable' state where limited input is accepted."
+  [game-state]
+  (and (not (room-is-quiet? game-state))
+       (not (room-is-deafening? game-state))))
 
 (defn pick-scramble-room
   "Pick a random room for the player to scramble to.
@@ -96,8 +113,7 @@
       game-state)
 
     ;; M-ENTER: Called when entering room
-    ;; When loud, this triggers the special echo puzzle input mode
-    ;; For now, we'll handle this in the main loop by checking room state
+    ;; When loud but not deafening, trigger the special echo puzzle input mode
     :m-enter
     (cond
       ;; Room is quiet - normal entry
@@ -109,9 +125,10 @@
       game-state
 
       ;; Room is loud but not deafening - enter special mode
-      ;; (This shouldn't happen with current logic, but handle gracefully)
+      ;; ZIL: Lines 1700-1741 in LOUD-ROOM-FCN
       :else
-      game-state)
+      (-> game-state
+          (assoc :loud-room-mode true)))
 
     ;; Default: no special handling
     game-state))
@@ -170,3 +187,113 @@
     (-> game-state
         (utils/tell "echo echo ...")
         (utils/crlf))))
+
+;;; ---------------------------------------------------------------------------
+;;; SPECIAL INPUT MODE HANDLER
+;;; ---------------------------------------------------------------------------
+;;; ZIL: Lines 1700-1741 in LOUD-ROOM-FCN
+;;; When the room is loud but not deafening, only limited commands work.
+
+(defn- get-first-word
+  "Extract the first meaningful word from input.
+   If input starts with GO/WALK/RUN, get the direction word instead.
+   If input starts with SAY, get the word being said."
+  [input]
+  (when input
+    (let [words (str/split (str/trim (str/lower-case input)) #"\s+")
+          first-word (first words)]
+      (cond
+        ;; GO WEST -> WEST, WALK EAST -> EAST, etc.
+        (contains? #{"go" "walk" "run"} first-word)
+        (second words)
+
+        ;; SAY ECHO -> ECHO
+        (= "say" first-word)
+        (second words)
+
+        :else first-word))))
+
+(defn- goto-room
+  "Move player to a room and exit special mode.
+   Uses requiring-resolve to avoid circular dependency with verbs-look."
+  [game-state room-id]
+  (let [v-first-look (requiring-resolve 'clork.verbs-look/v-first-look)]
+    (-> game-state
+        (assoc :here room-id)
+        (dissoc :loud-room-mode)
+        (v-first-look))))
+
+(defn- solve-echo-puzzle
+  "Solve the echo puzzle and exit special mode."
+  [game-state]
+  (-> game-state
+      (assoc :loud-flag true)
+      (gs/unset-thing-flag :platinum-bar :sacred)
+      (utils/tell "The acoustics of the room change subtly.")
+      (utils/crlf)
+      (dissoc :loud-room-mode)))
+
+(defn- echo-input
+  "Echo the player's input back (room is too loud for anything else).
+   ZIL: V-ECHO in special mode just echoes the input."
+  [game-state input]
+  (-> game-state
+      (utils/tell (str input " " input " ..."))
+      (utils/crlf)))
+
+(defn handle-special-input
+  "Handle input in the loud room special mode.
+   Only limited commands are recognized:
+   - Movement: W/WEST, E/EAST, U/UP (to specific rooms)
+   - Meta: SAVE, RESTORE, QUIT
+   - Puzzle: ECHO (solves the puzzle)
+   - Debug: $ commands (always allowed)
+   - Everything else is echoed back.
+
+   ZIL: LOUD-ROOM-FCN lines 1706-1741
+
+   Returns [game-state handled?] where handled? is true if we processed it."
+  [game-state input]
+  (cond
+    ;; Empty input
+    (or (nil? input) (str/blank? input))
+    [(utils/tell game-state "I beg your pardon?") true]
+
+    ;; Debug commands always pass through
+    (str/starts-with? (str/trim input) "$")
+    [game-state false]  ; Let main loop handle it
+
+    :else
+    (let [word (get-first-word input)]
+      (case word
+        ;; Movement - exit to specific rooms
+        ("w" "west")
+        [(goto-room game-state :round-room) true]
+
+        ("e" "east")
+        [(goto-room game-state :damp-cave) true]
+
+        ("u" "up")
+        [(goto-room game-state :deep-canyon) true]
+
+        ;; Meta commands - let main loop handle these
+        ("save" "restore" "quit" "q")
+        [game-state false]
+
+        ;; BUG easter egg
+        "bug"
+        [(-> game-state
+             (utils/tell "That's only your opinion.")
+             (utils/crlf)) true]
+
+        ;; ECHO - solve the puzzle!
+        "echo"
+        [(solve-echo-puzzle game-state) true]
+
+        ;; LOOK - show room description (helpful for players)
+        ("look" "l")
+        [(-> game-state
+             (loud-room-action :look)) true]
+
+        ;; Everything else is echoed back
+        [(echo-input game-state input) true]))))

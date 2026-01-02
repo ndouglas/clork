@@ -11,7 +11,8 @@
   (:require [clork.utils :as utils]
             [clork.game-state :as gs]
             [clork.flags :as flags]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [clork.verbs-look :as verbs-look]))
 
 ;;; ---------------------------------------------------------------------------
 ;;; HELPERS
@@ -47,21 +48,32 @@
           room (get-in game-state [:rooms room-id])
           winner (:winner game-state)]
       (if room
-        (-> game-state
-            ;; Move the player object to the new room
-            (assoc-in [:objects winner :in] room-id)
-            ;; Update HERE
-            (assoc :here room-id)
-            ;; Update LIT flag based on room and carried light sources
-            (as-> gs
-                (let [room-lit (contains? (or (:flags room) #{}) :lit)
-                      contents (gs/get-contents gs winner)
-                      has-light-on (some (fn [obj-id]
-                                           (and (gs/set-thing-flag? gs obj-id :light)
-                                                (gs/set-thing-flag? gs obj-id :on)))
-                                         contents)]
-                  (assoc gs :lit (or room-lit has-light-on))))
-            (tell-action (str "Teleported to " room-id " (" (:desc room) ")")))
+        (let [gs (-> game-state
+                     ;; Move the player object to the new room
+                     (assoc-in [:objects winner :in] room-id)
+                     ;; Update HERE
+                     (assoc :here room-id)
+                     ;; Update LIT flag based on room and carried light sources
+                     (as-> gs
+                         (let [room-lit (contains? (or (:flags room) #{}) :lit)
+                               contents (gs/get-contents gs winner)
+                               has-light-on (some (fn [obj-id]
+                                                    (and (gs/set-thing-flag? gs obj-id :light)
+                                                         (gs/set-thing-flag? gs obj-id :on)))
+                                                  contents)]
+                           (assoc gs :lit (or room-lit has-light-on))))
+                     (tell-action (str "Teleported to " room-id " (" (:desc room) ")")))
+              ;; Call room action with M-ENTER if it exists
+              ;; This ensures special behaviors like loud-room-mode are triggered
+              room-action (:action room)
+              gs (if room-action
+                   (let [result (room-action gs :m-enter)]
+                     (if (gs/use-default? result)
+                       (gs/clear-use-default result)
+                       result))
+                   gs)]
+          ;; Show room description
+          (verbs-look/v-first-look gs))
         (utils/tell game-state (str "Unknown room: " room-id "\n"))))))
 
 ;;; ---------------------------------------------------------------------------

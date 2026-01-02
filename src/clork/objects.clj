@@ -1131,8 +1131,10 @@
 ;;	(VALUE 10)
 ;;	(TVALUE 5)>
 ;;
-;; Note: The SACREDBIT flag prevents the bar from being taken until
-;; the echo puzzle is solved (saying "echo" in the Loud Room removes it).
+;; Note: The bar cannot be taken until the echo puzzle is solved.
+;; In the original ZIL, this was enforced by a special input mode in the loud room
+;; that only accepts limited commands (movement, echo, save/restore/quit).
+;; The :sacred flag protects from the thief and is cleared when the puzzle is solved.
 
 (def platinum-bar
   {:id :platinum-bar
@@ -1140,7 +1142,7 @@
    :synonym ["bar" "platinum" "treasure"]
    :adjective ["platinum" "large"]
    :desc "platinum bar"
-   :flags (flags/flags :take :sacred)  ; sacred = can't take until puzzle solved
+   :flags (flags/flags :take :sacred)  ; sacred = protects from thief
    :ldesc "On the ground is a large platinum bar."
    :size 20
    :value 10   ; base value

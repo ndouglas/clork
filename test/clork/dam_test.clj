@@ -100,7 +100,7 @@
 (deftest initial-dam-globals-test
   (testing "Dam globals are initialized correctly"
     (let [gs (core/init-game)]
-      (is (true? (:low-tide gs)) "low-tide should start true (reservoir empty)")
+      (is (false? (:low-tide gs)) "low-tide should start false (reservoir full)")
       (is (false? (:gates-open gs)) "gates-open should start false")
       (is (false? (:gate-flag gs)) "gate-flag should start false")
       (is (zero? (:water-level gs)) "water-level should start at 0"))))

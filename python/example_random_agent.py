@@ -38,12 +38,7 @@ def run_episode(env: ClorkEnv, max_steps: int, verbose: bool = False) -> dict:
                 print("No valid actions available!")
             break
 
-        # Bias toward exploration: prefer movement over other actions
-        movement_actions = [a for a in actions if a.verb == "go"]
-        if movement_actions and random.random() < 0.6:
-            action = random.choice(movement_actions)
-        else:
-            action = random.choice(actions)
+        action = random.choice(actions)
 
         # Take the action
         obs, reward, done, info = env.step(action)

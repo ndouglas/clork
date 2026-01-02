@@ -54,12 +54,12 @@
       (gs/set-thing-flag :brass-lantern :lit)))
 
 (defn kill-troll
-  "Set troll as dead/unconscious (not blocking passages)."
+  "Remove troll as obstacle (for testing - just removes it from the game).
+   Sets TROLL-FLAG to allow passage through troll room."
   [game-state]
   (-> game-state
-      (assoc :troll-flag true)  ; Troll defeated
-      (gs/set-thing-flag :troll :invisible)
-      (assoc-in [:objects :troll :in] :troll-room)))  ; Keep in room but invisible
+      (assoc :troll-flag true)           ; Troll defeated - allows passage
+      (assoc-in [:objects :troll :in] nil)))  ; Remove from game entirely
 
 (defn open-grating
   "Open the grating in the clearing."
@@ -75,12 +75,13 @@
       (gs/unset-thing-flag :platinum-bar :sacred)))
 
 (defn defeat-cyclops
-  "Mark cyclops as defeated (fled)."
+  "Remove cyclops as obstacle (for testing - just removes it from the game).
+   Sets flags to allow passage through cyclops room and into strange passage."
   [game-state]
   (-> game-state
-      (assoc :cyclops-flag true)   ; Cyclops asleep/gone
-      (assoc :magic-flag true)     ; East wall opened
-      (gs/set-thing-flag :cyclops :invisible)))
+      (assoc :cyclops-flag true)   ; Cyclops defeated - allows up exit
+      (assoc :magic-flag true)     ; East wall opened - allows east exit
+      (assoc-in [:objects :cyclops :in] nil)))  ; Remove from game entirely
 
 (defn open-dam-gates
   "Open the dam sluice gates (water draining)."
