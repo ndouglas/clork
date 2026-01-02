@@ -12,6 +12,7 @@
             [clork.verbs-put :as verbs-put]
             [clork.verbs-combat :as verbs-combat]
             [clork.cyclops :as cyclops]
+            [clork.loud-room :as loud-room]
             [clork.debug.trace :as trace]))
 
 ;;;; ============================================================================
@@ -558,7 +559,13 @@
    ;; Saying "Odysseus" or "Ulysses" scares the cyclops (his father's nemesis)
    :odysseus   {:words   ["odysseus" "ulysses"]
                 :syntax  {:num-objects 0}
-                :handler cyclops/v-odysseus}})
+                :handler cyclops/v-odysseus}
+
+   ;; ZIL: <SYNTAX ECHO = V-ECHO>
+   ;; Saying "echo" in the Loud Room solves the puzzle
+   :echo       {:words   ["echo"]
+                :syntax  {:num-objects 0}
+                :handler loud-room/v-echo}})
 
 ;;; ---------------------------------------------------------------------------
 ;;; DIRECTION VOCABULARY

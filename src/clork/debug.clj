@@ -9,6 +9,7 @@
    - Undo/redo ($undo, $redo)
    - Tracing ($trace ...)
    - Daemon tracking ($daemon ...)
+   - Test scenarios ($scenario ...)
 
    Commands are always available (no toggle required)."
   (:require [clork.utils :as utils]
@@ -20,6 +21,7 @@
             [clork.debug.daemon :as debug-daemon]
             [clork.debug.test :as debug-test]
             [clork.debug.thief :as debug-thief]
+            [clork.debug.scenarios :as debug-scenarios]
             [clork.undo :as undo]))
 
 ;;; ---------------------------------------------------------------------------
@@ -206,7 +208,11 @@
                      :subcommands debug-thief/subcommands)
   ;; Quick state inspection
   (register-command! :state debug-state/cmd-state
-                     "Quick state inspection ($state <key>)"))
+                     "Quick state inspection ($state <key>)")
+  ;; Test scenarios
+  (register-command! :scenario debug-scenarios/cmd-scenario
+                     "Load test scenarios (equipped player, troll dead, etc.)"
+                     :subcommands debug-scenarios/subcommands))
 
 ;; Auto-initialize on namespace load
 (init-commands!)

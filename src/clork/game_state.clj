@@ -66,6 +66,8 @@
    :gates-open false    ; Sluice gates open
    :gate-flag false     ; Bolt can be turned (set by yellow button)
    :water-level 0       ; Flooding progress in maintenance room (0-8)
+   ;; Loud Room puzzle flag - ZIL: LOUD-FLAG
+   :loud-flag false     ; Echo puzzle solved (room is quiet)
    :parser (parser-state/initial-parser-state)
     ;; Undo system state
    :undo-stack []

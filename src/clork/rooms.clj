@@ -4,7 +4,8 @@
             [clork.game-state :as gs]
             [clork.thief :as thief]
             [clork.cyclops :as cyclops]
-            [clork.dam :as dam]))
+            [clork.dam :as dam]
+            [clork.loud-room :as loud-room]))
 
 ;;; ---------------------------------------------------------------------------
 ;;; ABOVE GROUND - HOUSE EXTERIOR
@@ -615,9 +616,9 @@
    :flags #{}
    :exits {:west :east-west-passage
            :north :ns-passage
-           :east "TODO: This exit leads to LOUD-ROOM."
-           :south "TODO: This exit leads to NARROW-PASSAGE."
-           :se "TODO: This exit leads to ENGRAVINGS-CAVE."}})
+           :east :loud-room
+           :south :narrow-passage
+           :se :engravings-cave}})
 
 ;; <ROOM NS-PASSAGE
 ;;       (IN ROOMS)
@@ -636,7 +637,7 @@
    :flags #{}
    :exits {:north :chasm-room
            :south :round-room
-           :ne "TODO: This exit leads to DEEP-CANYON."}})
+           :ne :deep-canyon}})
 
 ;; <ROOM CHASM-ROOM
 ;;       (IN ROOMS)
@@ -1150,7 +1151,7 @@
            :north {:to :reservoir
                    :if :low-tide
                    :else "You would drown."}
-           :se "TODO: This exit leads to DEEP-CANYON."}
+           :se :deep-canyon}
    :globals #{:global-water}
    :action dam/reservoir-south-action})
 
@@ -1272,7 +1273,7 @@
            :north :dam-lobby
            :down :dam-base
            :east :dam-base
-           :south "TODO: This exit leads to DEEP-CANYON."}
+           :south :deep-canyon}
    :globals #{:global-water}
    :action dam/dam-room-action})
 
@@ -1340,6 +1341,115 @@
    :exits {:north :dam-room
            :up :dam-room}
    :globals #{:global-water}})
+
+;;; ---------------------------------------------------------------------------
+;;; LOUD ROOM AREA
+;;; ---------------------------------------------------------------------------
+
+;; <ROOM LOUD-ROOM
+;;       (IN ROOMS)
+;;       (DESC "Loud Room")
+;;       (EAST TO DAMP-CAVE)
+;;       (WEST TO ROUND-ROOM)
+;;       (UP TO DEEP-CANYON)
+;;       (ACTION LOUD-ROOM-FCN)
+;;       (FLAGS RLANDBIT)
+;;       (GLOBAL STAIRS)>
+
+(def loud-room
+  {:id :loud-room
+   :desc "Loud Room"
+   ;; ldesc is dynamic, handled by action function
+   :flags #{}  ; Underground, not lit
+   :exits {:east :damp-cave
+           :west :round-room
+           :up :deep-canyon}
+   :globals #{:stairs}
+   :action loud-room/loud-room-action})
+
+;; <ROOM DEEP-CANYON
+;;       (IN ROOMS)
+;;       (DESC "Deep Canyon")
+;;       (NW TO RESERVOIR-SOUTH) ;COFFIN-CURE
+;;       (EAST TO DAM-ROOM)
+;;       (SW TO NS-PASSAGE)
+;;       (DOWN TO LOUD-ROOM)
+;;       (FLAGS RLANDBIT)
+;;       (ACTION DEEP-CANYON-F)
+;;       (GLOBAL STAIRS)>
+
+(def deep-canyon
+  {:id :deep-canyon
+   :desc "Deep Canyon"
+   ;; ldesc is dynamic, handled by action function
+   :flags #{}  ; Underground, not lit
+   :exits {:nw :reservoir-south
+           :east :dam-room
+           :sw :ns-passage
+           :down :loud-room}
+   :globals #{:stairs}
+   :action loud-room/deep-canyon-action})
+
+;; <ROOM DAMP-CAVE
+;;       (IN ROOMS)
+;;       (LDESC
+;; "This cave has exits to the west and east, and narrows to a crack toward
+;; the south. The earth is particularly damp here.")
+;;       (DESC "Damp Cave")
+;;       (WEST TO LOUD-ROOM)
+;;       (EAST TO WHITE-CLIFFS-NORTH)
+;;       (SOUTH "It is too narrow for most insects.")
+;;       (FLAGS RLANDBIT)
+;;       (GLOBAL CRACK)>
+
+(def damp-cave
+  {:id :damp-cave
+   :desc "Damp Cave"
+   :ldesc "This cave has exits to the west and east, and narrows to a crack toward the south. The earth is particularly damp here."
+   :flags #{}  ; Underground, not lit
+   :exits {:west :loud-room
+           :east "TODO: This exit leads to WHITE-CLIFFS-NORTH."
+           :south "It is too narrow for most insects."}
+   :globals #{:crack}})
+
+;;; ---------------------------------------------------------------------------
+;;; NARROW PASSAGE AREA (connects to Temple/Mirror rooms)
+;;; ---------------------------------------------------------------------------
+
+;; <ROOM NARROW-PASSAGE
+;;       (IN ROOMS)
+;;       (LDESC
+;; "This is a long and narrow corridor where a long north-south passageway
+;; briefly narrows even further.")
+;;       (DESC "Narrow Passage")
+;;       (NORTH TO ROUND-ROOM)
+;;       (SOUTH TO MIRROR-ROOM-2)
+;;       (FLAGS RLANDBIT)>
+
+(def narrow-passage
+  {:id :narrow-passage
+   :desc "Narrow Passage"
+   :ldesc "This is a long and narrow corridor where a long north-south passageway briefly narrows even further."
+   :flags #{}  ; Underground, not lit
+   :exits {:north :round-room
+           :south "TODO: This exit leads to MIRROR-ROOM-2."}})
+
+;; <ROOM ENGRAVINGS-CAVE	;"was CAVE4"
+;;       (IN ROOMS)
+;;       (LDESC
+;; "You have entered a low cave with passages leading northwest and east.")
+;;       (DESC "Engravings Cave")
+;;       (NW TO ROUND-ROOM)
+;;       (EAST TO DOME-ROOM)
+;;       (FLAGS RLANDBIT)>
+
+(def engravings-cave
+  {:id :engravings-cave
+   :desc "Engravings Cave"
+   :ldesc "You have entered a low cave with passages leading northwest and east."
+   :flags #{}  ; Underground, not lit
+   :exits {:nw :round-room
+           :east "TODO: This exit leads to DOME-ROOM."}})
 
 ;; Note: dark-area is a placeholder for unlit areas, not a specific ZIL room.
 ;; When the player enters an unlit room without a light source, they see
@@ -1430,6 +1540,13 @@
    dam-lobby
    maintenance-room
    dam-base
+   ;; Loud Room area
+   loud-room
+   deep-canyon
+   damp-cave
+   ;; Passage rooms (toward Temple/Mirror)
+   narrow-passage
+   engravings-cave
    ;; Special rooms
    dark-area
    stone-barrow])

@@ -1120,6 +1120,32 @@
    :value 10   ; base value
    :tvalue 5}) ; trophy case value
 
+;; <OBJECT BAR
+;;	(IN LOUD-ROOM)
+;;	(SYNONYM BAR PLATINUM TREASURE)
+;;	(ADJECTIVE PLATINUM LARGE)
+;;	(DESC "platinum bar")
+;;	(FLAGS TAKEBIT SACREDBIT)
+;;	(LDESC "On the ground is a large platinum bar.")
+;;	(SIZE 20)
+;;	(VALUE 10)
+;;	(TVALUE 5)>
+;;
+;; Note: The SACREDBIT flag prevents the bar from being taken until
+;; the echo puzzle is solved (saying "echo" in the Loud Room removes it).
+
+(def platinum-bar
+  {:id :platinum-bar
+   :in :loud-room
+   :synonym ["bar" "platinum" "treasure"]
+   :adjective ["platinum" "large"]
+   :desc "platinum bar"
+   :flags (flags/flags :take :sacred)  ; sacred = can't take until puzzle solved
+   :ldesc "On the ground is a large platinum bar."
+   :size 20
+   :value 10   ; base value
+   :tvalue 5}) ; trophy case value
+
 ;; <OBJECT RUSTY-KNIFE
 ;;	(IN MAZE-5)
 ;;	(SYNONYM KNIVES KNIFE)
@@ -1657,4 +1683,6 @@
    brown-button
    blue-button
    red-button
-   pump])
+   pump
+   ;; Loud Room treasure
+   platinum-bar])

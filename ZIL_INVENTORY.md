@@ -171,7 +171,7 @@ These are out-of-game commands that don't advance time.
 | [ ]    | COUNT       | V-COUNT   | Count objects      |
 | [ ]    | WEAR        | V-WEAR    | Wear clothing      |
 | [ ]    | RING        | V-RING    | Ring bell          |
-| [ ]    | ECHO        | V-ECHO    | Say "echo"         |
+| [x]    | ECHO        | V-ECHO    | Say "echo"         |
 | [ ]    | CROSS       | V-CROSS   | Cross bridge/chasm |
 | [ ]    | GIVE/OFFER  | V-GIVE    | Give to NPC        |
 | [ ]    | THROUGH     | V-THROUGH | Go through         |
@@ -293,19 +293,19 @@ These are out-of-game commands that don't advance time.
 
 | Status | Room ID          | Description      |
 | ------ | ---------------- | ---------------- |
-| [ ]    | LOUD-ROOM        | Loud Room        |
-| [ ]    | DAMP-CAVE        | Damp Cave        |
+| [x]    | LOUD-ROOM        | Loud Room        |
+| [x]    | DAMP-CAVE        | Damp Cave        |
 | [ ]    | SMALL-CAVE       | Small Cave       |
 | [ ]    | TINY-CAVE        | Tiny Cave        |
 | [ ]    | COLD-PASSAGE     | Cold Passage     |
-| [ ]    | NARROW-PASSAGE   | Narrow Passage   |
+| [x]    | NARROW-PASSAGE   | Narrow Passage   |
 | [ ]    | TWISTING-PASSAGE | Twisting Passage |
 | [ ]    | WINDING-PASSAGE  | Winding Passage  |
-| [ ]    | STRANGE-PASSAGE  | Strange Passage  |
-| [ ]    | DEEP-CANYON      | Deep Canyon      |
+| [x]    | STRANGE-PASSAGE  | Strange Passage  |
+| [x]    | DEEP-CANYON      | Deep Canyon      |
 | [ ]    | CANYON-VIEW      | Canyon View      |
 | [ ]    | CANYON-BOTTOM    | Canyon Bottom    |
-| [ ]    | ENGRAVINGS-CAVE  | Engravings Cave  |
+| [x]    | ENGRAVINGS-CAVE  | Engravings Cave  |
 | [ ]    | DOME-ROOM        | Dome Room        |
 | [ ]    | TORCH-ROOM       | Torch Room       |
 
@@ -341,8 +341,8 @@ These are out-of-game commands that don't advance time.
 
 | Status | Room ID       | Description   |
 | ------ | ------------- | ------------- |
-| [ ]    | CYCLOPS-ROOM  | Cyclops Room  |
-| [ ]    | TREASURE-ROOM | Treasure Room |
+| [x]    | CYCLOPS-ROOM  | Cyclops Room  |
+| [x]    | TREASURE-ROOM | Treasure Room |
 | [ ]    | ATLANTIS-ROOM | Atlantis Room |
 
 ### Underground - Other
@@ -365,7 +365,7 @@ These are out-of-game commands that don't advance time.
 
 | Status | Object ID    | Description         | Points |
 | ------ | ------------ | ------------------- | ------ |
-| [ ]    | BAR          | Platinum Bar        | 10     |
+| [x]    | BAR          | Platinum Bar        | 10     |
 | [ ]    | BAUBLE       | Brass Bauble        | 1      |
 | [ ]    | BRACELET     | Sapphire Bracelet   | 5      |
 | [ ]    | CHALICE      | Silver Chalice      | 10     |
@@ -560,10 +560,10 @@ These are out-of-game commands that don't advance time.
 | [ ]    | CELLAR-FCN        | CELLAR        | Cellar behavior           |
 | [x]    | CYCLOPS-ROOM-FCN  | CYCLOPS-ROOM  | Cyclops room              |
 | [ ]    | TROLL-ROOM-F      | TROLL-ROOM    | Troll room logic          |
-| [ ]    | LOUD-ROOM-FCN     | LOUD-ROOM     | Echo puzzle               |
+| [x]    | LOUD-ROOM-FCN     | LOUD-ROOM     | Echo puzzle               |
 | [x]    | DAM-ROOM-FCN      | DAM-ROOM      | Dam controls              |
 | [x]    | RESERVOIR-FCN     | RESERVOIR     | Reservoir water           |
-| [ ]    | TREASURE-ROOM-FCN | TREASURE-ROOM | Treasure room             |
+| [x]    | TREASURE-ROOM-FCN | TREASURE-ROOM | Treasure room             |
 | [ ]    | TORCH-ROOM-FCN    | TORCH-ROOM    | Torch room                |
 | [ ]    | MIRROR-ROOM       | MIRROR-ROOM-* | Mirror rooms              |
 | [ ]    | MACHINE-ROOM-FCN  | MACHINE-ROOM  | Coal machine              |
@@ -794,7 +794,7 @@ These are out-of-game commands that don't advance time.
 | [ ]    | RAINBOW-FLAG        | Rainbow solid        |
 | [x]    | LOW-TIDE            | Water level          |
 | [x]    | WATER-LEVEL         | Reservoir level      |
-| [ ]    | LOUD-FLAG           | Loud room state      |
+| [x]    | LOUD-FLAG           | Loud room state      |
 | [ ]    | RUG-MOVED           | Rug moved            |
 | [ ]    | EGG-SOLVE           | Egg opened           |
 | [ ]    | COFFIN-CURE         | Coffin taken         |
