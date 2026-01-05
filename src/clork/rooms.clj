@@ -5,7 +5,8 @@
             [clork.thief :as thief]
             [clork.cyclops :as cyclops]
             [clork.dam :as dam]
-            [clork.loud-room :as loud-room]))
+            [clork.loud-room :as loud-room]
+            [clork.death :as death]))
 
 ;;; ---------------------------------------------------------------------------
 ;;; ABOVE GROUND - HOUSE EXTERIOR
@@ -191,7 +192,7 @@
    :globals #{:tree :white-house}  ; ZIL: (GLOBAL TREE SONGBIRD WHITE-HOUSE FOREST)
    :exits {:up "There is no tree here suitable for climbing."
            :north :clearing
-           :east "The rank undergrowth prevents eastward movement."
+           :east :canyon-view  ; ZIL: CANYON-VIEW has (WEST TO FOREST-3)
            :south "Storm-tossed trees block your way."
            :west :forest-1
            :nw :south-of-house}})
@@ -244,7 +245,7 @@
    :flags #{:lit :sacred}
    :globals #{:tree :white-house}  ; ZIL: (GLOBAL TREE SONGBIRD WHITE-HOUSE FOREST)
    :exits {:up "There is no tree here suitable for climbing."
-           :east "TODO: This exit leads to CANYON-VIEW."
+           :se :canyon-view  ; ZIL: CANYON-VIEW has (NW TO CLEARING)
            :north :forest-2
            :south :forest-3
            :west :behind-house}})
@@ -342,7 +343,7 @@
    :globals #{:tree :white-house}
    :exits {:up "There is no tree here suitable for climbing."
            :north "The forest becomes impenetrable to the north."
-           :east "TODO: This exit leads to MOUNTAINS."
+           :east :mountains
            :south :clearing
            :west :forest-path}})
 
@@ -1408,7 +1409,7 @@
    :ldesc "This cave has exits to the west and east, and narrows to a crack toward the south. The earth is particularly damp here."
    :flags #{}  ; Underground, not lit
    :exits {:west :loud-room
-           :east "TODO: This exit leads to WHITE-CLIFFS-NORTH."
+           :east :white-cliffs-north
            :south "It is too narrow for most insects."}
    :globals #{:crack}})
 
@@ -1477,6 +1478,315 @@
    :ldesc "You are standing in front of a massive barrow of stone. In the east face is a huge stone door which is open. You cannot see into the dark of the tomb."
    :flags #{:lit :sacred}
    :exits {:ne :west-of-house}})
+
+;;; ---------------------------------------------------------------------------
+;;; CANYON / FALLS / RAINBOW AREA
+;;; ---------------------------------------------------------------------------
+
+;; <ROOM MOUNTAINS
+;;       (IN ROOMS)
+;;       (LDESC "The forest thins out, revealing impassable mountains.")
+;;       (DESC "Forest")
+;;       (UP "The mountains are impassable.")
+;;       (NORTH TO FOREST-2)
+;;       (EAST "The mountains are impassable.")
+;;       (SOUTH TO FOREST-2)
+;;       (WEST TO FOREST-2)
+;;       (FLAGS RLANDBIT ONBIT SACREDBIT)
+;;       (GLOBAL TREE WHITE-HOUSE)>
+
+(def mountains
+  {:id :mountains
+   :desc "Forest"
+   :ldesc "The forest thins out, revealing impassable mountains."
+   :flags #{:lit :sacred}
+   :globals #{:tree :white-house}
+   :exits {:up "The mountains are impassable."
+           :north :forest-2
+           :east "The mountains are impassable."
+           :south :forest-2
+           :west :forest-2}})
+
+;; <ROOM CANYON-VIEW
+;;       (IN ROOMS)
+;;       (LDESC
+;; "You are at the top of the Great Canyon on its west wall. From here
+;; there is a marvelous view of the canyon and parts of the Frigid River
+;; upstream. Across the canyon, the walls of the White Cliffs join the
+;; mighty ramparts of the Flathead Mountains to the east. Following the
+;; Canyon upstream to the north, Aragain Falls may be seen, complete with
+;; rainbow. The mighty Frigid River flows out from a great dark cavern. To
+;; the west and south can be seen an immense forest, stretching for miles
+;; around. A path leads northwest. It is possible to climb down into
+;; the canyon from here.")
+;;       (DESC "Canyon View")
+;;       (EAST TO CLIFF-MIDDLE)
+;;       (DOWN TO CLIFF-MIDDLE)
+;;       (NW TO CLEARING)
+;;       (WEST TO FOREST-3)
+;;       (SOUTH "Storm-tossed trees block your way.")
+;;       (FLAGS RLANDBIT ONBIT SACREDBIT)
+;;       (GLOBAL CLIMBABLE-CLIFF RIVER RAINBOW)
+;;       (ACTION CANYON-VIEW-F)>
+
+(defn canyon-view-action
+  "Handle special actions in Canyon View.
+   ZIL: CANYON-VIEW-F - handles LEAP verb with death message."
+  [game-state rarg]
+  (cond
+    ;; If player tries to jump/leap without an object, it's fatal
+    (and (= rarg :m-beg)
+         (= (:verb game-state) :leap)
+         (nil? (:prso game-state)))
+    (death/jigs-up game-state "Nice view, lousy place to jump.")
+
+    :else
+    (gs/use-default game-state)))
+
+(def canyon-view
+  {:id :canyon-view
+   :desc "Canyon View"
+   :ldesc "You are at the top of the Great Canyon on its west wall. From here there is a marvelous view of the canyon and parts of the Frigid River upstream. Across the canyon, the walls of the White Cliffs join the mighty ramparts of the Flathead Mountains to the east. Following the Canyon upstream to the north, Aragain Falls may be seen, complete with rainbow. The mighty Frigid River flows out from a great dark cavern. To the west and south can be seen an immense forest, stretching for miles around. A path leads northwest. It is possible to climb down into the canyon from here."
+   :flags #{:lit :sacred}
+   :globals #{:climbable-cliff :river :rainbow}
+   :exits {:east :cliff-middle
+           :down :cliff-middle
+           :nw :clearing
+           :west :forest-3
+           :south "Storm-tossed trees block your way."}
+   :action canyon-view-action})
+
+;; <ROOM CLIFF-MIDDLE
+;;       (IN ROOMS)
+;;       (LDESC
+;; "You are on a ledge about halfway up the wall of the river canyon.
+;; You can see from here that the main flow from Aragain Falls twists
+;; along a passage which it is impossible for you to enter. Below you is the
+;; canyon bottom. Above you is more cliff, which appears
+;; climbable.")
+;;       (DESC "Rocky Ledge")
+;;       (UP TO CANYON-VIEW)
+;;       (DOWN TO CANYON-BOTTOM)
+;;       (FLAGS RLANDBIT ONBIT SACREDBIT)
+;;       (GLOBAL CLIMBABLE-CLIFF RIVER)>
+
+(def cliff-middle
+  {:id :cliff-middle
+   :desc "Rocky Ledge"
+   :ldesc "You are on a ledge about halfway up the wall of the river canyon. You can see from here that the main flow from Aragain Falls twists along a passage which it is impossible for you to enter. Below you is the canyon bottom. Above you is more cliff, which appears climbable."
+   :flags #{:lit :sacred}
+   :globals #{:climbable-cliff :river}
+   :exits {:up :canyon-view
+           :down :canyon-bottom}})
+
+;; <ROOM CANYON-BOTTOM
+;;       (IN ROOMS)
+;;       (LDESC
+;; "You are beneath the walls of the river canyon which may be climbable
+;; here. The lesser part of the runoff of Aragain Falls flows by below.
+;; To the north is a narrow path.")
+;;       (DESC "Canyon Bottom")
+;;       (UP TO CLIFF-MIDDLE)
+;;       (NORTH TO END-OF-RAINBOW)
+;;       (FLAGS RLANDBIT ONBIT SACREDBIT)
+;;       (GLOBAL GLOBAL-WATER CLIMBABLE-CLIFF RIVER)>
+
+(def canyon-bottom
+  {:id :canyon-bottom
+   :desc "Canyon Bottom"
+   :ldesc "You are beneath the walls of the river canyon which may be climbable here. The lesser part of the runoff of Aragain Falls flows by below. To the north is a narrow path."
+   :flags #{:lit :sacred}
+   :globals #{:global-water :climbable-cliff :river}
+   :exits {:up :cliff-middle
+           :north :end-of-rainbow}})
+
+;; <ROOM END-OF-RAINBOW
+;;       (IN ROOMS)
+;;       (LDESC
+;; "You are on a small, rocky beach on the continuation of the Frigid
+;; River past the Falls. The beach is narrow due to the presence of the
+;; White Cliffs. The river canyon opens here and sunlight shines in
+;; from above. A rainbow crosses over the falls to the east and a narrow
+;; path continues to the southwest.")
+;;       (DESC "End of Rainbow")
+;;       (UP TO ON-RAINBOW IF RAINBOW-FLAG)
+;;       (NE TO ON-RAINBOW IF RAINBOW-FLAG)
+;;       (EAST TO ON-RAINBOW IF RAINBOW-FLAG)
+;;       (SW TO CANYON-BOTTOM)
+;;       (FLAGS RLANDBIT ONBIT)
+;;       (GLOBAL GLOBAL-WATER RAINBOW RIVER)>
+
+(def end-of-rainbow
+  {:id :end-of-rainbow
+   :desc "End of Rainbow"
+   :ldesc "You are on a small, rocky beach on the continuation of the Frigid River past the Falls. The beach is narrow due to the presence of the White Cliffs. The river canyon opens here and sunlight shines in from above. A rainbow crosses over the falls to the east and a narrow path continues to the southwest."
+   :flags #{:lit}  ; Note: not :sacred in ZIL
+   :globals #{:global-water :rainbow :river}
+   :exits {:up {:to :on-rainbow :if :rainbow-flag}
+           :ne {:to :on-rainbow :if :rainbow-flag}
+           :east {:to :on-rainbow :if :rainbow-flag}
+           :sw :canyon-bottom}})
+
+;; <ROOM ON-RAINBOW
+;;       (IN ROOMS)
+;;       (LDESC
+;; "You are on top of a rainbow (I bet you never thought you would walk
+;; on a rainbow), with a magnificent view of the Falls. The rainbow
+;; travels east-west here.")
+;;       (DESC "On the Rainbow")
+;;       (WEST TO END-OF-RAINBOW)
+;;       (EAST TO ARAGAIN-FALLS)
+;;       (FLAGS RLANDBIT ONBIT SACREDBIT)
+;;       (GLOBAL RAINBOW)>
+
+(def on-rainbow
+  {:id :on-rainbow
+   :desc "On the Rainbow"
+   :ldesc "You are on top of a rainbow (I bet you never thought you would walk on a rainbow), with a magnificent view of the Falls. The rainbow travels east-west here."
+   :flags #{:lit :sacred}
+   :globals #{:rainbow}
+   :exits {:west :end-of-rainbow
+           :east :aragain-falls}})
+
+;; <ROOM ARAGAIN-FALLS
+;;       (IN ROOMS)
+;;       (DESC "Aragain Falls")
+;;       (WEST TO ON-RAINBOW IF RAINBOW-FLAG)
+;;       (DOWN "It's a long way...")
+;;       (NORTH TO SHORE)
+;;       (UP TO ON-RAINBOW IF RAINBOW-FLAG)
+;;       (ACTION FALLS-ROOM)
+;;       (FLAGS RLANDBIT SACREDBIT ONBIT)
+;;       (GLOBAL GLOBAL-WATER RIVER RAINBOW)>
+
+(defn aragain-falls-action
+  "Handle Aragain Falls room description.
+   ZIL: FALLS-ROOM - dynamic description based on RAINBOW-FLAG."
+  [game-state rarg]
+  (if (= rarg :look)
+    (let [rainbow-solid? (gs/flag? game-state :rainbow-flag)]
+      (-> game-state
+          (utils/tell "You are at the top of Aragain Falls, an enormous waterfall with a drop of about 450 feet. The only path here is on the north end.")
+          (utils/crlf)
+          (utils/tell (if rainbow-solid?
+                        "A solid rainbow spans the falls."
+                        "A beautiful rainbow can be seen over the falls and to the west."))
+          (utils/crlf)))
+    (gs/use-default game-state)))
+
+(def aragain-falls
+  {:id :aragain-falls
+   :desc "Aragain Falls"
+   ;; ldesc handled dynamically by action function
+   :flags #{:lit :sacred}
+   :globals #{:global-water :river :rainbow}
+   :exits {:west {:to :on-rainbow :if :rainbow-flag}
+           :up {:to :on-rainbow :if :rainbow-flag}
+           :down "It's a long way..."
+           :north :shore}
+   :action aragain-falls-action})
+
+;; <ROOM SHORE
+;;       (IN ROOMS)
+;;       (LDESC
+;; "You are on the east shore of the river. The water here seems somewhat
+;; treacherous. A path travels from north to south here, the south end
+;; quickly turning around a sharp corner.")
+;;       (DESC "Shore")
+;;       (NORTH TO SANDY-BEACH)
+;;       (SOUTH TO ARAGAIN-FALLS)
+;;       (FLAGS RLANDBIT SACREDBIT ONBIT)
+;;       (GLOBAL GLOBAL-WATER RIVER)>
+
+(def shore
+  {:id :shore
+   :desc "Shore"
+   :ldesc "You are on the east shore of the river. The water here seems somewhat treacherous. A path travels from north to south here, the south end quickly turning around a sharp corner."
+   :flags #{:lit :sacred}
+   :globals #{:global-water :river}
+   :exits {:north :sandy-beach
+           :south :aragain-falls}})
+
+;; <ROOM SANDY-BEACH
+;;       (IN ROOMS)
+;;       (LDESC
+;; "You are on a large sandy beach on the east shore of the river, which is
+;; flowing quickly by. A path runs beside the river to the south here, and
+;; a passage is partially buried in sand to the northeast.")
+;;       (DESC "Sandy Beach")
+;;       (NE TO SANDY-CAVE)
+;;       (SOUTH TO SHORE)
+;;       (FLAGS RLANDBIT SACREDBIT)
+;;       (GLOBAL GLOBAL-WATER RIVER)>
+
+(def sandy-beach
+  {:id :sandy-beach
+   :desc "Sandy Beach"
+   :ldesc "You are on a large sandy beach on the east shore of the river, which is flowing quickly by. A path runs beside the river to the south here, and a passage is partially buried in sand to the northeast."
+   :flags #{:lit :sacred}
+   :globals #{:global-water :river}
+   :exits {:ne :sandy-cave
+           :south :shore}})
+
+;; <ROOM SANDY-CAVE
+;;       (IN ROOMS)
+;;       (LDESC
+;; "This is a sand-filled cave whose exit is to the southwest.")
+;;       (DESC "Sandy Cave")
+;;       (SW TO SANDY-BEACH)
+;;       (FLAGS RLANDBIT)>
+
+(def sandy-cave
+  {:id :sandy-cave
+   :desc "Sandy Cave"
+   :ldesc "This is a sand-filled cave whose exit is to the southwest."
+   :flags #{:lit}  ; Outdoor, lit
+   :exits {:sw :sandy-beach}})
+
+;; <ROOM WHITE-CLIFFS-NORTH
+;;       (IN ROOMS)
+;;       (LDESC
+;; "You are on a narrow strip of beach which runs along the base of the
+;; White Cliffs. There is a narrow path heading south along the Cliffs
+;; and a tight passage leading west into the cliffs themselves.")
+;;       (DESC "White Cliffs Beach")
+;;       (SOUTH TO WHITE-CLIFFS-SOUTH IF DEFLATE ELSE "The path is too narrow.")
+;;       (WEST TO DAMP-CAVE IF DEFLATE ELSE "The path is too narrow.")
+;;       (ACTION WHITE-CLIFFS-FUNCTION)
+;;       (FLAGS RLANDBIT SACREDBIT)
+;;       (GLOBAL GLOBAL-WATER WHITE-CLIFF RIVER)>
+
+(def white-cliffs-north
+  {:id :white-cliffs-north
+   :desc "White Cliffs Beach"
+   :ldesc "You are on a narrow strip of beach which runs along the base of the White Cliffs. There is a narrow path heading south along the Cliffs and a tight passage leading west into the cliffs themselves."
+   :flags #{:lit :sacred}
+   :globals #{:global-water :white-cliff :river}
+   ;; Note: DEFLATE flag controls whether paths are accessible (boat must be deflated)
+   ;; For now, paths are open. TODO: Add conditional when boat system is implemented.
+   :exits {:south :white-cliffs-south
+           :west :damp-cave}})
+
+;; <ROOM WHITE-CLIFFS-SOUTH
+;;       (IN ROOMS)
+;;       (LDESC
+;; "You are on a rocky, narrow strip of beach beside the Cliffs. A
+;; narrow path leads north along the shore.")
+;;       (DESC "White Cliffs Beach")
+;;       (NORTH TO WHITE-CLIFFS-NORTH
+;;        IF DEFLATE ELSE "The path is too narrow.")
+;;       (ACTION WHITE-CLIFFS-FUNCTION)
+;;       (FLAGS RLANDBIT SACREDBIT)
+;;       (GLOBAL GLOBAL-WATER WHITE-CLIFF RIVER)>
+
+(def white-cliffs-south
+  {:id :white-cliffs-south
+   :desc "White Cliffs Beach"
+   :ldesc "You are on a rocky, narrow strip of beach beside the Cliffs. A narrow path leads north along the shore."
+   :flags #{:lit :sacred}
+   :globals #{:global-water :white-cliff :river}
+   ;; Note: DEFLATE flag controls path access. TODO: Add conditional when boat system is implemented.
+   :exits {:north :white-cliffs-north}})
 
 ;;; ---------------------------------------------------------------------------
 ;;; ALL ROOMS LIST
@@ -1549,4 +1859,17 @@
    engravings-cave
    ;; Special rooms
    dark-area
-   stone-barrow])
+   stone-barrow
+   ;; Canyon / Falls / Rainbow area
+   mountains
+   canyon-view
+   cliff-middle
+   canyon-bottom
+   end-of-rainbow
+   on-rainbow
+   aragain-falls
+   shore
+   sandy-beach
+   sandy-cave
+   white-cliffs-north
+   white-cliffs-south])

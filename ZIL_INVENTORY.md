@@ -208,14 +208,14 @@ These are out-of-game commands that don't advance time.
 | [x]    | PATH               | Forest Path                       |
 | [x]    | UP-A-TREE          | Up a Tree                         |
 | [x]    | GRATING-CLEARING   | Clearing with Grating             |
-| [ ]    | MOUNTAINS          | Mountains                         |
-| [ ]    | END-OF-RAINBOW     | End of Rainbow                    |
-| [ ]    | ON-RAINBOW         | On the Rainbow                    |
-| [ ]    | ARAGAIN-FALLS      | Aragain Falls                     |
-| [ ]    | WHITE-CLIFFS-NORTH | White Cliffs Beach (North)        |
-| [ ]    | WHITE-CLIFFS-SOUTH | White Cliffs Beach (South)        |
-| [ ]    | SHORE              | Shore                             |
-| [ ]    | SANDY-BEACH        | Sandy Beach                       |
+| [x]    | MOUNTAINS          | Mountains                         |
+| [x]    | END-OF-RAINBOW     | End of Rainbow                    |
+| [x]    | ON-RAINBOW         | On the Rainbow                    |
+| [x]    | ARAGAIN-FALLS      | Aragain Falls                     |
+| [x]    | WHITE-CLIFFS-NORTH | White Cliffs Beach (North)        |
+| [x]    | WHITE-CLIFFS-SOUTH | White Cliffs Beach (South)        |
+| [x]    | SHORE              | Shore                             |
+| [x]    | SANDY-BEACH        | Sandy Beach                       |
 
 ### Inside House
 
@@ -303,8 +303,9 @@ These are out-of-game commands that don't advance time.
 | [ ]    | WINDING-PASSAGE  | Winding Passage  |
 | [x]    | STRANGE-PASSAGE  | Strange Passage  |
 | [x]    | DEEP-CANYON      | Deep Canyon      |
-| [ ]    | CANYON-VIEW      | Canyon View      |
-| [ ]    | CANYON-BOTTOM    | Canyon Bottom    |
+| [x]    | CANYON-VIEW      | Canyon View      |
+| [x]    | CLIFF-MIDDLE     | Rocky Ledge      |
+| [x]    | CANYON-BOTTOM    | Canyon Bottom    |
 | [x]    | ENGRAVINGS-CAVE  | Engravings Cave  |
 | [ ]    | DOME-ROOM        | Dome Room        |
 | [ ]    | TORCH-ROOM       | Torch Room       |
@@ -352,7 +353,7 @@ These are out-of-game commands that don't advance time.
 | [ ]    | MIRROR-ROOM-1 | Mirror Room            |
 | [ ]    | MIRROR-ROOM-2 | Mirror Room            |
 | [ ]    | MACHINE-ROOM  | Machine Room           |
-| [ ]    | SANDY-CAVE    | Sandy Cave             |
+| [x]    | SANDY-CAVE    | Sandy Cave             |
 | [x]    | STONE-BARROW  | Stone Barrow (endgame) |
 | [ ]    | SMELLY-ROOM   | Smelly Room            |
 | [ ]    | SQUEEKY-ROOM  | Squeaky Room           |
@@ -571,7 +572,7 @@ These are out-of-game commands that don't advance time.
 | [ ]    | SOUTH-TEMPLE-FCN  | SOUTH-TEMPLE  | Temple altar              |
 | [ ]    | BARROW-FCN        | STONE-BARROW  | Endgame barrow            |
 | [ ]    | BATS-ROOM         | BAT-ROOM      | Bat room                  |
-| [ ]    | FALLS-ROOM        | ARAGAIN-FALLS | Falls viewing             |
+| [x]    | FALLS-ROOM        | ARAGAIN-FALLS | Falls viewing             |
 | [ ]    | BOOM-ROOM         | GAS-ROOM      | Gas explosion             |
 | [ ]    | CAVE2-ROOM        | Caves         | Various caves             |
 
