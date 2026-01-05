@@ -262,7 +262,7 @@ These are out-of-game commands that don't advance time.
 | [x]    | DEAD-END-2   | Dead End    |
 | [x]    | DEAD-END-3   | Dead End    |
 | [x]    | DEAD-END-4   | Dead End    |
-| [ ]    | DEAD-END-5   | Dead End    |
+| [x]    | DEAD-END-5   | Dead End    |
 | [x]    | GRATING-ROOM | Grate Room  |
 
 ### Underground - Dam Area
@@ -283,11 +283,11 @@ These are out-of-game commands that don't advance time.
 
 | Status | Room ID | Description  |
 | ------ | ------- | ------------ |
-| [ ]    | RIVER-1 | Frigid River |
-| [ ]    | RIVER-2 | Frigid River |
-| [ ]    | RIVER-3 | Frigid River |
-| [ ]    | RIVER-4 | Frigid River |
-| [ ]    | RIVER-5 | Frigid River |
+| [x]    | RIVER-1 | Frigid River |
+| [x]    | RIVER-2 | Frigid River |
+| [x]    | RIVER-3 | Frigid River |
+| [x]    | RIVER-4 | Frigid River |
+| [x]    | RIVER-5 | Frigid River |
 
 ### Underground - Caves and Passages
 

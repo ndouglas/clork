@@ -1687,6 +1687,144 @@
            :north :shore}
    :action aragain-falls-action})
 
+;;; ---------------------------------------------------------------------------
+;;; FRIGID RIVER (requires boat to navigate)
+;;; ---------------------------------------------------------------------------
+;;; The river rooms have NONLANDBIT which means you must be in a boat to enter.
+;;; Until the boat system is implemented, these rooms define the geography but
+;;; won't be fully navigable.
+
+;; <ROOM RIVER-1
+;;       (IN ROOMS)
+;;       (LDESC
+;; "You are on the Frigid River in the vicinity of the Dam. The river
+;; flows quietly here. There is a landing on the west shore.")
+;;       (DESC "Frigid River")
+;;       (UP "You cannot go upstream due to strong currents.")
+;;       (WEST TO DAM-BASE)
+;;       (LAND TO DAM-BASE)
+;;       (DOWN TO RIVER-2)
+;;       (EAST "The White Cliffs prevent your landing here.")
+;;       (FLAGS NONLANDBIT SACREDBIT ONBIT)
+;;       (GLOBAL GLOBAL-WATER RIVER)>
+
+(def river-1
+  {:id :river-1
+   :desc "Frigid River"
+   :ldesc "You are on the Frigid River in the vicinity of the Dam. The river flows quietly here. There is a landing on the west shore."
+   :flags #{:lit :sacred :rwater}  ; NONLANDBIT = :rwater (water room, requires boat)
+   :globals #{:global-water :river}
+   :exits {:up "You cannot go upstream due to strong currents."
+           :west :dam-base
+           :land :dam-base
+           :down :river-2
+           :east "The White Cliffs prevent your landing here."}})
+
+;; <ROOM RIVER-2
+;;       (IN ROOMS)
+;;       (LDESC
+;; "The river turns a corner here making it impossible to see the
+;; Dam. The White Cliffs loom on the east bank and large rocks prevent
+;; landing on the west.")
+;;       (DESC "Frigid River")
+;;       (UP "You cannot go upstream due to strong currents.")
+;;       (DOWN TO RIVER-3)
+;;       (LAND "There is no safe landing spot here.")
+;;       (EAST "The White Cliffs prevent your landing here.")
+;;       (WEST "Just in time you steer away from the rocks.")
+;;       (FLAGS NONLANDBIT SACREDBIT)
+;;       (GLOBAL GLOBAL-WATER RIVER)>
+
+(def river-2
+  {:id :river-2
+   :desc "Frigid River"
+   :ldesc "The river turns a corner here making it impossible to see the Dam. The White Cliffs loom on the east bank and large rocks prevent landing on the west."
+   :flags #{:sacred :rwater}  ; Not lit (no ONBIT), water room
+   :globals #{:global-water :river}
+   :exits {:up "You cannot go upstream due to strong currents."
+           :down :river-3
+           :land "There is no safe landing spot here."
+           :east "The White Cliffs prevent your landing here."
+           :west "Just in time you steer away from the rocks."}})
+
+;; <ROOM RIVER-3
+;;       (IN ROOMS)
+;;       (LDESC
+;; "The river descends here into a valley. There is a narrow beach on the
+;; west shore below the cliffs. In the distance a faint rumbling can be
+;; heard.")
+;;       (DESC "Frigid River")
+;;       (UP "You cannot go upstream due to strong currents.")
+;;       (DOWN TO RIVER-4)
+;;       (LAND TO WHITE-CLIFFS-NORTH)
+;;       (WEST TO WHITE-CLIFFS-NORTH)
+;;       (FLAGS NONLANDBIT SACREDBIT)
+;;       (GLOBAL GLOBAL-WATER RIVER)>
+
+(def river-3
+  {:id :river-3
+   :desc "Frigid River"
+   :ldesc "The river descends here into a valley. There is a narrow beach on the west shore below the cliffs. In the distance a faint rumbling can be heard."
+   :flags #{:sacred :rwater}  ; Water room
+   :globals #{:global-water :river}
+   :exits {:up "You cannot go upstream due to strong currents."
+           :down :river-4
+           :land :white-cliffs-north
+           :west :white-cliffs-north}})
+
+;; <ROOM RIVER-4
+;;       (IN ROOMS)
+;;       (LDESC
+;; "The river is running faster here and the sound ahead appears to be
+;; that of rushing water. On the east shore is a sandy beach. A small
+;; area of beach can also be seen below the cliffs on the west shore.")
+;;       (DESC "Frigid River")
+;;       (UP "You cannot go upstream due to strong currents.")
+;;       (DOWN TO RIVER-5)
+;;       (LAND "You can land either to the east or the west.")
+;;       (WEST TO WHITE-CLIFFS-SOUTH)
+;;       (EAST TO SANDY-BEACH)
+;;       (ACTION RIVR4-ROOM)
+;;       (FLAGS NONLANDBIT SACREDBIT)
+;;       (GLOBAL GLOBAL-WATER RIVER)>
+
+(def river-4
+  {:id :river-4
+   :desc "Frigid River"
+   :ldesc "The river is running faster here and the sound ahead appears to be that of rushing water. On the east shore is a sandy beach. A small area of beach can also be seen below the cliffs on the west shore."
+   :flags #{:sacred :rwater}  ; Water room
+   :globals #{:global-water :river}
+   ;; Note: RIVR4-ROOM action handles warning about falls ahead - skipped for now
+   :exits {:up "You cannot go upstream due to strong currents."
+           :down :river-5
+           :land "You can land either to the east or the west."
+           :west :white-cliffs-south
+           :east :sandy-beach}})
+
+;; <ROOM RIVER-5
+;;       (IN ROOMS)
+;;       (LDESC
+;; "The sound of rushing water is nearly unbearable here. On the east
+;; shore is a large landing area.")
+;;       (DESC "Frigid River")
+;;       (UP "You cannot go upstream due to strong currents.")
+;;       (EAST TO SHORE)
+;;       (LAND TO SHORE)
+;;       (FLAGS NONLANDBIT SACREDBIT ONBIT)
+;;       (GLOBAL GLOBAL-WATER RIVER)>
+
+(def river-5
+  {:id :river-5
+   :desc "Frigid River"
+   :ldesc "The sound of rushing water is nearly unbearable here. On the east shore is a large landing area."
+   :flags #{:lit :sacred :rwater}  ; Lit, water room
+   :globals #{:global-water :river}
+   ;; Note: Going DOWN from here without landing leads to death over the falls!
+   ;; That logic will be implemented when boat system is added.
+   :exits {:up "You cannot go upstream due to strong currents."
+           :east :shore
+           :land :shore}})
+
 ;; <ROOM SHORE
 ;;       (IN ROOMS)
 ;;       (LDESC
@@ -2787,6 +2925,12 @@ The gate is open; through it you can see a desolation, with a pile of mangled bo
    sandy-cave
    white-cliffs-north
    white-cliffs-south
+   ;; Frigid River (requires boat)
+   river-1
+   river-2
+   river-3
+   river-4
+   river-5
    ;; Mirror room complex
    mirror-room-1
    mirror-room-2
