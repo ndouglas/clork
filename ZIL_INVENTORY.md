@@ -295,12 +295,12 @@ These are out-of-game commands that don't advance time.
 | ------ | ---------------- | ---------------- |
 | [x]    | LOUD-ROOM        | Loud Room        |
 | [x]    | DAMP-CAVE        | Damp Cave        |
-| [ ]    | SMALL-CAVE       | Small Cave       |
-| [ ]    | TINY-CAVE        | Tiny Cave        |
-| [ ]    | COLD-PASSAGE     | Cold Passage     |
+| [x]    | SMALL-CAVE       | Small Cave       |
+| [x]    | TINY-CAVE        | Tiny Cave        |
+| [x]    | COLD-PASSAGE     | Cold Passage     |
 | [x]    | NARROW-PASSAGE   | Narrow Passage   |
-| [ ]    | TWISTING-PASSAGE | Twisting Passage |
-| [ ]    | WINDING-PASSAGE  | Winding Passage  |
+| [x]    | TWISTING-PASSAGE | Twisting Passage |
+| [x]    | WINDING-PASSAGE  | Winding Passage  |
 | [x]    | STRANGE-PASSAGE  | Strange Passage  |
 | [x]    | DEEP-CANYON      | Deep Canyon      |
 | [x]    | CANYON-VIEW      | Canyon View      |
@@ -344,14 +344,14 @@ These are out-of-game commands that don't advance time.
 | ------ | ------------- | ------------- |
 | [x]    | CYCLOPS-ROOM  | Cyclops Room  |
 | [x]    | TREASURE-ROOM | Treasure Room |
-| [ ]    | ATLANTIS-ROOM | Atlantis Room |
+| [x]    | ATLANTIS-ROOM | Atlantis Room |
 
 ### Underground - Other
 
 | Status | Room ID       | Description            |
 | ------ | ------------- | ---------------------- |
-| [ ]    | MIRROR-ROOM-1 | Mirror Room            |
-| [ ]    | MIRROR-ROOM-2 | Mirror Room            |
+| [x]    | MIRROR-ROOM-1 | Mirror Room            |
+| [x]    | MIRROR-ROOM-2 | Mirror Room            |
 | [ ]    | MACHINE-ROOM  | Machine Room           |
 | [x]    | SANDY-CAVE    | Sandy Cave             |
 | [x]    | STONE-BARROW  | Stone Barrow (endgame) |
@@ -566,7 +566,7 @@ These are out-of-game commands that don't advance time.
 | [x]    | RESERVOIR-FCN     | RESERVOIR     | Reservoir water           |
 | [x]    | TREASURE-ROOM-FCN | TREASURE-ROOM | Treasure room             |
 | [ ]    | TORCH-ROOM-FCN    | TORCH-ROOM    | Torch room                |
-| [ ]    | MIRROR-ROOM       | MIRROR-ROOM-* | Mirror rooms              |
+| [x]    | MIRROR-ROOM       | MIRROR-ROOM-* | Mirror rooms              |
 | [ ]    | MACHINE-ROOM-FCN  | MACHINE-ROOM  | Coal machine              |
 | [ ]    | DOME-ROOM-FCN     | DOME-ROOM     | Dome room                 |
 | [ ]    | SOUTH-TEMPLE-FCN  | SOUTH-TEMPLE  | Temple altar              |

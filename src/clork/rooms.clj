@@ -1200,7 +1200,7 @@
    :exits {:south {:to :reservoir
                    :if :low-tide
                    :else "You would drown."}
-           :north "TODO: This exit leads to ATLANTIS-ROOM."}
+           :north :atlantis-room}
    :globals #{:global-water}
    :action dam/reservoir-north-action})
 
@@ -1433,7 +1433,7 @@
    :ldesc "This is a long and narrow corridor where a long north-south passageway briefly narrows even further."
    :flags #{}  ; Underground, not lit
    :exits {:north :round-room
-           :south "TODO: This exit leads to MIRROR-ROOM-2."}})
+           :south :mirror-room-2}})
 
 ;; <ROOM ENGRAVINGS-CAVE	;"was CAVE4"
 ;;       (IN ROOMS)
@@ -1789,6 +1789,190 @@
    :exits {:north :white-cliffs-north}})
 
 ;;; ---------------------------------------------------------------------------
+;;; MIRROR ROOM COMPLEX
+;;; ---------------------------------------------------------------------------
+
+;; The mirror rooms contain a large mirror that teleports objects (and the player)
+;; between the two mirror rooms when rubbed. The mirror can also be broken.
+;; ZIL: MIRROR-ROOM routine in 1actions.zil lines 971-1043
+
+(defn mirror-room-action
+  "Handle mirror room description and mirror interactions.
+   ZIL: MIRROR-ROOM in 1actions.zil"
+  [game-state rarg]
+  (if (= rarg :look)
+    (let [mirror-broken? (gs/flag? game-state :mirror-mung)]
+      (-> game-state
+          (utils/tell "You are in a large square room with tall ceilings. On the south wall is an enormous mirror which fills the entire wall. There are exits on the other three sides of the room.")
+          (utils/crlf)
+          (cond-> mirror-broken?
+            (-> (utils/tell "Unfortunately, the mirror has been destroyed by your recklessness.")
+                (utils/crlf)))))
+    (gs/use-default game-state)))
+
+;; <ROOM MIRROR-ROOM-1
+;;       (IN ROOMS)
+;;       (DESC "Mirror Room")
+;;       (NORTH TO COLD-PASSAGE)
+;;       (WEST TO TWISTING-PASSAGE)
+;;       (EAST TO SMALL-CAVE)
+;;       (ACTION MIRROR-ROOM)
+;;       (FLAGS RLANDBIT)>
+
+(def mirror-room-1
+  {:id :mirror-room-1
+   :desc "Mirror Room"
+   ;; ldesc handled by action function
+   :flags #{}  ; Underground, not lit
+   :exits {:north :cold-passage
+           :west :twisting-passage
+           :east :small-cave}
+   :action mirror-room-action})
+
+;; <ROOM MIRROR-ROOM-2
+;;       (IN ROOMS)
+;;       (DESC "Mirror Room")
+;;       (WEST TO WINDING-PASSAGE)
+;;       (NORTH TO NARROW-PASSAGE)
+;;       (EAST TO TINY-CAVE)
+;;       (ACTION MIRROR-ROOM)
+;;       (FLAGS RLANDBIT ONBIT)>
+
+(def mirror-room-2
+  {:id :mirror-room-2
+   :desc "Mirror Room"
+   ;; ldesc handled by action function
+   :flags #{:lit}  ; ZIL ONBIT = lit
+   :exits {:west :winding-passage
+           :north :narrow-passage
+           :east :tiny-cave}
+   :action mirror-room-action})
+
+;; <ROOM SMALL-CAVE
+;;       (IN ROOMS)
+;;       (LDESC
+;; "This is a tiny cave with entrances west and north, and a staircase
+;; leading down.")
+;;       (DESC "Cave")
+;;       (NORTH TO MIRROR-ROOM-1)
+;;       (DOWN TO ATLANTIS-ROOM)
+;;       (SOUTH TO ATLANTIS-ROOM)
+;;       (WEST TO TWISTING-PASSAGE)
+;;       (FLAGS RLANDBIT)
+;;       (GLOBAL STAIRS)>
+
+(def small-cave
+  {:id :small-cave
+   :desc "Cave"
+   :ldesc "This is a tiny cave with entrances west and north, and a staircase leading down."
+   :flags #{}  ; Underground, not lit
+   :globals #{:stairs}
+   :exits {:north :mirror-room-1
+           :down :atlantis-room
+           :south :atlantis-room
+           :west :twisting-passage}})
+
+;; <ROOM TINY-CAVE
+;;       (IN ROOMS)
+;;       (LDESC
+;; "This is a tiny cave with entrances west and north, and a dark,
+;; forbidding staircase leading down.")
+;;       (DESC "Cave")
+;;       (NORTH TO MIRROR-ROOM-2)
+;;       (WEST TO WINDING-PASSAGE)
+;;       (DOWN TO ENTRANCE-TO-HADES)
+;;       (ACTION CAVE2-ROOM)
+;;       (FLAGS RLANDBIT)
+;;       (GLOBAL STAIRS)>
+
+(def tiny-cave
+  {:id :tiny-cave
+   :desc "Cave"
+   :ldesc "This is a tiny cave with entrances west and north, and a dark, forbidding staircase leading down."
+   :flags #{}  ; Underground, not lit
+   :globals #{:stairs}
+   ;; Note: DOWN leads to ENTRANCE-TO-HADES (not yet implemented)
+   ;; CAVE2-ROOM action blows out candles - skipped until candles implemented
+   :exits {:north :mirror-room-2
+           :west :winding-passage
+           :down "TODO: This exit leads to ENTRANCE-TO-HADES."}})
+
+;; <ROOM COLD-PASSAGE
+;;       (IN ROOMS)
+;;       (LDESC
+;; "This is a cold and damp corridor where a long east-west passageway
+;; turns into a southward path.")
+;;       (DESC "Cold Passage")
+;;       (SOUTH TO MIRROR-ROOM-1)
+;;       (WEST TO SLIDE-ROOM)
+;;       (FLAGS RLANDBIT)>
+
+(def cold-passage
+  {:id :cold-passage
+   :desc "Cold Passage"
+   :ldesc "This is a cold and damp corridor where a long east-west passageway turns into a southward path."
+   :flags #{}  ; Underground, not lit
+   ;; Note: WEST leads to SLIDE-ROOM (not yet implemented)
+   :exits {:south :mirror-room-1
+           :west "TODO: This exit leads to SLIDE-ROOM."}})
+
+;; <ROOM WINDING-PASSAGE
+;;       (IN ROOMS)
+;;       (LDESC
+;; "This is a winding passage. It seems that there are only exits
+;; on the east and north.")
+;;       (DESC "Winding Passage")
+;;       (NORTH TO MIRROR-ROOM-2)
+;;       (EAST TO TINY-CAVE)
+;;       (FLAGS RLANDBIT)>
+
+(def winding-passage
+  {:id :winding-passage
+   :desc "Winding Passage"
+   :ldesc "This is a winding passage. It seems that there are only exits on the east and north."
+   :flags #{}  ; Underground, not lit
+   :exits {:north :mirror-room-2
+           :east :tiny-cave}})
+
+;; <ROOM TWISTING-PASSAGE
+;;       (IN ROOMS)
+;;       (LDESC
+;; "This is a winding passage. It seems that there are only exits
+;; on the east and north.")
+;;       (DESC "Twisting Passage")
+;;       (NORTH TO MIRROR-ROOM-1)
+;;       (EAST TO SMALL-CAVE)
+;;       (FLAGS RLANDBIT)>
+
+(def twisting-passage
+  {:id :twisting-passage
+   :desc "Twisting Passage"
+   :ldesc "This is a winding passage. It seems that there are only exits on the east and north."
+   :flags #{}  ; Underground, not lit
+   :exits {:north :mirror-room-1
+           :east :small-cave}})
+
+;; <ROOM ATLANTIS-ROOM
+;;       (IN ROOMS)
+;;       (LDESC
+;; "This is an ancient room, long under water. There is an exit to
+;; the south and a staircase leading up.")
+;;       (DESC "Atlantis Room")
+;;       (UP TO SMALL-CAVE)
+;;       (SOUTH TO RESERVOIR-NORTH)
+;;       (FLAGS RLANDBIT)
+;;       (GLOBAL STAIRS)>
+
+(def atlantis-room
+  {:id :atlantis-room
+   :desc "Atlantis Room"
+   :ldesc "This is an ancient room, long under water. There is an exit to the south and a staircase leading up."
+   :flags #{}  ; Underground, not lit
+   :globals #{:stairs}
+   :exits {:up :small-cave
+           :south :reservoir-north}})
+
+;;; ---------------------------------------------------------------------------
 ;;; ALL ROOMS LIST
 ;;; ---------------------------------------------------------------------------
 
@@ -1872,4 +2056,13 @@
    sandy-beach
    sandy-cave
    white-cliffs-north
-   white-cliffs-south])
+   white-cliffs-south
+   ;; Mirror room complex
+   mirror-room-1
+   mirror-room-2
+   small-cave
+   tiny-cave
+   cold-passage
+   winding-passage
+   twisting-passage
+   atlantis-room])
