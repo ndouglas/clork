@@ -2404,7 +2404,7 @@ The gate is open; through it you can see a desolation, with a pile of mangled bo
 
     ;; On entering, if player doesn't have garlic, bat transports them
     (and (= rarg :m-enter)
-         (not (gs/flag? game-state :dead)))
+         (not (:dead game-state)))
     (let [garlic-loc (gs/get-thing-loc-id game-state :garlic)
           player-id (:winner game-state)
           here (:here game-state)

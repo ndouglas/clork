@@ -412,19 +412,19 @@ These are out-of-game commands that don't advance time.
 | ------ | ------------ | ------------------- | ------ |
 | [x]    | BAR          | Platinum Bar        | 10     |
 | [ ]    | BAUBLE       | Brass Bauble        | 1      |
-| [ ]    | BRACELET     | Sapphire Bracelet   | 5      |
-| [ ]    | CHALICE      | Silver Chalice      | 10     |
+| [x]    | BRACELET     | Sapphire Bracelet   | 5      |
+| [x]    | CHALICE      | Silver Chalice      | 10     |
 | [ ]    | COFFIN       | Gold Coffin         | 10     |
 | [ ]    | DIAMOND      | Huge Diamond        | 10     |
 | [~]    | EGG          | Jewel-Encrusted Egg | 5      |
 | [ ]    | EMERALD      | Large Emerald       | 5      |
-| [ ]    | JADE         | Jade Figurine       | 5      |
+| [x]    | JADE         | Jade Figurine       | 5      |
 | [~]    | PAINTING     | Beautiful Painting  | 4      |
 | [ ]    | POT-OF-GOLD  | Pot of Gold         | 10     |
-| [ ]    | SCARAB       | Jeweled Scarab      | 5      |
+| [x]    | SCARAB       | Jeweled Scarab      | 5      |
 | [ ]    | SCEPTRE      | Royal Sceptre       | 4      |
 | [ ]    | TORCH        | Ivory Torch         | 6      |
-| [ ]    | TRIDENT      | Crystal Trident     | 4      |
+| [x]    | TRIDENT      | Crystal Trident     | 4      |
 | [ ]    | TRUNK        | Trunk of Jewels     | 15     |
 | [ ]    | CANARY       | Clockwork Canary    | 6      |
 | [x]    | BAG-OF-COINS | Bag of Coins        | 5      |
@@ -436,7 +436,7 @@ These are out-of-game commands that don't advance time.
 | [~]    | LAMP      | Brass Lantern   |
 | [ ]    | CANDLES   | Pair of Candles |
 | [ ]    | TORCH     | Ivory Torch     |
-| [ ]    | MATCH     | Match           |
+| [~]    | MATCH     | Match           |
 
 ### Weapons
 
@@ -446,7 +446,7 @@ These are out-of-game commands that don't advance time.
 | [~]    | KNIFE       | Nasty Knife  |
 | [x]    | RUSTY-KNIFE | Rusty Knife  |
 | [x]    | AXE         | Bloody Axe   |
-| [ ]    | STILETTO    | Stiletto     |
+| [x]    | STILETTO    | Stiletto     |
 
 ### Tools
 
@@ -455,9 +455,9 @@ These are out-of-game commands that don't advance time.
 | [ ]    | SHOVEL      | Shovel       |
 | [x]    | KEYS        | Skeleton Key |
 | [ ]    | SCREWDRIVER | Screwdriver  |
-| [ ]    | WRENCH      | Wrench       |
+| [x]    | WRENCH      | Wrench       |
 | [~]    | ROPE        | Rope         |
-| [ ]    | PUTTY       | Gunk/Putty   |
+| [x]    | PUTTY       | Gunk/Putty   |
 
 ### Containers
 
@@ -466,7 +466,7 @@ These are out-of-game commands that don't advance time.
 | [~]    | MAILBOX      | Small Mailbox |
 | [x]    | TROPHY-CASE  | Trophy Case   |
 | [ ]    | TOOL-CHEST   | Tool Chest    |
-| [ ]    | LARGE-BAG    | Large Bag     |
+| [x]    | LARGE-BAG    | Large Bag     |
 | [~]    | SANDWICH-BAG | Brown Sack    |
 | [~]    | BOTTLE       | Glass Bottle  |
 | [ ]    | BUOY         | Buoy          |
@@ -478,7 +478,7 @@ These are out-of-game commands that don't advance time.
 | [ ]    | INFLATABLE-BOAT | Pile of Plastic |
 | [ ]    | INFLATED-BOAT   | Inflated Boat   |
 | [ ]    | PUNCTURED-BOAT  | Punctured Boat  |
-| [ ]    | PUMP            | Hand Pump       |
+| [x]    | PUMP            | Hand Pump       |
 
 ### Readable Items
 
@@ -486,7 +486,7 @@ These are out-of-game commands that don't advance time.
 | ------ | ------------- | -------------- |
 | [x]    | ADVERTISEMENT | Leaflet        |
 | [ ]    | BOOK          | Black Book     |
-| [ ]    | GUIDE         | Tour Guide     |
+| [x]    | GUIDE         | Tour Guide     |
 | [ ]    | MAP           | Ancient Map    |
 | [ ]    | OWNERS-MANUAL | Owner's Manual |
 | [ ]    | BOAT-LABEL    | Label          |

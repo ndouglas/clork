@@ -726,6 +726,153 @@
    :tvalue 6})
 
 ;;; ---------------------------------------------------------------------------
+;;; TREASURES
+;;; ---------------------------------------------------------------------------
+
+;; <OBJECT JADE
+;;	(IN BAT-ROOM)
+;;	(SYNONYM FIGURINE TREASURE)
+;;	(ADJECTIVE EXQUISITE JADE)
+;;	(DESC "jade figurine")
+;;	(FLAGS TAKEBIT)
+;;	(LDESC "There is an exquisite jade figurine here.")
+;;	(SIZE 10)
+;;	(VALUE 5)
+;;	(TVALUE 5)>
+
+(def jade-figurine
+  {:id :jade-figurine
+   :in :bat-room
+   :synonym ["figurine" "treasure"]
+   :adjective ["exquisite" "jade"]
+   :desc "jade figurine"
+   :flags (flags/flags :take)
+   :ldesc "There is an exquisite jade figurine here."
+   :size 10
+   :value 5
+   :tvalue 5})
+
+;; <OBJECT TRIDENT
+;;	(IN ATLANTIS-ROOM)
+;;	(SYNONYM TRIDENT FORK TREASURE)
+;;	(ADJECTIVE POSEIDON OWN CRYSTAL)
+;;	(DESC "crystal trident")
+;;	(FLAGS TAKEBIT)
+;;	(FDESC "On the shore lies Poseidon's own crystal trident.")
+;;	(SIZE 20)
+;;	(VALUE 4)
+;;	(TVALUE 11)>
+
+(def crystal-trident
+  {:id :crystal-trident
+   :in :atlantis-room
+   :synonym ["trident" "fork" "treasure"]
+   :adjective ["poseidon" "crystal"]
+   :desc "crystal trident"
+   :flags (flags/flags :take)
+   :fdesc "On the shore lies Poseidon's own crystal trident."
+   :size 20
+   :value 4
+   :tvalue 11})
+
+;; <OBJECT BRACELET
+;;	(IN GAS-ROOM)
+;;	(SYNONYM BRACELET JEWEL SAPPHIRE TREASURE)
+;;	(ADJECTIVE SAPPHIRE)
+;;	(DESC "sapphire-encrusted bracelet")
+;;	(FLAGS TAKEBIT)
+;;	(SIZE 10)
+;;	(VALUE 5)
+;;	(TVALUE 5)>
+
+(def sapphire-bracelet
+  {:id :sapphire-bracelet
+   :in :gas-room
+   :synonym ["bracelet" "jewel" "sapphire" "treasure"]
+   :adjective ["sapphire"]
+   :desc "sapphire-encrusted bracelet"
+   :flags (flags/flags :take)
+   :size 10
+   :value 5
+   :tvalue 5})
+
+;; <OBJECT SCARAB
+;;	(IN SANDY-CAVE)
+;;	(SYNONYM SCARAB BUG BEETLE TREASURE)
+;;	(ADJECTIVE BEAUTI CARVED JEWELED)
+;;	(DESC "beautiful jeweled scarab")
+;;	(FLAGS TAKEBIT INVISIBLE)
+;;	(SIZE 8)
+;;	(VALUE 5)
+;;	(TVALUE 5)>
+;;
+;; Note: The scarab is INVISIBLE until discovered by digging in the sand.
+
+(def jeweled-scarab
+  {:id :jeweled-scarab
+   :in :sandy-cave
+   :synonym ["scarab" "bug" "beetle" "treasure"]
+   :adjective ["beautiful" "carved" "jeweled"]
+   :desc "beautiful jeweled scarab"
+   :flags (flags/flags :take :invisible)
+   :size 8
+   :value 5
+   :tvalue 5})
+
+;; <OBJECT CHALICE
+;;	(IN TREASURE-ROOM)
+;;	(SYNONYM CHALICE CUP SILVER TREASURE)
+;;	(ADJECTIVE SILVER ENGRAVINGS)
+;;	(DESC "chalice")
+;;	(FLAGS TAKEBIT TRYTAKEBIT CONTBIT)
+;;	(ACTION CHALICE-FCN)
+;;	(LDESC "There is a silver chalice, intricately engraved, here.")
+;;	(CAPACITY 5)
+;;	(SIZE 10)
+;;	(VALUE 10)
+;;	(TVALUE 5)>
+;;
+;; ZIL: CHALICE-FCN in 1actions.zil (lines 2136-2149)
+;; - TAKE: If thief is in treasure room and fighting, "You'd be stabbed in the back first."
+;; - PUT: "You can't. It's not a very good chalice, is it?"
+;; - Otherwise: acts as a (poor) container
+
+(def silver-chalice
+  {:id :silver-chalice
+   :in :treasure-room
+   :synonym ["chalice" "cup" "silver" "treasure"]
+   :adjective ["silver" "engraved"]
+   :desc "chalice"
+   :flags (flags/flags :take :trytake :cont)
+   :ldesc "There is a silver chalice, intricately engraved, here."
+   :capacity 5
+   :size 10
+   :value 10
+   :tvalue 5
+   :action (fn [game-state]
+             (let [prsa (parser-state/get-prsa game-state)
+                   prsi (parser-state/get-prsi game-state)
+                   here (:here game-state)
+                   thief-here? (= (gs/get-thing-loc-id game-state :thief) here)
+                   thief-fighting? (gs/set-thing-flag? game-state :thief :fight)
+                   thief-visible? (not (gs/set-thing-flag? game-state :thief :invisible))]
+               (cond
+                 ;; TAKE: If thief is fighting in treasure room
+                 (and (= prsa :take)
+                      (= here :treasure-room)
+                      thief-here?
+                      thief-fighting?
+                      thief-visible?)
+                 (utils/tell game-state "You'd be stabbed in the back first.")
+
+                 ;; PUT: Can't put things in the chalice
+                 (and (= prsa :put) (= prsi :silver-chalice))
+                 (utils/tell game-state "You can't. It's not a very good chalice, is it?")
+
+                 ;; Default - let normal handling take over
+                 :else nil)))})
+
+;;; ---------------------------------------------------------------------------
 ;;; FOREST OBJECTS
 ;;; ---------------------------------------------------------------------------
 
@@ -1687,4 +1834,10 @@
    red-button
    pump
    ;; Loud Room treasure
-   platinum-bar])
+   platinum-bar
+   ;; Treasures
+   jade-figurine
+   crystal-trident
+   sapphire-bracelet
+   jeweled-scarab
+   silver-chalice])
