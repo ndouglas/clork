@@ -6,7 +6,8 @@
             [clork.cyclops :as cyclops]
             [clork.dam :as dam]
             [clork.loud-room :as loud-room]
-            [clork.death :as death]))
+            [clork.death :as death]
+            [clork.random :as random]))
 
 ;;; ---------------------------------------------------------------------------
 ;;; ABOVE GROUND - HOUSE EXTERIOR
@@ -1911,9 +1912,8 @@
    :desc "Cold Passage"
    :ldesc "This is a cold and damp corridor where a long east-west passageway turns into a southward path."
    :flags #{}  ; Underground, not lit
-   ;; Note: WEST leads to SLIDE-ROOM (not yet implemented)
    :exits {:south :mirror-room-1
-           :west "TODO: This exit leads to SLIDE-ROOM."}})
+           :west :slide-room}})
 
 ;; <ROOM WINDING-PASSAGE
 ;;       (IN ROOMS)
@@ -2221,6 +2221,488 @@ The gate is open; through it you can see a desolation, with a pile of mangled bo
            :north :entrance-to-hades}})
 
 ;;; ---------------------------------------------------------------------------
+;;; COAL MINE AREA
+;;; ---------------------------------------------------------------------------
+;;; The coal mine is a dangerous area with gas rooms (instant death if you bring
+;;; a flame), bats that randomly transport you, and the coal machine that
+;;; transforms coal into diamonds.
+
+;; BAT-DROPS: List of rooms the bat can drop you in
+;; ZIL: <GLOBAL BAT-DROPS <LTABLE MINE-1 MINE-2 MINE-3 MINE-4 LADDER-TOP
+;;      LADDER-BOTTOM SQUEEKY-ROOM MINE-ENTRANCE>>
+(def bat-drops
+  [:mine-1 :mine-2 :mine-3 :mine-4 :ladder-top :ladder-bottom
+   :squeeky-room :mine-entrance])
+
+(defn fly-me
+  "Transport player to a random mine location via bat.
+   ZIL: FLY-ME in 1actions.zil lines 330-337"
+  [game-state]
+  (let [destination (random/rand-nth* bat-drops)]
+    (-> game-state
+        (utils/tell "    Fweep!")
+        (utils/crlf)
+        (utils/tell "    Fweep!")
+        (utils/crlf)
+        (utils/tell "    Fweep!")
+        (utils/crlf)
+        (utils/tell "    Fweep!")
+        (utils/crlf)
+        (utils/crlf)
+        (utils/tell "The bat grabs you by the scruff of your neck and lifts you away....")
+        (utils/crlf)
+        (utils/crlf)
+        (assoc :here destination))))
+
+(defn bats-room-action
+  "Handle Bat Room description and bat transport.
+   ZIL: BATS-ROOM in 1actions.zil lines 2491-2499"
+  [game-state rarg]
+  (cond
+    (= rarg :look)
+    (-> game-state
+        (utils/tell "You are in a small room which has doors only to the east and south.")
+        (utils/crlf))
+
+    ;; On entering, if player doesn't have garlic, bat transports them
+    (and (= rarg :m-enter)
+         (not (gs/flag? game-state :dead)))
+    (let [garlic-loc (gs/get-thing-loc-id game-state :garlic)
+          player-id (:winner game-state)
+          here (:here game-state)
+          has-garlic? (or (= garlic-loc player-id)
+                          (= garlic-loc here))]
+      (if has-garlic?
+        (gs/use-default game-state)
+        (fly-me game-state)))
+
+    :else
+    (gs/use-default game-state)))
+
+(defn bat-ldesc
+  "Get bat room long description based on garlic presence.
+   ZIL: BAT-D in 1actions.zil lines 2482-2489"
+  [game-state]
+  (let [garlic-loc (gs/get-thing-loc-id game-state :garlic)
+        player-id (:winner game-state)
+        here (:here game-state)
+        has-garlic? (or (= garlic-loc player-id)
+                        (= garlic-loc here))]
+    (if has-garlic?
+      "In the corner of the room on the ceiling is a large vampire bat who is obviously deranged and holding his nose."
+      "A large vampire bat, hanging from the ceiling, swoops down at you!")))
+
+(defn boom-room-action
+  "Handle Gas Room explosion if player has flame.
+   ZIL: BOOM-ROOM in 1actions.zil lines 2459-2480"
+  [game-state rarg]
+  (if (= rarg :m-end)
+    ;; Check if player is holding a lit flame source
+    (let [candles-lit? (and (= (:winner game-state) (gs/get-thing-loc-id game-state :candles))
+                            (gs/flag? game-state :objects :candles :on))
+          torch-lit? (and (= (:winner game-state) (gs/get-thing-loc-id game-state :torch))
+                          (gs/flag? game-state :objects :torch :on))
+          match-lit? (and (= (:winner game-state) (gs/get-thing-loc-id game-state :match))
+                          (gs/flag? game-state :objects :match :on))
+          has-flame? (or candles-lit? torch-lit? match-lit?)]
+      (if has-flame?
+        (-> game-state
+            (utils/tell "Oh dear. It appears that the smell coming from this room was coal gas. I would have thought twice about carrying flaming objects in here.")
+            (utils/crlf)
+            (death/jigs-up "|
+      ** BOOOOOOOOOOOM **"))
+        (gs/use-default game-state)))
+    (gs/use-default game-state)))
+
+(defn machine-room-action
+  "Handle Machine Room description.
+   ZIL: MACHINE-ROOM-FCN in 1actions.zil lines 2501-2513"
+  [game-state rarg]
+  (if (= rarg :look)
+    (let [machine-open? (gs/flag? game-state :objects :machine :open)]
+      (-> game-state
+          (utils/tell "This is a large, cold room whose sole exit is to the north. In one corner there is a machine which is reminiscent of a clothes dryer. On its face is a switch which is labelled \"START\". The switch does not appear to be manipulable by any human hand (unless the fingers are about 1/16 by 1/4 inch). On the front of the machine is a large lid, which is ")
+          (utils/tell (if machine-open? "open." "closed."))
+          (utils/crlf)))
+    (gs/use-default game-state)))
+
+(defn no-objs-action
+  "Handle rooms requiring empty hands (timber room, lower shaft).
+   ZIL: NO-OBJS in 1actions.zil lines 2571-2584
+   Sets EMPTY-HANDED flag based on whether player carries anything heavy."
+  [game-state rarg]
+  (if (= rarg :m-beg)
+    ;; Check if player is carrying anything with weight > 4
+    ;; For now, simplified: any carried objects make you not empty-handed
+    (let [player-id (:winner game-state)
+          carried-objects (->> (:objects game-state)
+                               (filter (fn [[_ obj]] (= (:in obj) player-id)))
+                               (map first))
+          heavy-objects (filter (fn [obj-id]
+                                  (let [weight (get-in game-state [:objects obj-id :weight] 0)]
+                                    (> weight 4)))
+                                carried-objects)
+          empty-handed? (empty? heavy-objects)]
+      (-> game-state
+          (assoc :empty-handed empty-handed?)
+          (gs/use-default)))
+    (gs/use-default game-state)))
+
+;; <ROOM SLIDE-ROOM
+;;       (IN ROOMS)
+;;       (LDESC
+;; "This is a small chamber, which appears to have been part of a
+;; coal mine. On the south wall of the chamber the letters \"Granite
+;; Wall\" are etched in the rock. To the east is a long passage, and
+;; there is a steep metal slide twisting downward. To the north is
+;; a small opening.")
+;;       (DESC "Slide Room")
+;;       (EAST TO COLD-PASSAGE)
+;;       (NORTH TO MINE-ENTRANCE)
+;;       (DOWN TO CELLAR)
+;;       (FLAGS RLANDBIT)
+;;       (GLOBAL SLIDE)>
+
+(def slide-room
+  {:id :slide-room
+   :desc "Slide Room"
+   :ldesc "This is a small chamber, which appears to have been part of a coal mine. On the south wall of the chamber the letters \"Granite Wall\" are etched in the rock. To the east is a long passage, and there is a steep metal slide twisting downward. To the north is a small opening."
+   :flags #{}  ; Underground, not lit
+   :globals #{:slide}
+   :exits {:east :cold-passage
+           :north :mine-entrance
+           :down :cellar}})
+
+;; <ROOM MINE-ENTRANCE
+;;       (IN ROOMS)
+;;       (LDESC
+;; "You are standing at the entrance of what might have been a coal mine.
+;; The shaft enters the west wall, and there is another exit on the south
+;; end of the room.")
+;;       (DESC "Mine Entrance")
+;;       (SOUTH TO SLIDE-ROOM)
+;;       (IN TO SQUEEKY-ROOM)
+;;       (WEST TO SQUEEKY-ROOM)
+;;       (FLAGS RLANDBIT)>
+
+(def mine-entrance
+  {:id :mine-entrance
+   :desc "Mine Entrance"
+   :ldesc "You are standing at the entrance of what might have been a coal mine. The shaft enters the west wall, and there is another exit on the south end of the room."
+   :flags #{}  ; Underground, not lit
+   :exits {:south :slide-room
+           :in :squeeky-room
+           :west :squeeky-room}})
+
+;; <ROOM SQUEEKY-ROOM
+;;       (IN ROOMS)
+;;       (LDESC
+;; "You are in a small room. Strange squeaky sounds may be heard coming
+;; from the passage at the north end. You may also escape to the east.")
+;;       (DESC "Squeaky Room")
+;;       (NORTH TO BAT-ROOM)
+;;       (EAST TO MINE-ENTRANCE)
+;;       (FLAGS RLANDBIT)>
+
+(def squeeky-room
+  {:id :squeeky-room
+   :desc "Squeaky Room"
+   :ldesc "You are in a small room. Strange squeaky sounds may be heard coming from the passage at the north end. You may also escape to the east."
+   :flags #{}  ; Underground, not lit
+   :exits {:north :bat-room
+           :east :mine-entrance}})
+
+;; <ROOM BAT-ROOM
+;;       (IN ROOMS)
+;;       (DESC "Bat Room")
+;;       (SOUTH TO SQUEEKY-ROOM)
+;;       (EAST TO SHAFT-ROOM)
+;;       (ACTION BATS-ROOM)
+;;       (FLAGS RLANDBIT SACREDBIT)>
+
+(def bat-room
+  {:id :bat-room
+   :desc "Bat Room"
+   ;; ldesc handled by action function
+   :flags #{:sacred}  ; SACREDBIT - sacred room (no thief)
+   :exits {:south :squeeky-room
+           :east :shaft-room}
+   :action bats-room-action})
+
+;; <ROOM SHAFT-ROOM
+;;       (IN ROOMS)
+;;       (LDESC
+;; "This is a large room, in the middle of which is a small shaft
+;; descending through the floor into darkness below. To the west and
+;; the north are exits from this room. Constructed over the top of the
+;; shaft is a metal framework to which a heavy iron chain is attached.")
+;;       (DESC "Shaft Room")
+;;       (DOWN "You wouldn't fit and would die if you could.")
+;;       (WEST TO BAT-ROOM)
+;;       (NORTH TO SMELLY-ROOM)
+;;       (FLAGS RLANDBIT)
+;;       (PSEUDO "CHAIN" CHAIN-PSEUDO)>
+
+(def shaft-room
+  {:id :shaft-room
+   :desc "Shaft Room"
+   :ldesc "This is a large room, in the middle of which is a small shaft descending through the floor into darkness below. To the west and the north are exits from this room. Constructed over the top of the shaft is a metal framework to which a heavy iron chain is attached."
+   :flags #{}  ; Underground, not lit
+   :exits {:down "You wouldn't fit and would die if you could."
+           :west :bat-room
+           :north :smelly-room}})
+
+;; <ROOM SMELLY-ROOM
+;;       (IN ROOMS)
+;;       (LDESC
+;; "This is a small nondescript room. However, from the direction
+;; of a small descending staircase a foul odor can be detected. To the
+;; south is a narrow tunnel.")
+;;       (DESC "Smelly Room")
+;;       (DOWN TO GAS-ROOM)
+;;       (SOUTH TO SHAFT-ROOM)
+;;       (FLAGS RLANDBIT)
+;;       (GLOBAL STAIRS)
+;;       (PSEUDO "ODOR" GAS-PSEUDO "GAS" GAS-PSEUDO)>
+
+(def smelly-room
+  {:id :smelly-room
+   :desc "Smelly Room"
+   :ldesc "This is a small nondescript room. However, from the direction of a small descending staircase a foul odor can be detected. To the south is a narrow tunnel."
+   :flags #{}  ; Underground, not lit
+   :globals #{:stairs}
+   :exits {:down :gas-room
+           :south :shaft-room}})
+
+;; <ROOM GAS-ROOM
+;;       (IN ROOMS)
+;;       (LDESC
+;; "This is a small room which smells strongly of coal gas. There is a
+;; short climb up some stairs and a narrow tunnel leading east.")
+;;       (DESC "Gas Room")
+;;       (UP TO SMELLY-ROOM)
+;;       (EAST TO MINE-1)
+;;       (ACTION BOOM-ROOM)
+;;       (FLAGS RLANDBIT SACREDBIT)
+;;       (GLOBAL STAIRS)
+;;       (PSEUDO "GAS" GAS-PSEUDO "ODOR" GAS-PSEUDO)>
+
+(def gas-room
+  {:id :gas-room
+   :desc "Gas Room"
+   :ldesc "This is a small room which smells strongly of coal gas. There is a short climb up some stairs and a narrow tunnel leading east."
+   :flags #{:sacred}  ; SACREDBIT - sacred room (no thief)
+   :globals #{:stairs}
+   :exits {:up :smelly-room
+           :east :mine-1}
+   :action boom-room-action})
+
+;; <ROOM LADDER-TOP
+;;       (IN ROOMS)
+;;       (LDESC
+;; "This is a very small room. In the corner is a rickety wooden
+;; ladder, leading downward. It might be safe to descend. There is
+;; also a staircase leading upward.")
+;;       (DESC "Ladder Top")
+;;       (DOWN TO LADDER-BOTTOM)
+;;       (UP TO MINE-4)
+;;       (FLAGS RLANDBIT)
+;;       (GLOBAL LADDER STAIRS)>
+
+(def ladder-top
+  {:id :ladder-top
+   :desc "Ladder Top"
+   :ldesc "This is a very small room. In the corner is a rickety wooden ladder, leading downward. It might be safe to descend. There is also a staircase leading upward."
+   :flags #{}  ; Underground, not lit
+   :globals #{:ladder :stairs}
+   :exits {:down :ladder-bottom
+           :up :mine-4}})
+
+;; <ROOM LADDER-BOTTOM
+;;       (IN ROOMS)
+;;       (LDESC
+;; "This is a rather wide room. On one side is the bottom of a
+;; narrow wooden ladder. To the west and the south are passages
+;; leaving the room.")
+;;       (DESC "Ladder Bottom")
+;;       (SOUTH TO DEAD-END-5)
+;;       (WEST TO TIMBER-ROOM)
+;;       (UP TO LADDER-TOP)
+;;       (FLAGS RLANDBIT)
+;;       (GLOBAL LADDER)>
+
+(def ladder-bottom
+  {:id :ladder-bottom
+   :desc "Ladder Bottom"
+   :ldesc "This is a rather wide room. On one side is the bottom of a narrow wooden ladder. To the west and the south are passages leaving the room."
+   :flags #{}  ; Underground, not lit
+   :globals #{:ladder}
+   :exits {:south :dead-end-5
+           :west :timber-room
+           :up :ladder-top}})
+
+;; <ROOM DEAD-END-5
+;;       (IN ROOMS)
+;;       (DESC "Dead End")
+;;       (LDESC "You have come to a dead end in the mine.")
+;;       (NORTH TO LADDER-BOTTOM)
+;;       (FLAGS RLANDBIT)>
+
+(def dead-end-5
+  {:id :dead-end-5
+   :desc "Dead End"
+   :ldesc "You have come to a dead end in the mine."
+   :flags #{}  ; Underground, not lit
+   :exits {:north :ladder-bottom}})
+
+;; <ROOM TIMBER-ROOM
+;;       (IN ROOMS)
+;;       (LDESC
+;; "This is a long and narrow passage, which is cluttered with broken
+;; timbers. A wide passage comes from the east and turns at the
+;; west end of the room into a very narrow passageway. From the west
+;; comes a strong draft.")
+;;       (DESC "Timber Room")
+;;       (EAST TO LADDER-BOTTOM)
+;;       (WEST TO LOWER-SHAFT
+;;        IF EMPTY-HANDED
+;;        ELSE "You cannot fit through this passage with that load.")
+;;       (ACTION NO-OBJS)
+;;       (FLAGS RLANDBIT SACREDBIT)>
+
+(def timber-room
+  {:id :timber-room
+   :desc "Timber Room"
+   :ldesc "This is a long and narrow passage, which is cluttered with broken timbers. A wide passage comes from the east and turns at the west end of the room into a very narrow passageway. From the west comes a strong draft."
+   :flags #{:sacred}  ; SACREDBIT - sacred room (no thief)
+   :exits {:east :ladder-bottom
+           :west {:to :lower-shaft
+                  :if :empty-handed
+                  :else "You cannot fit through this passage with that load."}}
+   :action no-objs-action})
+
+;; <ROOM LOWER-SHAFT
+;;       (IN ROOMS)
+;;       (LDESC
+;; "This is a small drafty room in which is the bottom of a long
+;; shaft. To the south is a passageway and to the east a very narrow
+;; passage. In the shaft can be seen a heavy iron chain.")
+;;       (DESC "Drafty Room")
+;;       (SOUTH TO MACHINE-ROOM)
+;;       (OUT TO TIMBER-ROOM
+;;        IF EMPTY-HANDED
+;;        ELSE "You cannot fit through this passage with that load.")
+;;       (EAST TO TIMBER-ROOM
+;;        IF EMPTY-HANDED
+;;        ELSE "You cannot fit through this passage with that load.")
+;;       (ACTION NO-OBJS)
+;;       (FLAGS RLANDBIT SACREDBIT)
+;;       (PSEUDO "CHAIN" CHAIN-PSEUDO)>
+
+(def lower-shaft
+  {:id :lower-shaft
+   :desc "Drafty Room"
+   :ldesc "This is a small drafty room in which is the bottom of a long shaft. To the south is a passageway and to the east a very narrow passage. In the shaft can be seen a heavy iron chain."
+   :flags #{:sacred}  ; SACREDBIT - sacred room (no thief)
+   :exits {:south :machine-room
+           :out {:to :timber-room
+                 :if :empty-handed
+                 :else "You cannot fit through this passage with that load."}
+           :east {:to :timber-room
+                  :if :empty-handed
+                  :else "You cannot fit through this passage with that load."}}
+   :action no-objs-action})
+
+;; <ROOM MACHINE-ROOM
+;;       (IN ROOMS)
+;;       (DESC "Machine Room")
+;;       (NORTH TO LOWER-SHAFT)
+;;       (ACTION MACHINE-ROOM-FCN)
+;;       (FLAGS RLANDBIT)>
+
+(def machine-room
+  {:id :machine-room
+   :desc "Machine Room"
+   ;; ldesc handled by action function
+   :flags #{}  ; Underground, not lit
+   :exits {:north :lower-shaft}
+   :action machine-room-action})
+
+;; --- COAL MINE MAZE ---
+
+;; <ROOM MINE-1
+;;       (IN ROOMS)
+;;       (LDESC "This is a nondescript part of a coal mine.")
+;;       (DESC "Coal Mine")
+;;       (NORTH TO GAS-ROOM)
+;;       (EAST TO MINE-1)
+;;       (NE TO MINE-2)
+;;       (FLAGS RLANDBIT)>
+
+(def mine-1
+  {:id :mine-1
+   :desc "Coal Mine"
+   :ldesc "This is a nondescript part of a coal mine."
+   :flags #{}  ; Underground, not lit
+   :exits {:north :gas-room
+           :east :mine-1  ; Loop back to itself
+           :ne :mine-2}})
+
+;; <ROOM MINE-2
+;;       (IN ROOMS)
+;;       (LDESC "This is a nondescript part of a coal mine.")
+;;       (DESC "Coal Mine")
+;;       (NORTH TO MINE-2)
+;;       (SOUTH TO MINE-1)
+;;       (SE TO MINE-3)
+;;       (FLAGS RLANDBIT)>
+
+(def mine-2
+  {:id :mine-2
+   :desc "Coal Mine"
+   :ldesc "This is a nondescript part of a coal mine."
+   :flags #{}  ; Underground, not lit
+   :exits {:north :mine-2  ; Loop back to itself
+           :south :mine-1
+           :se :mine-3}})
+
+;; <ROOM MINE-3
+;;       (IN ROOMS)
+;;       (LDESC "This is a nondescript part of a coal mine.")
+;;       (DESC "Coal Mine")
+;;       (SOUTH TO MINE-3)
+;;       (SW TO MINE-4)
+;;       (EAST TO MINE-2)
+;;       (FLAGS RLANDBIT)>
+
+(def mine-3
+  {:id :mine-3
+   :desc "Coal Mine"
+   :ldesc "This is a nondescript part of a coal mine."
+   :flags #{}  ; Underground, not lit
+   :exits {:south :mine-3  ; Loop back to itself
+           :sw :mine-4
+           :east :mine-2}})
+
+;; <ROOM MINE-4
+;;       (IN ROOMS)
+;;       (LDESC "This is a nondescript part of a coal mine.")
+;;       (DESC "Coal Mine")
+;;       (NORTH TO MINE-3)
+;;       (WEST TO MINE-4)
+;;       (DOWN TO LADDER-TOP)
+;;       (FLAGS RLANDBIT)>
+
+(def mine-4
+  {:id :mine-4
+   :desc "Coal Mine"
+   :ldesc "This is a nondescript part of a coal mine."
+   :flags #{}  ; Underground, not lit
+   :exits {:north :mine-3
+           :west :mine-4  ; Loop back to itself
+           :down :ladder-top}})
+
+;;; ---------------------------------------------------------------------------
 ;;; ALL ROOMS LIST
 ;;; ---------------------------------------------------------------------------
 
@@ -2321,4 +2803,22 @@ The gate is open; through it you can see a desolation, with a pile of mangled bo
    south-temple
    egypt-room
    entrance-to-hades
-   land-of-living-dead])
+   land-of-living-dead
+   ;; Coal Mine area
+   slide-room
+   mine-entrance
+   squeeky-room
+   bat-room
+   shaft-room
+   smelly-room
+   gas-room
+   ladder-top
+   ladder-bottom
+   dead-end-5
+   timber-room
+   lower-shaft
+   machine-room
+   mine-1
+   mine-2
+   mine-3
+   mine-4])

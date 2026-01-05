@@ -314,19 +314,20 @@ These are out-of-game commands that don't advance time.
 
 | Status | Room ID       | Description   |
 | ------ | ------------- | ------------- |
-| [ ]    | MINE-ENTRANCE | Mine Entrance |
-| [ ]    | MINE-1        | Squeaky Room  |
-| [ ]    | MINE-2        | Mine          |
-| [ ]    | MINE-3        | Mine          |
-| [ ]    | MINE-4        | Mine          |
-| [ ]    | BAT-ROOM      | Bat Room      |
-| [ ]    | SHAFT-ROOM    | Shaft Room    |
-| [ ]    | LOWER-SHAFT   | Smelly Room   |
-| [ ]    | TIMBER-ROOM   | Timber Room   |
-| [ ]    | SLIDE-ROOM    | Slide Room    |
-| [ ]    | LADDER-TOP    | Ladder Top    |
-| [ ]    | LADDER-BOTTOM | Ladder Bottom |
-| [ ]    | GAS-ROOM      | Gas Room      |
+| [x]    | MINE-ENTRANCE | Mine Entrance |
+| [x]    | MINE-1        | Coal Mine     |
+| [x]    | MINE-2        | Coal Mine     |
+| [x]    | MINE-3        | Coal Mine     |
+| [x]    | MINE-4        | Coal Mine     |
+| [x]    | BAT-ROOM      | Bat Room      |
+| [x]    | SHAFT-ROOM    | Shaft Room    |
+| [x]    | LOWER-SHAFT   | Drafty Room   |
+| [x]    | TIMBER-ROOM   | Timber Room   |
+| [x]    | SLIDE-ROOM    | Slide Room    |
+| [x]    | LADDER-TOP    | Ladder Top    |
+| [x]    | LADDER-BOTTOM | Ladder Bottom |
+| [x]    | GAS-ROOM      | Gas Room      |
+| [x]    | DEAD-END-5    | Dead End      |
 
 ### Underground - Temple and Hades
 
@@ -352,11 +353,11 @@ These are out-of-game commands that don't advance time.
 | ------ | ------------- | ---------------------- |
 | [x]    | MIRROR-ROOM-1 | Mirror Room            |
 | [x]    | MIRROR-ROOM-2 | Mirror Room            |
-| [ ]    | MACHINE-ROOM  | Machine Room           |
+| [x]    | MACHINE-ROOM  | Machine Room           |
 | [x]    | SANDY-CAVE    | Sandy Cave             |
 | [x]    | STONE-BARROW  | Stone Barrow (endgame) |
-| [ ]    | SMELLY-ROOM   | Smelly Room            |
-| [ ]    | SQUEEKY-ROOM  | Squeaky Room           |
+| [x]    | SMELLY-ROOM   | Smelly Room            |
+| [x]    | SQUEEKY-ROOM  | Squeaky Room           |
 
 ---
 
@@ -567,13 +568,14 @@ These are out-of-game commands that don't advance time.
 | [x]    | TREASURE-ROOM-FCN | TREASURE-ROOM | Treasure room             |
 | [x]    | TORCH-ROOM-FCN    | TORCH-ROOM    | Torch room                |
 | [x]    | MIRROR-ROOM       | MIRROR-ROOM-* | Mirror rooms              |
-| [ ]    | MACHINE-ROOM-FCN  | MACHINE-ROOM  | Coal machine              |
+| [x]    | MACHINE-ROOM-FCN  | MACHINE-ROOM  | Coal machine              |
 | [x]    | DOME-ROOM-FCN     | DOME-ROOM     | Dome room                 |
 | [x]    | SOUTH-TEMPLE-FCN  | SOUTH-TEMPLE  | Temple altar              |
 | [ ]    | BARROW-FCN        | STONE-BARROW  | Endgame barrow            |
-| [ ]    | BATS-ROOM         | BAT-ROOM      | Bat room                  |
+| [x]    | BATS-ROOM         | BAT-ROOM      | Bat room                  |
 | [x]    | FALLS-ROOM        | ARAGAIN-FALLS | Falls viewing             |
-| [ ]    | BOOM-ROOM         | GAS-ROOM      | Gas explosion             |
+| [x]    | BOOM-ROOM         | GAS-ROOM      | Gas explosion             |
+| [x]    | NO-OBJS           | TIMBER/SHAFT  | Empty-handed check        |
 | [ ]    | CAVE2-ROOM        | Caves         | Various caves             |
 
 ### NPC Actions
