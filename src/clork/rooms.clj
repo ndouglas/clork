@@ -1450,7 +1450,7 @@
    :ldesc "You have entered a low cave with passages leading northwest and east."
    :flags #{}  ; Underground, not lit
    :exits {:nw :round-room
-           :east "TODO: This exit leads to DOME-ROOM."}})
+           :east :dome-room}})
 
 ;; Note: dark-area is a placeholder for unlit areas, not a specific ZIL room.
 ;; When the player enters an unlit room without a light source, they see
@@ -1891,11 +1891,10 @@
    :ldesc "This is a tiny cave with entrances west and north, and a dark, forbidding staircase leading down."
    :flags #{}  ; Underground, not lit
    :globals #{:stairs}
-   ;; Note: DOWN leads to ENTRANCE-TO-HADES (not yet implemented)
    ;; CAVE2-ROOM action blows out candles - skipped until candles implemented
    :exits {:north :mirror-room-2
            :west :winding-passage
-           :down "TODO: This exit leads to ENTRANCE-TO-HADES."}})
+           :down :entrance-to-hades}})
 
 ;; <ROOM COLD-PASSAGE
 ;;       (IN ROOMS)
@@ -1971,6 +1970,255 @@
    :globals #{:stairs}
    :exits {:up :small-cave
            :south :reservoir-north}})
+
+;;; ---------------------------------------------------------------------------
+;;; TEMPLE / HADES AREA
+;;; ---------------------------------------------------------------------------
+
+;; <ROOM DOME-ROOM
+;;       (IN ROOMS)
+;;       (DESC "Dome Room")
+;;       (WEST TO ENGRAVINGS-CAVE)
+;;       (DOWN TO TORCH-ROOM
+;;        IF DOME-FLAG ELSE "You cannot go down without fracturing many bones.")
+;;       (ACTION DOME-ROOM-FCN)
+;;       (FLAGS RLANDBIT)
+;;       (PSEUDO "DOME" DOME-PSEUDO)>
+
+(defn dome-room-action
+  "Handle Dome Room description and special behavior.
+   ZIL: DOME-ROOM-FCN in 1actions.zil"
+  [game-state rarg]
+  (cond
+    (= rarg :look)
+    (let [rope-tied? (gs/flag? game-state :dome-flag)]
+      (-> game-state
+          (utils/tell "You are at the periphery of a large dome, which forms the ceiling of another room below. Protecting you from a precipitous drop is a wooden railing which circles the dome.")
+          (utils/crlf)
+          (cond-> rope-tied?
+            (-> (utils/tell "Hanging down from the railing is a rope which ends about ten feet from the floor below.")
+                (utils/crlf)))))
+
+    ;; If dead (ghost), player is pulled down to torch room
+    (and (= rarg :m-enter)
+         (gs/flag? game-state :dead))
+    (-> game-state
+        (utils/tell "As you enter the dome you feel a strong pull as if from a wind drawing you over the railing and down.")
+        (utils/crlf)
+        (assoc :here :torch-room))
+
+    ;; If player tries to leap, they die
+    (and (= rarg :m-enter)
+         (= (:verb game-state) :leap))
+    (death/jigs-up game-state "I'm afraid that the leap you attempted has done you in.")
+
+    :else
+    (gs/use-default game-state)))
+
+(def dome-room
+  {:id :dome-room
+   :desc "Dome Room"
+   ;; ldesc handled by action function
+   :flags #{}  ; Underground, not lit
+   :exits {:west :engravings-cave
+           :down {:to :torch-room
+                  :if :dome-flag
+                  :else "You cannot go down without fracturing many bones."}}
+   :action dome-room-action})
+
+;; <ROOM TORCH-ROOM
+;;       (IN ROOMS)
+;;       (DESC "Torch Room")
+;;       (UP "You cannot reach the rope.")
+;;       (SOUTH TO NORTH-TEMPLE)
+;;       (DOWN TO NORTH-TEMPLE)
+;;       (ACTION TORCH-ROOM-FCN)
+;;       (FLAGS RLANDBIT)
+;;       (GLOBAL STAIRS)
+;;       (PSEUDO "DOME" DOME-PSEUDO)>
+
+(defn torch-room-action
+  "Handle Torch Room description.
+   ZIL: TORCH-ROOM-FCN in 1actions.zil"
+  [game-state rarg]
+  (if (= rarg :look)
+    (let [rope-tied? (gs/flag? game-state :dome-flag)]
+      (-> game-state
+          (utils/tell "This is a large room with a prominent doorway leading to a down staircase. Above you is a large dome. Up around the edge of the dome (20 feet up) is a wooden railing. In the center of the room sits a white marble pedestal.")
+          (utils/crlf)
+          (cond-> rope-tied?
+            (-> (utils/tell "A piece of rope descends from the railing above, ending some five feet above your head.")
+                (utils/crlf)))))
+    (gs/use-default game-state)))
+
+(def torch-room
+  {:id :torch-room
+   :desc "Torch Room"
+   ;; ldesc handled by action function
+   :flags #{}  ; Underground, not lit
+   :globals #{:stairs}
+   :exits {:up "You cannot reach the rope."
+           :south :north-temple
+           :down :north-temple}
+   :action torch-room-action})
+
+;; <ROOM NORTH-TEMPLE
+;;       (IN ROOMS)
+;;       (LDESC
+;; "This is the north end of a large temple. On the east wall is an
+;; ancient inscription, probably a prayer in a long-forgotten language.
+;; Below the prayer is a staircase leading down. The west wall is solid
+;; granite. The exit to the north end of the room is through huge
+;; marble pillars.")
+;;       (DESC "Temple")
+;;       (DOWN TO EGYPT-ROOM)
+;;       (EAST TO EGYPT-ROOM)
+;;       (NORTH TO TORCH-ROOM)
+;;       (OUT TO TORCH-ROOM)
+;;       (UP TO TORCH-ROOM)
+;;       (SOUTH TO SOUTH-TEMPLE)
+;;       (FLAGS RLANDBIT ONBIT SACREDBIT)
+;;       (GLOBAL STAIRS)>
+
+(def north-temple
+  {:id :north-temple
+   :desc "Temple"
+   :ldesc "This is the north end of a large temple. On the east wall is an ancient inscription, probably a prayer in a long-forgotten language. Below the prayer is a staircase leading down. The west wall is solid granite. The exit to the north end of the room is through huge marble pillars."
+   :flags #{:lit :sacred}
+   :globals #{:stairs}
+   :exits {:down :egypt-room
+           :east :egypt-room
+           :north :torch-room
+           :out :torch-room
+           :up :torch-room
+           :south :south-temple}})
+
+;; <ROOM SOUTH-TEMPLE
+;;       (IN ROOMS)
+;;       (LDESC
+;; "This is the south end of a large temple. In front of you is what
+;; appears to be an altar. In one corner is a small hole in the floor
+;; which leads into darkness. You probably could not get back up it.")
+;;       (DESC "Altar")
+;;       (NORTH TO NORTH-TEMPLE)
+;;       (DOWN TO TINY-CAVE
+;;        IF COFFIN-CURE
+;;        ELSE "You haven't a prayer of getting the coffin down there.")
+;;       (FLAGS RLANDBIT ONBIT SACREDBIT)
+;;       (ACTION SOUTH-TEMPLE-FCN)>
+
+(defn south-temple-action
+  "Handle South Temple / Altar behavior.
+   ZIL: SOUTH-TEMPLE-FCN - sets COFFIN-CURE based on whether player has coffin.
+   The player can only go down if they're NOT carrying the coffin."
+  [game-state rarg]
+  (if (= rarg :m-beg)
+    ;; Set coffin-cure flag: true if player does NOT have the coffin
+    (let [has-coffin? (= :player (gs/get-thing-loc-id game-state :coffin))]
+      (-> game-state
+          (gs/set-flag :coffin-cure (not has-coffin?))
+          (gs/use-default)))
+    (gs/use-default game-state)))
+
+(def south-temple
+  {:id :south-temple
+   :desc "Altar"
+   :ldesc "This is the south end of a large temple. In front of you is what appears to be an altar. In one corner is a small hole in the floor which leads into darkness. You probably could not get back up it."
+   :flags #{:lit :sacred}
+   :exits {:north :north-temple
+           :down {:to :tiny-cave
+                  :if :coffin-cure
+                  :else "You haven't a prayer of getting the coffin down there."}}
+   :action south-temple-action})
+
+;; <ROOM EGYPT-ROOM
+;;       (IN ROOMS)
+;;       (LDESC
+;; "This is a room which looks like an Egyptian tomb. There is an
+;; ascending staircase to the west.")
+;;       (DESC "Egyptian Room")
+;;       (WEST TO NORTH-TEMPLE)
+;;       (UP TO NORTH-TEMPLE)
+;;       (FLAGS RLANDBIT)
+;;       (GLOBAL STAIRS)>
+
+(def egypt-room
+  {:id :egypt-room
+   :desc "Egyptian Room"
+   :ldesc "This is a room which looks like an Egyptian tomb. There is an ascending staircase to the west."
+   :flags #{}  ; Underground, not lit
+   :globals #{:stairs}
+   :exits {:west :north-temple
+           :up :north-temple}})
+
+;; <ROOM ENTRANCE-TO-HADES
+;;       (IN ROOMS)
+;;       (DESC "Entrance to Hades")
+;;       (UP TO TINY-CAVE)
+;;       (IN TO LAND-OF-LIVING-DEAD IF LLD-FLAG
+;;        ELSE "Some invisible force prevents you from passing through the gate.")
+;;       (SOUTH TO LAND-OF-LIVING-DEAD IF LLD-FLAG
+;;        ELSE "Some invisible force prevents you from passing through the gate.")
+;;       (ACTION LLD-ROOM)
+;;       (FLAGS RLANDBIT ONBIT)
+;;       (GLOBAL BODIES)
+;;       (PSEUDO "GATE" GATE-PSEUDO "GATES" GATE-PSEUDO)>
+
+(defn entrance-to-hades-action
+  "Handle Entrance to Hades description.
+   ZIL: LLD-ROOM in 1actions.zil"
+  [game-state rarg]
+  (if (= rarg :look)
+    (let [gate-open? (gs/flag? game-state :lld-flag)
+          is-dead? (gs/flag? game-state :dead)]
+      (-> game-state
+          (utils/tell "You are outside a large gateway, on which is inscribed
+
+  Abandon every hope all ye who enter here!
+
+The gate is open; through it you can see a desolation, with a pile of mangled bodies in one corner. Thousands of voices, lamenting some hideous fate, can be heard.")
+          (utils/crlf)
+          (cond-> (and (not gate-open?) (not is-dead?))
+            (-> (utils/tell "The way through the gate is barred by evil spirits, who jeer at your attempts to pass.")
+                (utils/crlf)))))
+    (gs/use-default game-state)))
+
+(def entrance-to-hades
+  {:id :entrance-to-hades
+   :desc "Entrance to Hades"
+   ;; ldesc handled by action function
+   :flags #{:lit}
+   :globals #{:bodies}
+   :exits {:up :tiny-cave
+           :in {:to :land-of-living-dead
+                :if :lld-flag
+                :else "Some invisible force prevents you from passing through the gate."}
+           :south {:to :land-of-living-dead
+                   :if :lld-flag
+                   :else "Some invisible force prevents you from passing through the gate."}}
+   :action entrance-to-hades-action})
+
+;; <ROOM LAND-OF-LIVING-DEAD
+;;       (IN ROOMS)
+;;       (LDESC
+;; "You have entered the Land of the Living Dead. Thousands of lost souls
+;; can be heard weeping and moaning. In the corner are stacked the remains
+;; of dozens of previous adventurers less fortunate than yourself.
+;; A passage exits to the north.")
+;;       (DESC "Land of the Dead")
+;;       (OUT TO ENTRANCE-TO-HADES)
+;;       (NORTH TO ENTRANCE-TO-HADES)
+;;       (FLAGS RLANDBIT ONBIT)
+;;       (GLOBAL BODIES)>
+
+(def land-of-living-dead
+  {:id :land-of-living-dead
+   :desc "Land of the Dead"
+   :ldesc "You have entered the Land of the Living Dead. Thousands of lost souls can be heard weeping and moaning. In the corner are stacked the remains of dozens of previous adventurers less fortunate than yourself. A passage exits to the north."
+   :flags #{:lit}
+   :globals #{:bodies}
+   :exits {:out :entrance-to-hades
+           :north :entrance-to-hades}})
 
 ;;; ---------------------------------------------------------------------------
 ;;; ALL ROOMS LIST
@@ -2065,4 +2313,12 @@
    cold-passage
    winding-passage
    twisting-passage
-   atlantis-room])
+   atlantis-room
+   ;; Temple / Hades area
+   dome-room
+   torch-room
+   north-temple
+   south-temple
+   egypt-room
+   entrance-to-hades
+   land-of-living-dead])

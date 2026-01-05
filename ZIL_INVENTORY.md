@@ -307,8 +307,8 @@ These are out-of-game commands that don't advance time.
 | [x]    | CLIFF-MIDDLE     | Rocky Ledge      |
 | [x]    | CANYON-BOTTOM    | Canyon Bottom    |
 | [x]    | ENGRAVINGS-CAVE  | Engravings Cave  |
-| [ ]    | DOME-ROOM        | Dome Room        |
-| [ ]    | TORCH-ROOM       | Torch Room       |
+| [x]    | DOME-ROOM        | Dome Room        |
+| [x]    | TORCH-ROOM       | Torch Room       |
 
 ### Underground - Mine
 
@@ -332,11 +332,11 @@ These are out-of-game commands that don't advance time.
 
 | Status | Room ID             | Description             |
 | ------ | ------------------- | ----------------------- |
-| [ ]    | NORTH-TEMPLE        | Temple                  |
-| [ ]    | SOUTH-TEMPLE        | Altar                   |
-| [ ]    | EGYPT-ROOM          | Egyptian Room           |
-| [ ]    | ENTRANCE-TO-HADES   | Entrance to Hades       |
-| [ ]    | LAND-OF-LIVING-DEAD | Land of the Living Dead |
+| [x]    | NORTH-TEMPLE        | Temple                  |
+| [x]    | SOUTH-TEMPLE        | Altar                   |
+| [x]    | EGYPT-ROOM          | Egyptian Room           |
+| [x]    | ENTRANCE-TO-HADES   | Entrance to Hades       |
+| [x]    | LAND-OF-LIVING-DEAD | Land of the Living Dead |
 
 ### Underground - Thief's Lair
 
@@ -565,11 +565,11 @@ These are out-of-game commands that don't advance time.
 | [x]    | DAM-ROOM-FCN      | DAM-ROOM      | Dam controls              |
 | [x]    | RESERVOIR-FCN     | RESERVOIR     | Reservoir water           |
 | [x]    | TREASURE-ROOM-FCN | TREASURE-ROOM | Treasure room             |
-| [ ]    | TORCH-ROOM-FCN    | TORCH-ROOM    | Torch room                |
+| [x]    | TORCH-ROOM-FCN    | TORCH-ROOM    | Torch room                |
 | [x]    | MIRROR-ROOM       | MIRROR-ROOM-* | Mirror rooms              |
 | [ ]    | MACHINE-ROOM-FCN  | MACHINE-ROOM  | Coal machine              |
-| [ ]    | DOME-ROOM-FCN     | DOME-ROOM     | Dome room                 |
-| [ ]    | SOUTH-TEMPLE-FCN  | SOUTH-TEMPLE  | Temple altar              |
+| [x]    | DOME-ROOM-FCN     | DOME-ROOM     | Dome room                 |
+| [x]    | SOUTH-TEMPLE-FCN  | SOUTH-TEMPLE  | Temple altar              |
 | [ ]    | BARROW-FCN        | STONE-BARROW  | Endgame barrow            |
 | [ ]    | BATS-ROOM         | BAT-ROOM      | Bat room                  |
 | [x]    | FALLS-ROOM        | ARAGAIN-FALLS | Falls viewing             |
