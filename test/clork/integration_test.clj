@@ -45,7 +45,7 @@
 
 (deftest parser-error-detection-test
   (testing "unknown words trigger parser errors"
-    (let [script "xyzzy\n$quit\n"
+    (let [script "frobulate\n$quit\n"  ; Use a nonsense word (not xyzzy - that's a valid verb!)
           result (run-script script :fail-on-parser-error true)]
       (is (= 2 (:exit-code result)) "Unknown word should cause exit code 2")
       (is (pos? (:parser-error-count (:game-state result)))

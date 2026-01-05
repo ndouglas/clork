@@ -93,7 +93,7 @@ These are out-of-game commands that don't advance time.
 | [x]    | ATTACK/FIGHT/HIT | V-ATTACK | Attack creature               |
 | [x]    | KILL/MURDER      | V-ATTACK | Kill creature (synonym)       |
 | [x]    | STAB             | V-STAB   | Stab without weapon specified |
-| [ ]    | SWING            | V-SWING  | Swing weapon                  |
+| [x]    | SWING            | V-SWING  | Swing weapon                  |
 | [ ]    | THROW AT         | V-THROW  | Throw at target               |
 
 ### Object Manipulation
@@ -103,14 +103,14 @@ These are out-of-game commands that don't advance time.
 | [x]    | MOVE       | V-MOVE  | Move object        |
 | [x]    | PUSH       | V-PUSH  | Push object        |
 | [x]    | PULL/TUG   | V-MOVE  | Pull object        |
-| [ ]    | RAISE/LIFT | V-RAISE | Raise object       |
-| [ ]    | LOWER      | V-LOWER | Lower object       |
+| [x]    | RAISE/LIFT | V-RAISE | Raise object       |
+| [x]    | LOWER      | V-LOWER | Lower object       |
 | [x]    | TURN       | V-TURN  | Turn/rotate object |
-| [ ]    | SHAKE      | V-SHAKE | Shake container    |
-| [ ]    | WAVE       | V-WAVE  | Wave object        |
-| [ ]    | RUB/TOUCH  | V-RUB   | Rub/touch object   |
-| [ ]    | TIE        | V-TIE   | Tie object         |
-| [ ]    | UNTIE      | V-UNTIE | Untie object       |
+| [x]    | SHAKE      | V-SHAKE | Shake container    |
+| [x]    | WAVE       | V-WAVE  | Wave object        |
+| [x]    | RUB/TOUCH  | V-RUB   | Rub/touch object   |
+| [x]    | TIE        | V-TIE   | Tie object         |
+| [x]    | UNTIE      | V-UNTIE | Untie object       |
 
 ### Tools and Items
 
@@ -118,14 +118,14 @@ These are out-of-game commands that don't advance time.
 | ------ | ----------- | --------- | --------------- |
 | [x]    | UNLOCK      | V-UNLOCK  | Unlock with key |
 | [x]    | LOCK        | V-LOCK    | Lock with key   |
-| [ ]    | DIG         | V-DIG     | Dig with shovel |
-| [ ]    | CUT/SLICE   | V-CUT     | Cut with blade  |
-| [ ]    | BURN/IGNITE | V-BURN    | Burn with fire  |
-| [ ]    | FILL        | V-FILL    | Fill container  |
-| [ ]    | POUR        | V-DROP    | Pour liquid     |
+| [x]    | DIG         | V-DIG     | Dig with shovel |
+| [x]    | CUT/SLICE   | V-CUT     | Cut with blade  |
+| [x]    | BURN/IGNITE | V-BURN    | Burn with fire  |
+| [x]    | FILL        | V-FILL    | Fill container  |
+| [x]    | POUR        | V-DROP    | Pour liquid     |
 | [ ]    | POUR ON     | V-POUR-ON | Pour on object  |
-| [ ]    | INFLATE     | V-INFLATE | Inflate object  |
-| [ ]    | DEFLATE     | V-DEFLATE | Deflate object  |
+| [x]    | INFLATE     | V-INFLATE | Inflate object  |
+| [x]    | DEFLATE     | V-DEFLATE | Deflate object  |
 | [ ]    | PLUG/PATCH  | V-PLUG    | Repair object   |
 | [ ]    | PUMP        | V-PUMP    | Pump air        |
 
@@ -140,54 +140,54 @@ These are out-of-game commands that don't advance time.
 
 | Status | Verb         | Handler  | Description     |
 | ------ | ------------ | -------- | --------------- |
-| [ ]    | SAY          | V-SAY    | Say something   |
+| [x]    | SAY          | V-SAY    | Say something   |
 | [ ]    | TELL/ASK     | V-TELL   | Talk to NPC     |
 | [ ]    | ANSWER/REPLY | V-ANSWER | Answer question |
-| [ ]    | HELLO/HI     | V-HELLO  | Greet           |
-| [ ]    | YELL/SCREAM  | V-YELL   | Yell loudly     |
+| [x]    | HELLO/HI     | V-HELLO  | Greet           |
+| [x]    | YELL/SCREAM  | V-YELL   | Yell loudly     |
 | [x]    | GIVE/OFFER   | V-GIVE   | Give to NPC     |
 
 ### Vehicle/Boat
 
 | Status | Verb      | Handler     | Description   |
 | ------ | --------- | ----------- | ------------- |
-| [ ]    | BOARD     | V-BOARD     | Board vehicle |
-| [ ]    | DISEMBARK | V-DISEMBARK | Leave vehicle |
-| [ ]    | LAUNCH    | V-LAUNCH    | Launch boat   |
+| [x]    | BOARD     | V-BOARD     | Board vehicle |
+| [x]    | DISEMBARK | V-DISEMBARK | Leave vehicle |
+| [x]    | LAUNCH    | V-LAUNCH    | Launch boat   |
 
 ### Miscellaneous Verbs
 
 | Status | Verb        | Handler   | Description        |
 | ------ | ----------- | --------- | ------------------ |
 | [x]    | WAIT/Z      | V-WAIT    | Wait/pass time     |
-| [ ]    | JUMP/LEAP   | V-LEAP    | Jump               |
-| [ ]    | SWIM        | V-SWIM    | Swim               |
-| [ ]    | LISTEN      | V-LISTEN  | Listen to sounds   |
-| [ ]    | SMELL/SNIFF | V-SMELL   | Smell object       |
-| [ ]    | KNOCK       | V-KNOCK   | Knock on door      |
-| [ ]    | KICK        | V-KICK    | Kick object        |
-| [ ]    | KISS        | V-KISS    | Kiss creature      |
-| [ ]    | PRAY        | V-PRAY    | Pray               |
-| [ ]    | FIND/WHERE  | V-FIND    | Find object        |
-| [ ]    | COUNT       | V-COUNT   | Count objects      |
-| [ ]    | WEAR        | V-WEAR    | Wear clothing      |
-| [ ]    | RING        | V-RING    | Ring bell          |
+| [x]    | JUMP/LEAP   | V-LEAP    | Jump               |
+| [x]    | SWIM        | V-SWIM    | Swim               |
+| [x]    | LISTEN      | V-LISTEN  | Listen to sounds   |
+| [x]    | SMELL/SNIFF | V-SMELL   | Smell object       |
+| [x]    | KNOCK       | V-KNOCK   | Knock on door      |
+| [x]    | KICK        | V-KICK    | Kick object        |
+| [x]    | KISS        | V-KISS    | Kiss creature      |
+| [x]    | PRAY        | V-PRAY    | Pray               |
+| [x]    | FIND/WHERE  | V-FIND    | Find object        |
+| [x]    | COUNT       | V-COUNT   | Count objects      |
+| [x]    | WEAR        | V-WEAR    | Wear clothing      |
+| [x]    | RING        | V-RING    | Ring bell          |
 | [x]    | ECHO        | V-ECHO    | Say "echo"         |
-| [ ]    | CROSS       | V-CROSS   | Cross bridge/chasm |
+| [x]    | CROSS       | V-CROSS   | Cross bridge/chasm |
 | [x]    | THROUGH     | V-THROUGH | Go through         |
-| [ ]    | STAND       | V-STAND   | Stand up           |
+| [x]    | STAND       | V-STAND   | Stand up           |
 
 ### Special/Easter Egg Verbs
 
 | Status | Verb             | Handler    | Description         |
 | ------ | ---------------- | ---------- | ------------------- |
 | [x]    | ODYSSEUS/ULYSSES | V-ODYSSEUS | Cyclops puzzle      |
-| [ ]    | PLUGH/XYZZY      | V-ADVENT   | Adventure reference |
-| [ ]    | FROBOZZ          | V-FROBOZZ  | Frobozz reference   |
-| [ ]    | ZORK             | V-ZORK     | Meta-reference      |
-| [ ]    | CURSE/DAMN       | V-CURSES   | Swear words         |
-| [ ]    | WIN              | V-WIN      | Try to win          |
-| [ ]    | TREASURE/TEMPLE  | V-TREASURE | Hint command        |
+| [x]    | PLUGH/XYZZY      | V-ADVENT   | Adventure reference |
+| [x]    | FROBOZZ          | V-FROBOZZ  | Frobozz reference   |
+| [x]    | ZORK             | V-ZORK     | Meta-reference      |
+| [x]    | CURSE/DAMN       | V-CURSES   | Swear words         |
+| [x]    | WIN              | V-WIN      | Try to win          |
+| [x]    | TREASURE/TEMPLE  | V-TREASURE | Hint command        |
 
 ---
 

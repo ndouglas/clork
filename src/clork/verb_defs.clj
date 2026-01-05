@@ -12,6 +12,7 @@
             [clork.verbs-put :as verbs-put]
             [clork.verbs-combat :as verbs-combat]
             [clork.verbs-food :as verbs-food]
+            [clork.verbs-misc :as verbs-misc]
             [clork.cyclops :as cyclops]
             [clork.loud-room :as loud-room]
             [clork.debug.trace :as trace]))
@@ -626,7 +627,257 @@
                           :loc1 #{:in-room :on-ground}
                           :loc2 #{:held :carried :in-room :on-ground :take}
                           :gwim2 :tool}  ; FIND TOOLBIT
-                :handler verbs-food/v-unlock}})
+                :handler verbs-food/v-unlock}
+
+   ;; === Simple/Message Verbs ===
+   ;; ZIL: <SYNTAX JUMP = V-LEAP>
+   ;;      <SYNTAX JUMP OVER OBJECT = V-LEAP>
+   :jump       {:words   ["jump" "leap" "hop"]
+                :syntax  [{:num-objects 0}
+                          {:num-objects 1 :prep1 :over :loc1 #{:in-room :on-ground}}
+                          {:num-objects 1 :prep1 :across :loc1 #{:in-room :on-ground}}
+                          {:num-objects 1 :prep1 :in :loc1 #{:in-room :on-ground}}
+                          {:num-objects 1 :prep1 :from :loc1 #{:in-room :on-ground}}
+                          {:num-objects 1 :prep1 :off :loc1 #{:in-room :on-ground}}]
+                :handler verbs-misc/v-jump}
+
+   ;; ZIL: <SYNTAX SWIM = V-SWIM>
+   :swim       {:words   ["swim" "wade"]
+                :syntax  [{:num-objects 0}
+                          {:num-objects 1 :prep1 :in :loc1 #{:in-room :on-ground}}
+                          {:num-objects 1 :prep1 :across :loc1 #{:in-room :on-ground}}]
+                :handler verbs-misc/v-swim}
+
+   ;; ZIL: <SYNTAX LISTEN TO OBJECT = V-LISTEN>
+   :listen     {:words   ["listen"]
+                :syntax  [{:num-objects 0}
+                          {:num-objects 1 :prep1 :to :loc1 #{:in-room :on-ground :held}}]
+                :handler verbs-misc/v-listen}
+
+   ;; ZIL: <SYNTAX SMELL OBJECT = V-SMELL>
+   :smell      {:words   ["smell" "sniff"]
+                :syntax  [{:num-objects 0}
+                          {:num-objects 1 :loc1 #{:in-room :on-ground :held}}]
+                :handler verbs-misc/v-smell}
+
+   ;; ZIL: <SYNTAX KICK OBJECT = V-KICK>
+   :kick       {:words   ["kick"]
+                :syntax  {:num-objects 1 :loc1 #{:in-room :on-ground}}
+                :handler verbs-misc/v-kick}
+
+   ;; ZIL: <SYNTAX KISS OBJECT = V-KISS>
+   :kiss       {:words   ["kiss" "hug" "embrace"]
+                :syntax  {:num-objects 1 :loc1 #{:in-room :on-ground}}
+                :handler verbs-misc/v-kiss}
+
+   ;; ZIL: <SYNTAX KNOCK ON OBJECT = V-KNOCK>
+   :knock      {:words   ["knock"]
+                :syntax  {:num-objects 1 :prep1 :on :loc1 #{:in-room :on-ground}}
+                :handler verbs-misc/v-knock}
+
+   ;; ZIL: <SYNTAX PRAY = V-PRAY>
+   :pray       {:words   ["pray"]
+                :syntax  {:num-objects 0}
+                :handler verbs-misc/v-pray}
+
+   ;; ZIL: <SYNTAX STAND = V-STAND>
+   ;;      <SYNTAX STAND UP = V-STAND>
+   :stand      {:words   ["stand"]
+                :syntax  [{:num-objects 0}
+                          {:num-objects 0 :prep1 :up}]
+                :handler verbs-misc/v-stand}
+
+   ;; ZIL: <SYNTAX FIND OBJECT = V-FIND>
+   ;;      <SYNTAX WHERE IS OBJECT = V-FIND>
+   :find       {:words   ["find" "where" "locate"]
+                :syntax  {:num-objects 1 :loc1 #{:held :in-room :on-ground :carried}}
+                :handler verbs-misc/v-find}
+
+   ;; ZIL: <SYNTAX COUNT OBJECT = V-COUNT>
+   :count      {:words   ["count"]
+                :syntax  [{:num-objects 0}
+                          {:num-objects 1 :loc1 #{:held :in-room :on-ground}}]
+                :handler verbs-misc/v-count}
+
+   ;; ZIL: <SYNTAX RING OBJECT = V-RING>
+   :ring       {:words   ["ring"]
+                :syntax  {:num-objects 1 :loc1 #{:held :in-room :on-ground}}
+                :handler verbs-misc/v-ring}
+
+   ;; === Object Manipulation Verbs ===
+   ;; ZIL: <SYNTAX WAVE OBJECT (HELD HAVE) = V-WAVE>
+   :wave       {:words   ["wave"]
+                :syntax  {:num-objects 1 :loc1 #{:held :have}}
+                :handler verbs-misc/v-wave}
+
+   ;; ZIL: <SYNTAX RUB OBJECT = V-RUB>
+   ;;      <SYNTAX TOUCH OBJECT = V-RUB>
+   :rub        {:words   ["rub" "touch" "feel" "fondle" "pet"]
+                :syntax  {:num-objects 1 :loc1 #{:in-room :on-ground :held}}
+                :handler verbs-misc/v-rub}
+
+   ;; ZIL: <SYNTAX RAISE OBJECT = V-RAISE>
+   ;;      <SYNTAX LIFT OBJECT = V-RAISE>
+   :raise      {:words   ["raise" "lift"]
+                :syntax  {:num-objects 1 :loc1 #{:in-room :on-ground :held}}
+                :handler verbs-misc/v-raise}
+
+   ;; ZIL: <SYNTAX LOWER OBJECT = V-LOWER>
+   :lower      {:words   ["lower"]
+                :syntax  {:num-objects 1 :loc1 #{:in-room :on-ground :held}}
+                :handler verbs-misc/v-lower}
+
+   ;; ZIL: <SYNTAX SHAKE OBJECT = V-SHAKE>
+   :shake      {:words   ["shake"]
+                :syntax  {:num-objects 1 :loc1 #{:held :in-room :on-ground}}
+                :handler verbs-misc/v-shake}
+
+   ;; ZIL: <SYNTAX TIE OBJECT TO OBJECT = V-TIE>
+   :tie        {:words   ["tie" "fasten" "attach"]
+                :syntax  {:num-objects 2 :prep2 :to
+                          :loc1 #{:held}
+                          :loc2 #{:in-room :on-ground}}
+                :handler verbs-misc/v-tie}
+
+   ;; ZIL: <SYNTAX UNTIE OBJECT = V-UNTIE>
+   :untie      {:words   ["untie" "unfasten" "detach"]
+                :syntax  {:num-objects 1 :loc1 #{:in-room :on-ground :held}}
+                :handler verbs-misc/v-untie}
+
+   ;; ZIL: <SYNTAX SWING OBJECT (HELD) = V-SWING>
+   ;;      <SYNTAX SWING OBJECT (HELD) AT OBJECT = V-SWING>
+   :swing      {:words   ["swing"]
+                :syntax  [{:num-objects 1 :loc1 #{:held}}
+                          {:num-objects 2 :prep2 :at :loc1 #{:held} :loc2 #{:in-room}}]
+                :handler verbs-misc/v-swing}
+
+   ;; === Communication Verbs ===
+   ;; ZIL: <SYNTAX HELLO = V-HELLO>
+   ;;      <SYNTAX HELLO OBJECT = V-HELLO>
+   :hello      {:words   ["hello" "hi" "greetings"]
+                :syntax  [{:num-objects 0}
+                          {:num-objects 1 :loc1 #{:in-room :on-ground}}]
+                :handler verbs-misc/v-hello}
+
+   ;; ZIL: <SYNTAX YELL = V-YELL>
+   ;;      <SYNTAX SCREAM = V-YELL>
+   :yell       {:words   ["yell" "scream" "shout"]
+                :syntax  {:num-objects 0}
+                :handler verbs-misc/v-yell}
+
+   ;; ZIL: <SYNTAX SAY STRING = V-SAY>
+   :say        {:words   ["say" "speak"]
+                :syntax  {:num-objects 0}  ;; String handling TBD
+                :handler verbs-misc/v-say}
+
+   ;; === Easter Egg / Meta Verbs ===
+   ;; ZIL: <SYNTAX CURSE OBJECT = V-CURSES>
+   ;;      <SYNTAX DAMN OBJECT = V-CURSES>
+   :curse      {:words   ["curse" "damn" "shit" "fuck" "crap" "hell" "darn"]
+                :syntax  [{:num-objects 0}
+                          {:num-objects 1 :loc1 #{:in-room :on-ground}}]
+                :handler verbs-misc/v-curses}
+
+   ;; ZIL: <SYNTAX WIN = V-WIN>
+   :win        {:words   ["win"]
+                :syntax  {:num-objects 0}
+                :handler verbs-misc/v-win}
+
+   ;; ZIL: <SYNTAX ZORK = V-ZORK>
+   :zork       {:words   ["zork"]
+                :syntax  {:num-objects 0}
+                :handler verbs-misc/v-zork}
+
+   ;; ZIL: <SYNTAX FROBOZZ = V-FROBOZZ>
+   :frobozz    {:words   ["frobozz"]
+                :syntax  {:num-objects 0}
+                :handler verbs-misc/v-frobozz}
+
+   ;; ZIL: <SYNTAX XYZZY = V-ADVENT>
+   ;;      <SYNTAX PLUGH = V-ADVENT>
+   :xyzzy      {:words   ["xyzzy" "plugh"]
+                :syntax  {:num-objects 0}
+                :handler verbs-misc/v-xyzzy}
+
+   ;; ZIL: <SYNTAX TREASURE = V-TREASURE>
+   ;;      <SYNTAX TEMPLE = V-TREASURE>
+   :treasure   {:words   ["treasure" "temple"]
+                :syntax  {:num-objects 0}
+                :handler verbs-misc/v-treasure}
+
+   ;; === Tool Verbs (stubs) ===
+   ;; ZIL: <SYNTAX CUT OBJECT WITH OBJECT (FIND WEAPONBIT) = V-CUT>
+   :cut        {:words   ["cut" "slice" "chop"]
+                :syntax  {:num-objects 2 :prep2 :with
+                          :loc1 #{:in-room :on-ground :held}
+                          :loc2 #{:held}}
+                :handler verbs-misc/v-cut}
+
+   ;; ZIL: <SYNTAX DIG OBJECT WITH OBJECT = V-DIG>
+   ;;      <SYNTAX DIG IN OBJECT WITH OBJECT = V-DIG>
+   :dig        {:words   ["dig"]
+                :syntax  [{:num-objects 1 :loc1 #{:in-room :on-ground}}
+                          {:num-objects 2 :prep2 :with :loc1 #{:in-room :on-ground} :loc2 #{:held}}]
+                :handler verbs-misc/v-dig}
+
+   ;; ZIL: <SYNTAX BURN OBJECT (ON-GROUND IN-ROOM) WITH OBJECT = V-BURN>
+   :burn       {:words   ["burn" "ignite" "light"]
+                :syntax  {:num-objects 2 :prep2 :with
+                          :loc1 #{:in-room :on-ground}
+                          :loc2 #{:held}}
+                :handler verbs-misc/v-burn}
+
+   ;; ZIL: <SYNTAX FILL OBJECT WITH OBJECT = V-FILL>
+   :fill       {:words   ["fill"]
+                :syntax  {:num-objects 2 :prep2 :with
+                          :loc1 #{:held :in-room}
+                          :loc2 #{:in-room :on-ground}}
+                :handler verbs-misc/v-fill}
+
+   ;; ZIL: <SYNTAX POUR OBJECT = V-POUR>
+   ;;      <SYNTAX POUR OBJECT ON OBJECT = V-POUR-ON>
+   :pour       {:words   ["pour" "spill"]
+                :syntax  [{:num-objects 1 :loc1 #{:held}}
+                          {:num-objects 2 :prep2 :on :loc1 #{:held} :loc2 #{:in-room :on-ground}}]
+                :handler verbs-misc/v-pour}
+
+   ;; ZIL: <SYNTAX INFLATE OBJECT (ON-GROUND IN-ROOM) WITH OBJECT = V-INFLATE>
+   :inflate    {:words   ["inflate"]
+                :syntax  [{:num-objects 1 :loc1 #{:in-room :on-ground}}
+                          {:num-objects 2 :prep2 :with :loc1 #{:in-room :on-ground} :loc2 #{:held}}]
+                :handler verbs-misc/v-inflate}
+
+   ;; ZIL: <SYNTAX DEFLATE OBJECT = V-DEFLATE>
+   :deflate    {:words   ["deflate"]
+                :syntax  {:num-objects 1 :loc1 #{:in-room :on-ground :held}}
+                :handler verbs-misc/v-deflate}
+
+   ;; ZIL: <SYNTAX CROSS OBJECT = V-CROSS>
+   :cross      {:words   ["cross"]
+                :syntax  {:num-objects 1 :loc1 #{:in-room :on-ground}}
+                :handler verbs-misc/v-cross}
+
+   ;; ZIL: <SYNTAX LAUNCH OBJECT = V-LAUNCH>
+   :launch     {:words   ["launch"]
+                :syntax  {:num-objects 1 :loc1 #{:in-room :on-ground}}
+                :handler verbs-misc/v-launch}
+
+   ;; ZIL: <SYNTAX BOARD OBJECT = V-BOARD PRE-BOARD>
+   :board      {:words   ["board"]
+                :syntax  {:num-objects 1 :loc1 #{:in-room :on-ground}}
+                :handler verbs-misc/v-board}
+
+   ;; ZIL: <SYNTAX DISEMBARK = V-DISEMBARK>
+   ;;      <SYNTAX DISEMBARK OBJECT = V-DISEMBARK>
+   :disembark  {:words   ["disembark" "debark"]
+                :syntax  [{:num-objects 0}
+                          {:num-objects 1 :loc1 #{:in-room :on-ground}}]
+                :handler verbs-misc/v-disembark}
+
+   ;; ZIL: <SYNTAX WEAR OBJECT (HELD) = V-WEAR>
+   :wear       {:words   ["wear" "don"]
+                :syntax  {:num-objects 1 :loc1 #{:held}}
+                :handler verbs-misc/v-wear}})
 
 ;;; ---------------------------------------------------------------------------
 ;;; DIRECTION VOCABULARY
