@@ -573,3 +573,506 @@
       (-> game-state
           (utils/tell (str "You can't wear the " (gs/thing-name game-state prso) "."))
           (utils/crlf)))))
+
+;;; ---------------------------------------------------------------------------
+;;; NPC INTERACTION VERBS
+;;; ---------------------------------------------------------------------------
+
+(defn v-alarm
+  "Handle WAKE/ALARM verb.
+   ZIL: V-ALARM in gverbs.zil lines 172-184"
+  [game-state]
+  (let [prso (:prso game-state)
+        obj (when prso (gs/get-thing game-state prso))]
+    (cond
+      ;; No object specified
+      (nil? prso)
+      (-> game-state
+          (utils/tell "Wake what?")
+          (utils/crlf))
+
+      ;; It's an actor
+      (and obj (contains? (:flags obj #{}) :actor))
+      (-> game-state
+          (utils/tell "He's wide awake, or haven't you noticed...")
+          (utils/crlf))
+
+      ;; Not an actor
+      :else
+      (-> game-state
+          (utils/tell (str "The " (gs/thing-name game-state prso) " isn't sleeping."))
+          (utils/crlf)))))
+
+(defn v-tell
+  "Handle TELL/TALK TO verb.
+   ZIL: V-TELL in gverbs.zil lines 1405-1418"
+  [game-state]
+  (let [prso (:prso game-state)
+        obj (when prso (gs/get-thing game-state prso))]
+    (if (and obj (contains? (:flags obj #{}) :actor))
+      (-> game-state
+          (utils/tell (str "The " (gs/thing-name game-state prso)
+                          " pauses for a moment, perhaps thinking that you should reread the manual."))
+          (utils/crlf))
+      (-> game-state
+          (utils/tell (str "You can't talk to the " (gs/thing-name game-state prso) "!"))
+          (utils/crlf)))))
+
+(defn v-answer
+  "Handle ANSWER verb.
+   ZIL: V-ANSWER in gverbs.zil lines 186-190"
+  [game-state]
+  (-> game-state
+      (utils/tell "Nobody seems to be awaiting your answer.")
+      (utils/crlf)))
+
+(defn v-reply
+  "Handle REPLY verb (answer to specific NPC).
+   ZIL: V-REPLY in gverbs.zil lines 1172-1176"
+  [game-state]
+  (let [prso (:prso game-state)]
+    (-> game-state
+        (utils/tell (str "It is hardly likely that the " (gs/thing-name game-state prso) " is interested."))
+        (utils/crlf))))
+
+(defn v-command
+  "Handle COMMAND verb.
+   ZIL: V-COMMAND in gverbs.zil lines 375-379"
+  [game-state]
+  (let [prso (:prso game-state)
+        obj (when prso (gs/get-thing game-state prso))]
+    (if (and obj (contains? (:flags obj #{}) :actor))
+      (-> game-state
+          (utils/tell (str "The " (gs/thing-name game-state prso) " pays no attention."))
+          (utils/crlf))
+      (-> game-state
+          (utils/tell "You cannot talk to that!")
+          (utils/crlf)))))
+
+(defn v-follow
+  "Handle FOLLOW verb.
+   ZIL: V-FOLLOW in gverbs.zil lines 717-718"
+  [game-state]
+  (-> game-state
+      (utils/tell "You're nuts!")
+      (utils/crlf)))
+
+(defn v-send
+  "Handle SEND FOR verb.
+   ZIL: V-SEND in gverbs.zil lines 1216-1220"
+  [game-state]
+  (let [prso (:prso game-state)
+        obj (when prso (gs/get-thing game-state prso))]
+    (if (and obj (contains? (:flags obj #{}) :actor))
+      (-> game-state
+          (utils/tell (str "Why would you send for the " (gs/thing-name game-state prso) "?"))
+          (utils/crlf))
+      (-> game-state
+          (utils/tell "That doesn't make sends.")
+          (utils/crlf)))))
+
+;;; ---------------------------------------------------------------------------
+;;; COMBAT/VIOLENCE VERBS
+;;; ---------------------------------------------------------------------------
+
+(defn v-blast
+  "Handle BLAST/BLOW UP verb.
+   ZIL: V-BLAST in gverbs.zil line 214-215"
+  [game-state]
+  (-> game-state
+      (utils/tell "You can't blast anything by using words.")
+      (utils/crlf)))
+
+(defn v-mung
+  "Handle MUNG/DESTROY verb.
+   ZIL: V-MUNG in gverbs.zil lines 954-959"
+  [game-state]
+  (let [prso (:prso game-state)
+        obj (when prso (gs/get-thing game-state prso))]
+    (if (and obj (contains? (:flags obj #{}) :actor))
+      ;; Redirect to attack
+      (-> game-state
+          (assoc :verb :attack))
+      (-> game-state
+          (utils/tell "Nice try.")
+          (utils/crlf)))))
+
+(defn v-strike
+  "Handle STRIKE verb.
+   ZIL: V-STRIKE in gverbs.zil lines 1331-1338"
+  [game-state]
+  (let [prso (:prso game-state)
+        obj (when prso (gs/get-thing game-state prso))]
+    (if (and obj (contains? (:flags obj #{}) :actor))
+      (-> game-state
+          (utils/tell (str "Since you aren't versed in hand-to-hand combat, you'd better attack the "
+                          (gs/thing-name game-state prso) " with a weapon."))
+          (utils/crlf))
+      ;; Non-actor: try to light it (strike a match)
+      (-> game-state
+          (assoc :verb :lamp-on)))))
+
+(defn v-throw
+  "Handle THROW verb.
+   ZIL: V-THROW in gverbs.zil lines 1461-1476"
+  [game-state]
+  (let [prso (:prso game-state)
+        prsi (:prsi game-state)]
+    (cond
+      ;; Throw at self
+      (= prsi :me)
+      (-> game-state
+          (utils/tell (str "A terrific throw! The " (gs/thing-name game-state prso)
+                          " hits you squarely in the head. Normally, this wouldn't do much damage, but by incredible mischance, you fall over backwards trying to duck, and break your neck, justice being swift and merciful in the Great Underground Empire."))
+          (utils/crlf)
+          (assoc :dead true))
+
+      ;; Throw at actor
+      (and prsi
+           (let [target (gs/get-thing game-state prsi)]
+             (contains? (:flags target #{}) :actor)))
+      (-> game-state
+          (utils/tell (str "The " (gs/thing-name game-state prsi)
+                          " ducks as the " (gs/thing-name game-state prso)
+                          " flies by and crashes to the ground."))
+          (utils/crlf))
+
+      ;; Default
+      :else
+      (-> game-state
+          (utils/tell "Thrown.")
+          (utils/crlf)))))
+
+(defn v-throw-off
+  "Handle THROW OFF/OVER verb.
+   ZIL: V-THROW-OFF in gverbs.zil lines 1478-1479"
+  [game-state]
+  (-> game-state
+      (utils/tell "You can't throw anything off of that!")
+      (utils/crlf)))
+
+(defn v-overboard
+  "Handle throwing something overboard from a vehicle.
+   ZIL: V-OVERBOARD in gverbs.zil lines 1012-1025"
+  [game-state]
+  (let [winner-loc (gs/get-thing-loc-id game-state (:winner game-state))
+        vehicle (gs/get-thing game-state winner-loc)]
+    (if (and vehicle (contains? (:flags vehicle #{}) :vehicle))
+      (-> game-state
+          (utils/tell (str "Ahoy -- " (gs/thing-name game-state (:prso game-state)) " overboard!"))
+          (utils/crlf))
+      (-> game-state
+          (utils/tell "You're not in anything!")
+          (utils/crlf)))))
+
+(defn v-tie-up
+  "Handle TIE UP verb.
+   ZIL: V-TIE-UP in gverbs.zil lines 1487-1488"
+  [game-state]
+  (-> game-state
+      (utils/tell "You could certainly never tie it with that!")
+      (utils/crlf)))
+
+;;; ---------------------------------------------------------------------------
+;;; MAGIC VERBS (stubs for Zork II/III)
+;;; ---------------------------------------------------------------------------
+
+(defn v-incant
+  "Handle INCANT verb (magic spell).
+   ZIL: V-INCANT - Zork II/III magic system stub"
+  [game-state]
+  (-> game-state
+      (utils/tell "Nothing happens.")
+      (utils/crlf)))
+
+(defn v-enchant
+  "Handle ENCHANT verb.
+   ZIL: V-ENCHANT - Zork II/III magic system stub"
+  [game-state]
+  (-> game-state
+      (utils/tell "Nothing happens.")
+      (utils/crlf)))
+
+(defn v-disenchant
+  "Handle DISENCHANT verb.
+   ZIL: V-DISENCHANT - Zork II/III magic system stub"
+  [game-state]
+  (-> game-state
+      (utils/tell "Nothing happens.")
+      (utils/crlf)))
+
+(defn v-exorcise
+  "Handle EXORCISE verb.
+   ZIL: V-EXORCISE in gverbs.zil lines 659-660"
+  [game-state]
+  (-> game-state
+      (utils/tell "What a bizarre concept!")
+      (utils/crlf)))
+
+;;; ---------------------------------------------------------------------------
+;;; OBJECT ACTION VERBS
+;;; ---------------------------------------------------------------------------
+
+(defn v-brush
+  "Handle BRUSH verb.
+   ZIL: V-BRUSH in gverbs.zil lines 249-250"
+  [game-state]
+  (-> game-state
+      (utils/tell "If you wish, but heaven only knows why.")
+      (utils/crlf)))
+
+(defn v-squeeze
+  "Handle SQUEEZE verb.
+   ZIL: V-SQUEEZE in gverbs.zil lines 1303-1308"
+  [game-state]
+  (let [prso (:prso game-state)
+        obj (when prso (gs/get-thing game-state prso))]
+    (if (and obj (contains? (:flags obj #{}) :actor))
+      (-> game-state
+          (utils/tell (str "The " (gs/thing-name game-state prso) " does not understand this."))
+          (utils/crlf))
+      (-> game-state
+          (utils/tell "How singularly useless.")
+          (utils/crlf)))))
+
+(defn v-spin
+  "Handle SPIN verb.
+   ZIL: V-SPIN in gverbs.zil lines 1297-1298"
+  [game-state]
+  (-> game-state
+      (utils/tell "You can't spin that!")
+      (utils/crlf)))
+
+(defn v-wind
+  "Handle WIND/WIND UP verb.
+   ZIL: V-WIND in gverbs.zil lines 1623-1624"
+  [game-state]
+  (-> game-state
+      (utils/tell (str "You cannot wind up a " (gs/thing-name game-state (:prso game-state)) "."))
+      (utils/crlf)))
+
+(defn v-pick
+  "Handle PICK verb (pick lock).
+   ZIL: V-PICK in gverbs.zil line 1027"
+  [game-state]
+  (-> game-state
+      (utils/tell "You can't pick that.")
+      (utils/crlf)))
+
+(defn v-oil
+  "Handle OIL/LUBRICATE verb.
+   ZIL: V-OIL in gverbs.zil lines 979-980"
+  [game-state]
+  (-> game-state
+      (utils/tell "You probably put spinach in your gas tank, too.")
+      (utils/crlf)))
+
+(defn v-melt
+  "Handle MELT verb.
+   ZIL: V-MELT in gverbs.zil lines 923-924"
+  [game-state]
+  (-> game-state
+      (utils/tell (str "It's not clear that a " (gs/thing-name game-state (:prso game-state)) " can be melted."))
+      (utils/crlf)))
+
+(defn v-spray
+  "Handle SPRAY verb.
+   ZIL: V-SPRAY in gverbs.zil line 1300-1301 - redirects to V-SQUEEZE"
+  [game-state]
+  (v-squeeze game-state))
+
+;;; ---------------------------------------------------------------------------
+;;; CONTAINER/POSITION VERBS
+;;; ---------------------------------------------------------------------------
+
+(defn v-drink-from
+  "Handle DRINK FROM verb.
+   ZIL: V-DRINK-FROM - redirects to V-DRINK"
+  [game-state]
+  ;; Just redirect to drink
+  (-> game-state
+      (assoc :verb :drink)))
+
+(defn v-push-to
+  "Handle PUSH TO verb.
+   ZIL: V-PUSH-TO in gverbs.zil lines 1088-1089"
+  [game-state]
+  (-> game-state
+      (utils/tell "You can't push things to that.")
+      (utils/crlf)))
+
+(defn v-put-under
+  "Handle PUT UNDER verb.
+   ZIL: V-PUT-UNDER in gverbs.zil lines 1144-1145"
+  [game-state]
+  (-> game-state
+      (utils/tell "You can't do that.")
+      (utils/crlf)))
+
+(defn v-put-behind
+  "Handle PUT BEHIND verb.
+   ZIL: V-PUT-BEHIND in gverbs.zil lines 1132-1133"
+  [game-state]
+  (-> game-state
+      (utils/tell "That hiding place is too obvious.")
+      (utils/crlf)))
+
+(defn v-search
+  "Handle SEARCH verb.
+   ZIL: V-SEARCH in gverbs.zil lines 1213-1214"
+  [game-state]
+  (-> game-state
+      (utils/tell "You find nothing unusual.")
+      (utils/crlf)))
+
+(defn v-pour-on
+  "Handle POUR ON verb.
+   ZIL: V-POUR-ON in gverbs.zil lines 1040-1070"
+  [game-state]
+  (let [prso (:prso game-state)
+        prsi (:prsi game-state)]
+    ;; TODO: Check if pouring water on fire
+    (-> game-state
+        (utils/tell "You can't pour that on anything.")
+        (utils/crlf))))
+
+(defn v-plug
+  "Handle PLUG/PATCH verb.
+   ZIL: V-PLUG in gverbs.zil lines 1037-1038"
+  [game-state]
+  (-> game-state
+      (utils/tell "This has no effect.")
+      (utils/crlf)))
+
+(defn v-pump
+  "Handle PUMP verb.
+   ZIL: V-PUMP in gverbs.zil lines 1072-1084"
+  [game-state]
+  (let [prsi (:prsi game-state)]
+    (cond
+      ;; Pumping with something other than pump
+      (and prsi (not= prsi :pump))
+      (-> game-state
+          (utils/tell (str "Pump it up with a " (gs/thing-name game-state prsi) "?"))
+          (utils/crlf))
+
+      :else
+      (-> game-state
+          (utils/tell "It's really not clear how.")
+          (utils/crlf)))))
+
+;;; ---------------------------------------------------------------------------
+;;; MISCELLANEOUS VERBS
+;;; ---------------------------------------------------------------------------
+
+(defn v-breathe
+  "Handle BREATHE/BLOW IN verb.
+   ZIL: V-BREATHE in gverbs.zil line 246-247 - redirects to V-INFLATE with lungs"
+  [game-state]
+  ;; Redirect to inflate using lungs
+  (-> game-state
+      (assoc :verb :inflate)
+      (assoc :prsi :lungs)))
+
+(defn v-chomp
+  "Handle CHOMP/BITE verb.
+   ZIL: V-CHOMP in gverbs.zil lines 292-293"
+  [game-state]
+  (-> game-state
+      (utils/tell "Preposterous!")
+      (utils/crlf)))
+
+(defn v-lean-on
+  "Handle LEAN ON verb.
+   ZIL: V-LEAN-ON in gverbs.zil lines 826-827"
+  [game-state]
+  (-> game-state
+      (utils/tell "Getting tired?")
+      (utils/crlf)))
+
+(defn v-make
+  "Handle MAKE verb.
+   ZIL: V-MAKE in gverbs.zil lines 920-921"
+  [game-state]
+  (-> game-state
+      (utils/tell "You can't do that.")
+      (utils/crlf)))
+
+(defn v-play
+  "Handle PLAY verb.
+   ZIL: V-PLAY in gverbs.zil lines 1029-1035"
+  [game-state]
+  (let [prso (:prso game-state)
+        obj (when prso (gs/get-thing game-state prso))]
+    (if (and obj (contains? (:flags obj #{}) :actor))
+      (-> game-state
+          (utils/tell (str "You become so engrossed in the role of the " (gs/thing-name game-state prso)
+                          " that you kill yourself, just as he might have done!"))
+          (utils/crlf)
+          (assoc :dead true))
+      (-> game-state
+          (utils/tell "That's silly!")
+          (utils/crlf)))))
+
+(defn v-stay
+  "Handle STAY verb.
+   ZIL: V-STAY in gverbs.zil lines 1328-1329"
+  [game-state]
+  (-> game-state
+      (utils/tell "You will be lost without me!")
+      (utils/crlf)))
+
+(defn v-wish
+  "Handle WISH verb.
+   ZIL: V-WISH in gverbs.zil lines 1626-1630"
+  [game-state]
+  (-> game-state
+      (utils/tell "With luck, your wish will come true.")
+      (utils/crlf)))
+
+(defn v-hatch
+  "Handle HATCH verb.
+   ZIL: V-HATCH in gverbs.zil lines 735-736"
+  [game-state]
+  (-> game-state
+      (utils/tell "Bizarre!")
+      (utils/crlf)))
+
+(defn v-mumble
+  "Handle MUMBLE verb.
+   ZIL: V-MUMBLE in gverbs.zil lines 936-937"
+  [game-state]
+  (-> game-state
+      (utils/tell "You'll have to speak up if you expect me to hear you!")
+      (utils/crlf)))
+
+(defn v-repent
+  "Handle REPENT verb.
+   ZIL: V-REPENT in gverbs.zil lines 1169-1170"
+  [game-state]
+  (-> game-state
+      (utils/tell "It could very well be too late!")
+      (utils/crlf)))
+
+;;; ---------------------------------------------------------------------------
+;;; META/DEBUG VERBS
+;;; ---------------------------------------------------------------------------
+
+(defn v-bug
+  "Handle BUG verb.
+   ZIL: V-BUG in gverbs.zil lines 252-254"
+  [game-state]
+  (-> game-state
+      (utils/tell "Bug? Not in a flawless program like this! (Cough, cough).")
+      (utils/crlf)))
+
+(defn v-verify
+  "Handle VERIFY verb (disk verification - stub).
+   ZIL: V-VERIFY in gverbs.zil lines 139-144"
+  [game-state]
+  (-> game-state
+      (utils/tell "Verifying disk...")
+      (utils/crlf)
+      (utils/tell "The disk is correct.")
+      (utils/crlf)))
+

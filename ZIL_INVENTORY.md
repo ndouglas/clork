@@ -94,7 +94,7 @@ These are out-of-game commands that don't advance time.
 | [x]    | KILL/MURDER      | V-ATTACK | Kill creature (synonym)       |
 | [x]    | STAB             | V-STAB   | Stab without weapon specified |
 | [x]    | SWING            | V-SWING  | Swing weapon                  |
-| [ ]    | THROW AT         | V-THROW  | Throw at target               |
+| [x]    | THROW AT         | V-THROW  | Throw at target               |
 
 ### Object Manipulation
 
@@ -123,11 +123,11 @@ These are out-of-game commands that don't advance time.
 | [x]    | BURN/IGNITE | V-BURN    | Burn with fire  |
 | [x]    | FILL        | V-FILL    | Fill container  |
 | [x]    | POUR        | V-DROP    | Pour liquid     |
-| [ ]    | POUR ON     | V-POUR-ON | Pour on object  |
+| [x]    | POUR ON     | V-POUR-ON | Pour on object  |
 | [x]    | INFLATE     | V-INFLATE | Inflate object  |
 | [x]    | DEFLATE     | V-DEFLATE | Deflate object  |
-| [ ]    | PLUG/PATCH  | V-PLUG    | Repair object   |
-| [ ]    | PUMP        | V-PUMP    | Pump air        |
+| [x]    | PLUG/PATCH  | V-PLUG    | Repair object   |
+| [x]    | PUMP        | V-PUMP    | Pump air        |
 
 ### Food and Drink
 
@@ -141,8 +141,8 @@ These are out-of-game commands that don't advance time.
 | Status | Verb         | Handler  | Description     |
 | ------ | ------------ | -------- | --------------- |
 | [x]    | SAY          | V-SAY    | Say something   |
-| [ ]    | TELL/ASK     | V-TELL   | Talk to NPC     |
-| [ ]    | ANSWER/REPLY | V-ANSWER | Answer question |
+| [x]    | TELL/ASK     | V-TELL   | Talk to NPC     |
+| [x]    | ANSWER/REPLY | V-ANSWER | Answer question |
 | [x]    | HELLO/HI     | V-HELLO  | Greet           |
 | [x]    | YELL/SCREAM  | V-YELL   | Yell loudly     |
 | [x]    | GIVE/OFFER   | V-GIVE   | Give to NPC     |
@@ -188,6 +188,49 @@ These are out-of-game commands that don't advance time.
 | [x]    | CURSE/DAMN       | V-CURSES   | Swear words         |
 | [x]    | WIN              | V-WIN      | Try to win          |
 | [x]    | TREASURE/TEMPLE  | V-TREASURE | Hint command        |
+
+### Additional Verbs (newly implemented)
+
+| Status | Verb            | Handler       | Description                 |
+| ------ | --------------- | ------------- | --------------------------- |
+| [x]    | WAKE/ALARM      | V-ALARM       | Wake sleeping creature      |
+| [x]    | COMMAND/ORDER   | V-COMMAND     | Command NPC                 |
+| [x]    | FOLLOW          | V-FOLLOW      | Follow someone              |
+| [x]    | SEND FOR        | V-SEND        | Send for someone            |
+| [x]    | BLAST/BLOW UP   | V-BLAST       | Blow up something           |
+| [x]    | DESTROY/MUNG    | V-MUNG        | Destroy object              |
+| [x]    | STRIKE          | V-STRIKE      | Strike (attack or light)    |
+| [x]    | THROW OFF/OVER  | V-THROW-OFF   | Throw over edge             |
+| [x]    | TIE UP          | V-TIE-UP      | Tie up creature             |
+| [x]    | INCANT/CAST     | V-INCANT      | Cast spell (Zork II stub)   |
+| [x]    | ENCHANT         | V-ENCHANT     | Enchant (Zork II stub)      |
+| [x]    | DISENCHANT      | V-DISENCHANT  | Disenchant (Zork II stub)   |
+| [x]    | EXORCISE/BANISH | V-EXORCISE    | Exorcise spirit             |
+| [x]    | BRUSH           | V-BRUSH       | Brush object                |
+| [x]    | SQUEEZE         | V-SQUEEZE     | Squeeze object              |
+| [x]    | SPIN/ROTATE     | V-SPIN        | Spin object                 |
+| [x]    | WIND            | V-WIND        | Wind up object              |
+| [x]    | PICK            | V-PICK        | Pick lock                   |
+| [x]    | OIL/LUBRICATE   | V-OIL         | Lubricate object            |
+| [x]    | MELT            | V-MELT        | Melt object                 |
+| [x]    | SPRAY           | V-SPRAY       | Spray something             |
+| [x]    | PUSH TO         | V-PUSH-TO     | Push object to location     |
+| [x]    | PUT UNDER       | V-PUT-UNDER   | Put under something         |
+| [x]    | PUT BEHIND      | V-PUT-BEHIND  | Put behind something        |
+| [x]    | SEARCH          | V-SEARCH      | Search for hidden things    |
+| [x]    | BREATHE/BLOW IN | V-BREATHE     | Blow into object            |
+| [x]    | CHOMP/BITE      | V-CHOMP       | Bite something              |
+| [x]    | LEAN ON         | V-LEAN-ON     | Lean on object              |
+| [x]    | MAKE/BUILD      | V-MAKE        | Make something              |
+| [x]    | PLAY            | V-PLAY        | Play with object            |
+| [x]    | STAY            | V-STAY        | Stay put                    |
+| [x]    | WISH            | V-WISH        | Make a wish                 |
+| [x]    | HATCH           | V-HATCH       | Hatch something             |
+| [x]    | MUMBLE/MUTTER   | V-MUMBLE      | Mumble                      |
+| [x]    | REPENT          | V-REPENT      | Repent sins                 |
+| [x]    | BUG             | V-BUG         | Report bug (easter egg)     |
+| [x]    | REPLY           | V-REPLY       | Reply to NPC                |
+| [x]    | OVERBOARD       | V-OVERBOARD   | Throw overboard from boat   |
 
 ---
 
