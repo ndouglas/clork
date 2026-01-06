@@ -56,7 +56,8 @@
   (contains? (or (:flags obj) #{}) :door))
 
 (defn describe-contents
-  "Describe the contents of a container that was just opened."
+  "Describe the contents of a container that was just opened.
+   ZIL: Uses 'and' before last item: 'a X, and a Y' or 'a X, a Y, and a Z'."
   [game-state obj-id]
   (let [contents (gs/get-contents game-state obj-id)
         visible (remove (fn [id]
@@ -66,11 +67,16 @@
                         contents)]
     (if (empty? visible)
       ""
-      (let [descriptions (map (fn [id]
-                                (let [obj (gs/get-thing game-state id)]
-                                  (str "a " (:desc obj))))
-                              visible)]
-        (clojure.string/join ", " descriptions)))))
+      (let [descriptions (mapv (fn [id]
+                                 (let [obj (gs/get-thing game-state id)]
+                                   (str "a " (:desc obj))))
+                               visible)
+            n (count descriptions)]
+        (cond
+          (= n 1) (first descriptions)
+          (= n 2) (str (first descriptions) ", and " (second descriptions))
+          :else (str (clojure.string/join ", " (butlast descriptions))
+                     ", and " (last descriptions)))))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; LOOK-INSIDE COMMAND
@@ -240,8 +246,24 @@
                                       flags (or (:flags o) #{})]
                                   (contains? flags :invisible)))
                               contents)]
-          (if (or (empty? visible) (transparent? obj))
+          (cond
+            ;; Empty or transparent: just "Opened."
+            (or (empty? visible) (transparent? obj))
             (utils/tell state "Opened.")
+
+            ;; ZIL: Single untouched item with FDESC: "The X opens." + FDESC
+            (and (= 1 (count visible))
+                 (let [item (gs/get-thing state (first visible))
+                       touched? (contains? (or (:flags item) #{}) :touch)]
+                   (and (not touched?) (:fdesc item))))
+            (let [item (gs/get-thing state (first visible))]
+              (-> state
+                  (utils/tell (str "The " desc " opens."))
+                  (utils/crlf)
+                  (utils/tell (:fdesc item))))
+
+            ;; Otherwise: "Opening the X reveals Y."
+            :else
             (let [content-desc (describe-contents state prso)]
               (utils/tell state (str "Opening the " desc " reveals " content-desc ".")))))
 

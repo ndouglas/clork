@@ -11,8 +11,9 @@
                  [net.java.dev.jna/jna "5.14.0"]]
   :jvm-opts ["--enable-native-access=ALL-UNNAMED"]
   :repl-options {:init-ns clork.core}
-  :test-selectors {:default (complement :pending)
+  :test-selectors {:default (fn [m] (and (not (:pending m)) (not (:transcript m)) (not (:slow m))))
                    :pending :pending
+                   :transcript :transcript
                    :all (constantly true)}
   :profiles {:dev {:dependencies [[org.clojure/test.check "1.1.1"]]}
              :uberjar {:aot :all

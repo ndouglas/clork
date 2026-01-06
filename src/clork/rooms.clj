@@ -7,7 +7,8 @@
             [clork.dam :as dam]
             [clork.loud-room :as loud-room]
             [clork.death :as death]
-            [clork.random :as random]))
+            [clork.random :as random]
+            [clork.parser.state :as parser-state]))
 
 ;;; ---------------------------------------------------------------------------
 ;;; ABOVE GROUND - HOUSE EXTERIOR
@@ -246,7 +247,7 @@
    :flags #{:lit :sacred}
    :globals #{:tree :white-house}  ; ZIL: (GLOBAL TREE SONGBIRD WHITE-HOUSE FOREST)
    :exits {:up "There is no tree here suitable for climbing."
-           :se :canyon-view  ; ZIL: CANYON-VIEW has (NW TO CLEARING)
+           :east :canyon-view  ; ZIL: (EAST TO CANYON-VIEW)
            :north :forest-2
            :south :forest-3
            :west :behind-house}})
@@ -422,7 +423,7 @@
 (def attic
   {:id :attic
    :desc "Attic"
-   :ldesc "This is the attic. The only exit is a stairway leading down. A large coil of rope is lying in the corner. On a table is a nasty-looking knife."
+   :ldesc "This is the attic. The only exit is a stairway leading down."
    :flags #{:lit :sacred}
    :exits {:down :kitchen}})
 
@@ -1622,7 +1623,7 @@
   {:id :end-of-rainbow
    :desc "End of Rainbow"
    :ldesc "You are on a small, rocky beach on the continuation of the Frigid River past the Falls. The beach is narrow due to the presence of the White Cliffs. The river canyon opens here and sunlight shines in from above. A rainbow crosses over the falls to the east and a narrow path continues to the southwest."
-   :flags #{:lit}  ; Note: not :sacred in ZIL
+   :flags #{:lit :sacred}  ; ZIL omits SACREDBIT but all nearby outdoor rooms have it - likely oversight
    :globals #{:global-water :rainbow :river}
    :exits {:up {:to :on-rainbow :if :rainbow-flag}
            :ne {:to :on-rainbow :if :rainbow-flag}
@@ -1941,7 +1942,7 @@
    ZIL: MIRROR-ROOM in 1actions.zil"
   [game-state rarg]
   (if (= rarg :look)
-    (let [mirror-broken? (gs/flag? game-state :mirror-mung)]
+    (let [mirror-broken? (get game-state :mirror-mung false)]
       (-> game-state
           (utils/tell "You are in a large square room with tall ceilings. On the south wall is an enormous mirror which fills the entire wall. There are exits on the other three sides of the room.")
           (utils/crlf)
@@ -2025,13 +2026,31 @@
 ;;       (FLAGS RLANDBIT)
 ;;       (GLOBAL STAIRS)>
 
+(defn tiny-cave-action
+  "Handle Tiny Cave wind effect that can blow out candles.
+   ZIL: CAVE2-ROOM in 1actions.zil lines 2429-2439
+   Wind only blows when Hades gate is open (lld-flag set) - wind from below."
+  [game-state rarg]
+  (if (= rarg :m-end)
+    (let [lld-flag (:lld-flag game-state)
+          winner (:winner game-state)
+          has-candles? (= winner (gs/get-thing-loc-id game-state :candles))
+          candles-on? (gs/set-thing-flag? game-state :candles :on)]
+      ;; Wind only comes up from Hades after the gate is opened
+      (if (and lld-flag has-candles? candles-on? (< (random/rand-int* 100) 50))
+        (-> game-state
+            (gs/unset-thing-flag :candles :on)
+            (utils/tell "A gust of wind blows out your candles!"))
+        game-state))
+    (gs/use-default game-state)))
+
 (def tiny-cave
   {:id :tiny-cave
    :desc "Cave"
    :ldesc "This is a tiny cave with entrances west and north, and a dark, forbidding staircase leading down."
    :flags #{}  ; Underground, not lit
    :globals #{:stairs}
-   ;; CAVE2-ROOM action blows out candles - skipped until candles implemented
+   :action tiny-cave-action
    :exits {:north :mirror-room-2
            :west :winding-passage
            :down :entrance-to-hades}})
@@ -2256,7 +2275,7 @@
     (let [winner (:winner game-state)
           has-coffin? (= winner (gs/get-thing-loc-id game-state :gold-coffin))]
       (-> game-state
-          (gs/set-flag :coffin-cure (not has-coffin?))
+          (assoc :coffin-cure (not has-coffin?))
           (gs/use-default)))
     (gs/use-default game-state)))
 
@@ -2305,12 +2324,13 @@
 ;;       (PSEUDO "GATE" GATE-PSEUDO "GATES" GATE-PSEUDO)>
 
 (defn entrance-to-hades-action
-  "Handle Entrance to Hades description.
+  "Handle Entrance to Hades description and exorcism puzzle.
    ZIL: LLD-ROOM in 1actions.zil"
   [game-state rarg]
-  (if (= rarg :look)
-    (let [gate-open? (gs/flag? game-state :lld-flag)
-          is-dead? (gs/flag? game-state :dead)]
+  (case rarg
+    :look
+    (let [gate-open? (:lld-flag game-state)
+          is-dead? (:dead game-state)]
       (-> game-state
           (utils/tell "You are outside a large gateway, on which is inscribed
 
@@ -2321,6 +2341,67 @@ The gate is open; through it you can see a desolation, with a pile of mangled bo
           (cond-> (and (not gate-open?) (not is-dead?))
             (-> (utils/tell "The way through the gate is barred by evil spirits, who jeer at your attempts to pass.")
                 (utils/crlf)))))
+
+    ;; Ring the bell - start the exorcism sequence
+    ;; ZIL: LLD-ROOM handles RING in M-BEG
+    :ring-bell
+    (let [here (:here game-state)
+          winner (:winner game-state)
+          has-candles? (= winner (gs/get-thing-loc-id game-state :candles))]
+      (-> game-state
+          ;; XB flag indicates exorcism started
+          (assoc :xb true)
+          ;; Remove bell from player, put hot-bell in room
+          (assoc-in [:objects :brass-bell :in] :limbo)
+          (assoc-in [:objects :hot-bell :in] here)
+          (utils/tell "The bell suddenly becomes red hot and falls to the ground. The wraiths, as if paralyzed, stop their jeering and slowly turn to face you. On their ashen faces, the expression of a long-forgotten terror takes shape.")
+          (utils/crlf)
+          ;; If player has candles, drop them
+          (cond-> has-candles?
+            (-> (utils/tell "In your confusion, the candles drop to the ground (and they are out).")
+                (utils/crlf)
+                (assoc-in [:objects :candles :in] here)
+                (gs/unset-thing-flag :candles :on)))))
+
+    ;; M-BEG: Check for reading the book during exorcism (prayer completion)
+    ;; ZIL: LLD-ROOM checks for READ BOOK when XC is set
+    :m-beg
+    (let [xc (:xc game-state)
+          lld-flag (:lld-flag game-state)
+          prsa (parser-state/get-prsa game-state)
+          prso (parser-state/get-prso game-state)]
+      (if (and xc
+               (not lld-flag)
+               (= prsa :read)
+               (= prso :black-book))
+        ;; Exorcism complete! The prayer banishes the spirits
+        ;; Set :command-handled so perform doesn't also run v-read
+        (-> game-state
+            (utils/tell "Each word of the prayer reverberates through the hall in a deafening confusion. As the last word fades, a voice, loud and commanding, speaks: \"Begone, fiends!\" A heart-stopping scream fills the cavern, and the spirits, sensing a greater power, flee through the walls.")
+            (utils/crlf)
+            ;; Remove ghosts and open the gate
+            (assoc-in [:objects :ghosts :in] :limbo)
+            (assoc :lld-flag true)
+            (assoc :command-handled true))
+        ;; Not the exorcism prayer - use default
+        (gs/use-default game-state)))
+
+    ;; M-END: Check for candles lit during exorcism
+    ;; ZIL: LLD-ROOM M-END - spirits cower when candles lit after bell
+    :m-end
+    (let [xb (:xb game-state)
+          xc (:xc game-state)
+          winner (:winner game-state)
+          has-candles? (= winner (gs/get-thing-loc-id game-state :candles))
+          candles-on? (gs/set-thing-flag? game-state :candles :on)]
+      (if (and xb has-candles? candles-on? (not xc))
+        (-> game-state
+            (assoc :xc true)
+            (utils/crlf)
+            (utils/tell "The flames flicker wildly and appear to dance. The earth beneath your feet trembles, and your legs nearly buckle beneath you. The spirits cower at your unearthly power."))
+        game-state))
+
+    ;; Default
     (gs/use-default game-state)))
 
 (def entrance-to-hades
@@ -2608,7 +2689,7 @@ The gate is open; through it you can see a desolation, with a pile of mangled bo
 (def smelly-room
   {:id :smelly-room
    :desc "Smelly Room"
-   :ldesc "This is a small nondescript room. However, from the direction of a small descending staircase a foul odor can be detected. To the south is a narrow tunnel."
+   :ldesc "This is a small non-descript room. However, from the direction of a small descending staircase a foul odor can be detected. To the south is a narrow tunnel."
    :flags #{}  ; Underground, not lit
    :globals #{:stairs}
    :exits {:down :gas-room
@@ -2782,7 +2863,7 @@ The gate is open; through it you can see a desolation, with a pile of mangled bo
 (def mine-1
   {:id :mine-1
    :desc "Coal Mine"
-   :ldesc "This is a nondescript part of a coal mine."
+   :ldesc "This is a non-descript part of a coal mine."
    :flags #{}  ; Underground, not lit
    :exits {:north :gas-room
            :east :mine-1  ; Loop back to itself
@@ -2800,7 +2881,7 @@ The gate is open; through it you can see a desolation, with a pile of mangled bo
 (def mine-2
   {:id :mine-2
    :desc "Coal Mine"
-   :ldesc "This is a nondescript part of a coal mine."
+   :ldesc "This is a non-descript part of a coal mine."
    :flags #{}  ; Underground, not lit
    :exits {:north :mine-2  ; Loop back to itself
            :south :mine-1
@@ -2818,7 +2899,7 @@ The gate is open; through it you can see a desolation, with a pile of mangled bo
 (def mine-3
   {:id :mine-3
    :desc "Coal Mine"
-   :ldesc "This is a nondescript part of a coal mine."
+   :ldesc "This is a non-descript part of a coal mine."
    :flags #{}  ; Underground, not lit
    :exits {:south :mine-3  ; Loop back to itself
            :sw :mine-4
@@ -2836,7 +2917,7 @@ The gate is open; through it you can see a desolation, with a pile of mangled bo
 (def mine-4
   {:id :mine-4
    :desc "Coal Mine"
-   :ldesc "This is a nondescript part of a coal mine."
+   :ldesc "This is a non-descript part of a coal mine."
    :flags #{}  ; Underground, not lit
    :exits {:north :mine-3
            :west :mine-4  ; Loop back to itself

@@ -108,6 +108,7 @@
         here (:here game-state)
         winner (:winner game-state)
         visible? (or (= obj-loc winner) (= obj-loc here))
+        obj-on? (gs/set-thing-flag? game-state obj-id :on)
         obj-desc (:desc (gs/get-thing game-state obj-id) "light")]
     (if (zero? ticks)
       ;; Burned out
@@ -117,8 +118,9 @@
         (if visible?
           (utils/tell gs (str "You'd better have more light than from the " obj-desc "."))
           gs))
-      ;; Not burned out - print stage message
-      (if (and visible? message)
+      ;; Not burned out - print stage message only if object is ON
+      ;; (candles blown out by wind should not print messages)
+      (if (and visible? obj-on? message)
         (utils/tell game-state (str "\n" message))
         game-state))))
 
@@ -260,7 +262,7 @@
           (-> game-state
               (gs/set-thing-flag :brass-lantern :on)
               (daemon/queue :i-lantern ticks)
-              (utils/tell "The lamp is now on."))))
+              (utils/tell "The brass lantern is now on."))))
 
       ;; LAMP-OFF
       (= prsa :lamp-off)
@@ -275,7 +277,7 @@
         (-> game-state
             (gs/unset-thing-flag :brass-lantern :on)
             (daemon/disable :i-lantern)
-            (utils/tell "The lamp is now off.")))
+            (utils/tell "The brass lantern is now off.")))
 
       ;; EXAMINE
       (= prsa :examine)
@@ -413,8 +415,9 @@
         is-on?
         (utils/tell game-state "The candles are already lit.")
 
-        ;; Light with torch - destroys candles!
-        (or (= prsi :ivory-torch) torch-held?)
+        ;; Light with torch specifically - destroys candles!
+        ;; ZIL: Only triggers when PRSI is the torch, not just when holding it
+        (= prsi :ivory-torch)
         (-> game-state
             (assoc-in [:objects :candles :in] :limbo)  ; Remove candles
             (utils/tell "The heat from the torch is so intense that the candles are vaporized."))

@@ -78,8 +78,16 @@
     (if (empty? contents)
       (utils/tell game-state "You are empty-handed.")
       (reduce (fn [state obj-id]
-                (let [obj-name (gs/thing-name state obj-id)]
-                  (utils/tell state (str "  A " obj-name "\n"))))
+                (let [obj (gs/get-thing state obj-id)
+                      obj-name (:desc obj)
+                      ;; Use gs/set-thing-flag? to check flags properly
+                      ;; (it checks both direct keys and :flags set)
+                      suffix (cond
+                               (gs/set-thing-flag? state obj-id :on) " (providing light)"
+                               (and (gs/set-thing-flag? state obj-id :wear)
+                                    (= (:in obj) winner-id)) " (being worn)"
+                               :else "")]
+                  (utils/tell state (str "  A " obj-name suffix "\n"))))
               (utils/tell game-state "You are carrying:\n")
               contents))))
 

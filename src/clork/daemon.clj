@@ -202,17 +202,74 @@
               (trace/trace-daemon daemon-id (str "ERROR: " (.getMessage e))))))
       game-state)))
 
+;; Daemon processing order - matches ZIL C-TABLE order.
+;; I-SWORD runs before I-FIGHT so sword glow message appears before combat.
+(def daemon-order
+  "Priority order for daemon processing. Lower numbers run first.
+   Daemons not in this list run after all listed daemons."
+  {:i-sword 10
+   :i-fight 20
+   :i-thief 30
+   :i-cyclops 40
+   :i-lantern 100
+   :i-candles 110
+   :i-match 120
+   :i-rfill 200
+   :i-rempty 210
+   :i-maint-room 220})
+
+(defn- daemon-priority
+  "Get priority for a daemon. Lower = runs first. Default 999."
+  [daemon-id]
+  (get daemon-order daemon-id 999))
+
+(defn call-room-m-beg
+  "Call the current room's action with :m-beg.
+
+   ZIL: Called at the beginning of each turn to allow rooms to set up
+   state needed for the turn (e.g., south-temple sets coffin-cure flag)."
+  [game-state]
+  (let [here (:here game-state)
+        rooms (:rooms game-state)
+        room (get rooms here)
+        room-action (:action room)]
+    (if room-action
+      (let [result (room-action game-state :m-beg)]
+        ;; If room returns use-default marker, strip it and return
+        (if (get result :clork.game-state/use-default)
+          (dissoc result :clork.game-state/use-default)
+          result))
+      game-state)))
+
+(defn- call-room-m-end
+  "Call the current room's action with :m-end.
+
+   ZIL: <SET V <APPLY <GETP <LOC ,WINNER> ,P?ACTION> ,M-END>>
+   This is called at the end of each turn to allow rooms to perform
+   end-of-turn processing (e.g., loud room ejecting player)."
+  [game-state]
+  (let [here (:here game-state)
+        rooms (:rooms game-state)
+        room (get rooms here)
+        room-action (:action room)]
+    (if room-action
+      (room-action game-state :m-end)
+      game-state)))
+
 (defn clocker
-  "Process all active daemons.
+  "Process room end-of-turn actions and all active daemons.
 
    ZIL: CLOCKER routine in gclock.zil
 
-   Called after each command. Processes daemons in order:
-   1. Decrement tick counters for countdown daemons
-   2. Run daemons that are ready (tick <= 0 or tick = -1)
-   3. Disable daemons that just ran with tick = 0"
+   Called after each command. Processes in order:
+   1. Call room action with :m-end (ZIL M-END processing - before daemons)
+   2. Decrement tick counters for countdown daemons
+   3. Run daemons that are ready (tick <= 0 or tick = -1)
+   4. Disable daemons that just ran with tick = 0"
   [game-state]
-  (let [daemon-ids (get-all-daemons game-state)]
+  ;; Call room's M-END action first (ZIL: M-END before CLOCKER)
+  (let [gs (call-room-m-end game-state)
+        daemon-ids (sort-by daemon-priority (get-all-daemons gs))]
     (reduce
      (fn [gs daemon-id]
        (if (daemon-enabled? gs daemon-id)
@@ -223,7 +280,7 @@
              (run-daemon gs daemon-id)
              gs))
          gs))
-     game-state
+     gs
      daemon-ids)))
 
 ;;; ---------------------------------------------------------------------------

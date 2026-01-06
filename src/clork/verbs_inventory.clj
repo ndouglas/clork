@@ -37,10 +37,15 @@
          (not (contains? loc-flags :open)))))
 
 (defn move-to-inventory
-  "Move an object to the winner's (player's) inventory."
+  "Move an object to the winner's (player's) inventory.
+   Tracks acquisition sequence for LIFO inventory ordering (ZIL behavior)."
   [game-state obj-id]
-  (let [winner (:winner game-state)]
-    (assoc-in game-state [:objects obj-id :in] winner)))
+  (let [winner (:winner game-state)
+        seq-num (inc (or (:inv-seq game-state) 0))]
+    (-> game-state
+        (assoc :inv-seq seq-num)
+        (assoc-in [:objects obj-id :in] winner)
+        (assoc-in [:objects obj-id :inv-seq] seq-num))))
 
 (defn already-holding?
   "Returns true if the player is already holding the object."

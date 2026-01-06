@@ -171,13 +171,11 @@
 (defn v-pray
   "Handle PRAY verb.
    ZIL: V-PRAY in gverbs.zil lines 1062-1070
-   Special: In South Temple, teleports to forest."
+   Special: In South Temple, teleports to forest (no message, just teleport)."
   [game-state]
   (if (= (:here game-state) :south-temple)
-    (-> game-state
-        (utils/tell "Your prayers have been answered.")
-        (utils/crlf)
-        (verbs-movement/goto :forest-1))
+    ;; ZIL: Just <GOTO ,FOREST-1> with no message
+    (verbs-movement/goto game-state :forest-1)
     (-> game-state
         (utils/tell "If you pray enough, your prayers may be answered.")
         (utils/crlf))))
@@ -268,12 +266,30 @@
 
 (defn v-ring
   "Handle RING verb (ring a bell).
-   ZIL: V-RING in gverbs.zil lines 1178-1179"
+   ZIL: V-RING in gverbs.zil lines 1178-1179
+   First checks object action handler (e.g., brass bell at entrance to hades)."
   [game-state]
-  ;; TODO: Special handling for the brass bell
-  (-> game-state
-      (utils/tell "How, exactly, can you ring that?")
-      (utils/crlf)))
+  (let [prso (parser-state/get-prso game-state)
+        obj (when prso (gs/get-thing game-state prso))
+        action-fn (:action obj)
+        here (:here game-state)]
+    ;; First try the object's action handler
+    (if-let [result (when action-fn (action-fn game-state))]
+      result
+      ;; If in Entrance to Hades with bell and exorcism not done, room handles it
+      (if (and (= here :entrance-to-hades)
+               (= prso :brass-bell)
+               (not (:lld-flag game-state)))
+        ;; Let room handle exorcism
+        (let [room (gs/get-thing game-state :entrance-to-hades)
+              room-action (:action room)]
+          (if room-action
+            (room-action game-state :ring-bell)
+            (utils/tell game-state "You haven't implemented the exorcism yet.")))
+        ;; Default behavior
+        (-> game-state
+            (utils/tell "How, exactly, can you ring that?")
+            (utils/crlf))))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; OBJECT MANIPULATION VERBS
@@ -296,10 +312,16 @@
 (defn v-rub
   "Handle RUB/TOUCH verb.
    ZIL: V-RUB in gverbs.zil line 1181
-   Note: Mirror rubbing is handled by mirror object action."
+   First checks object action handler (e.g., mirror)."
   [game-state]
-  ;; Mirror special case will be handled by object actions
-  (hack-hack game-state "Fiddling with the "))
+  (let [prso (parser-state/get-prso game-state)
+        obj (when prso (gs/get-thing game-state prso))
+        action-fn (:action obj)]
+    ;; First try the object's action handler (e.g., mirror)
+    (if-let [result (when action-fn (action-fn game-state))]
+      result
+      ;; Default behavior
+      (hack-hack game-state "Fiddling with the "))))
 
 (defn v-raise
   "Handle RAISE/LIFT verb.
@@ -309,9 +331,17 @@
 
 (defn v-lower
   "Handle LOWER verb.
-   ZIL: V-LOWER uses HACK-HACK"
+   ZIL: V-LOWER uses HACK-HACK
+   First checks the object's action handler (e.g., for basket)."
   [game-state]
-  (hack-hack game-state "Lowering the "))
+  (let [prso (parser-state/get-prso game-state)
+        obj (when prso (gs/get-thing game-state prso))
+        action-fn (:action obj)]
+    ;; First try the object's action handler
+    (if-let [result (when action-fn (action-fn game-state))]
+      result
+      ;; Default behavior
+      (hack-hack game-state "Lowering the "))))
 
 (defn v-shake
   "Handle SHAKE verb.

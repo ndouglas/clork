@@ -15,6 +15,7 @@
             [clork.verbs-misc :as verbs-misc]
             [clork.cyclops :as cyclops]
             [clork.loud-room :as loud-room]
+            [clork.daemon :as daemon]
             [clork.debug.trace :as trace]))
 
 ;;;; ============================================================================
@@ -1446,46 +1447,53 @@
    to that object for pronoun resolution.
    Returns the updated game-state."
   [game-state]
-  (let [action (get-in game-state [:parser :prsa])
-        prso (get-in game-state [:parser :prso])
-        prsi (get-in game-state [:parser :prsi])
-        ;; Get all objects - prso may be a vector of multiple objects
-        all-prso (if (sequential? prso) prso (when prso [prso]))
-        ;; Check if we're in "all" mode (even with single object)
-        ;; ZIL: <OR <G? .NUM 1> <EQUAL? <GET <GET ,P-ITBL ,P-NC1> 0> ,W?ALL>>
-        getflags (get-in game-state [:parser :getflags] 0)
-        all-mode? (pos? (bit-and (or getflags 0) (:all game-state/getflags)))
-        ;; Print prefixes when multiple objects OR in "all" mode
-        multi? (and all-prso
-                    (or (> (count all-prso) 1)
-                        all-mode?))
-        ;; Get handler for tracing
-        handler (get *verb-handlers* action)
-        handler-name (when handler (str action))
-        ;; Trace verb dispatch if enabled
-        gs (-> game-state
-               (trace/trace-verb action prso prsi)
-               (trace/trace-verb-dispatch action handler-name multi? all-mode?))]
-    (if handler
-      (if multi?
-        ;; Multiple objects - loop through each one
-        ;; ZIL: MAIN-LOOP-1 lines 99-153
-        (reduce
-         (fn [current-gs obj]
-           ;; Print "object: " prefix
-           (let [obj-name (game-state/thing-name current-gs obj)
-                 ;; Trace individual object processing
-                 gs-traced (trace/trace-verb-object current-gs obj obj-name)
-                 gs-with-prefix (utils/tell gs-traced (str obj-name ": "))
-                 ;; Set prso to just this single object for the handler
-                 gs-single (assoc-in gs-with-prefix [:parser :prso] [obj])
-                 result-gs (perform-single gs-single handler)]
-             ;; Add newline after each object's output
-             (utils/crlf result-gs)))
-         gs
-         all-prso)
-        ;; Single object (or no object)
-        (perform-single gs handler))
-      (do
-        (utils/tell gs (str "I don't know how to do that. [" action "]\n"))
-        gs))))
+  ;; Call room's M-BEG action first (ZIL: room actions get M-BEG at start of turn)
+  ;; If room fully handles the command, it sets :command-handled to prevent verb
+  (let [game-state (daemon/call-room-m-beg game-state)]
+    (if (:command-handled game-state)
+      ;; Room already handled the command - just clear the flag and return
+      (dissoc game-state :command-handled)
+      ;; Normal verb processing
+      (let [action (get-in game-state [:parser :prsa])
+            prso (get-in game-state [:parser :prso])
+            prsi (get-in game-state [:parser :prsi])
+            ;; Get all objects - prso may be a vector of multiple objects
+            all-prso (if (sequential? prso) prso (when prso [prso]))
+            ;; Check if we're in "all" mode (even with single object)
+            ;; ZIL: <OR <G? .NUM 1> <EQUAL? <GET <GET ,P-ITBL ,P-NC1> 0> ,W?ALL>>
+            getflags (get-in game-state [:parser :getflags] 0)
+            all-mode? (pos? (bit-and (or getflags 0) (:all game-state/getflags)))
+            ;; Print prefixes when multiple objects OR in "all" mode
+            multi? (and all-prso
+                        (or (> (count all-prso) 1)
+                            all-mode?))
+            ;; Get handler for tracing
+            handler (get *verb-handlers* action)
+            handler-name (when handler (str action))
+            ;; Trace verb dispatch if enabled
+            gs (-> game-state
+                   (trace/trace-verb action prso prsi)
+                   (trace/trace-verb-dispatch action handler-name multi? all-mode?))]
+        (if handler
+          (if multi?
+            ;; Multiple objects - loop through each one
+            ;; ZIL: MAIN-LOOP-1 lines 99-153
+            (reduce
+             (fn [current-gs obj]
+               ;; Print "object: " prefix
+               (let [obj-name (game-state/thing-name current-gs obj)
+                     ;; Trace individual object processing
+                     gs-traced (trace/trace-verb-object current-gs obj obj-name)
+                     gs-with-prefix (utils/tell gs-traced (str obj-name ": "))
+                     ;; Set prso to just this single object for the handler
+                     gs-single (assoc-in gs-with-prefix [:parser :prso] [obj])
+                     result-gs (perform-single gs-single handler)]
+                 ;; Add newline after each object's output
+                 (utils/crlf result-gs)))
+             gs
+             all-prso)
+            ;; Single object (or no object)
+            (perform-single gs handler))
+          (do
+            (utils/tell gs (str "I don't know how to do that. [" action "]\n"))
+            gs))))))

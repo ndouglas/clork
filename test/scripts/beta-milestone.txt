@@ -1,5 +1,6 @@
 ; Clork Beta Milestone Test - Complete Game Walkthrough
 ; Based on Zork I walkthrough from web.mit.edu transcript
+; https://web.mit.edu/marleigh/www/portfolio/Files/zork/transcript.html
 ; This represents our target for "beta" release - full game completion
 ;
 ; When this script passes with --strict and sets :won true,

@@ -783,6 +783,7 @@
    :fdesc "A battery-powered brass lantern is on the trophy case."
    :ldesc "There is a brass lantern (battery-powered) here."
    :size 15
+   :order 2  ; Listed after sword in original transcript
    :action light/lantern-action})
 
 ;;; ---------------------------------------------------------------------------
@@ -837,6 +838,7 @@
    :fdesc "Above the trophy case hangs an elvish sword of great antiquity."
    :size 30
    :tvalue 0
+   :order 1  ; Listed before lamp in original transcript
    :action sword/sword-action})
 
 ;; <OBJECT RUG
@@ -1104,6 +1106,147 @@
    :action painting-action})
 
 ;;; ---------------------------------------------------------------------------
+;;; MIRROR OBJECTS
+;;; ---------------------------------------------------------------------------
+;;; Two magical mirrors that swap room contents when rubbed.
+;;; ZIL: MIRROR-1 and MIRROR-2 with MIRROR-MIRROR action (1actions.zil 984-1011)
+
+(defn mirror-action
+  "Mirror action handler - handles rubbing the mirror.
+   ZIL: MIRROR-MIRROR routine (1actions.zil lines 984-1011)
+
+   Rubbing the mirror swaps all objects between the two mirror rooms
+   and teleports the player to the other room."
+  [game-state]
+  (let [prsa (parser-state/get-prsa game-state)
+        prsi (parser-state/get-prsi game-state)
+        here (:here game-state)
+        mirror-broken? (get game-state :mirror-mung false)]
+    (cond
+      ;; RUB verb - magical teleportation
+      (and (= prsa :rub) (not mirror-broken?))
+      (if (and prsi (not= prsi :hands))
+        ;; Rubbing with an object
+        (let [obj-desc (:desc (gs/get-thing game-state prsi))]
+          (utils/tell game-state (str "You feel a faint tingling transmitted through the " obj-desc ".")))
+        ;; Rubbing with hands - swap rooms!
+        (let [other-room (if (= here :mirror-room-2) :mirror-room-1 :mirror-room-2)
+              ;; Get contents of both rooms (excluding player and mirrors)
+              here-contents (filter #(and (not= % (:winner game-state))
+                                          (not (#{:mirror-1 :mirror-2} %)))
+                                    (gs/get-contents game-state here))
+              other-contents (filter #(and (not= % (:winner game-state))
+                                           (not (#{:mirror-1 :mirror-2} %)))
+                                     (gs/get-contents game-state other-room))
+              ;; Move contents
+              gs (reduce (fn [s id] (assoc-in s [:objects id :in] other-room)) game-state here-contents)
+              gs (reduce (fn [s id] (assoc-in s [:objects id :in] here)) gs other-contents)]
+          ;; Teleport player silently (ZIL: GOTO .RM2 <> - don't describe room)
+          (-> gs
+              (assoc :here other-room)
+              (assoc-in [:objects (:winner gs) :in] other-room)
+              (utils/tell "There is a rumble from deep within the earth and the room shakes."))))
+
+      ;; EXAMINE or LOOK-INSIDE
+      (#{:examine :look-inside} prsa)
+      (if mirror-broken?
+        (utils/tell game-state "The mirror is broken into many pieces.")
+        (utils/tell game-state "There is an ugly person staring back at you."))
+
+      ;; Default - no special handling
+      :else nil)))
+
+;; <OBJECT MIRROR-1
+;;	(IN MIRROR-ROOM-1)
+;;	(SYNONYM REFLECTION MIRROR ENORMOUS)
+;;	(DESC "mirror")
+;;	(FLAGS TRYTAKEBIT NDESCBIT)
+;;	(ACTION MIRROR-MIRROR)>
+
+(def mirror-1
+  {:id :mirror-1
+   :in :mirror-room-1
+   :synonym ["reflection" "mirror" "enormous"]
+   :desc "mirror"
+   :flags (flags/flags :trytake :ndesc)
+   :action mirror-action})
+
+;; <OBJECT MIRROR-2
+;;	(IN MIRROR-ROOM-2)
+;;	(SYNONYM REFLECTION MIRROR ENORMOUS)
+;;	(DESC "mirror")
+;;	(FLAGS TRYTAKEBIT NDESCBIT)
+;;	(ACTION MIRROR-MIRROR)>
+
+(def mirror-2
+  {:id :mirror-2
+   :in :mirror-room-2
+   :synonym ["reflection" "mirror" "enormous"]
+   :desc "mirror"
+   :flags (flags/flags :trytake :ndesc)
+   :action mirror-action})
+
+;;; ---------------------------------------------------------------------------
+;;; STUDIO OBJECTS
+;;; ---------------------------------------------------------------------------
+
+;; <OBJECT OWNERS-MANUAL
+;;	(IN STUDIO)
+;;	(SYNONYM MANUAL PIECE PAPER)
+;;	(ADJECTIVE ZORK OWNERS SMALL)
+;;	(DESC "ZORK owner's manual")
+;;	(FLAGS READBIT TAKEBIT)
+;;	(FDESC "Loosely attached to a wall is a small piece of paper.")
+;;	(TEXT
+;;       "Congratulations!
+;;
+;;        You are the privileged owner of ZORK I: The Great Underground Empire,
+;;        a self-contained and self-maintaining universe. If used and maintained
+;;        in accordance with normal operating practices for small universes, ZORK
+;;        will provide many months of trouble-free operation.")>
+
+(def owners-manual
+  {:id :owners-manual
+   :in :studio
+   :synonym ["manual" "piece" "paper"]
+   :adjective ["zork" "owners" "small"]
+   :desc "ZORK owner's manual"
+   :flags (flags/flags :read :take)
+   :fdesc "Loosely attached to a wall is a small piece of paper."
+   :text "Congratulations!
+
+You are the privileged owner of ZORK I: The Great Underground Empire, a self-contained and self-maintaining universe. If used and maintained in accordance with normal operating practices for small universes, ZORK will provide many months of trouble-free operation."})
+
+;;; ---------------------------------------------------------------------------
+;;; ENGRAVINGS CAVE OBJECTS
+;;; ---------------------------------------------------------------------------
+
+;; <OBJECT ENGRAVINGS
+;;	(IN ENGRAVINGS-CAVE)
+;;	(SYNONYM WALL ENGRAVINGS INSCRIPTION)
+;;	(ADJECTIVE OLD ANCIENT)
+;;	(DESC "wall with engravings")
+;;	(FLAGS READBIT SACREDBIT)
+;;	(LDESC "There are old engravings on the walls here.")
+;;	(TEXT
+;;       "The engravings were incised in the living rock of the cave wall by
+;;        an unknown hand. They depict, in symbolic form, the beliefs of the
+;;        ancient Zorkers. Skillfully interwoven with the bas reliefs are excerpts
+;;        illustrating the major religious tenets of that time. Unfortunately, a
+;;        later age seems to have considered them blasphemous and just as skillfully
+;;        excised them.")>
+
+(def engravings
+  {:id :engravings
+   :in :engravings-cave
+   :synonym ["wall" "engravings" "inscription"]
+   :adjective ["old" "ancient"]
+   :desc "wall with engravings"
+   :flags (flags/flags :read :sacred)
+   :ldesc "There are old engravings on the walls here."
+   :text "The engravings were incised in the living rock of the cave wall by an unknown hand. They depict, in symbolic form, the beliefs of the ancient Zorkers. Skillfully interwoven with the bas reliefs are excerpts illustrating the major religious tenets of that time. Unfortunately, a later age seems to have considered them blasphemous and just as skillfully excised them."})
+
+;;; ---------------------------------------------------------------------------
 ;;; TREASURES
 ;;; ---------------------------------------------------------------------------
 
@@ -1168,13 +1311,25 @@
                  (and (#{:wave :raise} prsa)
                       (#{:aragain-falls :end-of-rainbow} here))
                  (if rainbow-flag
-                   ;; Rainbow already solid
-                   (utils/tell game-state "The rainbow seems as solid as ever.")
-                   ;; Make the rainbow solid and reveal pot of gold
+                   ;; Rainbow already solid - toggle it off
+                   ;; ZIL: <ROB ,ON-RAINBOW ,WALL> and set RAINBOW-FLAG <>
                    (-> game-state
-                       (assoc :rainbow-flag true)
-                       (gs/unset-thing-flag :pot-of-gold :invisible)
-                       (utils/tell "Suddenly, the rainbow appears to become solid and a shimmering, magical staircase leads upward to the end of the rainbow. You could swear that there's a pot of gold there.")))
+                       (assoc :rainbow-flag false)
+                       (utils/tell "The rainbow seems to have become somewhat run-of-the-mill."))
+                   ;; Make the rainbow solid and reveal pot of gold
+                   ;; ZIL: "Suddenly, the rainbow appears to become solid and, I venture,
+                   ;;       walkable (I think the giveaway was the stairs and bannister)."
+                   (let [gs (-> game-state
+                                (assoc :rainbow-flag true)
+                                (gs/unset-thing-flag :pot-of-gold :invisible)
+                                (utils/tell "Suddenly, the rainbow appears to become solid and, I venture, walkable (I think the giveaway was the stairs and bannister)."))]
+                     ;; If at end-of-rainbow and pot is there, show extra message
+                     (if (and (= here :end-of-rainbow)
+                              (= (gs/get-thing-loc-id gs :pot-of-gold) :end-of-rainbow))
+                       (-> gs
+                           (utils/crlf)
+                           (utils/tell "A shimmering pot of gold appears at the end of the rainbow."))
+                       gs)))
 
                  ;; Default - no special handling
                  :else nil)))})
@@ -1340,6 +1495,29 @@
    :ldesc "On the ground is a red hot bell."
    :action hot-bell-action})
 
+;; <OBJECT SKULL
+;;	(IN LAND-OF-LIVING-DEAD)
+;;	(SYNONYM SKULL HEAD TREASURE)
+;;	(ADJECTIVE CRYSTAL)
+;;	(DESC "crystal skull")
+;;	(FDESC
+;; "Lying in one corner of the room is a beautifully carved crystal skull.
+;; It appears to be grinning at you rather nastily.")
+;;	(FLAGS TAKEBIT)
+;;	(VALUE 10)
+;;	(TVALUE 10)>
+
+(def crystal-skull
+  {:id :crystal-skull
+   :in :land-of-living-dead
+   :synonym ["skull" "head" "treasure"]
+   :adjective ["crystal"]
+   :desc "crystal skull"
+   :fdesc "Lying in one corner of the room is a beautifully carved crystal skull. It appears to be grinning at you rather nastily."
+   :flags (flags/flags :take)
+   :value 10
+   :tvalue 10})
+
 ;; <OBJECT CANDLES
 ;;	(IN SOUTH-TEMPLE)
 ;;	(SYNONYM CANDLES PAIR)
@@ -1360,6 +1538,37 @@
    :fdesc "On the two ends of the altar are burning candles."
    :size 10
    :action light/candles-action})
+
+;; <OBJECT BOOK
+;;	(IN ALTAR)
+;;	(SYNONYM BOOK PRAYER PAGE BOOKS)
+;;	(ADJECTIVE LARGE BLACK)
+;;	(DESC "black book")
+;;	(FLAGS READBIT TAKEBIT CONTBIT BURNBIT TURNBIT)
+;;	(ACTION BLACK-BOOK)
+;;	(FDESC "On the altar is a large black book, open to page 569.")
+;;	(SIZE 10)
+;;	(TEXT "Commandment #12592...")>
+
+(def black-book
+  {:id :black-book
+   :in :south-temple
+   :synonym ["book" "prayer" "page" "books"]
+   :adjective ["large" "black"]
+   :desc "black book"
+   :flags (flags/flags :read :take :cont :burn)
+   :fdesc "On the altar is a large black book, open to page 569."
+   :size 10
+   :text "Commandment #12592
+
+Oh ye who go about saying unto each: \"Hello sailor\":
+Dost thou know the magnitude of thy sin before the gods?
+Yea, verily, thou shalt be ground between two stones.
+Shall the angry gods cast thy body into the whirlpool?
+Surely, thy eye shall be put out with a sharp stick!
+Even unto the ends of the earth shalt thou wander and
+Unto the land of the dead shalt thou be sent at last.
+Surely thou shalt repent of thy cunning."})
 
 ;; <OBJECT TRUNK
 ;;	(IN RESERVOIR)
@@ -1569,6 +1778,42 @@
    :size 10
    :value 5
    :tvalue 5})
+
+;; <OBJECT BAT
+;;	(IN BAT-ROOM)
+;;	(SYNONYM BAT VAMPIRE)
+;;	(ADJECTIVE VAMPIRE DERANGED)
+;;	(DESC "bat")
+;;	(FLAGS ACTORBIT TRYTAKEBIT)
+;;	(DESCFCN BAT-D)
+;;	(ACTION BAT-F)>
+;;
+;; ZIL: BAT-D in 1actions.zil lines 2482-2489
+;;      Describes bat differently based on garlic presence
+
+(defn bat-descfcn
+  "Bat description function - changes based on garlic presence.
+   ZIL: BAT-D in 1actions.zil"
+  [game-state _rarg]
+  (let [garlic-loc (gs/get-thing-loc-id game-state :garlic)
+        player-id (:winner game-state)
+        here (:here game-state)
+        has-garlic? (or (= garlic-loc player-id)
+                        (= garlic-loc here))]
+    (-> game-state
+        (utils/tell (if has-garlic?
+                      "In the corner of the room on the ceiling is a large vampire bat who is obviously deranged and holding his nose."
+                      "A large vampire bat, hanging from the ceiling, swoops down at you!"))
+        (utils/crlf))))
+
+(def bat
+  {:id :bat
+   :in :bat-room
+   :synonym ["bat" "vampire"]
+   :adjective ["vampire" "deranged"]
+   :desc "bat"
+   :flags (flags/flags :actor :trytake)
+   :descfcn bat-descfcn})
 
 ;; <OBJECT TRIDENT
 ;;	(IN ATLANTIS-ROOM)
@@ -2624,7 +2869,8 @@
    :capacity 7
    :size 5
    :text "---> Frobozz Magic Gunk Company <---\n      All-Purpose Gunk"
-   :action dam/tube-action})
+   :action dam/tube-action
+   :order 3})
 
 ;; <OBJECT PUTTY
 ;;     (IN TUBE)
@@ -2700,7 +2946,25 @@
    :synonym ["wrench" "tool" "tools"]
    :desc "wrench"
    :flags (flags/flags :take :tool)
-   :size 10})
+   :size 10
+   :order 2})
+
+;; <OBJECT TOOL-CHEST
+;;     (IN MAINTENANCE-ROOM)
+;;     (SYNONYM CHEST CHESTS GROUP TOOLCHESTS)
+;;     (ADJECTIVE TOOL)
+;;     (DESC "group of tool chests")
+;;     (FLAGS CONTBIT OPENBIT TRYTAKEBIT SACREDBIT)
+;;     (ACTION TOOL-CHEST-FCN)>
+
+(def tool-chest
+  {:id :tool-chest
+   :in :maintenance-room
+   :synonym ["chest" "chests" "group" "toolchests"]
+   :adjective "tool"
+   :desc "group of tool chests"
+   :flags (flags/flags :cont :open :try-take :sacred)
+   :order 1})  ; First visible object in maintenance room
 
 ;; <OBJECT YELLOW-BUTTON
 ;;     (IN MAINTENANCE-ROOM)
@@ -2943,7 +3207,8 @@
    :synonym ["screwdriver" "tool" "tools" "driver"]
    :adjective "screw"
    :desc "screwdriver"
-   :flags (flags/flags :take :tool)})
+   :flags (flags/flags :take :tool)
+   :order 4})
 
 ;; <OBJECT COAL
 ;;     (IN DEAD-END-5)
@@ -2952,6 +3217,23 @@
 ;;     (DESC "small pile of coal")
 ;;     (FLAGS TAKEBIT BURNBIT)
 ;;     (SIZE 20)>
+
+;; <OBJECT TIMBERS
+;;	(IN TIMBER-ROOM)
+;;	(SYNONYM TIMBERS PILE)
+;;	(ADJECTIVE WOODEN BROKEN)
+;;	(DESC "broken timber")
+;;	(FLAGS TAKEBIT)
+;;	(SIZE 50)>
+
+(def timbers
+  {:id :timbers
+   :in :timber-room
+   :synonym ["timber" "timbers" "pile"]
+   :adjective ["wooden" "broken"]
+   :desc "broken timber"
+   :flags (flags/flags :take)
+   :size 50})
 
 (def coal
   {:id :coal
@@ -3185,6 +3467,10 @@
    railing
    knife
    painting
+   mirror-1
+   mirror-2
+   owners-manual
+   engravings
    tree
    nest
    egg
@@ -3218,6 +3504,7 @@
    guidebook
    matchbook
    wrench
+   tool-chest
    yellow-button
    brown-button
    blue-button
@@ -3229,14 +3516,18 @@
    screwdriver
    coal
    gunk
+   ;; Timber room
+   timbers
    ;; Shaft/basket objects
    raised-basket
    lowered-basket
    rainbow
    ;; Loud Room treasure
    platinum-bar
-   ;; Treasures
+   ;; Bat room objects
+   bat
    jade-figurine
+   ;; Treasures
    crystal-trident
    sapphire-bracelet
    jeweled-scarab
@@ -3245,8 +3536,10 @@
    sceptre
    ivory-torch
    candles
+   black-book
    brass-bell
    hot-bell
+   crystal-skull
    trunk-of-jewels
    huge-diamond
    large-emerald

@@ -62,7 +62,9 @@
          ;; OR the room's native :lit flag
          lit? (or (:lit game-state) (gs/set-here-flag? game-state :lit))
          maze? (gs/set-here-flag? game-state :maze)
-         is-verbose? (if maze? is-verbose? true)
+         ;; ZIL: Maze rooms always show full description (touch is cleared each visit)
+         ;; Non-maze rooms use the current verbose setting
+         is-verbose? (if maze? true is-verbose?)
          vehicle? (get-in location [:flags :vehicle] false)
          here (gs/get-here game-state)
          act (:action here)]
@@ -302,25 +304,27 @@
                                              (seq (gs/get-contents game-state id))))
                                       without-fdesc)]
 
-         ;; First describe ndesc containers' contents
-         (let [state (reduce (fn [st id]
-                               (print-cont st id verbose? (if (< level 0) 0 level)))
-                             state
-                             ndesc-containers)]
-           (if (empty? describable)
-             state
-             ;; Print header for container (but not for room floor at level -1)
-             (let [state (if (and (not= obj-id (:here game-state))
-                                  (>= level 0))
-                           (firster state obj-id level)
-                           state)
-                   ;; Room floor (level -1) -> describe at level 0
-                   ;; Container (level >= 0) -> describe at level+1
-                   new-level (if (< level 0) 0 (inc level))]
-               (reduce (fn [st id]
-                         (describe-object st id verbose? new-level))
+         ;; First describe regular objects, then ndesc containers' contents
+         ;; ZIL describes objects before container contents
+         (let [state (if (empty? describable)
                        state
-                       describable)))))))))
+                       ;; Print header for container (but not for room floor at level -1)
+                       (let [state (if (and (not= obj-id (:here game-state))
+                                            (>= level 0))
+                                     (firster state obj-id level)
+                                     state)
+                             ;; Room floor (level -1) -> describe at level 0
+                             ;; Container (level >= 0) -> describe at level+1
+                             new-level (if (< level 0) 0 (inc level))]
+                         (reduce (fn [st id]
+                                   (describe-object st id verbose? new-level))
+                                 state
+                                 describable)))]
+           ;; Then describe ndesc containers' contents (like trophy case)
+           (reduce (fn [st id]
+                     (print-cont st id verbose? (if (< level 0) 0 level)))
+                   state
+                   ndesc-containers)))))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; DESCRIBE-OBJECTS

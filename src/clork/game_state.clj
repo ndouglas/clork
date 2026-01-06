@@ -199,12 +199,25 @@
 (def get-thing-location get-thing-loc-id)
 
 (defn get-contents
-  "Return the IDs of all objects inside the given container, sorted by definition order."
+  "Return the IDs of all objects inside the given container.
+   For player/actor inventory, sorts by acquisition sequence (LIFO - newest first).
+   For rooms/containers, sorts by :order field (for consistent description order)."
   [game-state container-id]
-  (->> (:objects game-state)
-       (filter (fn [[_ obj]] (= (:in obj) container-id)))
-       (sort-by (fn [[_ obj]] (or (:order obj) 999)))
-       (map first)))
+  (let [winner (:winner game-state)
+        is-actor? (or (= container-id :adventurer)
+                      (= container-id :player)
+                      (= container-id winner))
+        contents (->> (:objects game-state)
+                      (filter (fn [[_ obj]] (= (:in obj) container-id))))]
+    (if is-actor?
+      ;; Player inventory: sort by inv-seq descending (LIFO - newest first)
+      (->> contents
+           (sort-by (fn [[_ obj]] (- (or (:inv-seq obj) 0))))
+           (map first))
+      ;; Rooms/containers: sort by :order (for consistent room descriptions)
+      (->> contents
+           (sort-by (fn [[_ obj]] (or (:order obj) 999)))
+           (map first)))))
 
 (defn verbose?
   "Indicate whether we should be operating in verbose mode."
@@ -248,11 +261,15 @@
   (reduce add-room game-state rooms))
 
 (defn add-object
-  "Add an object to the game state. Optionally takes an order index."
+  "Add an object to the game state. Optionally takes an order index.
+   If the object already has an :order field, it is preserved."
   ([game-state object]
    (add-object game-state object nil))
   ([game-state object order]
-   (let [obj-with-order (if order (assoc object :order order) object)]
+   ;; Only set order if object doesn't already have one
+   (let [obj-with-order (if (and order (not (contains? object :order)))
+                          (assoc object :order order)
+                          object)]
      (assoc game-state :objects
             (assoc (:objects game-state) (:id obj-with-order) obj-with-order)))))
 

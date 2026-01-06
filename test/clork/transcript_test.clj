@@ -1,0 +1,256 @@
+(ns clork.transcript-test
+  "Tests that verify game output matches the MIT Zork I transcript.
+
+   The transcript comes from: https://web.mit.edu/marleigh/www/portfolio/Files/zork/transcript.html
+   It represents an actual playthrough of Zork I (Revision 88 / Serial number 840726).
+
+   This test executes each command from the transcript and verifies the output
+   matches exactly. The test uses a random seed to try to reproduce the exact
+   combat outcomes and random events from the original playthrough.
+
+   If a mismatch is found, the test stops and reports the difference."
+  (:require [clojure.test :refer :all]
+            [clojure.data.json :as json]
+            [clojure.java.io :as io]
+            [clojure.string :as str]
+            [clork.game-state :as gs]
+            [clork.core :as core]
+            [clork.parser :as parser]
+            [clork.verb-defs :as verb-defs]
+            [clork.verbs-look :as look]
+            [clork.utils :as utils]
+            [clork.daemon :as daemon]
+            [clork.random :as random]))
+
+;;; ---------------------------------------------------------------------------
+;;; TRANSCRIPT DATA LOADING
+;;; ---------------------------------------------------------------------------
+
+(defn load-transcript-data
+  "Load the parsed transcript JSON file."
+  []
+  (with-open [r (io/reader "test/scripts/mit-transcript.json")]
+    (json/read r :key-fn keyword)))
+
+;;; ---------------------------------------------------------------------------
+;;; OUTPUT CAPTURE AND NORMALIZATION
+;;; ---------------------------------------------------------------------------
+
+(defn normalize-output
+  "Normalize output for comparison by converting all whitespace to single spaces.
+   This makes us insensitive to:
+   - Line wrapping differences (original wraps at ~80 cols, we don't)
+   - Extra blank lines between sections
+   - Trailing whitespace
+   We focus on content, not formatting."
+  [s]
+  (when s
+    (-> s
+        str/trim
+        ;; Convert all whitespace (including newlines) to single spaces
+        (str/replace #"\s+" " ")
+        ;; Remove spaces before/after punctuation that shouldn't have them
+        str/trim)))
+
+;;; ---------------------------------------------------------------------------
+;;; COMMAND EXECUTION
+;;; ---------------------------------------------------------------------------
+
+(defn execute-command
+  "Execute a single command and return [new-state output-string].
+   Simulates one iteration of the main loop."
+  [game-state input]
+  (let [output (java.io.StringWriter.)]
+    (binding [*out* output]
+      (let [;; Initialize parser state
+            lexv (parser/lexv-from-input input)
+            gs (-> game-state
+                   (parser/parser-init)
+                   (parser/parser-set-winner-to-player)
+                   (assoc :input input)
+                   (assoc-in [:parser :lexv] lexv)
+                   (assoc-in [:parser :len] (count (:tokens lexv)))
+                   (assoc-in [:parser :again-lexv] lexv)
+                   (assoc-in [:parser :dir] nil)
+                   (assoc-in [:parser :ncn] 0)
+                   (assoc-in [:parser :getflags] 0))
+            ;; Parse the command
+            gs (parser/parse-command gs)]
+        (if (parser/get-parser-error gs)
+          ;; Parsing failed - error already in output
+          [gs (str output)]
+          ;; Parsing succeeded - perform the action, then run daemons
+          (let [gs (-> gs
+                       (verb-defs/perform)
+                       (daemon/clocker)
+                       (utils/crlf))]
+            [gs (str output)]))))))
+
+;;; ---------------------------------------------------------------------------
+;;; COMPARISON AND REPORTING
+;;; ---------------------------------------------------------------------------
+
+(defn find-first-diff
+  "Find the position of the first character difference between two strings.
+   Returns [position expected-char actual-char] or nil if equal."
+  [expected actual]
+  (let [len (min (count expected) (count actual))]
+    (loop [i 0]
+      (cond
+        (>= i len)
+        (when (not= (count expected) (count actual))
+          [i
+           (if (< i (count expected)) (get expected i) :eof)
+           (if (< i (count actual)) (get actual i) :eof)])
+
+        (not= (get expected i) (get actual i))
+        [i (get expected i) (get actual i)]
+
+        :else
+        (recur (inc i))))))
+
+(defn char-repr
+  "Human-readable representation of a character."
+  [c]
+  (cond
+    (= c :eof) "<EOF>"
+    (= c \newline) "\\n"
+    (= c \return) "\\r"
+    (= c \tab) "\\t"
+    (= c \space) "<space>"
+    :else (str c)))
+
+(defn context-around
+  "Get context around a position in a string."
+  [s pos radius]
+  (let [start (max 0 (- pos radius))
+        end (min (count s) (+ pos radius))]
+    (subs s start end)))
+
+(defn report-mismatch
+  "Generate a detailed mismatch report."
+  [command-num command expected actual]
+  (let [[pos exp-char act-char] (find-first-diff expected actual)
+        exp-context (when pos (context-around expected pos 40))
+        act-context (when pos (context-around actual pos 40))]
+    (str "\n"
+         "=== TRANSCRIPT MISMATCH at command #" command-num " ===\n"
+         "Command: " command "\n"
+         "\n"
+         "First difference at position " pos ":\n"
+         "  Expected char: " (char-repr exp-char) "\n"
+         "  Actual char:   " (char-repr act-char) "\n"
+         "\n"
+         "Expected context:\n"
+         "  \"" exp-context "\"\n"
+         "\n"
+         "Actual context:\n"
+         "  \"" act-context "\"\n"
+         "\n"
+         "--- Full Expected ---\n"
+         expected "\n"
+         "\n"
+         "--- Full Actual ---\n"
+         actual "\n")))
+
+;;; ---------------------------------------------------------------------------
+;;; INITIAL STATE SETUP
+;;; ---------------------------------------------------------------------------
+
+(defn create-initial-state
+  "Create initial game state for transcript testing."
+  [seed]
+  (random/init! seed)
+  (let [output (java.io.StringWriter.)]
+    (binding [*out* output]
+      ;; Use core/init-game which properly sets up rooms, objects, daemons, etc.
+      (core/init-game nil))))
+
+;;; ---------------------------------------------------------------------------
+;;; MAIN TEST RUNNER
+;;; ---------------------------------------------------------------------------
+
+(defn run-transcript-test
+  "Run through the transcript, comparing outputs.
+   Returns {:success true :commands-run N} or {:success false :error <report>}."
+  [seed max-commands]
+  (let [data (load-transcript-data)
+        commands (:commands data)
+        commands-to-run (if max-commands
+                          (take max-commands commands)
+                          commands)]
+    (loop [gs (create-initial-state seed)
+           remaining commands-to-run
+           cmd-num 1]
+      (if (empty? remaining)
+        {:success true :commands-run (dec cmd-num)}
+        (let [{:keys [command response]} (first remaining)
+              expected (normalize-output response)
+              [new-gs actual-raw] (execute-command gs command)
+              actual (normalize-output actual-raw)]
+          (if (= expected actual)
+            (recur new-gs (rest remaining) (inc cmd-num))
+            {:success false
+             :command-num cmd-num
+             :command command
+             :expected expected
+             :actual actual
+             :report (report-mismatch cmd-num command expected actual)}))))))
+
+;;; ---------------------------------------------------------------------------
+;;; TESTS
+;;; ---------------------------------------------------------------------------
+
+(deftest ^:transcript transcript-first-10-commands
+  (testing "First 10 commands match transcript"
+    (let [result (run-transcript-test 315 10)]
+      (when-not (:success result)
+        (println (:report result)))
+      (is (:success result)
+          (str "Failed at command #" (:command-num result))))))
+
+(deftest ^:transcript ^:slow transcript-full-test
+  (testing "Full transcript matches"
+    (let [result (run-transcript-test 315 nil)]
+      (when-not (:success result)
+        (println (:report result)))
+      (is (:success result)
+          (str "Failed at command #" (:command-num result))))))
+
+;;; ---------------------------------------------------------------------------
+;;; SEED FINDER (for finding seeds that match random events)
+;;; ---------------------------------------------------------------------------
+
+(defn try-seeds
+  "Try multiple seeds to find one that gets furthest in the transcript.
+   Returns the best seed found."
+  [seed-start seed-end max-commands]
+  (let [data (load-transcript-data)
+        commands (take (or max-commands 50) (:commands data))]
+    (loop [seed seed-start
+           best-seed seed-start
+           best-count 0]
+      (if (> seed seed-end)
+        {:best-seed best-seed :commands-matched best-count}
+        (let [result (run-transcript-test seed (count commands))
+              matched (if (:success result)
+                        (count commands)
+                        (dec (:command-num result)))]
+          (if (> matched best-count)
+            (do
+              (println (str "Seed " seed ": " matched " commands matched"))
+              (recur (inc seed) seed matched))
+            (recur (inc seed) best-seed best-count)))))))
+
+(comment
+  ;; Run first 10 commands with seed 42
+  (run-transcript-test 42 10)
+
+  ;; Try seeds 0-100 for first 20 commands
+  (try-seeds 0 100 20)
+
+  ;; Load and inspect transcript data
+  (def data (load-transcript-data))
+  (count (:commands data))
+  (first (:commands data))
+  )

@@ -1,0 +1,1401 @@
+{
+  "header": "ZORK I: The Great Underground Empire\n\nCopyright (c) 1981, 1982, 1983 Infocom, Inc. All rights\nreserved.\n\nZORK is a registered trademark of Infocom, Inc.\n\nRevision 88 / Serial number 840726\n\nWest of House\n\nYou are standing in an open field west of a white house,\nwith a boarded front door.\n\nThere is a small mailbox here.",
+  "commands": [
+    {
+      "command": "open mailbox",
+      "response": "Opening the small mailbox reveals a leaflet."
+    },
+    {
+      "command": "read leaflet",
+      "response": "(Taken)\n\n\"WELCOME TO ZORK!\n\nZORK is a game of adventure, danger, and low cunning. In it\nyou will explore some of the most amazing territory ever seen by mortals. No\ncomputer should be without one!\""
+    },
+    {
+      "command": "drop leaflet",
+      "response": "Dropped."
+    },
+    {
+      "command": "go south",
+      "response": "South of House\n\nYou are facing the south side of a white house. There is no\ndoor here, and all the windows are boarded."
+    },
+    {
+      "command": "go east",
+      "response": "Behind House\n\nYou are behind the white house. A path leads into the forest\nto the east. In one corner of the house there is a small window which is\nslightly ajar."
+    },
+    {
+      "command": "open window",
+      "response": "With great effort, you open the window far enough to allow\nentry."
+    },
+    {
+      "command": "enter house",
+      "response": "Kitchen\n\nYou are in the kitchen of the white house. A table seems to\nhave been used recently for the preparation of food. A passage leads to the\nwest and a dark staircase can be seen leading upward. A dark chimney leads down\nand to the east is a small window which is open.\n\nOn the table is an elongated brown sack, smelling of hot\npeppers.\n\nA bottle is sitting on the table.\n\nThe glass bottle contains:\n\nA quantity of\nwater"
+    },
+    {
+      "command": "go west",
+      "response": "Living Room\n\nYou are in the living room. There is a doorway to the east,\na wooden door with strange gothic lettering to the west, which appears to be\nnailed shut, a trophy case, and a large oriental rug in the center of the room.\n\nAbove the trophy case hangs an elvish sword of great\nantiquity.\n\nA battery-powered brass lantern is on the trophy case."
+    },
+    {
+      "command": "take lamp",
+      "response": "Taken."
+    },
+    {
+      "command": "move rug",
+      "response": "With a great effort, the rug is moved to one side of the\nroom, revealing the dusty cover of a closed trap door."
+    },
+    {
+      "command": "open trap door",
+      "response": "The door reluctantly opens to reveal a rickety staircase\ndescending into darkness."
+    },
+    {
+      "command": "turn on lamp",
+      "response": "The brass lantern is now on."
+    },
+    {
+      "command": "go down",
+      "response": "The trap door crashes shut, and you hear someone barring it.\n\nCellar\n\nYou are in a dark and damp cellar with a narrow passageway\nleading north, and a crawlway to the south. On the west is the bottom of a\nsteep metal ramp which is unclimbable."
+    },
+    {
+      "command": "go south",
+      "response": "East of Chasm\n\nYou are on the east edge of a chasm, the bottom of which\ncannot be seen. A narrow passage goes north, and the path you are on continues\nto the east."
+    },
+    {
+      "command": "go east",
+      "response": "Gallery\n\nThis is an art gallery. Most of the paintings have been\nstolen by vandals with exceptional taste. The vandals left through either the\nnorth or west exits.\n\nFortunately, there is still one chance for you to be a\nvandal, for on the far wall is a painting of unparalleled beauty."
+    },
+    {
+      "command": "take painting",
+      "response": "Taken."
+    },
+    {
+      "command": "go north",
+      "response": "Studio\n\nThis appears to have been an artist's studio. The walls and\nfloors are splattered with paints of 69 different colors. Strangely enough,\nnothing of value is hanging here. At the south end of the room is an open door\n(also covered with paint). A dark and narrow chimney leads up from a fireplace;\nalthough you might be able to get up it, it seems unlikely you could get back\ndown.\n\nLoosely attached to a wall is a small piece of paper."
+    },
+    {
+      "command": "go up chimney",
+      "response": "Kitchen\n\nOn the table is an elongated brown sack, smelling of hot\npeppers.\n\nA bottle is sitting on the table.\n\nThe glass bottle contains:\n\nA quantity of\nwater"
+    },
+    {
+      "command": "go up",
+      "response": "Attic\n\nThis is the attic. The only exit is a stairway leading down.\n\nA large coil of rope is lying in the corner.\n\nOn a table is a nasty-looking knife."
+    },
+    {
+      "command": "take knife",
+      "response": "Taken."
+    },
+    {
+      "command": "take rope",
+      "response": "Taken."
+    },
+    {
+      "command": "go down",
+      "response": "Kitchen\n\nOn the table is an elongated brown sack, smelling of hot\npeppers.\n\nA bottle is sitting on the table.\n\nThe glass bottle contains:\n\nA quantity of\nwater"
+    },
+    {
+      "command": "go west",
+      "response": "Living Room\n\nAbove the trophy case hangs an elvish sword of great\nantiquity."
+    },
+    {
+      "command": "open case",
+      "response": "Opened."
+    },
+    {
+      "command": "put painting inside case",
+      "response": "Done."
+    },
+    {
+      "command": "drop knife",
+      "response": "Dropped."
+    },
+    {
+      "command": "take sword",
+      "response": "Taken."
+    },
+    {
+      "command": "open trap door",
+      "response": "The door reluctantly opens to reveal a rickety staircase\ndescending into darkness."
+    },
+    {
+      "command": "go down",
+      "response": "The trap door crashes shut, and you hear someone barring it.\n\nCellar\n\nYour sword is glowing with a faint blue glow."
+    },
+    {
+      "command": "go north",
+      "response": "The Troll Room\n\nThis is a small room with passages to the east and south and\na forbidding hole leading west. Bloodstains and deep scratches (perhaps made by\nan axe) mar the walls.\n\nA nasty-looking troll, brandishing a bloody axe, blocks all\npassages out of the room.\n\nYour sword has begun to glow very brightly.\n\nThe troll's mighty blow drops you to your knees."
+    },
+    {
+      "command": "kill troll with sword",
+      "response": "You are still recovering from that last blow, so your attack\nis ineffective.\n\nThe troll's axe barely misses your ear."
+    },
+    {
+      "command": "kill troll with sword",
+      "response": "The troll is confused and can't fight back.\n\nThe troll slowly regains his feet."
+    },
+    {
+      "command": "kill troll with sword",
+      "response": "The troll takes a fatal blow and slumps to the floor dead.\n\nAlmost as soon as the troll breathes his last breath, a cloud of sinister black fog envelops him, and when the fog lifts, the carcass has disappeared.\n\nYour sword is no longer glowing."
+    },
+    {
+      "command": "drop sword",
+      "response": "Dropped."
+    },
+    {
+      "command": "go east",
+      "response": "East-West Passage\n\nThis is a narrow east-west passageway. There is a narrow\nstairway leading down at the north end of the room."
+    },
+    {
+      "command": "go east",
+      "response": "Round Room\n\nThis is a circular stone room with passages in all\ndirections. Several of them have unfortunately been blocked by cave-ins."
+    },
+    {
+      "command": "go southeast",
+      "response": "Engravings Cave\n\nYou have entered a low cave with passages leading northwest\nand east.\n\nThere are old engravings on the walls here."
+    },
+    {
+      "command": "go east",
+      "response": "Dome Room\n\nYou are at the periphery of a large dome, which forms the\nceiling of another room below. Protecting you from a precipitous drop is a\nwooden railing which circles the dome."
+    },
+    {
+      "command": "tie rope to railing",
+      "response": "The rope drops over the side and comes within ten feet of\nthe floor."
+    },
+    {
+      "command": "go down",
+      "response": "Torch Room\n\nThis is a large room with a prominent doorway leading to a\ndown staircase. Above you is a large dome. Up around the edge of the dome (20\nfeet up) is a wooden railing. In the center of the room sits a white marble\npedestal.\n\nA piece of rope descends from the railing above, ending some\nfive feet above your head.\n\nSitting on the pedestal is a flaming torch, made of ivory."
+    },
+    {
+      "command": "go south",
+      "response": "Temple\n\nThis is the north end of a large temple. On the east wall is\nan ancient inscription, probably a prayer in a long-forgotten language. Below\nthe prayer is a staircase leading down. The west wall is solid granite. The\nexit to the north end of the room is through huge marble pillars.\n\nThere is a brass bell here."
+    },
+    {
+      "command": "go east",
+      "response": "Egyptian Room\n\nThis is a room which looks like an Egyptian tomb. There is\nan ascending staircase to the west.\n\nThe solid-gold coffin used for the burial of Ramses II is\nhere."
+    },
+    {
+      "command": "take coffin",
+      "response": "Taken."
+    },
+    {
+      "command": "go west",
+      "response": "Temple\n\nThere is a brass bell here."
+    },
+    {
+      "command": "go south",
+      "response": "Altar\n\nThis is the south end of a large temple. In front of you is\nwhat appears to be an altar. In one corner is a small hole in the floor which\nleads into darkness. You probably could not get back up it.\n\nOn the two ends of the altar are burning candles.\n\nOn the altar is a large black book, open to page 569."
+    },
+    {
+      "command": "pray",
+      "response": "Forest\n\nThis is a forest, with trees in all directions. To the east,\nthere appears to be sunlight."
+    },
+    {
+      "command": "turn off lamp",
+      "response": "The brass lantern is now off."
+    },
+    {
+      "command": "go south",
+      "response": "Forest\n\nThis is a dimly lit forest, with large trees all around."
+    },
+    {
+      "command": "go north",
+      "response": "Clearing\n\nYou are in a small clearing in a well marked forest path\nthat extends to the east and west."
+    },
+    {
+      "command": "go east",
+      "response": "Canyon View\n\nYou are at the top of the Great Canyon on its west wall.\nFrom here there is a marvelous view of the canyon and parts of the Frigid River\nupstream. Across the canyon, the walls of the White Cliffs join the mighty\nramparts of the Flathead Mountains to the east. Following the Canyon upstream\nto the north, Aragain Falls may be seen, complete with rainbow. The mighty\nFrigid River flows out from a great dark cavern. To the west and south can be\nseen an immense forest, stretching for miles around. A path leads northwest. It\nis possible to climb down into the canyon from here."
+    },
+    {
+      "command": "go down",
+      "response": "Rocky Ledge\n\nYou are on a ledge about halfway up the wall of the river\ncanyon. You can see from here that the main flow from Aragain Falls twists\nalong a passage which it is impossible for you to enter. Below you is the\ncanyon bottom. Above you is more cliff, which appears climbable."
+    },
+    {
+      "command": "go down",
+      "response": "Canyon Bottom\n\nYou are beneath the walls of the river canyon which may be\nclimbable here. The lesser part of the runoff of Aragain Falls flows by below.\nTo the north is a narrow path."
+    },
+    {
+      "command": "go north",
+      "response": "End of Rainbow\n\nYou are on a small, rocky beach on the continuation of the\nFrigid River past the Falls. The beach is narrow due to the presence of the\nWhite Cliffs. The river canyon opens here and sunlight shines in from above. A\nrainbow crosses over the falls to the east and a narrow path continues to the\nsouthwest."
+    },
+    {
+      "command": "drop coffin",
+      "response": "Dropped."
+    },
+    {
+      "command": "open coffin",
+      "response": "The gold coffin opens.\n\nA sceptre, possibly that of ancient Egypt itself, is in the\ncoffin. The sceptre is ornamented with colored enamel, and tapers to a sharp\npoint."
+    },
+    {
+      "command": "take sceptre",
+      "response": "Taken."
+    },
+    {
+      "command": "wave sceptre",
+      "response": "Suddenly, the rainbow appears to become solid and, I\nventure, walkable (I think the giveaway was the stairs and bannister).\n\nA shimmering pot of gold appears at the end of the rainbow."
+    },
+    {
+      "command": "take gold",
+      "response": "Taken."
+    },
+    {
+      "command": "take coffin",
+      "response": "Taken."
+    },
+    {
+      "command": "go southwest",
+      "response": "Canyon Bottom"
+    },
+    {
+      "command": "go up",
+      "response": "Rocky Ledge"
+    },
+    {
+      "command": "go up",
+      "response": "Canyon View"
+    },
+    {
+      "command": "go northwest",
+      "response": "Clearing"
+    },
+    {
+      "command": "go west",
+      "response": "Behind House"
+    },
+    {
+      "command": "enter house",
+      "response": "Kitchen\n\nOn the table is an elongated brown sack, smelling of hot\npeppers.\n\nA bottle is sitting on the table.\n\nThe glass bottle contains:\n\nA quantity of water"
+    },
+    {
+      "command": "open bag",
+      "response": "Opening the brown sack reveals a lunch, and a clove of\ngarlic."
+    },
+    {
+      "command": "take garlic",
+      "response": "Taken."
+    },
+    {
+      "command": "go west",
+      "response": "Living Room\n\nThere is a nasty knife here.\n\nYour collection of treasures consists of:\n\nA\npainting"
+    },
+    {
+      "command": "put coffin in case",
+      "response": "Done."
+    },
+    {
+      "command": "put gold in case",
+      "response": "Done."
+    },
+    {
+      "command": "put sceptre in case",
+      "response": "Done."
+    },
+    {
+      "command": "open trap door",
+      "response": "The door reluctantly opens to reveal a rickety staircase\ndescending into darkness."
+    },
+    {
+      "command": "turn on lamp",
+      "response": "The brass lantern is now on."
+    },
+    {
+      "command": "go down",
+      "response": "Cellar"
+    },
+    {
+      "command": "go north",
+      "response": "The Troll Room\n\nThere is a sword here.\n\nThere is a bloody axe here."
+    },
+    {
+      "command": "go east",
+      "response": "East-West Passage"
+    },
+    {
+      "command": "go north",
+      "response": "Chasm\n\nA chasm runs southwest to northeast and the path follows it.\nYou are on the south side of the chasm, where a crack opens into a passage."
+    },
+    {
+      "command": "go northeast",
+      "response": "Reservoir South\n\nYou are in a long room on the south shore of a large lake,\nfar too deep and wide for crossing.\n\nThere is a path along the stream to the east or west, a\nsteep pathway climbing southwest along the edge of a chasm, and a path leading\ninto a canyon to the southeast."
+    },
+    {
+      "command": "go east",
+      "response": "Dam\n\nYou are standing on the top of the Flood Control Dam #3,\nwhich was quite a tourist attraction in times far distant. There are paths to\nthe north, south, and west, and a scramble down.\n\nThe sluice gates on the dam are closed. Behind the dam,\nthere can be seen a wide reservoir. Water is pouring over the top of the now\nabandoned dam.\n\nThere is a control panel here, on which a large metal bolt\nis mounted. Directly above the bolt is a small green plastic bubble."
+    },
+    {
+      "command": "go north",
+      "response": "Dam Lobby\n\nThis room appears to have been the waiting room for groups\ntouring the dam. There are open doorways here to the north and east marked\n\"Private\", and there is a path leading south over the top of the dam.\n\nSome guidebooks entitled \"Flood Control Dam #3\"\nare on the reception desk.\n\nThere is a matchbook whose cover says \"Visit Beautiful\nFCD#3\" here."
+    },
+    {
+      "command": "take matches",
+      "response": "Taken."
+    },
+    {
+      "command": "go north",
+      "response": "Maintenance Room\n\nThis is what appears to have been the maintenance room for\nFlood Control Dam #3. Apparently, this room has been ransacked recently, for\nmost of the valuable equipment is gone. On the wall in front of you is a group\nof buttons colored blue, yellow, brown, and red. There are doorways to the west\nand south.\n\nThere is a group of tool chests here.\n\nThere is a wrench here.\n\nThere is an object which looks like a tube of toothpaste\nhere.\n\nThere is a screwdriver here."
+    },
+    {
+      "command": "take wrench",
+      "response": "Taken."
+    },
+    {
+      "command": "take screwdriver",
+      "response": "Taken."
+    },
+    {
+      "command": "push yellow button",
+      "response": "Click."
+    },
+    {
+      "command": "go south",
+      "response": "Dam Lobby\n\nSome guidebooks entitled \"Flood Control Dam #3\"\nare on the reception desk."
+    },
+    {
+      "command": "go south",
+      "response": "Dam\n\nYou are standing on the top of the Flood Control Dam #3,\nwhich was quite a tourist attraction in times far distant. There are paths to\nthe north, south, and west, and a scramble down.\n\nThe sluice gates on the dam are closed. Behind the dam,\nthere can be seen a wide reservoir. Water is pouring over the top of the now\nabandoned dam.\n\nThere is a control panel here, on which a large metal bolt\nis mounted. Directly above the bolt is a small green plastic bubble which is\nglowing serenely."
+    },
+    {
+      "command": "turn bolt with wrench",
+      "response": "The sluice gates open and water pours through the dam."
+    },
+    {
+      "command": "drop wrench",
+      "response": "Dropped."
+    },
+    {
+      "command": "go south",
+      "response": "Deep Canyon\n\nYou are on the south edge of a deep canyon. Passages lead\noff to the east, northwest and southwest. A stairway leads down. You can hear a\nloud roaring sound, like that of rushing water, from below."
+    },
+    {
+      "command": "go down",
+      "response": "Loud Room\n\nThis is a large room with a ceiling which cannot be detected\nfrom the ground. There is a narrow passage from east to west and a stone\nstairway leading upward. The room is deafeningly loud with an undetermined\nrushing sound. The sound seems to reverberate from all of the walls, making it\ndifficult even to think.\n\nOn the ground is a large platinum bar.\n\nIt is unbearably loud here, with an ear-splitting roar\nseeming to come from all around you. There is a pounding in your head which\nwon't stop. With a tremendous effort, you scramble out of the room.\n\nDeep Canyon"
+    },
+    {
+      "command": "go southwest",
+      "response": "North-South Passage\n\nThis is a high north-south passage, which forks to the northeast."
+    },
+    {
+      "command": "go south",
+      "response": "Round Room"
+    },
+    {
+      "command": "go southeast",
+      "response": "Engravings Cave\n\nThere are old engravings on the walls here."
+    },
+    {
+      "command": "go east",
+      "response": "Dome Room"
+    },
+    {
+      "command": "go down",
+      "response": "Torch Room\n\nSitting on the pedestal is a flaming torch, made of ivory."
+    },
+    {
+      "command": "take torch",
+      "response": "Taken."
+    },
+    {
+      "command": "turn off lamp",
+      "response": "The brass lantern is now off."
+    },
+    {
+      "command": "go south",
+      "response": "Temple\n\nThere is a brass bell here."
+    },
+    {
+      "command": "take bell",
+      "response": "Taken."
+    },
+    {
+      "command": "go south",
+      "response": "Altar\n\nOn the two ends of the altar are burning candles.\n\nOn the altar is a large black book, open to page 569."
+    },
+    {
+      "command": "take candles",
+      "response": "Taken."
+    },
+    {
+      "command": "take book",
+      "response": "Taken."
+    },
+    {
+      "command": "go down",
+      "response": "Cave\n\nThis is a tiny cave with entrances west and north, and a\ndark, forbidding staircase leading down."
+    },
+    {
+      "command": "go down",
+      "response": "Entrance to Hades\n\nYou are outside a large gateway, on which is inscribed\n\nAbandon every\nhope all ye who enter here!\n\nThe gate is open; through it you can see a desolation, with\na pile of mangled bodies in one corner. Thousands of voices, lamenting some\nhideous fate, can be heard.\n\nThe way through the gate is barred by evil spirits, who jeer\nat your attempts to pass."
+    },
+    {
+      "command": "ring bell",
+      "response": "The bell suddenly becomes red hot and falls to the ground.\nThe wraiths, as if paralyzed, stop their jeering and slowly turn to face you.\nOn their ashen faces, the expression of a long-forgotten terror takes shape.\n\nIn your confusion, the candles drop to the ground (and they\nare out)."
+    },
+    {
+      "command": "take candles",
+      "response": "Taken."
+    },
+    {
+      "command": "light match",
+      "response": "One of the matches starts to burn."
+    },
+    {
+      "command": "light candles with match",
+      "response": "The candles are lit.\n\nThe flames flicker wildly and appear to dance. The earth\nbeneath your feet trembles, and your legs nearly buckle beneath you. The\nspirits cower at your unearthly power.\n\nThe match has gone out."
+    },
+    {
+      "command": "read book",
+      "response": "Each word of the prayer reverberates through the hall in a\ndeafening confusion. As the last word fades, a voice, loud and commanding,\nspeaks: \"Begone, fiends!\" A heart-stopping scream fills the cavern,\nand the spirits, sensing a greater power, flee through the walls."
+    },
+    {
+      "command": "drop book",
+      "response": "Dropped."
+    },
+    {
+      "command": "go south",
+      "response": "Land of the Dead\n\nYou have entered the Land of the Living Dead. Thousands of\nlost souls can be heard weeping and moaning. In the corner are stacked the\nremains of dozens of previous adventurers less fortunate than yourself. A\npassage exits to the north.\n\nLying in one corner of the room is a beautifully carved\ncrystal skull. It appears to be grinning at you rather nastily."
+    },
+    {
+      "command": "take skull",
+      "response": "Taken."
+    },
+    {
+      "command": "go north",
+      "response": "Entrance to Hades\n\nThere is a black book here.\n\nOn the ground is a red hot bell."
+    },
+    {
+      "command": "go up",
+      "response": "Cave\n\nA gust of wind blows out your candles!"
+    },
+    {
+      "command": "go north",
+      "response": "Mirror Room\n\nYou are in a large square room with tall ceilings. On the\nsouth wall is an enormous mirror which fills the entire wall. There are exits\non the other three sides of the room."
+    },
+    {
+      "command": "rub mirror",
+      "response": "There is a rumble from deep within the earth and the room\nshakes."
+    },
+    {
+      "command": "go north",
+      "response": "Cold Passage\n\nThis is a cold and damp corridor where a long east-west\npassageway turns into a southward path."
+    },
+    {
+      "command": "go west",
+      "response": "Slide Room\n\nThis is a small chamber, which appears to have been part of\na coal mine. On the south wall of the chamber the letters \"Granite\nWall\" are etched in the rock. To the east is a long passage, and there is\na steep metal slide twisting downward. To the north is a small opening."
+    },
+    {
+      "command": "go north",
+      "response": "Mine Entrance\n\nYou are standing at the entrance of what might have been a\ncoal mine. The shaft enters the west wall, and there is another exit on the\nsouth end of the room."
+    },
+    {
+      "command": "go west",
+      "response": "Squeaky Room\n\nYou are in a small room. Strange squeaky sounds may be heard\ncoming from the passage at the north end. You may also escape to the east."
+    },
+    {
+      "command": "inventory",
+      "response": "You are carrying:\n\nA crystal\nskull\n\nA pair of\ncandles\n\nA torch\n(providing light)\n\nA screwdriver\n\nA matchbook\n\nA clove of\ngarlic\n\nA brass\nlantern"
+    },
+    {
+      "command": "go north",
+      "response": "Bat Room\n\nYou are in a small room which has doors only to the east and\nsouth.\n\nIn the corner of the room on the ceiling is a large vampire\nbat who is obviously deranged and holding his nose.\n\nThere is an exquisite jade figurine here."
+    },
+    {
+      "command": "go east",
+      "response": "Shaft Room\n\nThis is a large room, in the middle of which is a small\nshaft descending through the floor into darkness below. To the west and the\nnorth are exits from this room. Constructed over the top of the shaft is a\nmetal framework to which a heavy iron chain is attached.\n\nAt the end of the chain is a basket."
+    },
+    {
+      "command": "put torch in basket",
+      "response": "Done."
+    },
+    {
+      "command": "put screwdriver in basket",
+      "response": "Done."
+    },
+    {
+      "command": "turn on lamp",
+      "response": "The brass lantern is now on."
+    },
+    {
+      "command": "go north",
+      "response": "Smelly Room\n\nThis is a small non-descript room. However, from the\ndirection of a small descending staircase a foul odor can be detected. To the\nsouth is a narrow tunnel."
+    },
+    {
+      "command": "go down",
+      "response": "Gas Room\n\nThis is a small room which smells strongly of coal gas.\nThere is a short climb up some stairs and a narrow tunnel leading east.\n\nThere is a sapphire-encrusted bracelet here."
+    },
+    {
+      "command": "go east",
+      "response": "Coal Mine\n\nThis is a non-descript part of a coal mine."
+    },
+    {
+      "command": "go northeast",
+      "response": "Coal Mine\n\nThis is a non-descript part of a coal mine.\nThere is a black book here."
+    },
+    {
+      "command": "go southeast",
+      "response": "Coal Mine\n\nThis is a non-descript part of a coal mine."
+    },
+    {
+      "command": "go southwest",
+      "response": "Coal Mine\n\nThis is a non-descript part of a coal mine."
+    },
+    {
+      "command": "go down",
+      "response": "Ladder Top\n\nThis is a very small room. In the corner is a rickety wooden\nladder, leading downward. It might be safe to descend. There is also a\nstaircase leading upward.\nSomeone carrying a large bag is casually leaning against one of the walls here. He does not speak, but it is clear from his aspect that the bag will be taken only over his dead body."
+    },
+    {
+      "command": "go down",
+      "response": "Ladder Bottom\n\nThis is a rather wide room. On one side is the bottom of a\nnarrow wooden ladder. To the west and the south are passages leaving the room."
+    },
+    {
+      "command": "go south",
+      "response": "Dead End\n\nYou have come to a dead end in the mine.\n\nThere is a small pile of coal here."
+    },
+    {
+      "command": "take coal",
+      "response": "Taken."
+    },
+    {
+      "command": "go north",
+      "response": "Ladder Bottom"
+    },
+    {
+      "command": "go up",
+      "response": "Ladder Top"
+    },
+    {
+      "command": "go up",
+      "response": "Coal Mine"
+    },
+    {
+      "command": "go north",
+      "response": "Coal Mine"
+    },
+    {
+      "command": "go east",
+      "response": "Coal Mine\nThere is a black book here."
+    },
+    {
+      "command": "go south",
+      "response": "Coal Mine"
+    },
+    {
+      "command": "go north",
+      "response": "Gas Room\n\nThere is a sapphire-encrusted bracelet here."
+    },
+    {
+      "command": "go up",
+      "response": "Smelly Room"
+    },
+    {
+      "command": "go south",
+      "response": "Shaft Room\n\nAt the end of the chain is a basket.\n\nThe basket contains:\n\nA screwdriver\n\nA torch\n(providing light)"
+    },
+    {
+      "command": "put coal in basket",
+      "response": "Done."
+    },
+    {
+      "command": "lower basket",
+      "response": "The basket is lowered to the bottom of the shaft."
+    },
+    {
+      "command": "go north",
+      "response": "Smelly Room"
+    },
+    {
+      "command": "go down",
+      "response": "Gas Room\n\nThere is a sapphire-encrusted bracelet here."
+    },
+    {
+      "command": "go east",
+      "response": "Coal Mine"
+    },
+    {
+      "command": "go northeast",
+      "response": "Coal Mine\nThere is a black book here."
+    },
+    {
+      "command": "go southeast",
+      "response": "Coal Mine"
+    },
+    {
+      "command": "go southwest",
+      "response": "Coal Mine"
+    },
+    {
+      "command": "go down",
+      "response": "Ladder Top"
+    },
+    {
+      "command": "go down",
+      "response": "Ladder Bottom"
+    },
+    {
+      "command": "go west",
+      "response": "Timber Room\n\nThis is a long and narrow passage, which is cluttered with\nbroken timbers. A wide passage comes from the east and turns at the west end of\nthe room into a very narrow passageway. From the west comes a strong draft.\n\nThere is a broken timber here."
+    },
+    {
+      "command": "drop all",
+      "response": "crystal skull: Dropped.\n\npair of candles: Dropped.\n\nmatchbook: Dropped.\n\nclove of garlic: Dropped.\n\nbrass lantern: Dropped."
+    },
+    {
+      "command": "go west",
+      "response": "Drafty Room\n\nThis is a small drafty room in which is the bottom of a long\nshaft. To the south is a passageway and to the east a very narrow passage. In\nthe shaft can be seen a heavy iron chain.\n\nAt the end of the chain is a basket.\n\nThe basket contains:\n\nA small pile\nof coal\n\nA screwdriver\n\nA torch\n(providing light)"
+    },
+    {
+      "command": "take coal",
+      "response": "Taken."
+    },
+    {
+      "command": "take screwdriver",
+      "response": "Taken."
+    },
+    {
+      "command": "take torch",
+      "response": "Taken."
+    },
+    {
+      "command": "go south",
+      "response": "Machine Room\n\nThis is a large, cold room whose sole exit is to the north.\nIn one corner there is a machine which is reminiscent of a clothes dryer. On\nits face is a switch which is labelled \"START\". The switch does not\nappear to be manipulable by any human hand (unless the fingers are about 1/16\nby 1/4 inch). On the front of the machine is a large lid, which is closed."
+    },
+    {
+      "command": "open lid",
+      "response": "The lid opens."
+    },
+    {
+      "command": "put coal in machine",
+      "response": "Done."
+    },
+    {
+      "command": "close lid",
+      "response": "The lid closes."
+    },
+    {
+      "command": "turn switch with screwdriver",
+      "response": "The machine comes to life (figuratively) with a dazzling\ndisplay of colored lights and bizarre noises. After a few moments, the\nexcitement abates."
+    },
+    {
+      "command": "drop screwdriver",
+      "response": "Dropped."
+    },
+    {
+      "command": "open lid",
+      "response": "The lid opens, revealing a huge diamond."
+    },
+    {
+      "command": "take diamond",
+      "response": "Taken."
+    },
+    {
+      "command": "go north",
+      "response": "Drafty Room\n\nAt the end of the chain is a basket."
+    },
+    {
+      "command": "put torch in basket",
+      "response": "Done."
+    },
+    {
+      "command": "put diamond in basket",
+      "response": "Done."
+    },
+    {
+      "command": "go east",
+      "response": "Timber Room\n\nThere is a brass lantern (battery-powered) here.\n\nThere is a clove of garlic here.\n\nThere is a matchbook whose cover says \"Visit Beautiful\nFCD#3\" here.\n\nThere is a pair of candles here.\n\nThere is a crystal skull here.\n\nThere is a broken timber here."
+    },
+    {
+      "command": "take skull",
+      "response": "Taken."
+    },
+    {
+      "command": "take lamp",
+      "response": "Taken."
+    },
+    {
+      "command": "take garlic",
+      "response": "Taken."
+    },
+    {
+      "command": "go east",
+      "response": "Ladder Bottom"
+    },
+    {
+      "command": "go up",
+      "response": "Ladder Top"
+    },
+    {
+      "command": "go up",
+      "response": "Coal Mine"
+    },
+    {
+      "command": "go north",
+      "response": "Coal Mine\n\nA seedy-looking individual with a large bag just wandered\nthrough the room. On the way through, he quietly abstracted some valuables from\nthe room and from your possession, mumbling something about \"Doing unto\nothers before...\""
+    },
+    {
+      "command": "go east",
+      "response": "Coal Mine"
+    },
+    {
+      "command": "go south",
+      "response": "Coal Mine\n\nA \"lean and hungry\" gentleman just wandered\nthrough, carrying a large bag. Finding nothing of value, he left disgruntled."
+    },
+    {
+      "command": "go north",
+      "response": "Gas Room\n\nThere is a sapphire-encrusted bracelet here."
+    },
+    {
+      "command": "take bracelet",
+      "response": "Taken."
+    },
+    {
+      "command": "go up",
+      "response": "Smelly Room"
+    },
+    {
+      "command": "go south",
+      "response": "Shaft Room\n\nFrom the chain is suspended a basket."
+    },
+    {
+      "command": "raise basket",
+      "response": "The basket is raised to the top of the shaft."
+    },
+    {
+      "command": "look in basket",
+      "response": "The basket contains:\n\nA huge diamond\n\nA torch\n(providing light)"
+    },
+    {
+      "command": "take diamond",
+      "response": "Taken."
+    },
+    {
+      "command": "take torch",
+      "response": "Taken."
+    },
+    {
+      "command": "turn off lamp",
+      "response": "The brass lantern is now off."
+    },
+    {
+      "command": "go west",
+      "response": "Bat Room\n\nIn the corner of the room on the ceiling is a large vampire\nbat who is obviously deranged and holding his nose.\n\nThere is an exquisite jade figurine here."
+    },
+    {
+      "command": "take jade",
+      "response": "Taken."
+    },
+    {
+      "command": "go south",
+      "response": "Squeaky Room"
+    },
+    {
+      "command": "go east",
+      "response": "Mine Entrance"
+    },
+    {
+      "command": "go south",
+      "response": "Slide Room"
+    },
+    {
+      "command": "go down",
+      "response": "Cellar"
+    },
+    {
+      "command": "go up",
+      "response": "Living Room\n\nThere is a nasty knife here.\n\nYour collection of treasures consists of:\n\nA\nsceptre\n\nA\npot of gold\n\nA\ngold coffin\n\nA\npainting"
+    },
+    {
+      "command": "inventory",
+      "response": "You are carrying:\n\nA jade figurine\n\nA torch\n(providing light)\n\nA huge diamond\n\nA clove of\ngarlic\n\nA brass\nlantern"
+    },
+    {
+      "command": "put jade in case",
+      "response": "Done."
+    },
+    {
+      "command": "put diamond in case",
+      "response": "Done."
+    },
+    {
+      "command": "turn on lamp",
+      "response": "The brass lantern is now on."
+    },
+    {
+      "command": "go down",
+      "response": "Cellar"
+    },
+    {
+      "command": "go north",
+      "response": "The Troll Room\n\nThere is a sword here.\n\nThere is a bloody axe here."
+    },
+    {
+      "command": "go east",
+      "response": "East-West Passage"
+    },
+    {
+      "command": "go north",
+      "response": "Chasm"
+    },
+    {
+      "command": "go northeast",
+      "response": "Reservoir South\n\nYou are in a long room, to the north of which was formerly a\nlake. However, with the water level lowered, there is merely a wide stream\nrunning through the center of the room.\n\nThere is a path along the stream to the east or west, a\nsteep pathway climbing southwest along the edge of a chasm, and a path leading\ninto a canyon to the southeast."
+    },
+    {
+      "command": "go north",
+      "response": "Reservoir\n\nYou are on what used to be a large lake, but which is now a\nlarge mud pile. There are \"shores\" to the north and south.\n\nLying half buried in the mud is an old trunk, bulging with\njewels."
+    },
+    {
+      "command": "take trunk",
+      "response": "Taken."
+    },
+    {
+      "command": "go north",
+      "response": "Reservoir North\n\nYou are in a large cavernous room, the south of which was\nformerly a lake. However, with the water level lowered, there is merely a wide\nstream running through there.\n\nThere is a slimy stairway leaving the room to the north.\n\nThere is a hand-held air pump here."
+    },
+    {
+      "command": "take pump",
+      "response": "Taken."
+    },
+    {
+      "command": "take pump",
+      "response": "Taken."
+    },
+    {
+      "command": "go north",
+      "response": "Atlantis Room\n\nThis is an ancient room, long under water. There is an exit\nto the south and a staircase leading up.\n\nOn the shore lies Poseidon's own crystal trident."
+    },
+    {
+      "command": "take trident",
+      "response": "Your load is too heavy."
+    },
+    {
+      "command": "inventory",
+      "response": "You are carrying:\n\nA hand-held\nair pump\n\nA trunk of jewels\n\nA torch\n(providing light)\n\nA clove of\ngarlic\n\nA brass\nlantern (providing light)"
+    },
+    {
+      "command": "drop torch",
+      "response": "Dropped."
+    },
+    {
+      "command": "take trident",
+      "response": "Taken."
+    },
+    {
+      "command": "go south",
+      "response": "Reservoir North"
+    },
+    {
+      "command": "go south",
+      "response": "Reservoir"
+    },
+    {
+      "command": "go south",
+      "response": "Reservoir South"
+    },
+    {
+      "command": "go east",
+      "response": "Dam\n\nThere is a wrench here."
+    },
+    {
+      "command": "go east",
+      "response": "Dam Base\n\nYou are at the base of Flood Control Dam #3, which looms\nabove you and to the north. The river Frigid is flowing by here. Along the\nriver are the White Cliffs which seem to form giant walls stretching from north\nto south along the shores of the river as it winds its way downstream.\n\nThere is a folded pile of plastic here which has a small\nvalve attached."
+    },
+    {
+      "command": "inflate plastic with pump",
+      "response": "The boat inflates and appears seaworthy.\n\nA tan label is lying inside the boat."
+    },
+    {
+      "command": "drop pump",
+      "response": "Dropped."
+    },
+    {
+      "command": "go inside boat",
+      "response": "You are now in the magic boat."
+    },
+    {
+      "command": "launch",
+      "response": "(magic boat)\n\nFrigid River, in the magic boat\n\nYou are on the Frigid River in the vicinity of the Dam. The\nriver flows quietly here. There is a landing on the west shore.\n\nThe magic boat contains:\n\nA tan label"
+    },
+    {
+      "command": "wait",
+      "response": "Time passes...\n\nThe flow of the river carries you downstream.\n\nFrigid River, in the magic boat\n\nThe river turns a corner here making it impossible to see\nthe Dam. The White Cliffs loom on the east bank and large rocks prevent landing\non the west.\n\nThe magic boat contains:\n\nA tan label"
+    },
+    {
+      "command": "wait",
+      "response": "Time passes..."
+    },
+    {
+      "command": "wait",
+      "response": "Time passes...\n\nThe flow of the river carries you downstream.\n\nFrigid River, in the magic boat\n\nThe river is running faster here and the sound ahead appears\nto be that of rushing water. On the east shore is a sandy beach. A small area\nof beach can also be seen below the cliffs on the west shore.\n\nThere is a red buoy here (probably a warning).\n\nThe magic boat contains:\n\nA tan label"
+    },
+    {
+      "command": "take buoy",
+      "response": "Taken."
+    },
+    {
+      "command": "go east",
+      "response": "The magic boat comes to a rest on the shore.\n\nSandy Beach, in the magic boat\n\nYou are on a large sandy beach on the east shore of the\nriver, which is flowing quickly by. A path runs beside the river to the south\nhere, and a passage is partially buried in sand to the northeast.\n\nThere is a shovel here. (outside the magic boat)\n\nThe magic boat\ncontains:\n\nA\ntan label"
+    },
+    {
+      "command": "leave boat",
+      "response": "You are on your own feet again."
+    },
+    {
+      "command": "take shovel",
+      "response": "Your load is too heavy."
+    },
+    {
+      "command": "drop garlic",
+      "response": "Dropped."
+    },
+    {
+      "command": "take shovel",
+      "response": "Your load is too heavy."
+    },
+    {
+      "command": "drop buoy",
+      "response": "Dropped."
+    },
+    {
+      "command": "take shovel",
+      "response": "Taken."
+    },
+    {
+      "command": "go northeast",
+      "response": "Sandy Cave\n\nThis is a sand-filled cave whose exit is to the southwest."
+    },
+    {
+      "command": "dig",
+      "response": "What do you want to dig in?"
+    },
+    {
+      "command": "sand",
+      "response": "(with the shovel)\n\nYou seem to be digging a hole here."
+    },
+    {
+      "command": "dig sand",
+      "response": "(with the shovel)\n\nThe hole is getting deeper, but that's about it."
+    },
+    {
+      "command": "dig sand",
+      "response": "(with the shovel)\n\nYou are surrounded by a wall of sand on all sides."
+    },
+    {
+      "command": "dig sand",
+      "response": "(with the shovel)\n\nYou can see a scarab here in the sand."
+    },
+    {
+      "command": "take scarab",
+      "response": "Taken."
+    },
+    {
+      "command": "drop shovel",
+      "response": "Dropped."
+    },
+    {
+      "command": "go southwest",
+      "response": "Sandy Beach\n\nThere is a red buoy here.\n\nThere is a clove of garlic here.\n\nThere is a magic boat here.\n\nThe magic boat contains:\n\nA tan label"
+    },
+    {
+      "command": "open buoy",
+      "response": "Opening the red buoy reveals a large emerald."
+    },
+    {
+      "command": "take emerald",
+      "response": "Taken."
+    },
+    {
+      "command": "take garlic",
+      "response": "Taken."
+    },
+    {
+      "command": "go south",
+      "response": "Shore\n\nYou are on the east shore of the river. The water here seems\nsomewhat treacherous. A path travels from north to south here, the south end\nquickly turning around a sharp corner."
+    },
+    {
+      "command": "go south",
+      "response": "Aragain Falls\n\nYou are at the top of Aragain Falls, an enormous waterfall\nwith a drop of about 450 feet. The only path here is on the north end.\n\nA solid rainbow spans the falls."
+    },
+    {
+      "command": "cross rainbow",
+      "response": "End of Rainbow"
+    },
+    {
+      "command": "turn off lamp",
+      "response": "The brass lantern is now off."
+    },
+    {
+      "command": "go southwest",
+      "response": "Canyon Bottom"
+    },
+    {
+      "command": "go up",
+      "response": "Rocky Ledge"
+    },
+    {
+      "command": "go up",
+      "response": "Canyon View"
+    },
+    {
+      "command": "go northwest",
+      "response": "Clearing"
+    },
+    {
+      "command": "go west",
+      "response": "Behind House"
+    },
+    {
+      "command": "enter house",
+      "response": "Kitchen\n\nA bottle is sitting on the table.\n\nThe glass bottle contains:\n\nA quantity of\nwater\n\nThere is a brown sack here.\n\nThe brown sack contains:\n\nA lunch"
+    },
+    {
+      "command": "go west",
+      "response": "Living Room\n\nThere is a nasty knife here.\n\nYour collection of treasures consists of:\n\nA huge diamond\n\nA\njade figurine\n\nA\nsceptre\n\nA\npot of gold\n\nA\ngold coffin\n\nA\npainting"
+    },
+    {
+      "command": "inventory",
+      "response": "You are carrying:\n\nA clove of\ngarlic\n\nA large\nemerald\n\nA beautiful\njeweled scarab\n\nA crystal\ntrident\n\nA trunk of\njewels\n\nA brass\nlantern"
+    },
+    {
+      "command": "put emerald in case",
+      "response": "Done."
+    },
+    {
+      "command": "put scarab in case",
+      "response": "Done."
+    },
+    {
+      "command": "put trident in case",
+      "response": "Done."
+    },
+    {
+      "command": "put jewels in case",
+      "response": "Done."
+    },
+    {
+      "command": "go east",
+      "response": "Kitchen\n\nA bottle is sitting on the table.\n\nThe glass bottle contains:\n\nA quantity of\nwater\n\nThere is a brown sack here.\n\nThe brown sack contains:\n\nA lunch"
+    },
+    {
+      "command": "go east",
+      "response": "Behind House"
+    },
+    {
+      "command": "go north",
+      "response": "North of House\n\nYou are facing the north side of a white house. There is no\ndoor here, and all the windows are boarded up. To the north a narrow path winds\nthrough the trees."
+    },
+    {
+      "command": "go north",
+      "response": "Forest Path\n\nThis is a path winding through a dimly lit forest. The path\nheads north-south here. One particularly large tree with some low branches\nstands at the edge of the path."
+    },
+    {
+      "command": "climb tree",
+      "response": "Up a Tree\n\nYou are about 10 feet above the ground nestled among some\nlarge branches. The nearest branch above you is above your reach.\n\nBeside you on the branch is a small bird's nest.\n\nIn the bird's nest is a large egg encrusted with precious\njewels, apparently scavenged by a childless songbird. The egg is covered with\nfine gold inlay, and ornamented in lapis lazuli and mother-of-pearl. Unlike\nmost eggs, this one is hinged and closed with a delicate looking clasp. The egg\nappears extremely fragile."
+    },
+    {
+      "command": "take egg",
+      "response": "Taken."
+    },
+    {
+      "command": "climb down",
+      "response": "(down the tree)\n\nForest Path\n\nYou hear in the distance the chirping of a song bird."
+    },
+    {
+      "command": "go south",
+      "response": "North of House"
+    },
+    {
+      "command": "go east",
+      "response": "Behind House"
+    },
+    {
+      "command": "enter house",
+      "response": "Kitchen\n\nA bottle is sitting on the table.\n\nThe glass bottle contains:\n\nA quantity of\nwater\n\nThere is a brown sack here.\n\nThe brown sack contains:\n\nA lunch"
+    },
+    {
+      "command": "go west",
+      "response": "Living Room\n\nThere is a nasty knife here.\n\nYour collection of treasures consists of:\n\nA\ntrunk of jewels\n\nA\ncrystal trident\n\nA\nbeautiful jeweled scarab\n\nA\nlarge emerald\n\nA\nhuge diamond\n\nA\njade figurine\n\nA\nsceptre\n\nA\npot of gold\n\nA\ngold coffin\n\nA\npainting"
+    },
+    {
+      "command": "turn on lamp",
+      "response": "The brass lantern is now on."
+    },
+    {
+      "command": "go down",
+      "response": "Cellar"
+    },
+    {
+      "command": "go north",
+      "response": "The Troll Room\n\nThere is a sword here.\n\nThere is a bloody axe here."
+    },
+    {
+      "command": "go west",
+      "response": "Maze\n\nThis is part of a maze of twisty little passages, all alike."
+    },
+    {
+      "command": "go south",
+      "response": "Maze\n\nThis is part of a maze of twisty little passages, all alike."
+    },
+    {
+      "command": "go east",
+      "response": "Maze\n\nThis is part of a maze of twisty little passages, all alike."
+    },
+    {
+      "command": "go up",
+      "response": "Maze\n\nThis is part of a maze of twisty little passages, all alike.\nA skeleton, probably the remains of a luckless adventurer, lies here.\n\nBeside the skeleton is a rusty knife.\n\nThe deceased adventurer's useless lantern is here.\n\nThere is a skeleton key here.\n\nAn old leather bag, bulging with coins, is here."
+    },
+    {
+      "command": "take coins",
+      "response": "Taken."
+    },
+    {
+      "command": "take key",
+      "response": "Taken."
+    },
+    {
+      "command": "go southwest",
+      "response": "Maze\n\nThis is part of a maze of twisty little passages, all alike.\n\nThe lamp appears a bit dimmer."
+    },
+    {
+      "command": "go east",
+      "response": "Maze\n\nThis is part of a maze of twisty little passages, all alike."
+    },
+    {
+      "command": "go south",
+      "response": "Maze\n\nThis is part of a maze of twisty little passages, all alike."
+    },
+    {
+      "command": "go southeast",
+      "response": "Cyclops Room\n\nThis room has an exit on the northwest, and a staircase\nleading up.\n\nA cyclops, who looks prepared to eat horses (much less mere\nadventurers), blocks the staircase. From his state of health, and the\nbloodstains on the walls, you gather that he is not very friendly, though he\nlikes people."
+    },
+    {
+      "command": "Ulysses",
+      "response": "The cyclops, hearing the name of his father's deadly\nnemesis, flees the room by knocking down the wall on the east of the room.\n\nTreasure Room\n\nThis is a large room, whose east wall is solid granite. A\nnumber of discarded bags, which crumble at your touch, are scattered about on\nthe floor. There is an exit down a staircase.\n\nThere is a suspicious-looking individual, holding a large\nbag, leaning against one wall. He is armed with a deadly stiletto.\n\nThere is a silver chalice, intricately engraved, here.\n\nThe thief attacks, and you fall back desperately."
+    },
+    {
+      "command": "give egg to thief",
+      "response": "The thief is taken aback by your unexpected generosity, but\naccepts the jewel-encrusted egg and stops to admire its beauty."
+    },
+    {
+      "command": "go down",
+      "response": "Cyclops Room"
+    },
+    {
+      "command": "go east",
+      "response": "Strange Passage\n\nThis is a long passage. To the west is one entrance. On the\neast there is an old wooden door, with a large opening in it (about cyclops\nsized)."
+    },
+    {
+      "command": "go east",
+      "response": "Living Room\n\nThere is a nasty knife here.\n\nYour collection of treasures consists of:\n\nA\ntrunk of jewels\n\nA\ncrystal trident\n\nA\nbeautiful jeweled scarab\n\nA\nlarge emerald\n\nA\nhuge diamond\n\nA\njade figurine\n\nA\nsceptre\n\nA\npot of gold\n\nA\ngold coffin\n\nA\npainting"
+    },
+    {
+      "command": "put coins in case",
+      "response": "Done."
+    },
+    {
+      "command": "take knife",
+      "response": "Taken."
+    },
+    {
+      "command": "go west",
+      "response": "Strange Passage"
+    },
+    {
+      "command": "go west",
+      "response": "Cyclops Room"
+    },
+    {
+      "command": "go up",
+      "response": "You hear a scream of anguish as you violate the robber's\nhideaway. Using passages unknown to you, he rushes to its defense.\n\nThe thief gestures mysteriously, and the treasures in the\nroom suddenly vanish.\n\nTreasure Room\n\nThere is a suspicious-looking individual, holding a large\nbag, leaning against one wall. He is armed with a deadly stiletto.\n\nThere is a silver chalice, intricately engraved, here.\n\nYou dodge as the thief comes in low."
+    },
+    {
+      "command": "kill thief with knife",
+      "response": "The thief is disarmed by a subtle feint past his guard.\n\nThe robber, somewhat surprised at this turn of events,\nnimbly retrieves his stiletto."
+    },
+    {
+      "command": "kill thief with knife",
+      "response": "You dodge as the thief comes in low."
+    },
+    {
+      "command": "kill thief with knife",
+      "response": "It's curtains for the thief as your nasty knife removes his\nhead.\n\nAlmost as soon as the thief breathes his last breath, a\ncloud of sinister black fog envelops him, and when the fog lifts, the carcass\nhas disappeared.\n\nAs the thief dies, the power of his magic decreases, and his\ntreasures reappear:\n\nA stiletto\n\nA\njewel-encrusted egg, with a golden clockwork canary\n\nA torch\n\nA crystal\nskull\n\nA\nsapphire-encrusted bracelet\n\nThe chalice is now safe to take."
+    },
+    {
+      "command": "take all",
+      "response": "stiletto: Taken.\n\njewel-encrusted egg: Taken.\n\ntorch: Taken.\n\ncrystal skull: Taken.\n\nsapphire-encrusted bracelet: Taken.\n\nchalice: Your load is too heavy."
+    },
+    {
+      "command": "drop stiletto",
+      "response": "Dropped."
+    },
+    {
+      "command": "take chalice",
+      "response": "You're holding too many things already!"
+    },
+    {
+      "command": "drop torch",
+      "response": "Dropped."
+    },
+    {
+      "command": "take chalice",
+      "response": "Taken."
+    },
+    {
+      "command": "go down",
+      "response": "Cyclops Room"
+    },
+    {
+      "command": "go northwest",
+      "response": "Maze\n\nThis is part of a maze of twisty little passages, all alike."
+    },
+    {
+      "command": "go south",
+      "response": "Maze\n\nThis is part of a maze of twisty little passages, all alike."
+    },
+    {
+      "command": "go west",
+      "response": "Maze\n\nThis is part of a maze of twisty little passages, all alike."
+    },
+    {
+      "command": "go up",
+      "response": "Maze\n\nThis is part of a maze of twisty little passages, all alike."
+    },
+    {
+      "command": "go down",
+      "response": "You won't be able to get back up to the tunnel you are going\nthrough when it gets to the next room.\n\nMaze\n\nThis is part of a maze of twisty little passages, all alike."
+    },
+    {
+      "command": "go northeast",
+      "response": "Grating Room\n\nYou are in a small room near the maze. There are twisty\npassages in the immediate vicinity.\n\nAbove you is a grating locked with a skull-and-crossbones\nlock."
+    },
+    {
+      "command": "unlock grate",
+      "response": "(with the skeleton key)\n\nThe grate is unlocked."
+    },
+    {
+      "command": "open grate",
+      "response": "The grating opens to reveal trees above you.\n\nA pile of leaves falls onto your head and to the ground."
+    },
+    {
+      "command": "go up",
+      "response": "Clearing\n\nYou are in a clearing, with a forest surrounding you on all\nsides. A path leads south.\n\nThere is an open grating, descending into darkness."
+    },
+    {
+      "command": "go south",
+      "response": "Forest Path\n\nYou hear in the distance the chirping of a song bird."
+    },
+    {
+      "command": "climb tree",
+      "response": "Up a Tree\n\nBeside you on the branch is a small bird's nest.\n\nYou hear in the distance the chirping of a song bird."
+    },
+    {
+      "command": "wind up canary",
+      "response": "The canary chirps, slightly off-key, an aria from a\nforgotten opera. From out of the greenery flies a lovely songbird. It perches\non a limb just over your head and opens its beak to sing. As it does so a\nbeautiful brass bauble drops from its mouth, bounces off the top of your head,\nand lands glimmering in the grass. As the canary winds down, the songbird flies\naway."
+    },
+    {
+      "command": "go down",
+      "response": "Forest Path\n\nThere is a beautiful brass bauble here."
+    },
+    {
+      "command": "take bauble",
+      "response": "You're holding too many things already!"
+    },
+    {
+      "command": "drop knife",
+      "response": "Dropped.\n\nYou hear in the distance the chirping of a song bird."
+    },
+    {
+      "command": "take bauble",
+      "response": "Taken."
+    },
+    {
+      "command": "go south",
+      "response": "North of House"
+    },
+    {
+      "command": "go east",
+      "response": "Behind House"
+    },
+    {
+      "command": "enter house",
+      "response": "Kitchen\n\nA bottle is sitting on the table.\n\nThe glass bottle contains:\n\nA quantity of\nwater\n\nThere is a brown sack here.\n\nThe brown sack contains:\n\nA lunch"
+    },
+    {
+      "command": "go west",
+      "response": "Living Room\n\nYour collection of treasures consists of:\n\nA leather bag\nof coins\n\nA trunk of\njewels\n\nA crystal\ntrident\n\nA beautiful\njeweled scarab\n\nA large\nemerald\n\nA huge diamond\n\nA jade\nfigurine\n\nA sceptre\n\nA pot of gold\n\nA gold coffin\n\nA painting"
+    },
+    {
+      "command": "put bauble in case",
+      "response": "Done."
+    },
+    {
+      "command": "put chalice in case",
+      "response": "Done."
+    },
+    {
+      "command": "take canary from egg",
+      "response": "Taken."
+    },
+    {
+      "command": "put canary in case",
+      "response": "Done."
+    },
+    {
+      "command": "put egg in case",
+      "response": "Done."
+    },
+    {
+      "command": "put bracelet in case",
+      "response": "Done."
+    },
+    {
+      "command": "put skull in case",
+      "response": "Done."
+    },
+    {
+      "command": "go down",
+      "response": "Cellar"
+    },
+    {
+      "command": "go north",
+      "response": "The Troll Room\n\nThere is a sword here.\n\nThere is a bloody axe here."
+    },
+    {
+      "command": "go east",
+      "response": "East-West Passage"
+    },
+    {
+      "command": "go east",
+      "response": "Round Room"
+    },
+    {
+      "command": "go east",
+      "response": "Loud Room\n\nThis is a large room with a ceiling which cannot be detected\nfrom the ground. There is a narrow passage from east to west and a stone\nstairway leading upward. The room is deafeningly loud with an undetermined\nrushing sound. The sound seems to reverberate from all of the walls, making it\ndifficult even to think.\n\nOn the ground is a large platinum bar."
+    },
+    {
+      "command": "echo",
+      "response": "The acoustics of the room change subtly.\n\nLoud Room\n\nOn the ground is a large platinum bar."
+    },
+    {
+      "command": "take bar",
+      "response": "Taken."
+    },
+    {
+      "command": "go west",
+      "response": "Round Room"
+    },
+    {
+      "command": "go west",
+      "response": "East-West Passage"
+    },
+    {
+      "command": "go west",
+      "response": "The Troll Room\n\nThere is a sword here.\n\nThere is a bloody axe here."
+    },
+    {
+      "command": "go south",
+      "response": "Cellar"
+    },
+    {
+      "command": "go up",
+      "response": "Living Room\n\nYour collection of treasures consists of:\n\nA crystal\nskull\n\nA\nsapphire-encrusted bracelet\n\nA\njewel-encrusted egg\n\nA golden\nclockwork canary\n\nA chalice\n\nA beautiful\nbrass bauble\n\nA leather bag\nof coins\n\nA trunk of\njewels\n\nA crystal\ntrident\n\nA beautiful\njeweled scarab\n\nA large\nemerald\n\nA huge diamond\n\nA jade\nfigurine\n\nA sceptre\n\nA pot of gold\n\nA gold coffin\n\nA painting"
+    },
+    {
+      "command": "put bar in case",
+      "response": "Done.\n\nPoints: 349"
+    }
+  ]
+}

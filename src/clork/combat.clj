@@ -761,13 +761,18 @@
                               ;; Active villain - check if wants to fight
                               :else
                               (let [has-fightbit? (gs/set-thing-flag? gs villain-id :fight)
-                                    ;; Check F-FIRST? action
-                                    wants-first? (when-not has-fightbit?
-                                                   (when-let [action (get-in gs [:objects villain-id :action])]
-                                                     ;; F-FIRST? should return truthy to initiate combat
-                                                     (let [result (action gs :f-first?)]
-                                                       (and result (not= result gs)))))]
-                                [gs (or fight? has-fightbit? wants-first?)]))))
+                                    ;; Check F-FIRST? action - may return modified game-state with :fight flag set
+                                    [new-gs wants-first?]
+                                    (if has-fightbit?
+                                      [gs false]
+                                      (if-let [action (get-in gs [:objects villain-id :action])]
+                                        ;; F-FIRST? should return modified game-state to initiate combat
+                                        (let [result (action gs :f-first?)]
+                                          (if (and result (not= result gs))
+                                            [result true]  ; Use modified state
+                                            [gs false]))
+                                        [gs false]))]
+                                [new-gs (or fight? has-fightbit? wants-first?)]))))
                         [game-state false]
                         villains-map)]
       ;; After checking all villains, fight if any want to

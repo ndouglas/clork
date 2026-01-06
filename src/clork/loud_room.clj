@@ -103,12 +103,15 @@
     :m-end
     (if (room-is-deafening? game-state)
       ;; Player is forced out of the room
-      (let [escape-room (pick-scramble-room)]
+      ;; ZIL: <GOTO <PICK-ONE ,LOUD-RUNS>> - moves player AND describes new room
+      (let [escape-room (pick-scramble-room)
+            v-first-look (requiring-resolve 'clork.verbs-look/v-first-look)]
         (-> game-state
             (utils/tell "It is unbearably loud here, with an ear-splitting roar seeming to come from all around you. There is a pounding in your head which won't stop. With a tremendous effort, you scramble out of the room.")
             (utils/crlf)
             (utils/crlf)
             (assoc :here escape-room)
+            (v-first-look)
             ;; Mark that we handled the action (don't process further)
             (assoc ::ejected true)))
       game-state)

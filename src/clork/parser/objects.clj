@@ -449,12 +449,21 @@
 
    Returns: {:success bool, :game-state gs, :matches [...] or :error {...}}"
   [game-state ptr end-ptr match-table-key]
-  (let [initial-table (get-in game-state [:parser match-table-key] [])]
+  (let [initial-table (get-in game-state [:parser match-table-key] [])
+        ;; ZIL: SNARFEM sets slocbits from syntax loc1/loc2 at the start
+        ;; This controls where get-object searches when in "all" mode
+        ;; Note: loc1/loc2 are already converted to numeric bits by verb_defs.clj
+        syntax (get-in game-state [:parser :syntax])
+        loc-bits (if (= match-table-key :prso)
+                   (or (:loc1 syntax) 0)
+                   (or (:loc2 syntax) 0))]
     (loop [gs (-> game-state
                   (assoc-in [:parser :and-flag] false)
                   (assoc-in [:parser :getflags] 0)
                   (assoc-in [:parser :nam] nil)
-                  (assoc-in [:parser :adj] nil))
+                  (assoc-in [:parser :adj] nil)
+                  ;; Set slocbits from syntax loc1/loc2 for "all" mode
+                  (assoc-in [:parser :slocbits] loc-bits))
            current-ptr ptr
            but-mode? false
            match-table initial-table]
