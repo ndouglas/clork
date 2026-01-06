@@ -19,6 +19,7 @@
             [clork.game-state :as gs]
             [clork.parser.state :as parser-state]
             [clork.debug.trace :as trace]
+            [clork.random :as random]
             [clojure.string :as str]))
 
 ;;; ---------------------------------------------------------------------------
@@ -70,7 +71,7 @@
   "Pick a random room for the player to scramble to.
    ZIL: <GOTO <PICK-ONE ,LOUD-RUNS>>"
   []
-  (rand-nth loud-runs))
+  (random/rand-nth* loud-runs))
 
 ;;; ---------------------------------------------------------------------------
 ;;; ROOM ACTION FUNCTIONS

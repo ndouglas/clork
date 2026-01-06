@@ -332,7 +332,7 @@
                 (assoc-in [:objects prso :in] :cellar)
                 (utils/tell (str "The " (:desc obj) " falls into the slide and is gone."))))
           ;; Not takeable - humor response
-          (utils/tell game-state (rand-nth yuks))))
+          (utils/tell game-state (random/rand-nth* yuks))))
 
       ;; Default
       :else nil)))
@@ -363,43 +363,21 @@
 (defn chimney-action
   "Action handler for the chimney in studio/kitchen.
 
-   When climbed in studio, goes to kitchen (if conditions met).
-   When climbed in kitchen, goes down the slide (to cellar)."
+   ZIL: CHIMNEY-F in 1actions.zil (lines 558-564)
+   Only handles EXAMINE - prints direction info.
+   Climbing is handled by room exits:
+   - Studio UP: uses UP-CHIMNEY-FUNCTION per function
+   - Kitchen DOWN: blocked with 'Only Santa Claus' message"
   [game-state]
   (let [prsa (parser-state/get-prsa game-state)
         here (:here game-state)]
     (cond
-      ;; CLIMB-UP or similar actions
-      (contains? #{:climb-up :climb :through} prsa)
-      (cond
-        ;; In studio - try to go up to kitchen
-        (= here :studio)
-        (let [result (verbs-movement/up-chimney-function game-state)]
-          (if (:blocked result)
-            (utils/tell game-state (:message result))
-            ;; Success - move to kitchen (use goto to properly update player location)
-            (verbs-movement/goto game-state (:destination result))))
+      ;; EXAMINE - describe the chimney direction
+      (= prsa :examine)
+      (let [direction (if (= here :kitchen) "down" "up")]
+        (utils/tell game-state (str "The chimney leads " direction "ward, and looks climbable.")))
 
-        ;; In kitchen - "only Santa Claus" (can't climb down the chimney here)
-        (= here :kitchen)
-        (utils/tell game-state "Only Santa Claus climbs down chimneys.")
-
-        ;; Other rooms - not here
-        :else
-        (utils/tell game-state "There's no chimney here."))
-
-      ;; CLIMB-DOWN
-      (= prsa :climb-down)
-      (cond
-        ;; In kitchen - can go down (but this leads to cellar via slide, not studio)
-        (= here :kitchen)
-        (utils/tell game-state "Only Santa Claus climbs down chimneys.")
-
-        ;; Other rooms
-        :else
-        (utils/tell game-state "There's no chimney here."))
-
-      ;; Default - let other handlers deal with it
+      ;; Default - let room exits or other handlers deal with climbing
       :else nil)))
 
 (def chimney
@@ -616,9 +594,9 @@
 
                    ;; OPEN/CLOSE otherwise -> dummy message
                    (#{:open :close} verb)
-                   (utils/tell game-state (rand-nth ["Look around."
-                                                     "Too late for that."
-                                                     "Have your eyes checked."]))
+                   (utils/tell game-state (random/rand-nth* ["Look around."
+                                                             "Too late for that."
+                                                             "Have your eyes checked."]))
 
                    ;; Not handled
                    :else nil)
@@ -2846,7 +2824,7 @@
       (cond
         ;; Already open
         machine-open?
-        (utils/tell game-state (rand-nth dummy-responses))
+        (utils/tell game-state (random/rand-nth* dummy-responses))
 
         ;; Has contents - show them
         :else
@@ -2867,7 +2845,7 @@
         (-> game-state
             (gs/unset-thing-flag :machine :open)
             (utils/tell "The lid closes."))
-        (utils/tell game-state (rand-nth dummy-responses)))
+        (utils/tell game-state (random/rand-nth* dummy-responses)))
 
       ;; LAMP-ON (turn on) - redirect to switch
       (= prsa :lamp-on)
@@ -3056,7 +3034,7 @@
       ;; RAISE - bring basket up
       (= prsa :raise)
       (if cage-top?
-        (utils/tell game-state (rand-nth dummy-responses))
+        (utils/tell game-state (random/rand-nth* dummy-responses))
         ;; Swap positions - "raise" brings basket to top
         (-> game-state
             (assoc-in [:objects :raised-basket :in] :shaft-room)
@@ -3067,7 +3045,7 @@
       ;; LOWER - send basket down
       (= prsa :lower)
       (if (not cage-top?)
-        (utils/tell game-state (rand-nth dummy-responses))
+        (utils/tell game-state (random/rand-nth* dummy-responses))
         ;; Swap positions - "lower" sends basket to bottom
         (let [gs (-> game-state
                      (assoc-in [:objects :raised-basket :in] :lower-shaft)

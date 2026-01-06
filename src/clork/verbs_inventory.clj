@@ -6,7 +6,8 @@
             [clork.game-state :as gs]
             [clork.parser.state :as parser-state]
             [clork.verbs-health :as verbs-health]
-            [clork.debug.trace :as trace]))
+            [clork.debug.trace :as trace]
+            [clork.random :as random]))
 
 ;;; ---------------------------------------------------------------------------
 ;;; TAKE COMMAND
@@ -107,7 +108,7 @@
 
         ;; Not takeable - respond with humor
         (not (takeable? obj))
-        (utils/tell game-state (rand-nth yuks))
+        (utils/tell game-state (random/rand-nth* yuks))
 
         ;; Success - take the object
         :else

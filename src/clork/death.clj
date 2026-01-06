@@ -6,7 +6,8 @@
   (:require [clork.utils :as utils]
             [clork.game-state :as gs]
             [clork.verbs-health :as health]
-            [clork.verbs-look :as look]))
+            [clork.verbs-look :as look]
+            [clork.random :as random]))
 
 ;;; ---------------------------------------------------------------------------
 ;;; FINISH - Game Over Prompt
@@ -125,7 +126,7 @@
 (defn- scatter-object
   "Scatter an object to a random room."
   [game-state obj-id rooms]
-  (let [room-id (rand-nth rooms)]
+  (let [room-id (random/rand-nth* rooms)]
     (assoc-in game-state [:objects obj-id :in] room-id)))
 
 (defn randomize-objects
