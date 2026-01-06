@@ -326,7 +326,19 @@
                           {:num-objects 1
                            :prep1 :through
                            :loc1 #{:in-room :on-ground}
-                           :action :through}]
+                           :action :through}
+
+                          ;; WALK UP OBJECT - go up chimney, climb up stairs
+                          {:num-objects 1
+                           :prep1 :up
+                           :loc1 #{:in-room :on-ground}
+                           :action :climb-up}
+
+                          ;; WALK DOWN OBJECT - go down stairs
+                          {:num-objects 1
+                           :prep1 :down
+                           :loc1 #{:in-room :on-ground}
+                           :action :climb-down}]
                 :handler verbs-movement/v-walk}
 
    ;; ZIL: <SYNTAX ENTER = V-ENTER> (bare enter goes to :in direction)

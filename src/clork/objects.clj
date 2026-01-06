@@ -5,6 +5,7 @@
             [clork.game-state :as gs]
             [clork.parser.state :as parser-state]
             [clork.verbs-look :as verbs-look]
+            [clork.verbs-movement :as verbs-movement]
             [clork.random :as random]
             [clork.sword :as sword]
             [clork.thief :as thief]
@@ -344,6 +345,71 @@
    :desc "chute"
    :flags (flags/flags :climb)
    :action slide-action})
+
+;;; ---------------------------------------------------------------------------
+;;; CHIMNEY OBJECT
+;;; ---------------------------------------------------------------------------
+
+;; ZIL: <OBJECT CHIMNEY
+;;     (IN LOCAL-GLOBALS)
+;;     (SYNONYM CHIMNEY)
+;;     (DESC "chimney")
+;;     (FLAGS CLIMBBIT NDESCBIT)>
+;;
+;; The chimney is present in Studio and Kitchen. In Studio, "up chimney" goes
+;; to kitchen via up-chimney-function. In Kitchen, the slide already handles
+;; going down.
+
+(defn chimney-action
+  "Action handler for the chimney in studio/kitchen.
+
+   When climbed in studio, goes to kitchen (if conditions met).
+   When climbed in kitchen, goes down the slide (to cellar)."
+  [game-state]
+  (let [prsa (parser-state/get-prsa game-state)
+        here (:here game-state)]
+    (cond
+      ;; CLIMB-UP or similar actions
+      (contains? #{:climb-up :climb :through} prsa)
+      (cond
+        ;; In studio - try to go up to kitchen
+        (= here :studio)
+        (let [result (verbs-movement/up-chimney-function game-state)]
+          (if (:blocked result)
+            (utils/tell game-state (:message result))
+            ;; Success - move to kitchen (use goto to properly update player location)
+            (verbs-movement/goto game-state (:destination result))))
+
+        ;; In kitchen - "only Santa Claus" (can't climb down the chimney here)
+        (= here :kitchen)
+        (utils/tell game-state "Only Santa Claus climbs down chimneys.")
+
+        ;; Other rooms - not here
+        :else
+        (utils/tell game-state "There's no chimney here."))
+
+      ;; CLIMB-DOWN
+      (= prsa :climb-down)
+      (cond
+        ;; In kitchen - can go down (but this leads to cellar via slide, not studio)
+        (= here :kitchen)
+        (utils/tell game-state "Only Santa Claus climbs down chimneys.")
+
+        ;; Other rooms
+        :else
+        (utils/tell game-state "There's no chimney here."))
+
+      ;; Default - let other handlers deal with it
+      :else nil)))
+
+(def chimney
+  {:id :chimney
+   :in :local-globals  ; Present in studio and kitchen
+   :synonym ["chimney" "fireplace"]
+   :adjective ["dark" "narrow"]
+   :desc "chimney"
+   :flags (flags/flags :climb :ndesc)
+   :action chimney-action})
 
 ;;; ---------------------------------------------------------------------------
 ;;; SAND/BEACH OBJECTS
@@ -3120,6 +3186,7 @@
    white-house
    kitchen-window
    slide
+   chimney
    ;; Sand/beach objects
    sand
    jeweled-scarab

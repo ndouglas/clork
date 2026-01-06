@@ -5,7 +5,8 @@
   (:require [clork.utils :as utils]
             [clork.game-state :as gs]
             [clork.parser.state :as parser-state]
-            [clork.random :as random]))
+            [clork.random :as random]
+            [clork.verbs-movement :as verbs-movement]))
 
 ;;; ---------------------------------------------------------------------------
 ;;; RANDOM MESSAGE TABLES
@@ -176,7 +177,7 @@
     (-> game-state
         (utils/tell "Your prayers have been answered.")
         (utils/crlf)
-        (assoc :here :forest-1))
+        (verbs-movement/goto :forest-1))
     (-> game-state
         (utils/tell "If you pray enough, your prayers may be answered.")
         (utils/crlf))))

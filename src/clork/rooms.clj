@@ -369,7 +369,7 @@
   {:id :kitchen
    :desc "Kitchen"
    :flags #{:lit :sacred}
-   :globals #{:kitchen-window}  ; ZIL: (GLOBAL KITCHEN-WINDOW CHIMNEY STAIRS)
+   :globals #{:kitchen-window :chimney}  ; ZIL: (GLOBAL KITCHEN-WINDOW CHIMNEY STAIRS)
    :value 10   ; ZIL: (VALUE 10) - points for entering house first time
    :exits {:west :living-room
            :up :attic
@@ -569,6 +569,7 @@
    :desc "Studio"
    :ldesc "This appears to have been an artist's studio. The walls and floors are splattered with paints of 69 different colors. Strangely enough, nothing of value is hanging here. At the south end of the room is an open door (also covered with paint). A dark and narrow chimney leads up from a fireplace; although you might be able to get up it, it seems unlikely you could get back down."
    :flags #{}  ; Underground
+   :globals #{:chimney}  ; ZIL: (GLOBAL CHIMNEY)
    :exits {:south :gallery
            ;; ZIL: (UP PER UP-CHIMNEY-FUNCTION) - special exit that clears TOUCHBIT
            :up {:per :up-chimney-function}
@@ -2252,7 +2253,8 @@
   [game-state rarg]
   (if (= rarg :m-beg)
     ;; Set coffin-cure flag: true if player does NOT have the coffin
-    (let [has-coffin? (= :player (gs/get-thing-loc-id game-state :coffin))]
+    (let [winner (:winner game-state)
+          has-coffin? (= winner (gs/get-thing-loc-id game-state :gold-coffin))]
       (-> game-state
           (gs/set-flag :coffin-cure (not has-coffin?))
           (gs/use-default)))
