@@ -30,11 +30,9 @@
 (defn in-closed-container?
   "Returns true if the object is inside a closed container."
   [game-state obj-id]
-  (let [loc-id (gs/get-thing-loc-id game-state obj-id)
-        loc (gs/get-thing game-state loc-id)
-        loc-flags (or (:flags loc) #{})]
-    (and (contains? loc-flags :cont)
-         (not (contains? loc-flags :open)))))
+  (let [loc-id (gs/get-thing-loc-id game-state obj-id)]
+    (and (gs/set-thing-flag? game-state loc-id :cont)
+         (not (gs/set-thing-flag? game-state loc-id :open)))))
 
 (defn move-to-inventory
   "Move an object to the winner's (player's) inventory.
@@ -176,10 +174,15 @@
           (= (gs/get-thing-loc-id game-state obj-loc) winner)))))
 
 (defn- drop-to-room
-  "Move an object to the current room."
+  "Move an object to the current room.
+   Sets inv-seq for proper LIFO ordering among dropped objects."
   [game-state obj-id]
-  (let [here (:here game-state)]
-    (assoc-in game-state [:objects obj-id :in] here)))
+  (let [here (:here game-state)
+        seq-num (inc (or (:inv-seq game-state) 0))]
+    (-> game-state
+        (assoc :inv-seq seq-num)
+        (assoc-in [:objects obj-id :in] here)
+        (assoc-in [:objects obj-id :inv-seq] seq-num))))
 
 (defn v-drop
   "Drop an object from inventory.

@@ -140,22 +140,28 @@
             take-result (verbs-inv/v-take (assoc-in game-state [:parser :prso] [prso]))]
         (if (verbs-inv/already-holding? take-result prso)
           ;; Successfully took it, now put it in
-          (-> take-result
-              (assoc-in [:objects prso :in] prsi)
-              (gs/set-thing-flag prso :touch)
-              (score-put prso prsi)
-              (utils/tell "Done."))
+          (let [seq-num (inc (or (:inv-seq take-result) 0))]
+            (-> take-result
+                (assoc :inv-seq seq-num)
+                (assoc-in [:objects prso :in] prsi)
+                (assoc-in [:objects prso :inv-seq] seq-num)
+                (gs/set-thing-flag prso :touch)
+                (score-put prso prsi)
+                (utils/tell "Done.")))
           ;; Couldn't take it
           take-result))
 
       ;; ZIL: (T <MOVE ,PRSO ,PRSI> <FSET ,PRSO ,TOUCHBIT>
       ;;         <SCORE-OBJ ,PRSO> <TELL "Done." CR>)
       :else
-      (-> game-state
-          (assoc-in [:objects prso :in] prsi)
-          (gs/set-thing-flag prso :touch)
-          (score-put prso prsi)
-          (utils/tell "Done.")))))
+      (let [seq-num (inc (or (:inv-seq game-state) 0))]
+        (-> game-state
+            (assoc :inv-seq seq-num)
+            (assoc-in [:objects prso :in] prsi)
+            (assoc-in [:objects prso :inv-seq] seq-num)
+            (gs/set-thing-flag prso :touch)
+            (score-put prso prsi)
+            (utils/tell "Done."))))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; V-PUT-ON

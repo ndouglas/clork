@@ -223,14 +223,12 @@
                 add-contents))
 
           ;; Level 0, generic description
+          ;; Note: "(providing light)" is NOT added at ground level per ZIL behavior
+          ;; Objects with custom :ldesc include their own parenthetical (e.g., lantern)
           (zero? level)
-          (let [state (utils/tell game-state (str "There is " (get-article game-state obj-id) desc " here"))
-                state (if (contains? flags :on)
-                        (utils/tell state " (providing light)")
-                        state)]
-            (-> state
-                (utils/tell ".\n")
-                add-contents))
+          (-> game-state
+              (utils/tell (str "There is " (get-article game-state obj-id) desc " here.\n"))
+              add-contents)
 
           ;; Nested level (inside container)
           :else

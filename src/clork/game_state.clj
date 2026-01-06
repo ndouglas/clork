@@ -201,22 +201,46 @@
 (defn get-contents
   "Return the IDs of all objects inside the given container.
    For player/actor inventory, sorts by acquisition sequence (LIFO - newest first).
-   For rooms/containers, sorts by :order field (for consistent description order)."
+   For rooms, sorts by :order field with inv-seq as tie-breaker (for LIFO among dropped objects).
+   For object containers, sorts by inv-seq if present (LIFO), otherwise by :order."
   [game-state container-id]
   (let [winner (:winner game-state)
         is-actor? (or (= container-id :adventurer)
                       (= container-id :player)
                       (= container-id winner))
+        is-room? (contains? (:rooms game-state) container-id)
         contents (->> (:objects game-state)
                       (filter (fn [[_ obj]] (= (:in obj) container-id))))]
-    (if is-actor?
+    (cond
       ;; Player inventory: sort by inv-seq descending (LIFO - newest first)
+      is-actor?
       (->> contents
            (sort-by (fn [[_ obj]] (- (or (:inv-seq obj) 0))))
            (map first))
-      ;; Rooms/containers: sort by :order (for consistent room descriptions)
+      ;; Rooms: dropped objects (have inv-seq) come first in LIFO order,
+      ;; then original objects (no inv-seq) in their :order
+      ;; This matches ZIL behavior where dropped objects go to front of list
+      is-room?
       (->> contents
-           (sort-by (fn [[_ obj]] (or (:order obj) 999)))
+           (sort-by (fn [[_ obj]]
+                      (let [inv-seq (:inv-seq obj)
+                            order (or (:order obj) 999)]
+                        (if inv-seq
+                          ;; Dropped: sort first (0), then by LIFO (higher inv-seq first)
+                          [0 (- inv-seq)]
+                          ;; Original: sort second (1), then by :order
+                          [1 order]))))
+           (map first))
+      ;; Object containers: sort by inv-seq if present, otherwise by :order
+      ;; This handles both initial placement (no inv-seq) and gameplay PUT (has inv-seq)
+      :else
+      (->> contents
+           (sort-by (fn [[_ obj]]
+                      (if-let [seq (:inv-seq obj)]
+                        ;; Has inv-seq: use LIFO (negated for descending)
+                        [(- seq) 0]
+                        ;; No inv-seq: use :order for stable initial ordering
+                        [0 (or (:order obj) 999)])))
            (map first)))))
 
 (defn verbose?

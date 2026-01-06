@@ -193,15 +193,35 @@
           (game-state/set-thing-flag? game-state room-id :lit))
      true
 
-     ;; Direct check: player carries a light source that is on
-     ;; This is simpler and more reliable than the GWIMBIT search
+     ;; Check for light sources:
+     ;; ZIL LIT? checks winner's inventory, player's inventory (if different),
+     ;; and the room itself (line 1351: <DO-SL .RM 1 1>)
+     ;; The search is recursive - light in a container in the room counts
      :else
      (let [winner (:winner game-state)
-           contents (game-state/get-contents game-state winner)]
-       (some (fn [obj-id]
-               (and (game-state/set-thing-flag? game-state obj-id :light)
-                    (game-state/set-thing-flag? game-state obj-id :on)))
-             contents)))))
+           player (:player game-state)
+           ;; Check function for lit light sources
+           lit-light-source? (fn [obj-id]
+                               (and (game-state/set-thing-flag? game-state obj-id :light)
+                                    (game-state/set-thing-flag? game-state obj-id :on)))
+           ;; Recursive search function - searches container and its contents
+           search-for-light (fn search-for-light [container-id]
+                              (let [contents (game-state/get-contents game-state container-id)]
+                                (or (some lit-light-source? contents)
+                                    (some (fn [obj-id]
+                                            ;; Search inside containers
+                                            (when (game-state/set-thing-flag? game-state obj-id :cont)
+                                              (search-for-light obj-id)))
+                                          contents))))
+           ;; Search locations
+           winner-has-light? (search-for-light winner)
+           player-has-light? (and (not= winner player)
+                                  (= (game-state/get-thing-loc-id game-state player) room-id)
+                                  (search-for-light player))
+           room-has-light? (search-for-light room-id)]
+       (or winner-has-light?
+           player-has-light?
+           room-has-light?)))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; MANY-CHECK

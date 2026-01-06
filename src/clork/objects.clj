@@ -3095,7 +3095,16 @@ Surely thou shalt repent of thy cunning."})
         (let [contents (filter (fn [[_ obj]] (= (:in obj) :machine))
                                (:objects game-state))]
           (if (seq contents)
-            (let [content-descs (map (fn [[_ obj]] (:desc obj)) contents)]
+            (let [;; Add article "a " before each description
+                  content-descs (map (fn [[_ obj]]
+                                       (let [desc (:desc obj)
+                                             flags (or (:flags obj) #{})]
+                                         (cond
+                                           (contains? flags :narticle) desc
+                                           (contains? flags :plural) (str "some " desc)
+                                           (contains? flags :vowel) (str "an " desc)
+                                           :else (str "a " desc))))
+                                     contents)]
               (-> game-state
                   (gs/set-thing-flag :machine :open)
                   (utils/tell (str "The lid opens, revealing " (clojure.string/join ", " content-descs) "."))))

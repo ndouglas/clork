@@ -119,27 +119,19 @@
     (get-in room [:exits direction])))
 
 (defn room-lit?
-  "Check if a room is lit (simple version for movement).
+  "Check if a room is lit.
 
-   A room is lit if:
-   1. It has the :lit flag in its :flags set
-   2. The player carries a light source that is on
+   Delegates to validation/lit? which does a complete check including:
+   1. Room's :lit flag
+   2. Light sources carried by winner/player
+   3. Light sources in the room (including inside containers)
 
-   Note: parser/validation.clj has a more complete lit? that also
-   checks for carried light sources. That version is used during parsing."
+   Uses requiring-resolve to avoid circular dependency.
+
+   ZIL Reference: LIT? routine in gparser.zil lines 1333-1355"
   [game-state room-id]
-  (let [;; Check room's :lit flag - handle missing rooms gracefully
-        room (gs/get-thing game-state room-id)
-        room-lit (when room
-                   (or (contains? (:flags room) :lit)
-                       (gs/flag? game-state :rooms room-id :lit)))
-        winner (:winner game-state)
-        contents (gs/get-contents game-state winner)
-        has-light-on (some (fn [obj-id]
-                             (and (gs/set-thing-flag? game-state obj-id :light)
-                                  (gs/set-thing-flag? game-state obj-id :on)))
-                           contents)]
-    (or room-lit has-light-on)))
+  (let [lit-fn (requiring-resolve 'clork.parser.validation/lit?)]
+    (lit-fn game-state room-id)))
 
 (defn goto
   "Move the player to a new room and describe it.
