@@ -167,19 +167,24 @@
   (let [prso (parser-state/get-prso game-state)
         obj (gs/get-thing game-state prso)
         desc (:desc obj)
-        flags (or (:flags obj) #{})]
-    (cond
-      ;; Has text property - show it
-      (:text obj)
-      (utils/tell game-state (:text obj))
+        flags (or (:flags obj) #{})
+        action-fn (:action obj)]
+    ;; First try the object's action handler
+    (if-let [result (when action-fn (action-fn game-state))]
+      result
+      ;; Object didn't handle it - default behavior
+      (cond
+        ;; Has text property - show it
+        (:text obj)
+        (utils/tell game-state (:text obj))
 
-      ;; Container or door - look inside
-      (or (contains? flags :cont) (contains? flags :door))
-      (v-look-inside game-state)
+        ;; Container or door - look inside
+        (or (contains? flags :cont) (contains? flags :door))
+        (v-look-inside game-state)
 
-      ;; Default - nothing special
-      :else
-      (utils/tell game-state (str "There's nothing special about the " desc ".")))))
+        ;; Default - nothing special
+        :else
+        (utils/tell game-state (str "There's nothing special about the " desc "."))))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; OPEN COMMAND

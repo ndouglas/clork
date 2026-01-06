@@ -17,6 +17,7 @@
             [clork.sword :as sword]
             [clork.thief :as thief]
             [clork.cyclops :as cyclops]
+            [clork.light :as light]
             [clojure.java.io :as io]))
 
 ;; Re-export the essential API for creating and running games
@@ -59,7 +60,14 @@
                        (daemon/register-daemon :i-thief thief/i-thief :tick -1)
                        ;; Register cyclops daemon (starts disabled, enabled when player enters room)
                        ;; ZIL: I-CYCLOPS in 1actions.zil lines 1609-1627
-                       (daemon/register-daemon :i-cyclops cyclops/i-cyclops :tick -1 :enabled false))]
+                       (daemon/register-daemon :i-cyclops cyclops/i-cyclops :tick -1 :enabled false)
+                       ;; Register light source daemons (start disabled, enabled when light is turned on)
+                       ;; ZIL: I-LANTERN in 1actions.zil line 2328
+                       (daemon/register-daemon :i-lantern light/i-lantern :tick 100 :enabled false)
+                       ;; ZIL: I-CANDLES in 1actions.zil line 2334
+                       (daemon/register-daemon :i-candles light/i-candles :tick 20 :enabled false)
+                       ;; ZIL: I-MATCH in 1actions.zil line 2321
+                       (daemon/register-daemon :i-match light/i-match :tick 2 :enabled false))]
        ;; Store initial state for restart
        (assoc init-gs :restart-state init-gs)))))
 
@@ -88,7 +96,14 @@
                        (daemon/register-daemon :i-thief thief/i-thief :tick -1)
                        ;; Register cyclops daemon (starts disabled, enabled when player enters room)
                        ;; ZIL: I-CYCLOPS in 1actions.zil lines 1609-1627
-                       (daemon/register-daemon :i-cyclops cyclops/i-cyclops :tick -1 :enabled false))
+                       (daemon/register-daemon :i-cyclops cyclops/i-cyclops :tick -1 :enabled false)
+                       ;; Register light source daemons (start disabled, enabled when light is turned on)
+                       ;; ZIL: I-LANTERN in 1actions.zil line 2328
+                       (daemon/register-daemon :i-lantern light/i-lantern :tick 100 :enabled false)
+                       ;; ZIL: I-CANDLES in 1actions.zil line 2334
+                       (daemon/register-daemon :i-candles light/i-candles :tick 20 :enabled false)
+                       ;; ZIL: I-MATCH in 1actions.zil line 2321
+                       (daemon/register-daemon :i-match light/i-match :tick 2 :enabled false))
            ;; Store initial state for restart (before version/look output)
            gs-with-restart (assoc init-gs :restart-state init-gs)]
        (-> gs-with-restart

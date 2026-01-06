@@ -411,32 +411,32 @@ These are out-of-game commands that don't advance time.
 | Status | Object ID    | Description         | Points |
 | ------ | ------------ | ------------------- | ------ |
 | [x]    | BAR          | Platinum Bar        | 10     |
-| [ ]    | BAUBLE       | Brass Bauble        | 1      |
+| [x]    | BAUBLE       | Brass Bauble        | 1      |
 | [x]    | BRACELET     | Sapphire Bracelet   | 5      |
 | [x]    | CHALICE      | Silver Chalice      | 10     |
-| [ ]    | COFFIN       | Gold Coffin         | 10     |
-| [ ]    | DIAMOND      | Huge Diamond        | 10     |
+| [x]    | COFFIN       | Gold Coffin         | 10     |
+| [x]    | DIAMOND      | Huge Diamond        | 10     |
 | [~]    | EGG          | Jewel-Encrusted Egg | 5      |
-| [ ]    | EMERALD      | Large Emerald       | 5      |
+| [x]    | EMERALD      | Large Emerald       | 5      |
 | [x]    | JADE         | Jade Figurine       | 5      |
 | [~]    | PAINTING     | Beautiful Painting  | 4      |
-| [ ]    | POT-OF-GOLD  | Pot of Gold         | 10     |
+| [x]    | POT-OF-GOLD  | Pot of Gold         | 10     |
 | [x]    | SCARAB       | Jeweled Scarab      | 5      |
-| [ ]    | SCEPTRE      | Royal Sceptre       | 4      |
-| [ ]    | TORCH        | Ivory Torch         | 6      |
+| [x]    | SCEPTRE      | Royal Sceptre       | 4      |
+| [x]    | TORCH        | Ivory Torch         | 6      |
 | [x]    | TRIDENT      | Crystal Trident     | 4      |
-| [ ]    | TRUNK        | Trunk of Jewels     | 15     |
-| [ ]    | CANARY       | Clockwork Canary    | 6      |
+| [x]    | TRUNK        | Trunk of Jewels     | 15     |
+| [x]    | CANARY       | Clockwork Canary    | 6      |
 | [x]    | BAG-OF-COINS | Bag of Coins        | 5      |
 
 ### Light Sources
 
 | Status | Object ID | Description     |
 | ------ | --------- | --------------- |
-| [~]    | LAMP      | Brass Lantern   |
-| [ ]    | CANDLES   | Pair of Candles |
-| [ ]    | TORCH     | Ivory Torch     |
-| [~]    | MATCH     | Match           |
+| [x]    | LAMP      | Brass Lantern   |
+| [x]    | CANDLES   | Pair of Candles |
+| [x]    | TORCH     | Ivory Torch     |
+| [x]    | MATCH     | Match           |
 
 ### Weapons
 
@@ -469,7 +469,7 @@ These are out-of-game commands that don't advance time.
 | [x]    | LARGE-BAG    | Large Bag     |
 | [~]    | SANDWICH-BAG | Brown Sack    |
 | [~]    | BOTTLE       | Glass Bottle  |
-| [ ]    | BUOY         | Buoy          |
+| [x]    | BUOY         | Buoy          |
 
 ### Boat-Related
 
@@ -646,18 +646,18 @@ These are out-of-game commands that don't advance time.
 | [ ]    | BOTTLE-FUNCTION  | BOTTLE      | Bottle liquid       |
 | [ ]    | ROPE-FUNCTION    | ROPE        | Rope tying          |
 | [x]    | SWORD-FCN        | SWORD       | Glowing sword       |
-| [ ]    | LANTERN          | LAMP        | Lantern usage       |
-| [ ]    | CANDLES-FCN      | CANDLES     | Candle burning      |
-| [ ]    | MATCH-FUNCTION   | MATCH       | Match lighting      |
+| [x]    | LANTERN          | LAMP        | Lantern usage       |
+| [x]    | CANDLES-FCN      | CANDLES     | Candle burning      |
+| [x]    | MATCH-FUNCTION   | MATCH       | Match lighting      |
 | [ ]    | BELL-F           | BELL        | Bell ringing        |
 | [ ]    | HOT-BELL-F       | HOT-BELL    | Hot bell handling   |
 | [ ]    | EGG-OBJECT       | EGG         | Egg opening         |
-| [ ]    | CANARY-OBJECT    | CANARY      | Clockwork canary    |
+| [x]    | CANARY-OBJECT    | CANARY      | Clockwork canary    |
 | [x]    | DAM-FUNCTION     | DAM         | Dam controls        |
 | [ ]    | MACHINE-F        | MACHINE     | Coal machine        |
 | [ ]    | RUG-FCN          | RUG         | Hidden trap door    |
 | [ ]    | BASKET-F         | BASKET      | Shaft basket        |
-| [ ]    | SCEPTRE-FUNCTION | SCEPTRE     | Rainbow waving      |
+| [x]    | SCEPTRE-FUNCTION | SCEPTRE     | Rainbow waving      |
 | [ ]    | PAINTING-FCN     | PAINTING    | Painting handling   |
 | [ ]    | RAINBOW-FCN      | RAINBOW     | Rainbow crossing    |
 | [ ]    | SLIDE-FUNCTION   | SLIDE       | Cellar slide        |
@@ -665,7 +665,7 @@ These are out-of-game commands that don't advance time.
 | [ ]    | LEAF-PILE        | LEAVES      | Leaf pile           |
 | [ ]    | SAND-FUNCTION    | SAND        | Digging sand        |
 | [x]    | TUBE-FUNCTION    | TUBE        | Tube usage          |
-| [ ]    | TORCH-OBJECT     | TORCH       | Torch handling      |
+| [x]    | TORCH-OBJECT     | TORCH       | Torch handling      |
 
 ### Combat System
 
@@ -687,9 +687,9 @@ These are out-of-game commands that don't advance time.
 
 | Status | Routine       | Description          |
 | ------ | ------------- | -------------------- |
-| [ ]    | I-LANTERN     | Lantern timer        |
-| [ ]    | I-CANDLES     | Candle timer         |
-| [ ]    | I-MATCH       | Match burning        |
+| [x]    | I-LANTERN     | Lantern timer        |
+| [x]    | I-CANDLES     | Candle timer         |
+| [x]    | I-MATCH       | Match burning        |
 | [x]    | I-THIEF       | Thief wandering      |
 | [x]    | I-SWORD       | Sword glowing        |
 | [x]    | I-CYCLOPS     | Cyclops behavior     |

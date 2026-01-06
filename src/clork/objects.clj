@@ -9,7 +9,8 @@
             [clork.sword :as sword]
             [clork.thief :as thief]
             [clork.cyclops :as cyclops]
-            [clork.dam :as dam]))
+            [clork.dam :as dam]
+            [clork.light :as light]))
 
 ;; <OBJECT MAILBOX
 ;;	(IN WEST-OF-HOUSE)
@@ -509,7 +510,8 @@
    :flags (flags/flags :take :light)
    :fdesc "A battery-powered brass lantern is on the trophy case."
    :ldesc "There is a brass lantern (battery-powered) here."
-   :size 15})
+   :size 15
+   :action light/lantern-action})
 
 ;;; ---------------------------------------------------------------------------
 ;;; LIVING ROOM OBJECTS
@@ -728,6 +730,328 @@
 ;;; ---------------------------------------------------------------------------
 ;;; TREASURES
 ;;; ---------------------------------------------------------------------------
+
+;; <OBJECT COFFIN
+;;	(IN EGYPT-ROOM)
+;;	(SYNONYM COFFIN CASKET TREASURE)
+;;	(ADJECTIVE GOLD SOLID)
+;;	(DESC "gold coffin")
+;;	(FLAGS TAKEBIT CONTBIT SACREDBIT SEARCHBIT)
+;;	(LDESC "The solid-gold coffin used for the burial of Ramses II is here.")
+;;	(CAPACITY 35)
+;;	(SIZE 55)
+;;	(VALUE 10)
+;;	(TVALUE 15)>
+
+(def gold-coffin
+  {:id :gold-coffin
+   :in :egypt-room
+   :synonym ["coffin" "casket" "treasure"]
+   :adjective ["gold" "solid"]
+   :desc "gold coffin"
+   :flags (flags/flags :take :cont :sacred :search)
+   :ldesc "The solid-gold coffin used for the burial of Ramses II is here."
+   :capacity 35
+   :size 55
+   :value 10
+   :tvalue 15})
+
+;; <OBJECT SCEPTRE
+;;	(IN COFFIN)
+;;	(SYNONYM SCEPTRE SCEPTER TREASURE)
+;;	(ADJECTIVE SHARP EGYPTIAN ANCIENT ENAMELED)
+;;	(DESC "sceptre")
+;;	(FLAGS TAKEBIT WEAPONBIT)
+;;	(ACTION SCEPTRE-FUNCTION)
+;;	(LDESC "An ornamented sceptre, tapering to a sharp point, is here.")
+;;	(FDESC "A sceptre, possibly that of ancient Egypt itself, is in the coffin.
+;;          The sceptre is ornamented with colored enamel, and tapers to a sharp point.")
+;;	(SIZE 3)
+;;	(VALUE 4)
+;;	(TVALUE 6)>
+
+(def sceptre
+  {:id :sceptre
+   :in :gold-coffin
+   :synonym ["sceptre" "scepter" "treasure"]
+   :adjective ["sharp" "egyptian" "ancient" "enameled"]
+   :desc "sceptre"
+   :flags (flags/flags :take :weapon)
+   :ldesc "An ornamented sceptre, tapering to a sharp point, is here."
+   :fdesc "A sceptre, possibly that of ancient Egypt itself, is in the coffin. The sceptre is ornamented with colored enamel, and tapers to a sharp point."
+   :size 3
+   :value 4
+   :tvalue 6
+   :action (fn [game-state]
+             ;; ZIL: SCEPTRE-FUNCTION - WAVE/RAISE at falls/rainbow reveals pot of gold
+             (let [prsa (parser-state/get-prsa game-state)
+                   here (:here game-state)
+                   rainbow-flag (get game-state :rainbow-flag false)]
+               (cond
+                 ;; WAVE/RAISE at Aragain Falls or End of Rainbow
+                 (and (#{:wave :raise} prsa)
+                      (#{:aragain-falls :end-of-rainbow} here))
+                 (if rainbow-flag
+                   ;; Rainbow already solid
+                   (utils/tell game-state "The rainbow seems as solid as ever.")
+                   ;; Make the rainbow solid and reveal pot of gold
+                   (-> game-state
+                       (assoc :rainbow-flag true)
+                       (gs/unset-thing-flag :pot-of-gold :invisible)
+                       (utils/tell "Suddenly, the rainbow appears to become solid and a shimmering, magical staircase leads upward to the end of the rainbow. You could swear that there's a pot of gold there.")))
+
+                 ;; Default - no special handling
+                 :else nil)))})
+
+;; <OBJECT TORCH
+;;	(IN TORCH-ROOM)
+;;	(SYNONYM TORCH IVORY TREASURE)
+;;	(ADJECTIVE FLAMING IVORY)
+;;	(DESC "torch")
+;;	(FLAGS TAKEBIT FLAMEBIT ONBIT LIGHTBIT)
+;;	(ACTION TORCH-OBJECT)
+;;	(FDESC "Sitting on the pedestal is a flaming torch, made of ivory.")
+;;	(SIZE 20)
+;;	(VALUE 14)
+;;	(TVALUE 6)>
+
+(def ivory-torch
+  {:id :ivory-torch
+   :in :torch-room
+   :synonym ["torch" "ivory" "treasure"]
+   :adjective ["flaming" "ivory"]
+   :desc "torch"
+   :flags (flags/flags :take :flame :on :light)
+   :fdesc "Sitting on the pedestal is a flaming torch, made of ivory."
+   :size 20
+   :value 14
+   :tvalue 6
+   :action (fn [game-state]
+             ;; ZIL: TORCH-OBJECT - examine, pour-on, lamp-off
+             (let [prsa (parser-state/get-prsa game-state)
+                   prso (parser-state/get-prso game-state)]
+               (cond
+                 ;; EXAMINE
+                 (= prsa :examine)
+                 (utils/tell game-state "The torch is burning.")
+
+                 ;; POUR-ON with water
+                 (and (= prsa :pour-on) (= prso :water))
+                 (utils/tell game-state "The water evaporates before it gets close.")
+
+                 ;; LAMP-OFF (extinguish)
+                 (= prsa :lamp-off)
+                 (utils/tell game-state "You nearly burn your hand trying to extinguish the flame.")
+
+                 ;; Default
+                 :else nil)))})
+
+;; <OBJECT CANDLES
+;;	(IN SOUTH-TEMPLE)
+;;	(SYNONYM CANDLES PAIR)
+;;	(ADJECTIVE BURNING)
+;;	(DESC "pair of candles")
+;;	(FLAGS TAKEBIT FLAMEBIT ONBIT LIGHTBIT)
+;;	(ACTION CANDLES-FCN)
+;;	(FDESC "On the two ends of the altar are burning candles.")
+;;	(SIZE 10)>
+
+(def candles
+  {:id :candles
+   :in :south-temple
+   :synonym ["candles" "pair"]
+   :adjective ["burning"]
+   :desc "pair of candles"
+   :flags (flags/flags :take :flame :on :light)  ; Start burning!
+   :fdesc "On the two ends of the altar are burning candles."
+   :size 10
+   :action light/candles-action})
+
+;; <OBJECT TRUNK
+;;	(IN RESERVOIR)
+;;	(SYNONYM TRUNK CHEST JEWELS TREASURE)
+;;	(ADJECTIVE OLD)
+;;	(DESC "trunk of jewels")
+;;	(FLAGS TAKEBIT INVISIBLE)
+;;	(FDESC "Lying half buried in the mud is an old trunk, bulging with jewels.")
+;;	(LDESC "There is an old trunk here, bulging with assorted jewels.")
+;;	(SIZE 35)
+;;	(VALUE 15)
+;;	(TVALUE 5)>
+
+(def trunk-of-jewels
+  {:id :trunk-of-jewels
+   :in :reservoir
+   :synonym ["trunk" "chest" "jewels" "treasure"]
+   :adjective ["old"]
+   :desc "trunk of jewels"
+   :flags (flags/flags :take :invisible)  ; Hidden until reservoir drains
+   :fdesc "Lying half buried in the mud is an old trunk, bulging with jewels."
+   :ldesc "There is an old trunk here, bulging with assorted jewels."
+   :size 35
+   :value 15
+   :tvalue 5})
+
+;; <OBJECT DIAMOND
+;;	(SYNONYM DIAMOND TREASURE)
+;;	(ADJECTIVE HUGE ENORMOUS)
+;;	(DESC "huge diamond")
+;;	(FLAGS TAKEBIT)
+;;	(LDESC "There is an enormous diamond (perfectly cut) here.")
+;;	(VALUE 10)
+;;	(TVALUE 10)>
+;;
+;; Note: Diamond starts in limbo and appears in machine when coal is compressed
+
+(def huge-diamond
+  {:id :huge-diamond
+   :in :limbo  ; Appears when coal machine puzzle is solved
+   :synonym ["diamond" "treasure"]
+   :adjective ["huge" "enormous"]
+   :desc "huge diamond"
+   :flags (flags/flags :take)
+   :ldesc "There is an enormous diamond (perfectly cut) here."
+   :size 6
+   :value 10
+   :tvalue 10})
+
+;; <OBJECT EMERALD
+;;	(IN BUOY)
+;;	(SYNONYM EMERALD TREASURE)
+;;	(ADJECTIVE LARGE)
+;;	(DESC "large emerald")
+;;	(FLAGS TAKEBIT)
+;;	(VALUE 5)
+;;	(TVALUE 10)>
+
+(def large-emerald
+  {:id :large-emerald
+   :in :buoy
+   :synonym ["emerald" "treasure"]
+   :adjective ["large"]
+   :desc "large emerald"
+   :flags (flags/flags :take)
+   :size 6
+   :value 5
+   :tvalue 10})
+
+;; <OBJECT POT-OF-GOLD
+;;	(IN END-OF-RAINBOW)
+;;	(SYNONYM POT GOLD TREASURE)
+;;	(ADJECTIVE GOLD)
+;;	(DESC "pot of gold")
+;;	(FLAGS TAKEBIT INVISIBLE)
+;;	(FDESC "At the end of the rainbow is a pot of gold.")
+;;	(SIZE 15)
+;;	(VALUE 10)
+;;	(TVALUE 10)>
+
+(def pot-of-gold
+  {:id :pot-of-gold
+   :in :end-of-rainbow
+   :synonym ["pot" "gold" "treasure"]
+   :adjective ["gold"]
+   :desc "pot of gold"
+   :flags (flags/flags :take :invisible)  ; Hidden until rainbow is solid
+   :fdesc "At the end of the rainbow is a pot of gold."
+   :size 15
+   :value 10
+   :tvalue 10})
+
+;; <OBJECT CANARY
+;;	(IN EGG)
+;;	(SYNONYM CANARY TREASURE)
+;;	(ADJECTIVE CLOCKWORK GOLD GOLDEN)
+;;	(DESC "golden clockwork canary")
+;;	(FLAGS TAKEBIT SEARCHBIT)
+;;	(ACTION CANARY-OBJECT)
+;;	(VALUE 6)
+;;	(TVALUE 4)
+;;	(FDESC "There is a golden clockwork canary nestled in the egg. It has ruby eyes
+;;          and a silver beak. Through a crystal window below its left wing you can
+;;          see intricate machinery inside. It appears to have wound down.")>
+
+(def clockwork-canary
+  {:id :clockwork-canary
+   :in :egg
+   :synonym ["canary" "treasure"]
+   :adjective ["clockwork" "gold" "golden"]
+   :desc "golden clockwork canary"
+   :flags (flags/flags :take :search)
+   :fdesc "There is a golden clockwork canary nestled in the egg. It has ruby eyes and a silver beak. Through a crystal window below its left wing you can see intricate machinery inside. It appears to have wound down."
+   :size 8
+   :value 6
+   :tvalue 4
+   :action (fn [game-state]
+             ;; ZIL: CANARY-OBJECT - WIND in forest room creates bauble
+             (let [prsa (parser-state/get-prsa game-state)
+                   here (:here game-state)
+                   forest-rooms #{:forest-1 :forest-2 :forest-3 :path :up-a-tree :clearing :grating-clearing}
+                   in-forest? (contains? forest-rooms here)
+                   sung? (get game-state :canary-sung false)]
+               (cond
+                 ;; WIND in forest room
+                 (and (= prsa :wind) in-forest? (not sung?))
+                 (let [bauble-loc (if (= here :up-a-tree) :path here)]
+                   (-> game-state
+                       (assoc :canary-sung true)
+                       (assoc-in [:objects :brass-bauble :in] bauble-loc)
+                       (gs/unset-thing-flag :brass-bauble :invisible)
+                       (utils/tell "The canary chirps, slightly off-key, an aria from a forgotten opera. From out of the greenery appears a scarlet songbird with ruby eyes, who pauses briefly to listen to the mechanical bird's song. It drops a small brass bauble at your feet and flies away.")))
+
+                 ;; WIND but already sang
+                 (and (= prsa :wind) in-forest? sung?)
+                 (utils/tell game-state "The canary chirps blithely, but no songbird appears.")
+
+                 ;; WIND not in forest
+                 (= prsa :wind)
+                 (utils/tell game-state "The canary chirps, but otherwise nothing happens. Perhaps the canary needs to be in the forest?")
+
+                 ;; Default
+                 :else nil)))})
+
+;; <OBJECT BAUBLE
+;;	(SYNONYM BAUBLE TREASURE)
+;;	(ADJECTIVE BRASS BEAUTI)
+;;	(DESC "beautiful brass bauble")
+;;	(FLAGS TAKEBIT INVISIBLE)
+;;	(VALUE 1)
+;;	(TVALUE 1)>
+;;
+;; Note: Bauble starts invisible in limbo, appears when canary sings in forest
+
+(def brass-bauble
+  {:id :brass-bauble
+   :in :limbo
+   :synonym ["bauble" "treasure"]
+   :adjective ["brass" "beautiful"]
+   :desc "beautiful brass bauble"
+   :flags (flags/flags :take :invisible)
+   :size 5
+   :value 1
+   :tvalue 1})
+
+;; <OBJECT BUOY
+;;	(IN RIVER-4)
+;;	(SYNONYM BUOY)
+;;	(ADJECTIVE RED)
+;;	(DESC "red buoy")
+;;	(FLAGS TAKEBIT CONTBIT SEARCHBIT OPENBIT)
+;;	(FDESC "There is a red buoy here (probably a warning).")
+;;	(ACTION BUOY-FCN)
+;;	(CAPACITY 20)
+;;	(SIZE 10)>
+
+(def buoy
+  {:id :buoy
+   :in :river-4
+   :synonym ["buoy"]
+   :adjective ["red"]
+   :desc "red buoy"
+   :flags (flags/flags :take :cont :search :open)
+   :fdesc "There is a red buoy here (probably a warning)."
+   :capacity 20
+   :size 10})
 
 ;; <OBJECT JADE
 ;;	(IN BAT-ROOM)
@@ -1666,12 +1990,11 @@
    :synonym ["match" "matches" "matchbook"]
    :adjective "match"
    :desc "matchbook"
-   :flags (flags/flags :read :take)
+   :flags (flags/flags :read :take :light)
    :ldesc "There is a matchbook whose cover says \"Visit Beautiful FCD#3\" here."
    :size 2
    :text "(Close cover before striking)\n\nVisit Beautiful FCD#3\n\nThe Greatest Dam in the GUE!"
-   ;; Match action will be implemented later (lighting matches)
-   })
+   :action light/match-action})
 
 ;; <OBJECT WRENCH
 ;;     (IN MAINTENANCE-ROOM)
@@ -1840,4 +2163,15 @@
    crystal-trident
    sapphire-bracelet
    jeweled-scarab
-   silver-chalice])
+   silver-chalice
+   gold-coffin
+   sceptre
+   ivory-torch
+   candles
+   trunk-of-jewels
+   huge-diamond
+   large-emerald
+   pot-of-gold
+   clockwork-canary
+   brass-bauble
+   buoy])

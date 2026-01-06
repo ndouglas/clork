@@ -35,40 +35,45 @@
   (let [prso (parser-state/get-prso game-state)
         obj (gs/get-thing game-state prso)
         desc (:desc obj)
+        action-fn (:action obj)
         has-light? (gs/set-thing-flag? game-state prso :light)
         has-burn? (gs/set-thing-flag? game-state prso :burn)
         is-on? (gs/set-thing-flag? game-state prso :on)]
-    (cond
-      ;; Object has :light flag (can be turned on/off)
-      has-light?
+    ;; First try the object's action handler (e.g., lantern, match, candles)
+    (if-let [result (when action-fn (action-fn game-state))]
+      result
+      ;; Object didn't handle it - default behavior
       (cond
-        ;; Already on
-        is-on?
-        (utils/tell game-state "It is already on.")
+        ;; Object has :light flag (can be turned on/off)
+        has-light?
+        (cond
+          ;; Already on
+          is-on?
+          (utils/tell game-state "It is already on.")
 
-        ;; Turn it on
+          ;; Turn it on
+          :else
+          (let [was-dark? (not (:lit game-state))
+                ;; Set the :on flag
+                gs (gs/set-thing-flag game-state prso :on)
+                ;; Update room lit status
+                gs (assoc gs :lit true)
+                ;; Tell the player
+                gs (utils/tell gs (str "The " desc " is now on."))]
+            ;; If room was dark, show the room description
+            (if was-dark?
+              (-> gs
+                  utils/crlf
+                  verbs-look/v-look)
+              gs)))
+
+        ;; Object has :burn flag (needs fire to light)
+        has-burn?
+        (utils/tell game-state (str "If you wish to burn the " desc ", you should say so."))
+
+        ;; Can't turn this on
         :else
-        (let [was-dark? (not (:lit game-state))
-              ;; Set the :on flag
-              gs (gs/set-thing-flag game-state prso :on)
-              ;; Update room lit status
-              gs (assoc gs :lit true)
-              ;; Tell the player
-              gs (utils/tell gs (str "The " desc " is now on."))]
-          ;; If room was dark, show the room description
-          (if was-dark?
-            (-> gs
-                utils/crlf
-                verbs-look/v-look)
-            gs)))
-
-      ;; Object has :burn flag (needs fire to light)
-      has-burn?
-      (utils/tell game-state (str "If you wish to burn the " desc ", you should say so."))
-
-      ;; Can't turn this on
-      :else
-      (utils/tell game-state "You can't turn that on."))))
+        (utils/tell game-state "You can't turn that on.")))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; LAMP-OFF COMMAND
@@ -113,30 +118,35 @@
   (let [prso (parser-state/get-prso game-state)
         obj (gs/get-thing game-state prso)
         desc (:desc obj)
+        action-fn (:action obj)
         has-light? (gs/set-thing-flag? game-state prso :light)
         is-on? (gs/set-thing-flag? game-state prso :on)]
-    (cond
-      ;; Object has :light flag (can be turned on/off)
-      has-light?
+    ;; First try the object's action handler (e.g., lantern, match, candles)
+    (if-let [result (when action-fn (action-fn game-state))]
+      result
+      ;; Object didn't handle it - default behavior
       (cond
-        ;; Already off
-        (not is-on?)
-        (utils/tell game-state "It is already off.")
+        ;; Object has :light flag (can be turned on/off)
+        has-light?
+        (cond
+          ;; Already off
+          (not is-on?)
+          (utils/tell game-state "It is already off.")
 
-        ;; Turn it off
+          ;; Turn it off
+          :else
+          (let [;; Clear the :on flag
+                gs (gs/unset-thing-flag game-state prso :on)
+                ;; Check if room is still lit
+                still-lit? (room-still-lit? gs)
+                gs (assoc gs :lit still-lit?)
+                ;; Tell the player
+                gs (utils/tell gs (str "The " desc " is now off."))]
+            ;; If now dark, warn the player
+            (if (not still-lit?)
+              (utils/tell gs "It is now pitch black.")
+              gs)))
+
+        ;; Can't turn this off
         :else
-        (let [;; Clear the :on flag
-              gs (gs/unset-thing-flag game-state prso :on)
-              ;; Check if room is still lit
-              still-lit? (room-still-lit? gs)
-              gs (assoc gs :lit still-lit?)
-              ;; Tell the player
-              gs (utils/tell gs (str "The " desc " is now off."))]
-          ;; If now dark, warn the player
-          (if (not still-lit?)
-            (utils/tell gs "It is now pitch black.")
-            gs)))
-
-      ;; Can't turn this off
-      :else
-      (utils/tell game-state "You can't turn that off."))))
+        (utils/tell game-state "You can't turn that off.")))))
