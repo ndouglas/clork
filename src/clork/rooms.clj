@@ -43,12 +43,14 @@
            :sw {:to :stone-barrow :if :won}
            :in {:to :stone-barrow :if :won}}
    :action (fn [game-state rarg]
-             (-> game-state
-                 (cond-> (= rarg :look)
-                   (utils/tell "You are standing in an open field west of a white house, with a boarded front door."))
-                 (cond-> (:won game-state)
-                   (utils/tell " A secret path leads southwest into the forest."))
-                 (utils/crlf)))})
+             ;; Only print description for :look action, not :m-beg
+             (if (= rarg :look)
+               (-> game-state
+                   (utils/tell "You are standing in an open field west of a white house, with a boarded front door.")
+                   (cond-> (:won game-state)
+                     (utils/tell " A secret path leads southwest into the forest."))
+                   (utils/crlf))
+               game-state))})
 
 ;; <ROOM NORTH-OF-HOUSE
 ;;       (IN ROOMS)
