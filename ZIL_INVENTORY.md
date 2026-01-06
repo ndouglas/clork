@@ -639,9 +639,9 @@ These are out-of-game commands that don't advance time.
 
 | Status | Routine          | Object      | Description         |
 | ------ | ---------------- | ----------- | ------------------- |
-| [ ]    | MAILBOX-F        | MAILBOX     | Mailbox interaction |
-| [ ]    | TRAP-DOOR-FCN    | TRAP-DOOR   | Trap door logic     |
-| [ ]    | GRATE-FUNCTION   | GRATE       | Grating logic       |
+| [x]    | MAILBOX-F        | MAILBOX     | Mailbox interaction |
+| [x]    | TRAP-DOOR-FCN    | TRAP-DOOR   | Trap door logic     |
+| [x]    | GRATE-FUNCTION   | GRATE       | Grating logic       |
 | [x]    | TROPHY-CASE-FCN  | TROPHY-CASE | Score deposit       |
 | [x]    | BOTTLE-FUNCTION  | BOTTLE      | Bottle liquid       |
 | [x]    | ROPE-FUNCTION    | ROPE        | Rope tying          |
@@ -649,21 +649,21 @@ These are out-of-game commands that don't advance time.
 | [x]    | LANTERN          | LAMP        | Lantern usage       |
 | [x]    | CANDLES-FCN      | CANDLES     | Candle burning      |
 | [x]    | MATCH-FUNCTION   | MATCH       | Match lighting      |
-| [ ]    | BELL-F           | BELL        | Bell ringing        |
-| [ ]    | HOT-BELL-F       | HOT-BELL    | Hot bell handling   |
+| [x]    | BELL-F           | BELL        | Bell ringing        |
+| [x]    | HOT-BELL-F       | HOT-BELL    | Hot bell handling   |
 | [x]    | EGG-OBJECT       | EGG         | Egg opening         |
 | [x]    | CANARY-OBJECT    | CANARY      | Clockwork canary    |
 | [x]    | DAM-FUNCTION     | DAM         | Dam controls        |
-| [ ]    | MACHINE-F        | MACHINE     | Coal machine        |
+| [x]    | MACHINE-F        | MACHINE     | Coal machine        |
 | [x]    | RUG-FCN          | RUG         | Hidden trap door    |
-| [ ]    | BASKET-F         | BASKET      | Shaft basket        |
+| [x]    | BASKET-F         | BASKET      | Shaft basket        |
 | [x]    | SCEPTRE-FUNCTION | SCEPTRE     | Rainbow waving      |
 | [x]    | PAINTING-FCN     | PAINTING    | Painting handling   |
 | [x]    | RAINBOW-FCN      | RAINBOW     | Rainbow crossing    |
-| [ ]    | SLIDE-FUNCTION   | SLIDE       | Cellar slide        |
+| [x]    | SLIDE-FUNCTION   | SLIDE       | Cellar slide        |
 | [x]    | LEAK-FUNCTION    | LEAK        | Dam leak            |
-| [ ]    | LEAF-PILE        | LEAVES      | Leaf pile           |
-| [ ]    | SAND-FUNCTION    | SAND        | Digging sand        |
+| [x]    | LEAF-PILE        | LEAVES      | Leaf pile           |
+| [x]    | SAND-FUNCTION    | SAND        | Digging sand        |
 | [x]    | TUBE-FUNCTION    | TUBE        | Tube usage          |
 | [x]    | TORCH-OBJECT     | TORCH       | Torch handling      |
 

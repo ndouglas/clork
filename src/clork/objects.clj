@@ -10,7 +10,8 @@
             [clork.thief :as thief]
             [clork.cyclops :as cyclops]
             [clork.dam :as dam]
-            [clork.light :as light]))
+            [clork.light :as light]
+            [clork.death :as death]))
 
 ;; <OBJECT MAILBOX
 ;;	(IN WEST-OF-HOUSE)
@@ -270,6 +271,187 @@
 
                  ;; Other verbs - not handled by window
                  :else nil)))})
+
+;; <OBJECT SLIDE
+;;     (IN LOCAL-GLOBALS)
+;;     (SYNONYM CHUTE RAMP SLIDE)
+;;     (ADJECTIVE STEEP METAL TWISTING)
+;;     (DESC "chute")
+;;     (FLAGS CLIMBBIT)
+;;     (ACTION SLIDE-FUNCTION)>
+
+(def ^:private yuks
+  "Humorous responses for trying to do impossible things.
+   ZIL: YUKS global in gverbs.zil"
+  ["A valiant attempt."
+   "You can't be serious."
+   "An interesting idea..."
+   "What a concept!"])
+
+(defn slide-action
+  "Action handler for the kitchen/cellar slide.
+
+   ZIL: SLIDE-FUNCTION in 1actions.zil (lines 3099-3109)
+   SLIDER routine (lines 3111-3117)
+
+   The slide connects the kitchen chimney to the cellar.
+   - THROUGH/CLIMB: From cellar goes west, otherwise tumble down to cellar
+   - PUT object IN slide: object falls to cellar"
+  [game-state]
+  (let [prsa (parser-state/get-prsa game-state)
+        prso (parser-state/get-prso game-state)
+        here (:here game-state)]
+    (cond
+      ;; THROUGH, CLIMB variations, or PUT ME IN
+      (or (contains? #{:through :climb-up :climb-down :climb} prsa)
+          (and (= prsa :put) (= prso :adventurer)))
+      (if (= here :cellar)
+        ;; From cellar - can go west (back up)
+        (-> game-state
+            (assoc :here :kitchen)
+            (utils/tell "You climb up the slide."))
+        ;; From kitchen - tumble down
+        (-> game-state
+            (assoc :here :cellar)
+            (utils/tell "You tumble down the slide....")))
+
+      ;; PUT object IN slide
+      (and (= prsa :put) (= (parser-state/get-prsi game-state) :slide))
+      (let [obj (gs/get-thing game-state prso)
+            takeable? (contains? (or (:flags obj) #{}) :take)]
+        (if takeable?
+          ;; Takeable objects fall to cellar
+          (if (= prso :water)
+            ;; Water disappears
+            (-> game-state
+                (assoc-in [:objects prso :in] :limbo)
+                (utils/tell (str "The " (:desc obj) " falls into the slide and is gone.")))
+            ;; Other items end up in cellar
+            (-> game-state
+                (assoc-in [:objects prso :in] :cellar)
+                (utils/tell (str "The " (:desc obj) " falls into the slide and is gone."))))
+          ;; Not takeable - humor response
+          (utils/tell game-state (rand-nth yuks))))
+
+      ;; Default
+      :else nil)))
+
+(def slide
+  {:id :slide
+   :in :local-globals  ; Present in kitchen and cellar
+   :synonym ["chute" "ramp" "slide"]
+   :adjective ["steep" "metal" "twisting"]
+   :desc "chute"
+   :flags (flags/flags :climb)
+   :action slide-action})
+
+;;; ---------------------------------------------------------------------------
+;;; SAND/BEACH OBJECTS
+;;; ---------------------------------------------------------------------------
+
+;; <OBJECT SAND
+;;     (IN SANDY-CAVE)
+;;     (SYNONYM SAND)
+;;     (DESC "sand")
+;;     (FLAGS NDESCBIT)
+;;     (ACTION SAND-FUNCTION)>
+
+(def ^:private dig-messages
+  "Progressive messages when digging in sand.
+   ZIL: BDIGS table in 1actions.zil"
+  ["You seem to be digging a hole here."
+   "The hole is getting deeper, but that's about it."
+   "You are surrounded by a wall of sand on all sides."])
+
+(defn sand-action
+  "Action handler for the sand in sandy cave.
+
+   ZIL: SAND-FUNCTION in 1actions.zil (lines 2868-2882)
+
+   Dig in the sand with a shovel to find the scarab:
+   - Dig 1-2: Progressive messages
+   - Dig 3: Reveal scarab if not already taken
+   - Dig 4+: Hole collapses, killing player"
+  [game-state]
+  (let [prsa (parser-state/get-prsa game-state)
+        prsi (parser-state/get-prsi game-state)]
+    (cond
+      ;; DIG with shovel
+      (and (= prsa :dig) (= prsi :shovel))
+      (let [beach-dig (get game-state :beach-dig 0)
+            new-dig (inc beach-dig)]
+        (cond
+          ;; Dig 4+: collapse!
+          (> new-dig 3)
+          (let [gs (-> game-state
+                       (assoc :beach-dig 0))]
+            ;; If scarab still here and visible, hide it again
+            (death/jigs-up gs "The hole collapses, smothering you."))
+
+          ;; Dig 3: reveal scarab
+          (= new-dig 3)
+          (let [scarab-invisible? (gs/set-thing-flag? game-state :jeweled-scarab :invisible)]
+            (if scarab-invisible?
+              (-> game-state
+                  (assoc :beach-dig new-dig)
+                  (gs/unset-thing-flag :jeweled-scarab :invisible)
+                  (utils/tell "You can see a scarab here in the sand."))
+              (-> game-state
+                  (assoc :beach-dig new-dig)
+                  (utils/tell (nth dig-messages 2)))))
+
+          ;; Dig 1-2: progressive message
+          :else
+          (-> game-state
+              (assoc :beach-dig new-dig)
+              (utils/tell (nth dig-messages (dec new-dig))))))
+
+      ;; Default
+      :else nil)))
+
+(def sand
+  {:id :sand
+   :in :sandy-cave
+   :synonym ["sand"]
+   :desc "sand"
+   :flags (flags/flags :ndesc)
+   :action sand-action})
+
+;; <OBJECT SCARAB
+;;     (IN SANDY-CAVE)
+;;     (SYNONYM SCARAB BUG BEETLE TREASURE)
+;;     (ADJECTIVE BEAUTI CARVED JEWELED)
+;;     (DESC "beautiful jeweled scarab")
+;;     (FLAGS TAKEBIT INVISIBLE)
+;;     (SIZE 8)
+;;     (VALUE 5)
+;;     (TVALUE 5)>
+
+(def jeweled-scarab
+  {:id :jeweled-scarab
+   :in :sandy-cave
+   :synonym ["scarab" "bug" "beetle" "treasure"]
+   :adjective ["beautiful" "carved" "jeweled"]
+   :desc "beautiful jeweled scarab"
+   :flags (flags/flags :take :invisible)  ; Hidden until dug up
+   :size 8
+   :value 5
+   :tvalue 5})
+
+;; <OBJECT SHOVEL
+;;     (IN SANDY-BEACH)
+;;     (SYNONYM SHOVEL TOOL TOOLS)
+;;     (DESC "shovel")
+;;     (FLAGS TAKEBIT TOOLBIT)
+;;     (SIZE 15)>
+
+(def shovel
+  {:id :shovel
+   :in :sandy-beach
+   :synonym ["shovel" "tool" "tools"]
+   :desc "shovel"
+   :flags (flags/flags :take :tool)
+   :size 15})
 
 ;; <OBJECT TRAP-DOOR
 ;;	(SYNONYM DOOR TRAPDOOR TRAP-DOOR COVER)
@@ -995,6 +1177,124 @@
 
                  ;; Default
                  :else nil)))})
+
+;; <OBJECT BRASS-BELL
+;;     (IN NORTH-TEMPLE)
+;;     (SYNONYM BELL)
+;;     (ADJECTIVE SMALL BRASS)
+;;     (DESC "brass bell")
+;;     (FLAGS TAKEBIT)
+;;     (ACTION BELL-F)>
+
+(defn bell-action
+  "Action handler for the brass bell.
+
+   ZIL: BELL-F in 1actions.zil (lines 356-362)
+   <ROUTINE BELL-F ()
+     <COND (<VERB? RING>
+            <COND (<AND <EQUAL? ,HERE ,LLD-ROOM>
+                        <NOT ,LLD-FLAG>>
+                   <RFALSE>)
+                  (T
+                   <TELL \"Ding, dong.\" CR>)>)>>
+
+   The bell is part of the exorcism puzzle. When rung in the
+   Entrance to Hades before the exorcism is complete, the
+   room action handles it instead."
+  [game-state]
+  (let [prsa (parser-state/get-prsa game-state)
+        here (:here game-state)
+        lld-flag (get game-state :lld-flag false)]
+    (cond
+      ;; RING
+      (= prsa :ring)
+      (if (and (= here :entrance-to-hades)
+               (not lld-flag))
+        ;; Return nil to let room handle this
+        nil
+        ;; Normal ring
+        (utils/tell game-state "Ding, dong."))
+
+      ;; Default - no special handling
+      :else nil)))
+
+(def brass-bell
+  {:id :brass-bell
+   :in :north-temple
+   :synonym ["bell"]
+   :adjective ["small" "brass"]
+   :desc "brass bell"
+   :flags (flags/flags :take)
+   :action bell-action})
+
+;; <OBJECT HOT-BELL
+;;     (SYNONYM BELL)
+;;     (ADJECTIVE BRASS HOT RED SMALL)
+;;     (DESC "red hot brass bell")
+;;     (FLAGS TRYTAKEBIT)
+;;     (ACTION HOT-BELL-F)
+;;     (LDESC "On the ground is a red hot bell.")>
+
+(defn hot-bell-action
+  "Action handler for the red hot brass bell.
+
+   ZIL: HOT-BELL-F in 1actions.zil (lines 364-381)
+   The bell becomes hot during the exorcism sequence when dropped.
+   It can be cooled with water or will eventually cool on its own."
+  [game-state]
+  (let [prsa (parser-state/get-prsa game-state)
+        prsi (parser-state/get-prsi game-state)
+        prsi-obj (when prsi (gs/get-thing game-state prsi))]
+    (cond
+      ;; TAKE
+      (= prsa :take)
+      (utils/tell game-state "The bell is very hot and cannot be taken.")
+
+      ;; RUB or RING with an instrument
+      (or (= prsa :rub)
+          (and (= prsa :ring) prsi))
+      (cond
+        ;; If prsi has burn flag, it burns up
+        (and prsi-obj (contains? (:flags prsi-obj) :burn))
+        (-> game-state
+            (assoc-in [:objects prsi :in] :limbo)
+            (utils/tell (str "The " (:desc prsi-obj) " burns and is consumed.")))
+
+        ;; Using hands
+        (= prsi :hands)
+        (utils/tell game-state "The bell is too hot to touch.")
+
+        ;; Other object
+        :else
+        (utils/tell game-state "The heat from the bell is too intense."))
+
+      ;; POUR-ON (water cools it)
+      (= prsa :pour-on)
+      (let [prso (parser-state/get-prso game-state)]
+        (-> game-state
+            (assoc-in [:objects prso :in] :limbo)  ; Remove water
+            (utils/tell "The water cools the bell and is evaporated.")
+            ;; Trigger I-XBH to swap hot bell back to normal bell
+            ;; For now, just do the swap directly
+            (assoc-in [:objects :hot-bell :in] :limbo)
+            (assoc-in [:objects :brass-bell :in] (:here game-state))))
+
+      ;; RING (without instrument)
+      (= prsa :ring)
+      (utils/tell game-state "The bell is too hot to reach.")
+
+      ;; Default - no special handling
+      :else nil)))
+
+(def hot-bell
+  {:id :hot-bell
+   :in :limbo  ; Starts in limbo, appears during exorcism
+   :synonym ["bell"]
+   :adjective ["brass" "hot" "red" "small"]
+   :desc "red hot brass bell"
+   :flags (flags/flags :trytake)
+   :ldesc "On the ground is a red hot bell."
+   :action hot-bell-action})
 
 ;; <OBJECT CANDLES
 ;;	(IN SOUTH-TEMPLE)
@@ -2028,7 +2328,7 @@
    :synonym ["leaves" "leaf" "pile"]
    :desc "pile of leaves"
    :ldesc "On the ground is a pile of leaves."
-   :flags (flags/flags :take)  ; BURNBIT not yet implemented
+   :flags (flags/flags :take :burn :trytake)
    :size 25
    :action (fn [game-state]
              ;; ZIL: LEAF-PILE in 1actions.zil (lines 799-826)
@@ -2038,6 +2338,17 @@
                  ;; COUNT
                  (= prsa :count)
                  (utils/tell game-state "There are 69,105 leaves here.")
+
+                 ;; BURN - burn leaves (fatal if holding them!)
+                 (= prsa :burn)
+                 (let [held? (= (gs/get-thing-loc-id game-state :leaves) :adventurer)
+                       gs (-> game-state
+                              (leaves-appear :burn)
+                              (assoc-in [:objects :leaves :in] :limbo))]
+                   (if held?
+                     ;; Holding burning leaves = death
+                     (death/jigs-up gs "The leaves burn, and so do you.")
+                     (utils/tell gs "The leaves burn.")))
 
                  ;; MOVE - reveal grating if not already revealed
                  (= prsa :move)
@@ -2117,6 +2428,10 @@
                    (= here :grating-clearing)
                    (utils/tell game-state "You can't lock it from this side."))
 
+                 ;; PICK (lock picking)
+                 (= prsa :pick)
+                 (utils/tell game-state "You can't pick the lock.")
+
                  ;; OPEN/CLOSE
                  (#{:open :close} prsa)
                  (if grunlock
@@ -2124,18 +2439,39 @@
                      (= prsa :open)
                      (if grate-open?
                        (utils/tell game-state "It is already open.")
-                       (let [gs (gs/set-thing-flag game-state :grate :open)]
+                       (let [gs (-> game-state
+                                    (gs/set-thing-flag :grate :open)
+                                    (gs/set-thing-flag :grating-room :on))]  ; Light enters
                          (if (= here :grating-clearing)
                            (utils/tell gs "The grating opens.")
-                           (-> gs
-                               (utils/tell "The grating opens to reveal trees above you.")))))
+                           ;; First time opening from below - leaves fall
+                           (if (get game-state :grate-revealed false)
+                             (utils/tell gs "The grating opens to reveal trees above you.")
+                             (-> gs
+                                 (assoc :grate-revealed true)
+                                 (assoc-in [:objects :leaves :in] here)
+                                 (utils/tell "The grating opens to reveal trees above you.")
+                                 (utils/crlf)
+                                 (utils/tell "A pile of leaves falls onto your head and to the ground."))))))
                      (= prsa :close)
                      (if grate-open?
                        (-> game-state
                            (gs/unset-thing-flag :grate :open)
+                           (gs/unset-thing-flag :grating-room :on)  ; No more light
                            (utils/tell "The grating is closed."))
                        (utils/tell game-state "It is already closed.")))
                    (utils/tell game-state "The grating is locked."))
+
+                 ;; PUT something through grate (from clearing above)
+                 (and (= prsa :put) (= prsi :grate))
+                 (let [prso (parser-state/get-prso game-state)
+                       obj (gs/get-thing game-state prso)
+                       size (get obj :size 5)]
+                   (if (> size 20)
+                     (utils/tell game-state "It won't fit through the grating.")
+                     (-> game-state
+                         (assoc-in [:objects prso :in] :grating-room)
+                         (utils/tell (str "The " (:desc obj) " goes through the grating into the darkness below.")))))
 
                  ;; Default - no special handling
                  :else nil)))})
@@ -2406,6 +2742,310 @@
    :flags (flags/flags :take :tool)})
 
 ;;; ---------------------------------------------------------------------------
+;;; MACHINE ROOM OBJECTS
+;;; ---------------------------------------------------------------------------
+
+;; <OBJECT MACHINE
+;;     (IN MACHINE-ROOM)
+;;     (SYNONYM MACHINE PDP10 DRYER LID)
+;;     (DESC "machine")
+;;     (FLAGS CONTBIT NDESCBIT TRYTAKEBIT)
+;;     (ACTION MACHINE-F)
+;;     (CAPACITY 50)>
+
+(def ^:private dummy-responses
+  "Humorous responses for already-done actions.
+   ZIL: DUMMY global in gverbs.zil"
+  ["It's already open."
+   "You can't be serious."
+   "An interesting idea..."])
+
+(defn machine-action
+  "Action handler for the coal machine.
+
+   ZIL: MACHINE-F in 1actions.zil (lines 2515-2542)
+   The machine transforms coal into a diamond when activated with
+   the screwdriver while closed. Other objects become gunk."
+  [game-state]
+  (let [prsa (parser-state/get-prsa game-state)
+        prso (parser-state/get-prso game-state)
+        machine-open? (gs/set-thing-flag? game-state :machine :open)]
+    (cond
+      ;; TAKE the machine
+      (and (= prsa :take) (= prso :machine))
+      (utils/tell game-state "It is far too large to carry.")
+
+      ;; OPEN
+      (= prsa :open)
+      (cond
+        ;; Already open
+        machine-open?
+        (utils/tell game-state (rand-nth dummy-responses))
+
+        ;; Has contents - show them
+        :else
+        (let [contents (filter (fn [[_ obj]] (= (:in obj) :machine))
+                               (:objects game-state))]
+          (if (seq contents)
+            (let [content-descs (map (fn [[_ obj]] (:desc obj)) contents)]
+              (-> game-state
+                  (gs/set-thing-flag :machine :open)
+                  (utils/tell (str "The lid opens, revealing " (clojure.string/join ", " content-descs) "."))))
+            (-> game-state
+                (gs/set-thing-flag :machine :open)
+                (utils/tell "The lid opens.")))))
+
+      ;; CLOSE
+      (= prsa :close)
+      (if machine-open?
+        (-> game-state
+            (gs/unset-thing-flag :machine :open)
+            (utils/tell "The lid closes."))
+        (utils/tell game-state (rand-nth dummy-responses)))
+
+      ;; LAMP-ON (turn on) - redirect to switch
+      (= prsa :lamp-on)
+      (let [prsi (parser-state/get-prsi game-state)]
+        (if (nil? prsi)
+          (utils/tell game-state "It's not clear how to turn it on with your bare hands.")
+          ;; Redirect to turn the switch with the tool
+          nil))  ; Let the verb handler deal with it
+
+      ;; Default
+      :else nil)))
+
+(def machine
+  {:id :machine
+   :in :machine-room
+   :synonym ["machine" "pdp10" "dryer" "lid"]
+   :desc "machine"
+   :flags (flags/flags :cont :ndesc :trytake)
+   :capacity 50
+   :action machine-action})
+
+;; <OBJECT MACHINE-SWITCH
+;;     (IN MACHINE-ROOM)
+;;     (SYNONYM SWITCH)
+;;     (DESC "switch")
+;;     (FLAGS NDESCBIT TURNBIT)
+;;     (ACTION MSWITCH-FUNCTION)>
+
+(defn machine-switch-action
+  "Action handler for the machine switch.
+
+   ZIL: MSWITCH-FUNCTION in 1actions.zil (lines 2544-2564)
+   Turn the switch with a screwdriver to activate the machine.
+   - If lid is open: machine does nothing
+   - If coal is inside: coal becomes a diamond
+   - Otherwise: contents become gunk"
+  [game-state]
+  (let [prsa (parser-state/get-prsa game-state)
+        prsi (parser-state/get-prsi game-state)
+        machine-open? (gs/set-thing-flag? game-state :machine :open)]
+    (cond
+      ;; TURN with screwdriver
+      (and (= prsa :turn) (= prsi :screwdriver))
+      (cond
+        ;; Lid is open - nothing happens
+        machine-open?
+        (utils/tell game-state "The machine doesn't seem to want to do anything.")
+
+        ;; Lid is closed - activate!
+        :else
+        (let [coal-in-machine? (= (gs/get-thing-loc-id game-state :coal) :machine)
+              ;; Light show message
+              gs (utils/tell game-state
+                   "The machine comes to life (figuratively) with a dazzling display of colored lights and bizarre noises. After a few moments, the excitement abates.")]
+          (if coal-in-machine?
+            ;; Coal -> Diamond
+            (-> gs
+                (assoc-in [:objects :coal :in] :limbo)
+                (assoc-in [:objects :huge-diamond :in] :machine))
+            ;; Everything else -> Gunk
+            (let [;; Remove all contents
+                  contents (filter (fn [[id obj]] (= (:in obj) :machine)) (:objects gs))
+                  gs-cleared (reduce (fn [state [id _]]
+                                       (assoc-in state [:objects id :in] :limbo))
+                                     gs contents)]
+              (assoc-in gs-cleared [:objects :gunk :in] :machine)))))
+
+      ;; TURN with other tool
+      (= prsa :turn)
+      (if prsi
+        (utils/tell game-state (str "It seems that a " (:desc (gs/get-thing game-state prsi)) " won't do."))
+        (utils/tell game-state "You need to use a tool to turn the switch."))
+
+      ;; Default
+      :else nil)))
+
+(def machine-switch
+  {:id :machine-switch
+   :in :machine-room
+   :synonym ["switch"]
+   :desc "switch"
+   :flags (flags/flags :ndesc :turn)
+   :action machine-switch-action})
+
+;; <OBJECT SCREWDRIVER
+;;     (IN MAINTENANCE-ROOM)
+;;     (SYNONYM SCREWDRIVER TOOL TOOLS DRIVER)
+;;     (ADJECTIVE SCREW)
+;;     (DESC "screwdriver")
+;;     (FLAGS TAKEBIT TOOLBIT)>
+
+(def screwdriver
+  {:id :screwdriver
+   :in :maintenance-room
+   :synonym ["screwdriver" "tool" "tools" "driver"]
+   :adjective "screw"
+   :desc "screwdriver"
+   :flags (flags/flags :take :tool)})
+
+;; <OBJECT COAL
+;;     (IN DEAD-END-5)
+;;     (SYNONYM COAL PILE HEAP)
+;;     (ADJECTIVE SMALL)
+;;     (DESC "small pile of coal")
+;;     (FLAGS TAKEBIT BURNBIT)
+;;     (SIZE 20)>
+
+(def coal
+  {:id :coal
+   :in :dead-end-5
+   :synonym ["coal" "pile" "heap"]
+   :adjective "small"
+   :desc "small pile of coal"
+   :flags (flags/flags :take :burn)
+   :size 20})
+
+;; <OBJECT GUNK
+;;     (SYNONYM GUNK PIECE SLAG)
+;;     (ADJECTIVE SMALL VITREOUS)
+;;     (DESC "small piece of vitreous slag")
+;;     (FLAGS TAKEBIT TRYTAKEBIT)
+;;     (ACTION GUNK-FUNCTION)
+;;     (SIZE 10)>
+
+(defn gunk-action
+  "Action handler for gunk (vitreous slag).
+
+   ZIL: GUNK-FUNCTION in 1actions.zil (lines 2566-2569)
+   The gunk crumbles when touched/taken."
+  [game-state]
+  (let [prsa (parser-state/get-prsa game-state)]
+    (when (= prsa :take)
+      (-> game-state
+          (assoc-in [:objects :gunk :in] :limbo)
+          (utils/tell "The slag was rather insubstantial, and crumbles into dust at your touch.")))))
+
+(def gunk
+  {:id :gunk
+   :in :limbo  ; Appears when machine destroys non-coal items
+   :synonym ["gunk" "piece" "slag"]
+   :adjective ["small" "vitreous"]
+   :desc "small piece of vitreous slag"
+   :flags (flags/flags :take :trytake)
+   :size 10
+   :action gunk-action})
+
+;;; ---------------------------------------------------------------------------
+;;; SHAFT/BASKET OBJECTS
+;;; ---------------------------------------------------------------------------
+
+;; <OBJECT LOWERED-BASKET
+;;     (IN LOWER-SHAFT)
+;;     (SYNONYM CAGE DUMBWAITER BASKET)
+;;     (ADJECTIVE LOWERED)
+;;     (LDESC "From the chain is suspended a basket.")
+;;     (DESC "basket")
+;;     (FLAGS TRYTAKEBIT)
+;;     (ACTION BASKET-F)>
+
+;; <OBJECT RAISED-BASKET
+;;     (IN SHAFT-ROOM)
+;;     (SYNONYM CAGE DUMBWAITER BASKET)
+;;     (DESC "basket")
+;;     (FLAGS TRANSBIT TRYTAKEBIT CONTBIT OPENBIT)
+;;     (ACTION BASKET-F)
+;;     (LDESC "At the end of the chain is a basket.")
+;;     (CAPACITY 50)>
+
+(defn basket-action
+  "Action handler for the shaft basket.
+
+   ZIL: BASKET-F in 1actions.zil (lines 290-319)
+
+   The basket can be raised or lowered via a chain. It's used
+   to transport objects between shaft-room (top) and lower-shaft
+   (bottom). The player cannot enter the basket.
+
+   CAGE-TOP global tracks basket position:
+   - true: raised basket at top (shaft-room), lowered at bottom
+   - false: raised basket at bottom (lower-shaft), lowered at top"
+  [game-state]
+  (let [prsa (parser-state/get-prsa game-state)
+        prso (parser-state/get-prso game-state)
+        cage-top? (get game-state :cage-top true)]
+    (cond
+      ;; RAISE - bring basket up
+      (= prsa :raise)
+      (if cage-top?
+        (utils/tell game-state (rand-nth dummy-responses))
+        ;; Swap positions - "raise" brings basket to top
+        (-> game-state
+            (assoc-in [:objects :raised-basket :in] :shaft-room)
+            (assoc-in [:objects :lowered-basket :in] :lower-shaft)
+            (assoc :cage-top true)
+            (utils/tell "The basket is raised to the top of the shaft.")))
+
+      ;; LOWER - send basket down
+      (= prsa :lower)
+      (if (not cage-top?)
+        (utils/tell game-state (rand-nth dummy-responses))
+        ;; Swap positions - "lower" sends basket to bottom
+        (let [gs (-> game-state
+                     (assoc-in [:objects :raised-basket :in] :lower-shaft)
+                     (assoc-in [:objects :lowered-basket :in] :shaft-room)
+                     (assoc :cage-top false)
+                     (utils/tell "The basket is lowered to the bottom of the shaft."))]
+          ;; Check if we just lowered light away - might go dark
+          ;; ZIL: <COND (<AND ,LIT <NOT <SETG LIT <LIT? ,HERE>>>>...
+          gs))
+
+      ;; Interacting with lowered basket from wrong end
+      (or (= prso :lowered-basket)
+          (= (parser-state/get-prsi game-state) :lowered-basket))
+      (utils/tell game-state "The basket is at the other end of the chain.")
+
+      ;; TAKE basket
+      (and (= prsa :take)
+           (contains? #{:raised-basket :lowered-basket} prso))
+      (utils/tell game-state "The cage is securely fastened to the iron chain.")
+
+      ;; Default
+      :else nil)))
+
+(def raised-basket
+  {:id :raised-basket
+   :in :shaft-room  ; Starts at top
+   :synonym ["cage" "dumbwaiter" "basket"]
+   :desc "basket"
+   :flags (flags/flags :trans :trytake :cont :open)
+   :ldesc "At the end of the chain is a basket."
+   :capacity 50
+   :action basket-action})
+
+(def lowered-basket
+  {:id :lowered-basket
+   :in :lower-shaft  ; Virtual - represents "other end of chain"
+   :synonym ["cage" "dumbwaiter" "basket"]
+   :adjective "lowered"
+   :desc "basket"
+   :flags (flags/flags :trytake)
+   :ldesc "From the chain is suspended a basket."
+   :action basket-action})
+
+;;; ---------------------------------------------------------------------------
 ;;; RAINBOW
 ;;; ---------------------------------------------------------------------------
 
@@ -2479,6 +3119,11 @@
    leaflet
    white-house
    kitchen-window
+   slide
+   ;; Sand/beach objects
+   sand
+   jeweled-scarab
+   shovel
    trap-door
    kitchen-table
    brown-sack
@@ -2533,6 +3178,15 @@
    blue-button
    red-button
    pump
+   ;; Machine room objects
+   machine
+   machine-switch
+   screwdriver
+   coal
+   gunk
+   ;; Shaft/basket objects
+   raised-basket
+   lowered-basket
    rainbow
    ;; Loud Room treasure
    platinum-bar
@@ -2546,6 +3200,8 @@
    sceptre
    ivory-torch
    candles
+   brass-bell
+   hot-bell
    trunk-of-jewels
    huge-diamond
    large-emerald
