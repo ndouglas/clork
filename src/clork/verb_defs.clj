@@ -267,9 +267,19 @@
                 :syntax  {:num-objects 0}
                 :handler verbs-put/v-put-behind}
 
+   ;; ZIL: <SYNTAX OPEN OBJECT (FIND DOORBIT) (HELD CARRIED ON-GROUND IN-ROOM) = V-OPEN>
+   ;;      <SYNTAX OPEN OBJECT (FIND DOORBIT) (HELD CARRIED ON-GROUND IN-ROOM) WITH
+   ;;              OBJECT (FIND TOOLBIT) (ON-GROUND IN-ROOM HELD CARRIED HAVE) = V-OPEN>
    :open       {:words   ["open"]
-                :syntax  {:num-objects 1
-                          :loc1 #{:held :in-room :on-ground :carried}}
+                :syntax  [{;; Basic: OPEN OBJECT
+                           :num-objects 1
+                           :loc1 #{:held :in-room :on-ground :carried}}
+                          ;; OPEN OBJECT WITH OBJECT
+                          {:num-objects 2
+                           :prep2 :with
+                           :loc1 #{:held :in-room :on-ground :carried}
+                           :loc2 #{:held :carried :in-room :on-ground :have}
+                           :gwim2 :tool}]  ; FIND TOOLBIT - find tools
                 :handler verbs-containers/v-open}
 
    ;; ZIL: <SYNTAX CLOSE OBJECT (FIND DOORBIT) (HELD CARRIED ON-GROUND IN-ROOM) = V-CLOSE>

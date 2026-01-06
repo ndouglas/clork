@@ -554,8 +554,8 @@ These are out-of-game commands that don't advance time.
 | [ ]    | TUBE               | Tube               |
 | [ ]    | LADDER             | Ladder             |
 | [ ]    | TIMBERS            | Timbers            |
-| [ ]    | BROKEN-EGG         | Broken Egg         |
-| [ ]    | BROKEN-CANARY      | Broken Canary      |
+| [x]    | BROKEN-EGG         | Broken Egg         |
+| [x]    | BROKEN-CANARY      | Broken Canary      |
 | [ ]    | BROKEN-LAMP        | Broken Lamp        |
 | [x]    | BURNED-OUT-LANTERN | Burned-out Lantern |
 
@@ -651,11 +651,11 @@ These are out-of-game commands that don't advance time.
 | [x]    | MATCH-FUNCTION   | MATCH       | Match lighting      |
 | [ ]    | BELL-F           | BELL        | Bell ringing        |
 | [ ]    | HOT-BELL-F       | HOT-BELL    | Hot bell handling   |
-| [ ]    | EGG-OBJECT       | EGG         | Egg opening         |
+| [x]    | EGG-OBJECT       | EGG         | Egg opening         |
 | [x]    | CANARY-OBJECT    | CANARY      | Clockwork canary    |
 | [x]    | DAM-FUNCTION     | DAM         | Dam controls        |
 | [ ]    | MACHINE-F        | MACHINE     | Coal machine        |
-| [ ]    | RUG-FCN          | RUG         | Hidden trap door    |
+| [x]    | RUG-FCN          | RUG         | Hidden trap door    |
 | [ ]    | BASKET-F         | BASKET      | Shaft basket        |
 | [x]    | SCEPTRE-FUNCTION | SCEPTRE     | Rainbow waving      |
 | [ ]    | PAINTING-FCN     | PAINTING    | Painting handling   |

@@ -4,6 +4,7 @@
    ZIL source: gverbs.zil"
   (:require [clork.utils :as utils]
             [clork.game-state :as gs]
+            [clork.parser.state :as parser-state]
             [clork.random :as random]))
 
 ;;; ---------------------------------------------------------------------------
@@ -685,17 +686,25 @@
 
 (defn v-mung
   "Handle MUNG/DESTROY verb.
-   ZIL: V-MUNG in gverbs.zil lines 954-959"
+   ZIL: V-MUNG in gverbs.zil lines 954-959
+
+   First checks the object's action handler (e.g., for egg destruction).
+   Then falls back to default behavior."
   [game-state]
-  (let [prso (:prso game-state)
-        obj (when prso (gs/get-thing game-state prso))]
-    (if (and obj (contains? (:flags obj #{}) :actor))
-      ;; Redirect to attack
-      (-> game-state
-          (assoc :verb :attack))
-      (-> game-state
-          (utils/tell "Nice try.")
-          (utils/crlf)))))
+  (let [prso (parser-state/get-prso game-state)
+        obj (when prso (gs/get-thing game-state prso))
+        action-fn (:action obj)]
+    ;; First try the object's action handler (e.g., egg)
+    (if-let [result (when action-fn (action-fn game-state))]
+      result
+      ;; Object didn't handle it - default behavior
+      (if (and obj (contains? (:flags obj #{}) :actor))
+        ;; Redirect to attack
+        (-> game-state
+            (assoc :verb :attack))
+        (-> game-state
+            (utils/tell "Nice try.")
+            (utils/crlf))))))
 
 (defn v-strike
   "Handle STRIKE verb.
@@ -714,34 +723,43 @@
 
 (defn v-throw
   "Handle THROW verb.
-   ZIL: V-THROW in gverbs.zil lines 1461-1476"
+   ZIL: V-THROW in gverbs.zil lines 1461-1476
+
+   First checks the object's action handler (e.g., for throwing egg).
+   Then falls back to default behavior."
   [game-state]
-  (let [prso (:prso game-state)
-        prsi (:prsi game-state)]
-    (cond
-      ;; Throw at self
-      (= prsi :me)
-      (-> game-state
-          (utils/tell (str "A terrific throw! The " (gs/thing-name game-state prso)
-                          " hits you squarely in the head. Normally, this wouldn't do much damage, but by incredible mischance, you fall over backwards trying to duck, and break your neck, justice being swift and merciful in the Great Underground Empire."))
-          (utils/crlf)
-          (assoc :dead true))
+  (let [prso (parser-state/get-prso game-state)
+        prsi (parser-state/get-prsi game-state)
+        obj (when prso (gs/get-thing game-state prso))
+        action-fn (:action obj)]
+    ;; First try the object's action handler (e.g., egg)
+    (if-let [result (when action-fn (action-fn game-state))]
+      result
+      ;; Object didn't handle it - default behavior
+      (cond
+        ;; Throw at self
+        (= prsi :me)
+        (-> game-state
+            (utils/tell (str "A terrific throw! The " (gs/thing-name game-state prso)
+                            " hits you squarely in the head. Normally, this wouldn't do much damage, but by incredible mischance, you fall over backwards trying to duck, and break your neck, justice being swift and merciful in the Great Underground Empire."))
+            (utils/crlf)
+            (assoc :dead true))
 
-      ;; Throw at actor
-      (and prsi
-           (let [target (gs/get-thing game-state prsi)]
-             (contains? (:flags target #{}) :actor)))
-      (-> game-state
-          (utils/tell (str "The " (gs/thing-name game-state prsi)
-                          " ducks as the " (gs/thing-name game-state prso)
-                          " flies by and crashes to the ground."))
-          (utils/crlf))
+        ;; Throw at actor
+        (and prsi
+             (let [target (gs/get-thing game-state prsi)]
+               (contains? (:flags target #{}) :actor)))
+        (-> game-state
+            (utils/tell (str "The " (gs/thing-name game-state prsi)
+                            " ducks as the " (gs/thing-name game-state prso)
+                            " flies by and crashes to the ground."))
+            (utils/crlf))
 
-      ;; Default
-      :else
-      (-> game-state
-          (utils/tell "Thrown.")
-          (utils/crlf)))))
+        ;; Default
+        :else
+        (-> game-state
+            (utils/tell "Thrown.")
+            (utils/crlf))))))
 
 (defn v-throw-off
   "Handle THROW OFF/OVER verb.

@@ -1250,6 +1250,112 @@
 ;;	        Unlike most eggs, this one is hinged and closed with a delicate looking
 ;;	        clasp. The egg appears extremely fragile.")>
 
+;; Forward declare bad-egg since it's called by egg-action
+(declare bad-egg)
+
+(defn egg-action
+  "Egg action handler - handles opening, breaking, and sitting on the egg.
+
+   ZIL: EGG-OBJECT (1actions.zil lines 2932-2971)
+
+   The egg is a fragile container. Opening it requires care:
+   - Opening with hands: won't work without tools
+   - Opening with weapons/tools: breaks the egg and damages canary
+   - Sitting on (CLIMB-ON): crushes the egg
+   - Throwing: breaks the egg
+   - Using other items: gives various humorous responses
+
+   Only the thief can open the egg properly (via thief code, not here)."
+  [game-state]
+  (let [prsa (parser-state/get-prsa game-state)
+        prso (parser-state/get-prso game-state)
+        prsi (parser-state/get-prsi game-state)
+        prsi-obj (when prsi (gs/get-thing game-state prsi))
+        is-open? (gs/set-thing-flag? game-state :egg :open)
+        ;; FIGHTBIT tracks if player has tried an original approach
+        tried-original? (gs/set-thing-flag? game-state :egg :fight)]
+    (cond
+      ;; OPEN or MUNG (break) with egg as direct object
+      (and (contains? #{:open :mung :break :destroy :smash} prsa)
+           (= prso :egg))
+      (cond
+        ;; Already open
+        is-open?
+        (utils/tell game-state "The egg is already open.")
+
+        ;; No indirect object (no tool specified)
+        (nil? prsi)
+        (utils/tell game-state "You have neither the tools nor the expertise.")
+
+        ;; Using bare hands
+        (= prsi :hands)
+        (utils/tell game-state "I doubt you could do that without damaging it.")
+
+        ;; Using weapon or tool - breaks the egg!
+        (or (gs/set-thing-flag? game-state prsi :weapon)
+            (gs/set-thing-flag? game-state prsi :tool)
+            (contains? #{:mung :break :destroy :smash} prsa))
+        (-> game-state
+            (utils/tell "The egg is now open, but the clumsiness of your attempt has seriously compromised its esthetic appeal.")
+            bad-egg)
+
+        ;; Using a fighting item (but not weapon/tool) - original!
+        tried-original?
+        (utils/tell game-state (str "Not to say that using the "
+                                    (:desc prsi-obj) " isn't original too..."))
+
+        ;; First time trying something unusual
+        :else
+        (-> game-state
+            (gs/set-thing-flag :egg :fight)
+            (utils/tell (str "The concept of using a "
+                             (:desc prsi-obj) " is certainly original."))))
+
+      ;; CLIMB-ON (sit on) the egg - crushes it
+      (= prsa :climb-on)
+      (-> game-state
+          (utils/tell "There is a noticeable crunch from beneath you, and inspection reveals that the egg is lying open, badly damaged.")
+          bad-egg)
+
+      ;; THROW the egg - breaks it
+      ;; Note: The broken egg moves to current room (handled by bad-egg)
+      (= prsa :throw)
+      (-> game-state
+          (utils/tell "Your rather indelicate handling of the egg has caused it some damage, although you have succeeded in opening it.")
+          bad-egg)
+
+      ;; Not handled - let default verb handle it
+      :else
+      nil)))
+
+(defn bad-egg
+  "Replace the egg with broken egg and damage the canary.
+
+   ZIL: BAD-EGG (1actions.zil lines 2973-2979)
+
+   If the canary is inside the egg, it becomes damaged (broken canary).
+   The broken-egg replaces the egg at the egg's current location.
+   The canary (if in egg) is moved to broken-egg and replaced with broken-canary."
+  [game-state]
+  (let [egg-loc (gs/get-thing-loc-id game-state :egg)
+        canary-in-egg? (= (gs/get-thing-loc-id game-state :clockwork-canary) :egg)
+        ;; Get broken-canary fdesc for the message if canary was in egg
+        broken-canary-fdesc (get-in game-state [:objects :broken-canary :fdesc])]
+    (-> game-state
+        ;; If canary was in egg, show the broken canary description
+        (cond-> canary-in-egg?
+          (utils/tell (str " " broken-canary-fdesc)))
+        ;; Move broken-egg to where egg was
+        (assoc-in [:objects :broken-egg :in] egg-loc)
+        ;; If canary was in egg, move broken-canary into broken-egg
+        (cond-> canary-in-egg?
+          (assoc-in [:objects :broken-canary :in] :broken-egg))
+        ;; Remove the original egg from the game
+        (assoc-in [:objects :egg :in] :limbo)
+        ;; Remove the original canary if it was in the egg
+        (cond-> canary-in-egg?
+          (assoc-in [:objects :clockwork-canary :in] :limbo)))))
+
 (def egg
   {:id :egg
    :in :nest
@@ -1260,7 +1366,62 @@
    :fdesc "In the bird's nest is a large egg encrusted with precious jewels, apparently scavenged by a childless songbird. The egg is covered with fine gold inlay, and ornamented in lapis lazuli and mother-of-pearl. Unlike most eggs, this one is hinged and closed with a delicate looking clasp. The egg appears extremely fragile."
    :capacity 6
    :value 5
-   :tvalue 5})
+   :tvalue 5
+   :action egg-action})
+
+;; ZIL: BROKEN-EGG (1dungeon.zil lines 1171-1178)
+;; <OBJECT BROKEN-EGG
+;;	(SYNONYM EGG TREASURE)
+;;	(ADJECTIVE BROKEN BIRDS ENCRUSTED JEWEL)
+;;	(DESC "broken jewel-encrusted egg")
+;;	(FLAGS TAKEBIT CONTBIT OPENBIT)
+;;	(CAPACITY 6)
+;;	(TVALUE 2)
+;;	(LDESC "There is a somewhat ruined egg here.")>
+
+(def broken-egg
+  {:id :broken-egg
+   :in :limbo  ; starts out of play, created when egg is damaged
+   :synonym ["egg" "treasure"]
+   :adjective ["broken" "birds" "encrusted" "jewel"]
+   :desc "broken jewel-encrusted egg"
+   :flags (flags/flags :take :cont :open)  ; already open
+   :capacity 6
+   :tvalue 2  ; worth less than intact egg (no :value means 0 pickup value)
+   :ldesc "There is a somewhat ruined egg here."})
+
+;; ZIL: BROKEN-CANARY (1dungeon.zil lines 1203-1217)
+;; <OBJECT BROKEN-CANARY
+;;	(IN BROKEN-EGG)
+;;	(SYNONYM CANARY TREASURE)
+;;	(ADJECTIVE BROKEN CLOCKWORK GOLD GOLDEN)
+;;	(DESC "broken clockwork canary")
+;;	(FLAGS TAKEBIT)
+;;	(ACTION CANARY-OBJECT)
+;;	(TVALUE 1)
+;;	(FDESC
+;; "There is a golden clockwork canary nestled in the egg. It seems to
+;; have recently had a bad experience. The mountings for its jewel-like
+;; eyes are empty, and its silver beak is crumpled. Through a cracked
+;; crystal window below its left wing you can see the remains of
+;; intricate machinery. It is not clear what result winding it would
+;; have, as the mainspring seems sprung.")>
+
+(def broken-canary
+  {:id :broken-canary
+   :in :limbo  ; starts out of play, created when egg is damaged
+   :synonym ["canary" "treasure"]
+   :adjective ["broken" "clockwork" "gold" "golden"]
+   :desc "broken clockwork canary"
+   :flags (flags/flags :take)
+   :tvalue 1  ; worth less than intact canary
+   :fdesc "There is a golden clockwork canary nestled in the egg. It seems to have recently had a bad experience. The mountings for its jewel-like eyes are empty, and its silver beak is crumpled. Through a cracked crystal window below its left wing you can see the remains of intricate machinery. It is not clear what result winding it would have, as the mainspring seems sprung."
+   ;; Note: broken canary uses same action as intact canary (CANARY-OBJECT)
+   ;; but the wind command will fail since it's broken
+   :action (fn [game-state]
+             (let [prsa (parser-state/get-prsa game-state)]
+               (when (= prsa :wind)
+                 (utils/tell game-state "The canary is broken and won't wind."))))})
 
 ;;; ---------------------------------------------------------------------------
 ;;; TROLL AND AXE
@@ -2123,6 +2284,8 @@
    tree
    nest
    egg
+   broken-egg
+   broken-canary
    troll
    axe
    ;; Thief and associated objects
