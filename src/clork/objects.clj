@@ -464,6 +464,51 @@
 ;;	(FDESC "A bottle is sitting on the table.")
 ;;	(CAPACITY 4)>
 
+(defn bottle-action
+  "Bottle action handler - handles throwing, breaking, shaking.
+
+   ZIL: BOTTLE-FUNCTION (1actions.zil lines 1504-1520)
+
+   - THROW: shatters bottle, spills water
+   - MUNG: destroys bottle, spills water
+   - SHAKE when open with water: spills water"
+  [game-state]
+  (let [prsa (parser-state/get-prsa game-state)
+        prso (parser-state/get-prso game-state)
+        has-water? (= (gs/get-thing-loc-id game-state :water) :bottle)
+        is-open? (gs/set-thing-flag? game-state :bottle :open)]
+    (cond
+      ;; THROW bottle - shatters it
+      (and (= prsa :throw) (= prso :bottle))
+      (let [gs (-> game-state
+                   (assoc-in [:objects :bottle :in] :limbo)
+                   (utils/tell "The bottle hits the far wall and shatters."))]
+        (if has-water?
+          (-> gs
+              (assoc-in [:objects :water :in] :limbo)
+              (utils/tell " The water spills to the floor and evaporates."))
+          gs))
+
+      ;; MUNG/DESTROY bottle
+      (and (= prsa :mung) (= prso :bottle))
+      (let [gs (-> game-state
+                   (assoc-in [:objects :bottle :in] :limbo)
+                   (utils/tell "A brilliant maneuver destroys the bottle."))]
+        (if has-water?
+          (-> gs
+              (assoc-in [:objects :water :in] :limbo)
+              (utils/tell " The water spills to the floor and evaporates."))
+          gs))
+
+      ;; SHAKE open bottle with water - spills water
+      (and (= prsa :shake) is-open? has-water?)
+      (-> game-state
+          (assoc-in [:objects :water :in] :limbo)
+          (utils/tell "The water spills to the floor and evaporates."))
+
+      ;; Not handled
+      :else nil)))
+
 (def bottle
   {:id :bottle
    :in :kitchen-table
@@ -472,7 +517,8 @@
    :desc "glass bottle"
    :flags (flags/flags :take :cont :trans)
    :fdesc "A bottle is sitting on the table."
-   :capacity 4})
+   :capacity 4
+   :action bottle-action})
 
 ;; <OBJECT WATER
 ;;	(IN BOTTLE)
@@ -668,15 +714,104 @@
 ;;	(FDESC "A large coil of rope is lying in the corner.")
 ;;	(SIZE 10)>
 
+(defn rope-action
+  "Rope action handler - handles tying to railing, climbing, untying.
+
+   ZIL: ROPE-FUNCTION (1actions.zil lines 3043-3091)
+
+   - TIE to RAILING (in Dome Room): ties rope, enables descent
+   - CLIMB-DOWN when tied: move down to Torch Room
+   - UNTIE: unties the rope
+   - DROP (in Dome Room): drops rope to floor below
+   - TAKE when tied: rope is tied to railing
+   - TIE-UP actor: various messages"
+  [game-state]
+  (let [prsa (parser-state/get-prsa game-state)
+        prso (parser-state/get-prso game-state)
+        prsi (parser-state/get-prsi game-state)
+        here (:here game-state)
+        dome-flag (get game-state :dome-flag false)]
+    (cond
+      ;; Not in Dome Room - clear flag, reject TIE
+      (not= here :dome-room)
+      (cond
+        (= prsa :tie)
+        (-> game-state
+            (assoc :dome-flag false)
+            (utils/tell "You can't tie the rope to that."))
+        :else nil)
+
+      ;; TIE rope to railing
+      (and (= prsa :tie) (= prsi :railing))
+      (if dome-flag
+        (utils/tell game-state "The rope is already tied to it.")
+        (-> game-state
+            (assoc :dome-flag true)
+            (gs/set-thing-flag :rope :ndesc)
+            ;; Move rope to dome room if not already there
+            (assoc-in [:objects :rope :in] :dome-room)
+            (utils/tell "The rope drops over the side and comes within ten feet of the floor.")))
+
+      ;; CLIMB-DOWN the rope when tied
+      (and (= prsa :climb-down) (or (= prso :rope) (nil? prso)) dome-flag)
+      (-> game-state
+          (assoc :here :torch-room)
+          (utils/tell "Hand over hand you climb down the rope."))
+
+      ;; TIE-UP an actor with rope
+      (and (= prsa :tie-up) (= prsi :rope))
+      (let [target (gs/get-thing game-state prso)
+            is-actor? (gs/set-thing-flag? game-state prso :actor)
+            strength (get target :strength 0)]
+        (cond
+          (and is-actor? (neg? strength))
+          (utils/tell game-state (str "Your attempt to tie up the " (:desc target) " awakens him."))
+          is-actor?
+          (utils/tell game-state (str "The " (:desc target) " struggles and you cannot tie him up."))
+          :else
+          (utils/tell game-state (str "Why would you tie up a " (:desc target) "?"))))
+
+      ;; UNTIE the rope
+      (= prsa :untie)
+      (if dome-flag
+        (-> game-state
+            (assoc :dome-flag false)
+            (gs/unset-thing-flag :rope :ndesc)
+            (utils/tell "The rope is now untied."))
+        (utils/tell game-state "It is not tied to anything."))
+
+      ;; DROP rope in Dome Room when not tied
+      (and (= prsa :drop) (= here :dome-room) (not dome-flag))
+      (-> game-state
+          (assoc-in [:objects :rope :in] :torch-room)
+          (utils/tell "The rope drops gently to the floor below."))
+
+      ;; TAKE rope when tied
+      (and (= prsa :take) dome-flag)
+      (utils/tell game-state "The rope is tied to the railing.")
+
+      ;; Not handled
+      :else nil)))
+
 (def rope
   {:id :rope
    :in :attic
    :synonym ["rope" "hemp" "coil"]
    :adjective ["large"]
-   :desc "coil of rope"
+   :desc "rope"
    :flags (flags/flags :take :sacred :trytake)
    :fdesc "A large coil of rope is lying in the corner."
-   :size 10})
+   :size 10
+   :action rope-action})
+
+;; ZIL: <OBJECT RAILING (IN DOME-ROOM) ...>
+(def railing
+  {:id :railing
+   :in :dome-room
+   :synonym ["railing" "rail"]
+   :adjective ["wooden"]
+   :desc "wooden railing"
+   :flags (flags/flags :ndesc)})
 
 ;; <OBJECT KNIFE
 ;;	(IN ATTIC-TABLE)
@@ -714,6 +849,20 @@
 ;;	(VALUE 4)
 ;;	(TVALUE 6)>
 
+(defn painting-action
+  "Painting action handler - handles vandalism.
+
+   ZIL: PAINTING-FCN (1actions.zil lines 2220-2227)
+
+   - MUNG: destroys the painting, sets tvalue to 0"
+  [game-state]
+  (let [prsa (parser-state/get-prsa game-state)]
+    (when (= prsa :mung)
+      (-> game-state
+          (assoc-in [:objects :painting :tvalue] 0)
+          (assoc-in [:objects :painting :ldesc] "There is a worthless piece of canvas here.")
+          (utils/tell "Congratulations! Unlike the other vandals, who merely stole the artist's masterpieces, you have destroyed one.")))))
+
 (def painting
   {:id :painting
    :in :gallery
@@ -725,7 +874,8 @@
    :ldesc "A painting by a neglected genius is here."
    :size 15
    :value 4
-   :tvalue 6})
+   :tvalue 6
+   :action painting-action})
 
 ;;; ---------------------------------------------------------------------------
 ;;; TREASURES
@@ -2256,6 +2406,69 @@
    :flags (flags/flags :take :tool)})
 
 ;;; ---------------------------------------------------------------------------
+;;; RAINBOW
+;;; ---------------------------------------------------------------------------
+
+;; ZIL: <OBJECT RAINBOW
+;;	(IN LOCAL-GLOBALS)
+;;	(SYNONYM RAINBOW)
+;;	(DESC "rainbow")
+;;	(FLAGS NDESCBIT)
+;;	(ACTION RAINBOW-FCN)>
+
+(defn rainbow-action
+  "Rainbow action handler - handles crossing and looking under.
+
+   ZIL: RAINBOW-FCN (1actions.zil lines 2647-2663)
+
+   - CROSS/THROUGH: walk across if rainbow is solid (rainbow-flag set)
+   - LOOK-UNDER: shows the river flows under it"
+  [game-state]
+  (let [prsa (parser-state/get-prsa game-state)
+        here (:here game-state)
+        rainbow-solid? (get game-state :rainbow-flag false)]
+    (cond
+      ;; CROSS or THROUGH the rainbow
+      (contains? #{:cross :through :enter} prsa)
+      (cond
+        ;; From Canyon View - too far
+        (= here :canyon-view)
+        (utils/tell game-state "From here?!?")
+
+        ;; Rainbow is solid - can cross
+        rainbow-solid?
+        (cond
+          (= here :aragain-falls)
+          (-> game-state
+              (assoc :here :end-of-rainbow)
+              (utils/tell "You walk across the rainbow..."))
+          (= here :end-of-rainbow)
+          (-> game-state
+              (assoc :here :aragain-falls)
+              (utils/tell "You walk across the rainbow..."))
+          :else
+          (utils/tell game-state "You'll have to say which way..."))
+
+        ;; Rainbow is not solid
+        :else
+        (utils/tell game-state "Can you walk on water vapor?"))
+
+      ;; LOOK-UNDER the rainbow
+      (= prsa :look-under)
+      (utils/tell game-state "The Frigid River flows under the rainbow.")
+
+      ;; Not handled
+      :else nil)))
+
+(def rainbow
+  {:id :rainbow
+   :in :local-globals  ; present in multiple rooms
+   :synonym ["rainbow"]
+   :desc "rainbow"
+   :flags (flags/flags :ndesc)
+   :action rainbow-action})
+
+;;; ---------------------------------------------------------------------------
 ;;; ALL OBJECTS LIST
 ;;; ---------------------------------------------------------------------------
 
@@ -2279,6 +2492,7 @@
    rug
    attic-table
    rope
+   railing
    knife
    painting
    tree
@@ -2319,6 +2533,7 @@
    blue-button
    red-button
    pump
+   rainbow
    ;; Loud Room treasure
    platinum-bar
    ;; Treasures

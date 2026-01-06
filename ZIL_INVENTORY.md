@@ -643,8 +643,8 @@ These are out-of-game commands that don't advance time.
 | [ ]    | TRAP-DOOR-FCN    | TRAP-DOOR   | Trap door logic     |
 | [ ]    | GRATE-FUNCTION   | GRATE       | Grating logic       |
 | [x]    | TROPHY-CASE-FCN  | TROPHY-CASE | Score deposit       |
-| [ ]    | BOTTLE-FUNCTION  | BOTTLE      | Bottle liquid       |
-| [ ]    | ROPE-FUNCTION    | ROPE        | Rope tying          |
+| [x]    | BOTTLE-FUNCTION  | BOTTLE      | Bottle liquid       |
+| [x]    | ROPE-FUNCTION    | ROPE        | Rope tying          |
 | [x]    | SWORD-FCN        | SWORD       | Glowing sword       |
 | [x]    | LANTERN          | LAMP        | Lantern usage       |
 | [x]    | CANDLES-FCN      | CANDLES     | Candle burning      |
@@ -658,8 +658,8 @@ These are out-of-game commands that don't advance time.
 | [x]    | RUG-FCN          | RUG         | Hidden trap door    |
 | [ ]    | BASKET-F         | BASKET      | Shaft basket        |
 | [x]    | SCEPTRE-FUNCTION | SCEPTRE     | Rainbow waving      |
-| [ ]    | PAINTING-FCN     | PAINTING    | Painting handling   |
-| [ ]    | RAINBOW-FCN      | RAINBOW     | Rainbow crossing    |
+| [x]    | PAINTING-FCN     | PAINTING    | Painting handling   |
+| [x]    | RAINBOW-FCN      | RAINBOW     | Rainbow crossing    |
 | [ ]    | SLIDE-FUNCTION   | SLIDE       | Cellar slide        |
 | [x]    | LEAK-FUNCTION    | LEAK        | Dam leak            |
 | [ ]    | LEAF-PILE        | LEAVES      | Leaf pile           |

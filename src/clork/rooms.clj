@@ -1665,7 +1665,7 @@
    ZIL: FALLS-ROOM - dynamic description based on RAINBOW-FLAG."
   [game-state rarg]
   (if (= rarg :look)
-    (let [rainbow-solid? (gs/flag? game-state :rainbow-flag)]
+    (let [rainbow-solid? (get game-state :rainbow-flag false)]
       (-> game-state
           (utils/tell "You are at the top of Aragain Falls, an enormous waterfall with a drop of about 450 feet. The only path here is on the north end.")
           (utils/crlf)
@@ -2129,7 +2129,7 @@
   [game-state rarg]
   (cond
     (= rarg :look)
-    (let [rope-tied? (gs/flag? game-state :dome-flag)]
+    (let [rope-tied? (get game-state :dome-flag false)]
       (-> game-state
           (utils/tell "You are at the periphery of a large dome, which forms the ceiling of another room below. Protecting you from a precipitous drop is a wooden railing which circles the dome.")
           (utils/crlf)
@@ -2139,7 +2139,7 @@
 
     ;; If dead (ghost), player is pulled down to torch room
     (and (= rarg :m-enter)
-         (gs/flag? game-state :dead))
+         (get game-state :dead false))
     (-> game-state
         (utils/tell "As you enter the dome you feel a strong pull as if from a wind drawing you over the railing and down.")
         (utils/crlf)
@@ -2180,7 +2180,7 @@
    ZIL: TORCH-ROOM-FCN in 1actions.zil"
   [game-state rarg]
   (if (= rarg :look)
-    (let [rope-tied? (gs/flag? game-state :dome-flag)]
+    (let [rope-tied? (get game-state :dome-flag false)]
       (-> game-state
           (utils/tell "This is a large room with a prominent doorway leading to a down staircase. Above you is a large dome. Up around the edge of the dome (20 feet up) is a wooden railing. In the center of the room sits a white marble pedestal.")
           (utils/crlf)

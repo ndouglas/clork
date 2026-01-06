@@ -186,17 +186,24 @@
    IDROP (line 1982):
    - Check if not carrying: \"You're not carrying the X.\"
    - Check if in closed container: \"The X is closed.\"
-   - Move to current room"
+   - Move to current room
+
+   First checks the object's action handler (e.g., rope in dome room)."
   [game-state]
   (let [prso (parser-state/get-prso game-state)
         obj (gs/get-thing game-state prso)
+        action-fn (:action obj)
         desc (:desc obj)]
-    (cond
-      ;; Not carrying it
-      (not (carrying? game-state prso))
-      (utils/tell game-state (str "You're not carrying the " desc "."))
+    ;; First try the object's action handler
+    (if-let [result (when action-fn (action-fn game-state))]
+      result
+      ;; Default behavior
+      (cond
+        ;; Not carrying it
+        (not (carrying? game-state prso))
+        (utils/tell game-state (str "You're not carrying the " desc "."))
 
-      ;; Success - drop the object
-      :else
-      (let [state (drop-to-room game-state prso)]
-        (utils/tell state "Dropped.")))))
+        ;; Success - drop the object
+        :else
+        (let [state (drop-to-room game-state prso)]
+          (utils/tell state "Dropped."))))))

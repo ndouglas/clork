@@ -281,10 +281,16 @@
 (defn v-wave
   "Handle WAVE verb.
    ZIL: V-WAVE in gverbs.zil line 1610-1611
-   Note: Sceptre waving at rainbow is handled by sceptre object action."
+   First checks object action handler (e.g., sceptre at rainbow)."
   [game-state]
-  ;; The sceptre special case will be handled by object actions
-  (hack-hack game-state "Waving the "))
+  (let [prso (parser-state/get-prso game-state)
+        obj (when prso (gs/get-thing game-state prso))
+        action-fn (:action obj)]
+    ;; First try the object's action handler (e.g., sceptre)
+    (if-let [result (when action-fn (action-fn game-state))]
+      result
+      ;; Default behavior
+      (hack-hack game-state "Waving the "))))
 
 (defn v-rub
   "Handle RUB/TOUCH verb.
@@ -307,33 +313,61 @@
   (hack-hack game-state "Lowering the "))
 
 (defn v-shake
-  "Handle SHAKE verb."
+  "Handle SHAKE verb.
+   First checks the object's action handler (e.g., for bottle)."
   [game-state]
-  (hack-hack game-state "Shaking the "))
+  (let [prso (parser-state/get-prso game-state)
+        obj (when prso (gs/get-thing game-state prso))
+        action-fn (:action obj)]
+    ;; First try the object's action handler
+    (if-let [result (when action-fn (action-fn game-state))]
+      result
+      ;; Default behavior
+      (hack-hack game-state "Shaking the "))))
 
 (defn v-tie
   "Handle TIE verb.
    ZIL: V-TIE in gverbs.zil lines 1481-1485
-   Note: Rope tying to railing is handled by rope object action."
+   First checks the object's action handler (e.g., for rope)."
   [game-state]
-  (let [prsi (:prsi game-state)
+  (let [prso (parser-state/get-prso game-state)
+        prsi (parser-state/get-prsi game-state)
+        obj (when prso (gs/get-thing game-state prso))
+        action-fn (:action obj)
         winner (:winner game-state)]
-    (if (= prsi winner)
-      (-> game-state
-          (utils/tell "You can't tie anything to yourself.")
-          (utils/crlf))
-      (-> game-state
-          (utils/tell (str "You can't tie the " (gs/thing-name game-state (:prso game-state)) " to that."))
-          (utils/crlf)))))
+    ;; First try the object's action handler
+    (if-let [result (when action-fn (action-fn game-state))]
+      result
+      ;; Default behavior
+      (cond
+        (nil? prso)
+        (-> game-state
+            (utils/tell "You need to specify what to tie.")
+            (utils/crlf))
+        (= prsi winner)
+        (-> game-state
+            (utils/tell "You can't tie anything to yourself.")
+            (utils/crlf))
+        :else
+        (-> game-state
+            (utils/tell (str "You can't tie the " (gs/thing-name game-state prso) " to that."))
+            (utils/crlf))))))
 
 (defn v-untie
   "Handle UNTIE verb.
-   ZIL: V-UNTIE in gverbs.zil lines 1527-1528"
+   ZIL: V-UNTIE in gverbs.zil lines 1527-1528
+   First checks the object's action handler (e.g., for rope)."
   [game-state]
-  ;; Rope untying will be handled by rope object action
-  (-> game-state
-      (utils/tell "This cannot be tied, so it cannot be untied!")
-      (utils/crlf)))
+  (let [prso (parser-state/get-prso game-state)
+        obj (when prso (gs/get-thing game-state prso))
+        action-fn (:action obj)]
+    ;; First try the object's action handler
+    (if-let [result (when action-fn (action-fn game-state))]
+      result
+      ;; Default behavior
+      (-> game-state
+          (utils/tell "This cannot be tied, so it cannot be untied!")
+          (utils/crlf)))))
 
 (defn v-swing
   "Handle SWING verb.
@@ -532,11 +566,19 @@
 
 (defn v-cross
   "Handle CROSS verb.
-   ZIL: V-CROSS in gverbs.zil lines 387-388"
+   ZIL: V-CROSS in gverbs.zil lines 387-388
+   First checks the object's action handler (e.g., for rainbow)."
   [game-state]
-  (-> game-state
-      (utils/tell "You can't cross that!")
-      (utils/crlf)))
+  (let [prso (parser-state/get-prso game-state)
+        obj (when prso (gs/get-thing game-state prso))
+        action-fn (:action obj)]
+    ;; First try the object's action handler
+    (if-let [result (when action-fn (action-fn game-state))]
+      result
+      ;; Default behavior
+      (-> game-state
+          (utils/tell "You can't cross that!")
+          (utils/crlf)))))
 
 (defn v-launch
   "Handle LAUNCH verb.

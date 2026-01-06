@@ -192,11 +192,16 @@
    ZIL: SYNTAX-FOUND routine, lines 895-897
      <ROUTINE SYNTAX-FOUND (SYN)
        <SETG P-SYNTAX .SYN>
-       <SETG PRSA <GETB .SYN ,P-SACTION>>>"
+       <SETG PRSA <GETB .SYN ,P-SACTION>>>
+
+   When syntax doesn't have an :action field, uses the verb keyword as default."
   [game-state syntax]
-  (parser-state/parser-success (-> game-state
-                                   (assoc-in [:parser :syntax] syntax)
-                                   (parser-state/set-prsa (:action syntax)))))
+  (let [;; Use syntax's :action if present, otherwise fall back to verb keyword
+        verb (parser-state/get-itbl game-state :verb)
+        action (or (:action syntax) verb)]
+    (parser-state/parser-success (-> game-state
+                                     (assoc-in [:parser :syntax] syntax)
+                                     (parser-state/set-prsa action)))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; GWIM - Get What I Mean
