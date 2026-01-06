@@ -4,6 +4,9 @@
 ;
 ; When this script passes with --strict and sets :won true,
 ; the game is feature-complete!
+;
+; Do not edit this script; if something doesn't work, that indicates
+; a bug in the implementation!
 
 ; === PART 1: Above Ground ===
 
@@ -34,7 +37,7 @@ take painting
 go north
 go up chimney
 
-; Attic
+; Kitchen - need to go up again to Attic
 go up
 take knife
 take rope
