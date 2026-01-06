@@ -128,3 +128,33 @@
       (is (clojure.string/includes? output "tied to"))
       ;; Rope should still be in room
       (is (= :dome-room (gs/get-thing-loc-id gs' :rope))))))
+
+;;; ---------------------------------------------------------------------------
+;;; Climb Rope Tests
+;;; ---------------------------------------------------------------------------
+
+(deftest climb-down-rope-when-tied-test
+  (testing "climbing down tied rope moves to torch room"
+    (let [gs (-> (make-test-state)
+                 (assoc :here :dome-room)
+                 (assoc :lit true)
+                 (assoc :dome-flag true)
+                 (assoc-in [:objects :rope :in] :dome-room))
+          [output gs'] (run-command gs "climb down rope")]
+      ;; Should move to torch room
+      (is (clojure.string/includes? output "Hand over hand"))
+      (is (= :torch-room (:here gs'))))))
+
+(deftest climb-down-rope-not-tied-test
+  (testing "climbing down untied rope doesn't move to torch room"
+    (let [gs (-> (make-test-state)
+                 (assoc :here :dome-room)
+                 (assoc :lit true)
+                 (assoc :dome-flag false)
+                 (assoc-in [:objects :rope :in] :dome-room))
+          [output gs'] (run-command gs "climb down rope")]
+      ;; Should NOT move to torch room (that only happens with tied rope)
+      ;; Might stay in dome-room or trigger some other behavior
+      (is (not= :torch-room (:here gs')))
+      ;; Should NOT show the "hand over hand" message
+      (is (not (clojure.string/includes? output "Hand over hand"))))))

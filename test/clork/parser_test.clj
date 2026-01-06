@@ -1261,3 +1261,31 @@
               "Action should be :take"))
         (finally
           (alter-var-root #'verb-defs/*verb-vocabulary* (constantly original-vocab)))))))
+
+;;; ---------------------------------------------------------------------------
+;;; PRSA DEFAULT VALUE TESTS
+;;; ---------------------------------------------------------------------------
+
+(deftest prsa-defaults-to-verb-keyword-test
+  (testing "prsa defaults to verb keyword when syntax has no :action field"
+    ;; Verbs like :untie, :mung, :tie don't have explicit :action in syntax
+    ;; so prsa should default to the verb keyword itself
+    (let [gs (-> (gs/initial-game-state)
+                 (assoc :here :west-of-house)
+                 (assoc :lit true)
+                 (assoc :input "untie mailbox"))
+          result (parser/parser-from-input gs)]
+      ;; prsa should be :untie (the verb keyword), not nil
+      (is (= :untie (parser-state/get-prsa result))
+          "prsa should default to verb keyword when syntax has no :action")))
+
+  (testing "prsa uses explicit :action when syntax specifies it"
+    ;; Verbs like :climb have syntaxes with explicit :action like :climb-down
+    (let [gs (-> (gs/initial-game-state)
+                 (assoc :here :west-of-house)
+                 (assoc :lit true)
+                 (assoc :input "climb up tree"))
+          result (parser/parser-from-input gs)]
+      ;; prsa should be :climb-up (from :action in syntax)
+      (is (= :climb-up (parser-state/get-prsa result))
+          "prsa should use explicit :action from syntax"))))
