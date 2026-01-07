@@ -1,0 +1,119 @@
+{
+  "description": "A complete playthrough of Clork with seed 42",
+  "seed": 42,
+  "header": "ZORK I: The Great Underground Empire\nInfocom interactive fiction - a fantasy story\nCopyright (c) 1981, 1982, 1983, 1984, 1985, 1986 Infocom, Inc. All rights reserved.\nZORK is a registered trademark of Infocom, Inc.\nRelease 1 / Serial number 1\nClojure port by Nathan Douglas\n\nWest of House\n\nYou are standing in an open field west of a white house, with a boarded front door.\nThere is a small mailbox here.",
+  "commands": [
+    {
+      "command": "open mailbox",
+      "response": "Opening the small mailbox reveals a leaflet."
+    },
+    {
+      "command": "go south",
+      "response": "South of House\n\nYou are facing the south side of a white house. There is no door here, and all the windows are boarded."
+    },
+    {
+      "command": "go east",
+      "response": "Behind House\n\nYou are behind the white house. A path leads into the forest to the east. In one corner of the house there is a small window which is slightly ajar."
+    },
+    {
+      "command": "open window",
+      "response": "With great effort, you open the window far enough to allow entry."
+    },
+    {
+      "command": "enter",
+      "response": "Kitchen\n\nYou are in the kitchen of the white house. A table seems to have been used recently for the preparation of food. A passage leads to the west and a dark staircase can be seen leading upward. A dark chimney leads down and to the east is a small window which is open.\n\nOn the table is an elongated brown sack, smelling of hot peppers.\n\nA bottle is sitting on the table.\n\nThe glass bottle contains:\n\nA quantity of water"
+    },
+    {
+      "command": "go up",
+      "response": "Attic\n\nThis is the attic. The only exit is a stairway leading down.\n\nA large coil of rope is lying in the corner.\n\nOn a table is a nasty-looking knife."
+    },
+    {
+      "command": "take rope",
+      "response": "Taken."
+    },
+    {
+      "command": "go down",
+      "response": "Kitchen\n\nOn the table is an elongated brown sack, smelling of hot peppers.\n\nA bottle is sitting on the table.\n\nThe glass bottle contains:\n\nA quantity of water"
+    },
+    {
+      "command": "take sack",
+      "response": "Taken."
+    },
+    {
+      "command": "open sack",
+      "response": "Opening the brown sack reveals a lunch, and a clove of garlic."
+    },
+    {
+      "command": "go west",
+      "response": "Living Room\n\nYou are in the living room. There is a doorway to the east, a wooden door with strange gothic lettering to the west, which appears to be nailed shut, a trophy case, and a large oriental rug in the center of the room.\n\nAbove the trophy case hangs an elvish sword of great antiquity.\n\nA battery-powered brass lantern is on the trophy case."
+    },
+    {
+      "command": "take lamp",
+      "response": "Taken."
+    },
+    {
+      "command": "take sword",
+      "response": "Taken."
+    },
+    {
+      "command": "move rug",
+      "response": "With a great effort, the rug is moved to one side of the room, revealing the dusty cover of a closed trap door."
+    },
+    {
+      "command": "open trap door",
+      "response": "The door reluctantly opens to reveal a rickety staircase descending into darkness."
+    },
+    {
+      "command": "turn on lamp",
+      "response": "The brass lantern is now on."
+    },
+    {
+      "command": "go down",
+      "response": "The trap door crashes shut, and you hear someone barring it.\n\nCellar\n\nYou are in a dark and damp cellar with a narrow passageway leading north, and a crawlway to the south. On the west is the bottom of a steep metal ramp which is unclimbable.\n\nYour sword is glowing with a faint blue glow."
+    },
+    {
+      "command": "go north",
+      "response": "The Troll Room\n\nThis is a small room with passages to the east and south and a forbidding hole leading west. Bloodstains and deep scratches (perhaps made by an axe) mar the walls.\n\nA nasty-looking troll, brandishing a bloody axe, blocks all passages out of the room.\n\nYour sword has begun to glow very brightly.\n\nThe axe sweeps past as you jump aside."
+    },
+    {
+      "command": "kill troll with sword",
+      "response": "It's curtains for the troll as your sword removes his head.\n\nAlmost as soon as the troll breathes his last breath, a cloud of sinister black fog envelops him, and when the fog lifts, the carcass has disappeared.\n\nYour sword is no longer glowing."
+    },
+    {
+      "command": "drop sword",
+      "response": "Dropped."
+    },
+    {
+      "command": "go east",
+      "response": "East-West Passage\n\nThis is a narrow east-west passageway. There is a narrow stairway leading down at the north end of the room."
+    },
+    {
+      "command": "go east",
+      "response": "Round Room\n\nThis is a circular stone room with passages in all directions. Several of them have unfortunately been blocked by cave-ins."
+    },
+    {
+      "command": "go se",
+      "response": "Engravings Cave\n\nYou have entered a low cave with passages leading northwest and east.\n\nThere are old engravings on the walls here."
+    },
+    {
+      "command": "go east",
+      "response": "Dome Room\n\nYou are at the periphery of a large dome, which forms the ceiling of another room below. Protecting you from a precipitous drop is a wooden railing which circles the dome."
+    },
+    {
+      "command": "tie rope to railing",
+      "response": "The rope drops over the side and comes within ten feet of the floor."
+    },
+    {
+      "command": "climb down",
+      "response": "Torch Room\n\nThis is a large room with a prominent doorway leading to a down staircase. Above you is a large dome. Up around the edge of the dome (20 feet up) is a wooden railing. In the center of the room sits a white marble pedestal.\n\nA piece of rope descends from the railing above, ending some five feet above your head.\n\nSitting on the pedestal is a flaming torch, made of ivory."
+    },
+    {
+      "command": "take torch",
+      "response": "Taken."
+    },
+    {
+      "command": "turn off lamp",
+      "response": "The brass lantern is now off."
+    }
+  ]
+}
