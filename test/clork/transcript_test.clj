@@ -191,10 +191,10 @@
 
 ;; Maximum commands to run before stopping.
 ;; Set to nil to run full transcript.
-;; Currently limited to 223 because:
-;; - Commands 224-233 require the boat/inflate feature (not yet implemented)
-;; - After verifying boat, extend this to continue testing
-(def max-verified-commands 223)
+;; Currently limited to 227 because:
+;; - Commands 228+ require the river flow daemon (I-RIVER) for boat drifting
+;; - After implementing river daemon, extend this to continue testing
+(def max-verified-commands 227)
 
 (defn run-transcript-test
   "Run through the transcript, comparing outputs.

@@ -589,19 +589,35 @@
 
 (defn v-inflate
   "Handle INFLATE verb.
-   ZIL: V-INFLATE in gverbs.zil lines 773-774"
+   ZIL: V-INFLATE in gverbs.zil lines 773-774
+   First checks the object's action handler (for inflatable boat)."
   [game-state]
-  (-> game-state
-      (utils/tell "How can you inflate that?")
-      (utils/crlf)))
+  (let [prso (parser-state/get-prso game-state)
+        obj (when prso (gs/get-thing game-state prso))
+        action-fn (:action obj)]
+    ;; First try the object's action handler
+    (if-let [result (when action-fn (action-fn game-state))]
+      result
+      ;; Default behavior
+      (-> game-state
+          (utils/tell "How can you inflate that?")
+          (utils/crlf)))))
 
 (defn v-deflate
   "Handle DEFLATE verb.
-   ZIL: V-DEFLATE in gverbs.zil lines 418-419"
+   ZIL: V-DEFLATE in gverbs.zil lines 418-419
+   First checks the object's action handler (for inflated boat)."
   [game-state]
-  (-> game-state
-      (utils/tell "Come on, now!")
-      (utils/crlf)))
+  (let [prso (parser-state/get-prso game-state)
+        obj (when prso (gs/get-thing game-state prso))
+        action-fn (:action obj)]
+    ;; First try the object's action handler
+    (if-let [result (when action-fn (action-fn game-state))]
+      result
+      ;; Default behavior
+      (-> game-state
+          (utils/tell "Come on, now!")
+          (utils/crlf)))))
 
 (defn v-cross
   "Handle CROSS verb.
@@ -621,11 +637,38 @@
 
 (defn v-launch
   "Handle LAUNCH verb.
-   ZIL: V-LAUNCH in gverbs.zil lines 820-824"
+   ZIL: V-LAUNCH in gverbs.zil lines 820-824
+
+   If no object specified, checks if player is in a vehicle and uses that.
+   The boat's action handler (RBOAT-FUNCTION) handles the actual launching."
   [game-state]
-  (-> game-state
-      (utils/tell "You can't launch that by saying \"launch\"!")
-      (utils/crlf)))
+  (let [prso (parser-state/get-prso game-state)
+        ;; If no object, check if player is in a vehicle
+        player-loc (gs/get-thing-loc-id game-state :adventurer)
+        vehicle (when (and (nil? prso) (keyword? player-loc))
+                  (let [loc-obj (gs/get-thing game-state player-loc)]
+                    (when (contains? (or (:flags loc-obj) #{}) :vehicle)
+                      player-loc)))
+        ;; Use explicit object or inferred vehicle
+        target (or prso vehicle)
+        obj (when target (gs/get-thing game-state target))
+        action-fn (:action obj)]
+    (if target
+      ;; Set PRSO if we inferred the vehicle
+      (let [gs (if (nil? prso)
+                 (assoc-in game-state [:parser :prso] target)
+                 game-state)]
+        ;; Try the object's action handler
+        (if-let [result (when action-fn (action-fn gs))]
+          result
+          ;; Default - can't launch
+          (-> gs
+              (utils/tell "You can't launch that!")
+              (utils/crlf))))
+      ;; No object and not in vehicle
+      (-> game-state
+          (utils/tell "You're not in anything to launch!")
+          (utils/crlf)))))
 
 (defn v-board
   "Handle BOARD verb."

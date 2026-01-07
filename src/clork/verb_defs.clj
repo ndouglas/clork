@@ -880,9 +880,11 @@
                 :syntax  {:num-objects 1 :loc1 #{:in-room :on-ground}}
                 :handler verbs-misc/v-cross}
 
-   ;; ZIL: <SYNTAX LAUNCH OBJECT = V-LAUNCH>
+   ;; ZIL: <SYNTAX LAUNCH = V-LAUNCH>
+   ;;      <SYNTAX LAUNCH OBJECT = V-LAUNCH>
    :launch     {:words   ["launch"]
-                :syntax  {:num-objects 1 :loc1 #{:in-room :on-ground}}
+                :syntax  [{:num-objects 0}
+                          {:num-objects 1 :loc1 #{:in-room :on-ground}}]
                 :handler verbs-misc/v-launch}
 
    ;; ZIL: <SYNTAX BOARD OBJECT = V-BOARD PRE-BOARD>

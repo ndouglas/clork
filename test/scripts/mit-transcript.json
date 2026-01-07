@@ -891,7 +891,7 @@
     },
     {
       "command": "go east",
-      "response": "Dam Base\n\nYou are at the base of Flood Control Dam #3, which looms\nabove you and to the north. The river Frigid is flowing by here. Along the\nriver are the White Cliffs which seem to form giant walls stretching from north\nto south along the shores of the river as it winds its way downstream."
+      "response": "Dam Base\n\nYou are at the base of Flood Control Dam #3, which looms\nabove you and to the north. The river Frigid is flowing by here. Along the\nriver are the White Cliffs which seem to form giant walls stretching from north\nto south along the shores of the river as it winds its way downstream.\n\nThere is a folded pile of plastic here which has a small valve attached."
     },
     {
       "command": "inflate plastic with pump",

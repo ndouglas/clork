@@ -3052,6 +3052,318 @@ Surely thou shalt repent of thy cunning."})
    :flags (flags/flags :take :tool)})
 
 ;;; ---------------------------------------------------------------------------
+;;; BOAT OBJECTS
+;;; ---------------------------------------------------------------------------
+
+;; <OBJECT INFLATABLE-BOAT
+;;     (IN DAM-BASE)
+;;     (SYNONYM BOAT PILE PLASTIC VALVE)
+;;     (ADJECTIVE PLASTIC INFLAT)
+;;     (DESC "pile of plastic")
+;;     (FLAGS TAKEBIT BURNBIT)
+;;     (ACTION IBOAT-FUNCTION)
+;;     (LDESC "There is a folded pile of plastic here which has a small valve attached.")
+;;     (SIZE 20)>
+
+(defn- iboat-function
+  "Action handler for the inflatable (uninflated) boat.
+   ZIL: IBOAT-FUNCTION in 1actions.zil"
+  [game-state]
+  (let [prsa (parser-state/get-prsa game-state)
+        prsi (parser-state/get-prsi game-state)
+        boat-here? (= (gs/get-thing-loc-id game-state :inflatable-boat) (:here game-state))]
+    (cond
+      ;; INFLATE or FILL
+      (#{:inflate :fill} prsa)
+      (cond
+        ;; Boat must be on ground
+        (not boat-here?)
+        (utils/tell game-state "The boat must be on the ground to be inflated.")
+
+        ;; With pump - success!
+        (= prsi :pump)
+        (let [label-touched? (gs/set-thing-flag? game-state :boat-label :touch)]
+          (-> game-state
+              (utils/tell "The boat inflates and appears seaworthy.")
+              ;; Show label message if not touched before
+              (cond-> (not label-touched?)
+                (-> (utils/crlf) (utils/crlf) (utils/tell "A tan label is lying inside the boat.")))
+              ;; Swap inflatable for inflated boat
+              (assoc-in [:objects :inflatable-boat :in] :limbo)
+              (assoc-in [:objects :inflated-boat :in] (:here game-state))
+              (assoc :it :inflated-boat)))
+
+        ;; With lungs (from BREATHE/BLOW)
+        (= prsi :lungs)
+        (utils/tell game-state "You don't have enough lung power to inflate it.")
+
+        ;; With something else
+        :else
+        (let [prsi-desc (:desc (gs/get-thing game-state prsi))]
+          (utils/tell game-state (str "With a " prsi-desc "? Surely you jest!"))))
+
+      ;; Default - no special handling
+      :else nil)))
+
+(def inflatable-boat
+  {:id :inflatable-boat
+   :in :dam-base
+   :synonym ["boat" "pile" "plastic" "valve"]
+   :adjective ["plastic" "inflatable"]
+   :desc "pile of plastic"
+   :ldesc "There is a folded pile of plastic here which has a small valve attached."
+   :flags (flags/flags :take :burn)
+   :size 20
+   :action iboat-function})
+
+;; <OBJECT INFLATED-BOAT
+;;     (SYNONYM BOAT RAFT)
+;;     (ADJECTIVE INFLAT MAGIC PLASTIC SEAWORTHY)
+;;     (DESC "magic boat")
+;;     (FLAGS TAKEBIT BURNBIT VEHBIT OPENBIT SEARCHBIT)
+;;     (ACTION RBOAT-FUNCTION)
+;;     (CAPACITY 100)
+;;     (SIZE 20)
+;;     (VTYPE NONLANDBIT)>
+
+(defn- boat-puncture!
+  "Puncture the inflated boat, dumping contents and player.
+   Returns updated game state."
+  [game-state puncturing-obj]
+  (let [here (:here game-state)
+        obj-desc (if puncturing-obj
+                   (:desc (gs/get-thing game-state puncturing-obj))
+                   "sharp object")
+        ;; Move all boat contents to current room
+        boat-contents (filter #(= (gs/get-thing-loc-id game-state %) :inflated-boat)
+                              (keys (:objects game-state)))
+        gs (reduce (fn [gs obj-id]
+                     (assoc-in gs [:objects obj-id :in] here))
+                   game-state
+                   boat-contents)
+        ;; Move player out of boat if inside
+        gs (if (= (gs/get-thing-loc-id gs :adventurer) :inflated-boat)
+             (assoc-in gs [:objects :adventurer :in] here)
+             gs)]
+    (-> gs
+        ;; Swap boats
+        (assoc-in [:objects :inflated-boat :in] :limbo)
+        (assoc-in [:objects :punctured-boat :in] here)
+        (assoc :it :punctured-boat)
+        (utils/tell (str "It seems that the " obj-desc " didn't agree with the boat, as evidenced by the loud hissing noise issuing therefrom. With a pathetic sputter, the boat deflates, leaving you without.")))))
+
+(defn- rboat-function
+  "Action handler for the inflated (magic) boat.
+   ZIL: RBOAT-FUNCTION in 1actions.zil"
+  [game-state]
+  (let [prsa (parser-state/get-prsa game-state)
+        prsi (parser-state/get-prsi game-state)
+        prso (parser-state/get-prso game-state)
+        here (:here game-state)
+        boat-here? (= (gs/get-thing-loc-id game-state :inflated-boat) here)
+        player-in-boat? (= (gs/get-thing-loc-id game-state :adventurer) :inflated-boat)]
+    (cond
+      ;; LAUNCH - launch the boat into water
+      (= prsa :launch)
+      (let [water-rooms #{:river-1 :river-2 :river-3 :river-4 :reservoir :in-stream}
+            launch-points {:dam-base :river-1}  ;; Rooms where you can launch and where to
+            on-water? (contains? water-rooms here)]
+        (cond
+          ;; Not in boat
+          (not player-in-boat?)
+          (utils/tell game-state "You're not in the boat!")
+
+          ;; Already on water
+          on-water?
+          (let [water-name (cond
+                             (= here :reservoir) "reservoir"
+                             (= here :in-stream) "stream"
+                             :else "river")]
+            (utils/tell game-state (str "You are on the " water-name ", or have you forgotten?")))
+
+          ;; Can launch from here
+          (contains? launch-points here)
+          (let [dest (get launch-points here)
+                dest-room (get-in game-state [:rooms dest])
+                room-name (:desc dest-room)
+                room-ldesc (:ldesc dest-room)
+                ;; Move boat (with player inside) to river
+                gs (-> game-state
+                       (assoc-in [:objects :inflated-boat :in] dest)
+                       (assoc :here dest))
+                ;; Get boat contents for display
+                boat-contents (filter #(= (gs/get-thing-loc-id gs %) :inflated-boat)
+                                      (keys (:objects gs)))
+                visible-contents (filter #(not (gs/set-thing-flag? gs % :invisible))
+                                         boat-contents)]
+            ;; Print formatted output: "(magic boat)\n\nRoom, in the magic boat\n\n..."
+            (-> gs
+                (utils/tell "(magic boat)")
+                (utils/crlf)
+                (utils/crlf)
+                (utils/tell (str room-name ", in the magic boat"))
+                (utils/crlf)
+                (utils/crlf)
+                (utils/tell room-ldesc)
+                ;; Print boat contents if any
+                (cond-> (seq visible-contents)
+                  (-> (utils/crlf)
+                      (utils/crlf)
+                      (utils/tell "The magic boat contains:")
+                      (utils/crlf)))
+                ;; List each item
+                (#(reduce (fn [s obj-id]
+                            (let [obj (gs/get-thing s obj-id)
+                                  desc (:desc obj)]
+                              (-> s
+                                  (utils/crlf)
+                                  (utils/tell (str "A " desc)))))
+                          %
+                          visible-contents))))
+
+          ;; Can't launch here
+          :else
+          (utils/tell game-state "You can't launch it here.")))
+
+      ;; BOARD - check for sharp objects
+      (= prsa :board)
+      (let [sharp-objects #{:sceptre :knife :sword :rusty-knife :axe :stiletto}
+            held-sharp (first (filter #(= (gs/get-thing-loc-id game-state %) :adventurer)
+                                      sharp-objects))]
+        (when held-sharp
+          (-> game-state
+              (utils/tell "Oops! Something sharp seems to have slipped and punctured the boat.\nThe boat deflates to the sounds of hissing, sputtering, and cursing.")
+              (assoc-in [:objects :inflated-boat :in] :limbo)
+              (assoc-in [:objects :punctured-boat :in] here)
+              (assoc :it :punctured-boat))))
+
+      ;; INFLATE or FILL - already inflated
+      (#{:inflate :fill} prsa)
+      (utils/tell game-state "Inflating it further would probably burst it.")
+
+      ;; DEFLATE
+      (= prsa :deflate)
+      (cond
+        player-in-boat?
+        (utils/tell game-state "You can't deflate the boat while you're in it.")
+
+        (not boat-here?)
+        (utils/tell game-state "The boat must be on the ground to be deflated.")
+
+        :else
+        (-> game-state
+            (utils/tell "The boat deflates.")
+            (assoc-in [:objects :inflated-boat :in] :limbo)
+            (assoc-in [:objects :inflatable-boat :in] here)
+            (assoc :it :inflatable-boat)))
+
+      ;; DROP/PUT weapon - punctures boat
+      (and (#{:drop :put} prsa)
+           (gs/set-thing-flag? game-state prso :weapon))
+      (boat-puncture! game-state prso)
+
+      ;; ATTACK with weapon - punctures boat
+      (and (#{:attack :mung} prsa)
+           prsi
+           (gs/set-thing-flag? game-state prsi :weapon))
+      (boat-puncture! game-state prsi)
+
+      ;; Default - no special handling
+      :else nil)))
+
+(def inflated-boat
+  {:id :inflated-boat
+   :in :limbo  ;; Starts nowhere - created when inflatable-boat is inflated
+   :synonym ["boat" "raft"]
+   :adjective ["inflated" "magic" "plastic" "seaworthy"]
+   :desc "magic boat"
+   :flags (flags/flags :take :burn :vehicle :open :search)
+   :capacity 100
+   :size 20
+   :action rboat-function})
+
+;; <OBJECT PUNCTURED-BOAT
+;;     (SYNONYM BOAT PILE PLASTIC)
+;;     (ADJECTIVE PLASTIC PUNCTURE LARGE)
+;;     (DESC "punctured boat")
+;;     (FLAGS TAKEBIT BURNBIT)
+;;     (ACTION DBOAT-FUNCTION)
+;;     (SIZE 20)>
+
+(defn- dboat-function
+  "Action handler for the punctured boat.
+   ZIL: DBOAT-FUNCTION in 1actions.zil"
+  [game-state]
+  (let [prsa (parser-state/get-prsa game-state)
+        prsi (parser-state/get-prsi game-state)
+        prso (parser-state/get-prso game-state)
+        here (:here game-state)]
+    (cond
+      ;; PUT putty on boat or PLUG with putty - repair it
+      (and (#{:put :put-on} prsa) (= prso :putty))
+      (-> game-state
+          (utils/tell "Well done. The boat is repaired.")
+          (assoc-in [:objects :inflatable-boat :in] here)
+          (assoc-in [:objects :punctured-boat :in] :limbo))
+
+      (and (= prsa :plug) (= prsi :putty))
+      (-> game-state
+          (utils/tell "Well done. The boat is repaired.")
+          (assoc-in [:objects :inflatable-boat :in] here)
+          (assoc-in [:objects :punctured-boat :in] :limbo))
+
+      ;; INFLATE or FILL - can't, it's punctured
+      (#{:inflate :fill} prsa)
+      (utils/tell game-state "No chance. Some moron punctured it.")
+
+      ;; Default - no special handling
+      :else nil)))
+
+(def punctured-boat
+  {:id :punctured-boat
+   :in :limbo  ;; Starts nowhere - created when inflated-boat is punctured
+   :synonym ["boat" "pile" "plastic"]
+   :adjective ["plastic" "punctured" "large"]
+   :desc "punctured boat"
+   :flags (flags/flags :take :burn)
+   :size 20
+   :action dboat-function})
+
+;; <OBJECT BOAT-LABEL
+;;     (IN INFLATED-BOAT)
+;;     (SYNONYM LABEL FINEPRINT PRINT)
+;;     (ADJECTIVE TAN FINE)
+;;     (DESC "tan label")
+;;     (FLAGS READBIT TAKEBIT BURNBIT)
+;;     (SIZE 2)
+;;     (TEXT "...")>
+
+(def boat-label
+  {:id :boat-label
+   :in :inflated-boat
+   :synonym ["label" "fineprint" "print"]
+   :adjective ["tan" "fine"]
+   :desc "tan label"
+   :flags (flags/flags :read :take :burn)
+   :size 2
+   :text "  !!!!FROBOZZ MAGIC BOAT COMPANY!!!!
+
+Hello, Sailor!
+
+Instructions for use:
+
+   To get into a body of water, say \"Launch\".
+   To get to shore, say \"Land\" or the direction in which you want to maneuver the boat.
+
+Warranty:
+
+  This boat is guaranteed against all defects for a period of 76 milliseconds from date of purchase or until first used, whichever comes first.
+
+Warning:
+   This boat is made of thin plastic.
+   Good Luck!"})
+
+;;; ---------------------------------------------------------------------------
 ;;; MACHINE ROOM OBJECTS
 ;;; ---------------------------------------------------------------------------
 
@@ -3521,6 +3833,11 @@ Surely thou shalt repent of thy cunning."})
    blue-button
    red-button
    pump
+   ;; Boat objects
+   inflatable-boat
+   inflated-boat
+   punctured-boat
+   boat-label
    ;; Machine room objects
    machine
    machine-switch

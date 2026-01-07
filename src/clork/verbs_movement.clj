@@ -335,8 +335,9 @@
    ZIL: V-THROUGH in gverbs.zil
 
    First tries the object's action handler. If the object handles the verb,
-   we're done. Otherwise, if the object has :door flag, try to walk through
-   to the other side."
+   we're done. Otherwise:
+   - If the object has :vehicle flag, board it
+   - If the object has :door flag, try to walk through to the other side."
   [game-state]
   (let [prso (parser-state/get-prso game-state)
         obj (gs/get-thing game-state prso)
@@ -347,8 +348,21 @@
     (if-let [result (when action-fn (action-fn game-state))]
       ;; Object handled the verb
       result
-      ;; Object didn't handle it - try default door behavior
+      ;; Object didn't handle it - try vehicle or door behavior
       (cond
+        ;; Object has vehicle flag - board it (redirect to v-board behavior)
+        (contains? flags :vehicle)
+        (let [;; Check if player is carrying sharp objects that would puncture
+              ;; (This check is done by the boat's action handler for :board)
+              ;; Set PRSA to :board and call the action handler again
+              gs-with-board (assoc-in game-state [:parser :prsa] :board)]
+          (if-let [result (when action-fn (action-fn gs-with-board))]
+            result
+            ;; Default board behavior - move player into vehicle
+            (-> game-state
+                (assoc-in [:objects :adventurer :in] prso)
+                (utils/tell (str "You are now in the " desc ".")))))
+
         ;; Object has door flag - find the other side and walk there
         (contains? flags :door)
         (let [here (:here game-state)
@@ -363,13 +377,14 @@
                                              (:to exit)))
                                          (:exits room))))
                                rooms)]
-          (if (and other-side (contains? flags :open))
-            (goto game-state other-side)
-            (if (not (contains? flags :open))
-              (utils/tell game-state (str "The " desc " is closed."))
-              (utils/tell game-state "You can't go that way."))))
+          (let [is-open? (gs/set-thing-flag? game-state prso :open)]
+            (if (and other-side is-open?)
+              (goto game-state other-side)
+              (if (not is-open?)
+                (utils/tell game-state (str "The " desc " is closed."))
+                (utils/tell game-state "You can't go that way.")))))
 
-        ;; Not a door - can't go through it
+        ;; Not a vehicle or door - can't go through it
         :else
         (utils/tell game-state "I don't know how to do that.")))))
 
