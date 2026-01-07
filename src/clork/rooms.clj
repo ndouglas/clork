@@ -388,7 +388,8 @@
                      window-state (if window-open? "open" "slightly ajar")]
                  (-> game-state
                      (utils/tell (str "You are in the kitchen of the white house. A table seems to have been used recently for the preparation of food. A passage leads to the west and a dark staircase can be seen leading upward. A dark chimney leads down and to the east is a small window which is " window-state "."))
-                     (utils/crlf)))
+                     ;; Paragraph break after room description
+                     (utils/tell "\n\n")))
                ;; Default - signal that default handling should be used
                (gs/use-default game-state)))})
 
@@ -2205,10 +2206,12 @@
     (let [rope-tied? (get game-state :dome-flag false)]
       (-> game-state
           (utils/tell "This is a large room with a prominent doorway leading to a down staircase. Above you is a large dome. Up around the edge of the dome (20 feet up) is a wooden railing. In the center of the room sits a white marble pedestal.")
-          (utils/crlf)
+          ;; Paragraph break after room description
+          (utils/tell "\n\n")
           (cond-> rope-tied?
             (-> (utils/tell "A piece of rope descends from the railing above, ending some five feet above your head.")
-                (utils/crlf)))))
+                ;; Paragraph break before objects
+                (utils/tell "\n\n")))))
     (gs/use-default game-state)))
 
 (def torch-room
@@ -2339,10 +2342,10 @@
   Abandon every hope all ye who enter here!
 
 The gate is open; through it you can see a desolation, with a pile of mangled bodies in one corner. Thousands of voices, lamenting some hideous fate, can be heard.")
-          (utils/crlf)
+          ;; Paragraph break after room description
+          (utils/tell "\n\n")
           (cond-> (and (not gate-open?) (not is-dead?))
-            (-> (utils/tell "The way through the gate is barred by evil spirits, who jeer at your attempts to pass.")
-                (utils/crlf)))))
+            (utils/tell "The way through the gate is barred by evil spirits, who jeer at your attempts to pass."))))
 
     ;; Ring the bell - start the exorcism sequence
     ;; ZIL: LLD-ROOM handles RING in M-BEG
@@ -2357,11 +2360,11 @@ The gate is open; through it you can see a desolation, with a pile of mangled bo
           (assoc-in [:objects :brass-bell :in] :limbo)
           (assoc-in [:objects :hot-bell :in] here)
           (utils/tell "The bell suddenly becomes red hot and falls to the ground. The wraiths, as if paralyzed, stop their jeering and slowly turn to face you. On their ashen faces, the expression of a long-forgotten terror takes shape.")
-          (utils/crlf)
+          ;; Paragraph break before candle message
+          (utils/tell "\n\n")
           ;; If player has candles, drop them
           (cond-> has-candles?
             (-> (utils/tell "In your confusion, the candles drop to the ground (and they are out).")
-                (utils/crlf)
                 (assoc-in [:objects :candles :in] here)
                 (gs/unset-thing-flag :candles :on)))))
 
@@ -2399,7 +2402,8 @@ The gate is open; through it you can see a desolation, with a pile of mangled bo
       (if (and xb has-candles? candles-on? (not xc))
         (-> game-state
             (assoc :xc true)
-            (utils/crlf)
+            ;; Paragraph break before flames message
+            (utils/tell "\n\n")
             (utils/tell "The flames flicker wildly and appear to dance. The earth beneath your feet trembles, and your legs nearly buckle beneath you. The spirits cower at your unearthly power."))
         game-state))
 
@@ -2485,7 +2489,8 @@ The gate is open; through it you can see a desolation, with a pile of mangled bo
     (= rarg :look)
     (-> game-state
         (utils/tell "You are in a small room which has doors only to the east and south.")
-        (utils/crlf))
+        ;; Paragraph break after room description
+        (utils/tell "\n\n"))
 
     ;; On entering, if player doesn't have garlic, bat transports them
     (and (= rarg :m-enter)

@@ -57,31 +57,33 @@
           gate-flag? (:gate-flag game-state)]
       (-> game-state
           (utils/tell "You are standing on the top of the Flood Control Dam #3, which was quite a tourist attraction in times far distant. There are paths to the north, south, and west, and a scramble down.")
-          (utils/crlf)
+          ;; Paragraph break between sections
+          (utils/tell "\n\n")
           ;; Water level description based on state
           (cond->
             (and low-tide? gates-open?)
             (-> (utils/tell "The water level behind the dam is low: The sluice gates have been opened. Water rushes through the dam and downstream.")
-                (utils/crlf))
+                (utils/tell "\n\n"))
 
             (and gates-open? (not low-tide?))
             (-> (utils/tell "The sluice gates are open, and water rushes through the dam. The water level behind the dam is still high.")
-                (utils/crlf))
+                (utils/tell "\n\n"))
 
             (and low-tide? (not gates-open?))
             (-> (utils/tell "The sluice gates are closed. The water level in the reservoir is quite low, but the level is rising quickly.")
-                (utils/crlf))
+                (utils/tell "\n\n"))
 
             (and (not low-tide?) (not gates-open?))
             (-> (utils/tell "The sluice gates on the dam are closed. Behind the dam, there can be seen a wide reservoir. Water is pouring over the top of the now abandoned dam.")
-                (utils/crlf)))
+                (utils/tell "\n\n")))
           ;; Control panel description
           (utils/tell "There is a control panel here, on which a large metal bolt is mounted. Directly above the bolt is a small green plastic bubble")
           (cond->
             gate-flag?
             (utils/tell " which is glowing serenely"))
           (utils/tell ".")
-          (utils/crlf)))
+          ;; Paragraph break after room description
+          (utils/tell "\n\n")))
 
     ;; Default - use default handling
     (gs/use-default game-state)))
@@ -108,10 +110,12 @@
 
             (and (not low-tide?) (not gates-open?))
             (utils/tell "You are in a long room on the south shore of a large lake, far too deep and wide for crossing."))
-          (utils/crlf)
+          ;; Paragraph break between description and exits
+          (utils/tell "\n\n")
           ;; Exits description
           (utils/tell "There is a path along the stream to the east or west, a steep pathway climbing southwest along the edge of a chasm, and a path leading into a canyon to the southeast.")
-          (utils/crlf)))
+          ;; Paragraph break after room description
+          (utils/tell "\n\n")))
 
     ;; Default
     (gs/use-default game-state)))
@@ -130,7 +134,8 @@
 
             (not low-tide?)
             (utils/tell "You are on the lake. Beaches can be seen north and south. Upstream a small stream enters the lake through a narrow cleft in the rocks. The dam can be seen downstream."))
-          (utils/crlf)))
+          ;; Paragraph break after room description
+          (utils/tell "\n\n")))
 
     ;; M-END: Warning about rising water
     :m-end
@@ -168,9 +173,11 @@
 
             (and (not low-tide?) (not gates-open?))
             (utils/tell "You are in a large cavernous room, north of a large lake."))
-          (utils/crlf)
+          ;; Paragraph break after main description
+          (utils/tell "\n\n")
           (utils/tell "There is a slimy stairway leaving the room to the north.")
-          (utils/crlf)))
+          ;; Paragraph break after room description
+          (utils/tell "\n\n")))
 
     ;; Default
     (gs/use-default game-state)))
@@ -439,9 +446,15 @@
     (-> game-state
         ;; Set reservoir to land room
         (gs/unset-thing-flag :reservoir :rwater)
-        ;; Clear touch flags
+        ;; Clear touch flags so player sees new descriptions after water change
+        ;; ZIL clears DEEP-CANYON and LOUD-ROOM, but we also need reservoir areas
+        ;; to show their new water-state-dependent descriptions
         (gs/unset-thing-flag :reservoir-south :touch)
         (gs/unset-thing-flag :reservoir-north :touch)
+        (gs/unset-thing-flag :deep-canyon :touch)
+        (gs/unset-thing-flag :loud-room :touch)
+        ;; Make trunk visible now that water is low (ZIL: FCLEAR TRUNK INVISIBLE)
+        (gs/unset-thing-flag :trunk-of-jewels :invisible)
         ;; Set low-tide to true (water is low)
         (assoc :low-tide true)
         ;; Disable the daemon (runs once)

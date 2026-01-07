@@ -579,7 +579,8 @@
       ;; Villain recovers
       (-> gs
           (gs/unset-thing-flag villain-id :staggered)
-          (utils/tell (str "\nThe " (get-thing-name gs villain-id) " slowly regains his feet.")))
+          ;; Paragraph break for proper separation
+          (utils/tell (str "\n\nThe " (get-thing-name gs villain-id) " slowly regains his feet.\n")))
 
       ;; Villain attacks
       (let [att (villain-strength gs villain-entry nil)  ; Villain's attack
@@ -598,7 +599,8 @@
           (neg? def)
           (let [message (select-combat-message messages killed "you" weapon-name)]
             (-> gs
-                (utils/tell (str "\n" message))
+                ;; Paragraph break for proper separation
+                (utils/tell (str "\n\n" message "\n"))
                 (winner-result 0 killed orig-def)))
 
           ;; Normal combat
@@ -628,7 +630,8 @@
 
                           :else def)]
             (-> gs
-                (utils/tell (str "\n" message))
+                ;; Paragraph break for proper separation
+                (utils/tell (str "\n\n" message "\n"))
                 ;; Set player staggered if result was stagger
                 (cond-> (= result stagger)
                   (gs/set-thing-flag winner :staggered))

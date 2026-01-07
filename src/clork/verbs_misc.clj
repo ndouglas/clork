@@ -51,7 +51,7 @@
    Used by WAVE, RUB, KICK, PUSH etc.
    ZIL: HACK-HACK in gverbs.zil lines 2040-2045"
   [game-state prefix]
-  (let [prso (:prso game-state)
+  (let [prso (parser-state/get-prso game-state)
         obj-name (if prso (gs/thing-name game-state prso) "it")
         message (random/rand-nth* ho-hum-messages)]
     (-> game-state
@@ -325,9 +325,17 @@
 
 (defn v-raise
   "Handle RAISE/LIFT verb.
-   ZIL: V-RAISE uses HACK-HACK"
+   ZIL: V-RAISE uses HACK-HACK
+   First checks the object's action handler (e.g., for basket)."
   [game-state]
-  (hack-hack game-state "Lifting the "))
+  (let [prso (parser-state/get-prso game-state)
+        obj (when prso (gs/get-thing game-state prso))
+        action-fn (:action obj)]
+    ;; First try the object's action handler
+    (if-let [result (when action-fn (action-fn game-state))]
+      result
+      ;; Default behavior
+      (hack-hack game-state "Lifting the "))))
 
 (defn v-lower
   "Handle LOWER verb.

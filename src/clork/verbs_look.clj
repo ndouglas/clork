@@ -74,10 +74,11 @@
            (utils/tell "It is pitch black. You are likely to be eaten by a grue.\n"))
        ;; Lit room - describe it, threading state through each operation
        ;; ZIL: <TELL D ,HERE> <CRLF> -- print room name first
+       ;; Use double newline for paragraph separation from description
        (let [room-name (:desc here)
              state (-> game-state
                        (cond-> room-name (utils/tell room-name))
-                       (cond-> room-name (utils/tell "\n"))
+                       (cond-> room-name (utils/tell "\n\n"))
                        (gs/set-here-flag :touch)
                        (cond-> maze? (gs/unset-here-flag :touch))
                        (cond-> vehicle? (utils/tell (str "(You are in the " (:desc location) ".)"))))
@@ -89,12 +90,14 @@
                      (let [result (act state :look)]
                        (if (gs/use-default? result)
                          (if-let [ldesc (:ldesc here)]
-                           (-> (gs/clear-use-default result) (utils/tell ldesc) (utils/crlf))
+                           ;; Use paragraph break after room description
+                           (-> (gs/clear-use-default result) (utils/tell ldesc) (utils/tell "\n\n"))
                            (gs/clear-use-default result))
                          result))
                      ;; Verbose mode without action - use ldesc (guard against nil ldesc)
                      (and is-verbose? (:ldesc here))
-                     (-> state (utils/tell (:ldesc here)) (utils/crlf))
+                     ;; Use paragraph break after room description
+                     (-> state (utils/tell (:ldesc here)) (utils/tell "\n\n"))
                      ;; Non-verbose with action - try flash (no ldesc fallback for flash)
                      (some? act)
                      (let [result (act state :flash)]
@@ -156,11 +159,13 @@
   [game-state obj-id level]
   (let [obj (gs/get-thing game-state obj-id)
         desc (:desc obj)
-        winner (:winner game-state)]
+        winner (:winner game-state)
+        ;; Use paragraph break for room floor level (-1 or 0)
+        line-end (if (<= level 0) "\n\n" "\n")]
     (cond
       ;; Trophy case special message
       (= obj-id :trophy-case)
-      (utils/tell game-state "Your collection of treasures consists of:\n")
+      (utils/tell game-state (str "Your collection of treasures consists of:" line-end))
 
       ;; Player inventory
       (= obj-id winner)
@@ -173,13 +178,13 @@
                     game-state)]
         (cond
           (has-flag? game-state obj-id :surface)
-          (utils/tell state (str "Sitting on the " desc " is:\n"))
+          (utils/tell state (str "Sitting on the " desc " is:" line-end))
 
           (has-flag? game-state obj-id :actor)
-          (utils/tell state (str "The " desc " is holding:\n"))
+          (utils/tell state (str "The " desc " is holding:" line-end))
 
           :else
-          (utils/tell state (str "The " desc " contains:\n")))))))
+          (utils/tell state (str "The " desc " contains:" line-end)))))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; DESCRIBE-OBJECT
@@ -219,7 +224,8 @@
                         (utils/tell state " (providing light)")
                         state)]
             (-> state
-                (utils/tell "\n")
+                ;; Double newline for paragraph separation at room floor level
+                (utils/tell "\n\n")
                 add-contents))
 
           ;; Level 0, generic description
@@ -227,10 +233,27 @@
           ;; Objects with custom :ldesc include their own parenthetical (e.g., lantern)
           (zero? level)
           (-> game-state
-              (utils/tell (str "There is " (get-article game-state obj-id) desc " here.\n"))
+              ;; Double newline for paragraph separation at room floor level
+              (utils/tell (str "There is " (get-article game-state obj-id) desc " here.\n\n"))
               add-contents)
 
-          ;; Nested level (inside container)
+          ;; Level 1: first container contents (no indent, paragraph breaks)
+          (= level 1)
+          (let [state (utils/tell game-state (str "A " desc))
+                state (cond
+                        (contains? flags :on)
+                        (utils/tell state " (providing light)")
+
+                        (and (contains? flags :wear)
+                             (= (:in obj) (:winner game-state)))
+                        (utils/tell state " (being worn)")
+
+                        :else state)]
+            (-> state
+                (utils/tell "\n\n")
+                add-contents))
+
+          ;; Nested level 2+ (inside nested containers - indented, single newline)
           :else
           (let [state (utils/tell game-state (get-indent level))
                 state (utils/tell state (str "A " desc))
@@ -277,13 +300,15 @@
              with-fdesc (filter has-untouched-fdesc? visible-contents)
              without-fdesc (remove has-untouched-fdesc? visible-contents)
 
-             ;; Print fdesc objects first
+             ;; Print fdesc objects first (with paragraph breaks at room floor level)
              state (reduce (fn [st id]
                              (let [obj (gs/get-thing game-state id)]
                                (-> st
                                    (utils/tell (:fdesc obj))
-                                   (utils/tell "\n")
+                                   ;; Use paragraph break for room floor level (-1) or ndesc containers (0)
+                                   (utils/tell (if (<= level 0) "\n\n" "\n"))
                                    ;; Also print contents if visible
+                                   ;; Pass 0 for container contents (level 0 gets paragraph breaks in firster)
                                    (cond-> (and (see-inside? st id)
                                                 (seq (gs/get-contents st id)))
                                      (print-cont id verbose? 0)))))
@@ -319,8 +344,9 @@
                                  state
                                  describable)))]
            ;; Then describe ndesc containers' contents (like trophy case)
+           ;; Pass level 0 so firster gets called (e.g. "Your collection of treasures consists of:")
            (reduce (fn [st id]
-                     (print-cont st id verbose? (if (< level 0) 0 level)))
+                     (print-cont st id verbose? 0))
                    state
                    ndesc-containers)))))))
 

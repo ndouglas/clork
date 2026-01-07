@@ -135,14 +135,18 @@
                               contents)]
           (if (empty? visible)
             (utils/tell game-state (str "The " desc " is empty."))
-            ;; Print contents
+            ;; Print contents - each item on its own paragraph
             (let [content-strs (map (fn [id]
-                                      (let [o (gs/get-thing game-state id)]
-                                        (str "  A " (:desc o))))
+                                      (let [o (gs/get-thing game-state id)
+                                            oflags (or (:flags o) #{})
+                                            suffix (if (contains? oflags :on)
+                                                     " (providing light)"
+                                                     "")]
+                                        (str "A " (:desc o) suffix)))
                                     visible)]
               (-> game-state
-                  (utils/tell (str "The " desc " contains:\n"))
-                  (utils/tell (clojure.string/join "\n" content-strs))))))
+                  (utils/tell (str "The " desc " contains:\n\n"))
+                  (utils/tell (clojure.string/join "\n\n" content-strs))))))
 
         ;; Closed container
         :else
@@ -259,7 +263,8 @@
             (let [item (gs/get-thing state (first visible))]
               (-> state
                   (utils/tell (str "The " desc " opens."))
-                  (utils/crlf)
+                  ;; Paragraph break before item description
+                  (utils/tell "\n\n")
                   (utils/tell (:fdesc item))))
 
             ;; Otherwise: "Opening the X reveals Y."

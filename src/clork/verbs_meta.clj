@@ -77,6 +77,7 @@
         contents (gs/get-contents game-state winner-id)]
     (if (empty? contents)
       (utils/tell game-state "You are empty-handed.")
+      ;; Inventory items each get their own paragraph (paragraph break after each)
       (reduce (fn [state obj-id]
                 (let [obj (gs/get-thing state obj-id)
                       obj-name (:desc obj)
@@ -87,8 +88,8 @@
                                (and (gs/set-thing-flag? state obj-id :wear)
                                     (= (:in obj) winner-id)) " (being worn)"
                                :else "")]
-                  (utils/tell state (str "  A " obj-name suffix "\n"))))
-              (utils/tell game-state "You are carrying:\n")
+                  (utils/tell state (str "A " obj-name suffix "\n\n"))))
+              (utils/tell game-state "You are carrying:\n\n")
               contents))))
 
 (defn v-wait

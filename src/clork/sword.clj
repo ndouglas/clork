@@ -147,13 +147,14 @@
           (-> game-state
               (cond->
                 (= new-glow 2)
-                (utils/tell "\nYour sword has begun to glow very brightly.")
+                ;; Paragraph break before and after for proper separation
+                (utils/tell "\n\nYour sword has begun to glow very brightly.\n")
 
                 (= new-glow 1)
-                (utils/tell "\nYour sword is glowing with a faint blue glow.")
+                (utils/tell "\n\nYour sword is glowing with a faint blue glow.\n")
 
                 (= new-glow 0)
-                (utils/tell "\nYour sword is no longer glowing."))
+                (utils/tell "\n\nYour sword is no longer glowing.\n"))
               (assoc-in [:objects :sword :tvalue] new-glow))))
 
       ;; Sword not in player's inventory - do nothing

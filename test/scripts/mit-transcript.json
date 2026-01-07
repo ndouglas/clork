@@ -134,6 +134,14 @@
       "response": "The troll takes a fatal blow and slumps to the floor dead.\n\nAlmost as soon as the troll breathes his last breath, a cloud of sinister black fog envelops him, and when the fog lifts, the carcass has disappeared.\n\nYour sword is no longer glowing."
     },
     {
+      "command": "kill troll with sword",
+      "response": "You can't see any such thing."
+    },
+    {
+      "command": "kill troll with sword",
+      "response": "You can't see any such thing."
+    },
+    {
       "command": "drop sword",
       "response": "Dropped."
     },
@@ -363,15 +371,7 @@
     },
     {
       "command": "go down",
-      "response": "Loud Room\n\nThis is a large room with a ceiling which cannot be detected\nfrom the ground. There is a narrow passage from east to west and a stone\nstairway leading upward. The room is deafeningly loud with an undetermined\nrushing sound. The sound seems to reverberate from all of the walls, making it\ndifficult even to think.\n\nOn the ground is a large platinum bar.\n\nIt is unbearably loud here, with an ear-splitting roar\nseeming to come from all around you. There is a pounding in your head which\nwon't stop. With a tremendous effort, you scramble out of the room.\n\nDeep Canyon"
-    },
-    {
-      "command": "go southwest",
-      "response": "North-South Passage\n\nThis is a high north-south passage, which forks to the northeast."
-    },
-    {
-      "command": "go south",
-      "response": "Round Room"
+      "response": "Loud Room\n\nThis is a large room with a ceiling which cannot be detected\nfrom the ground. There is a narrow passage from east to west and a stone\nstairway leading upward. The room is deafeningly loud with an undetermined\nrushing sound. The sound seems to reverberate from all of the walls, making it\ndifficult even to think.\n\nOn the ground is a large platinum bar.\n\nIt is unbearably loud here, with an ear-splitting roar\nseeming to come from all around you. There is a pounding in your head which\nwon't stop. With a tremendous effort, you scramble out of the room.\n\nRound Room"
     },
     {
       "command": "go southeast",
@@ -523,7 +523,7 @@
     },
     {
       "command": "go northeast",
-      "response": "Coal Mine\n\nThis is a non-descript part of a coal mine.\nThere is a black book here."
+      "response": "Coal Mine\n\nThis is a non-descript part of a coal mine."
     },
     {
       "command": "go southeast",
@@ -535,7 +535,7 @@
     },
     {
       "command": "go down",
-      "response": "Ladder Top\n\nThis is a very small room. In the corner is a rickety wooden\nladder, leading downward. It might be safe to descend. There is also a\nstaircase leading upward.\nSomeone carrying a large bag is casually leaning against one of the walls here. He does not speak, but it is clear from his aspect that the bag will be taken only over his dead body."
+      "response": "Ladder Top\n\nThis is a very small room. In the corner is a rickety wooden\nladder, leading downward. It might be safe to descend. There is also a\nstaircase leading upward."
     },
     {
       "command": "go down",
@@ -567,7 +567,7 @@
     },
     {
       "command": "go east",
-      "response": "Coal Mine\nThere is a black book here."
+      "response": "Coal Mine"
     },
     {
       "command": "go south",
@@ -607,7 +607,7 @@
     },
     {
       "command": "go northeast",
-      "response": "Coal Mine\nThere is a black book here."
+      "response": "Coal Mine"
     },
     {
       "command": "go southeast",
@@ -723,7 +723,7 @@
     },
     {
       "command": "go north",
-      "response": "Coal Mine\n\nA seedy-looking individual with a large bag just wandered\nthrough the room. On the way through, he quietly abstracted some valuables from\nthe room and from your possession, mumbling something about \"Doing unto\nothers before...\""
+      "response": "Coal Mine"
     },
     {
       "command": "go east",
@@ -731,7 +731,7 @@
     },
     {
       "command": "go south",
-      "response": "Coal Mine\n\nA \"lean and hungry\" gentleman just wandered\nthrough, carrying a large bag. Finding nothing of value, he left disgruntled."
+      "response": "Coal Mine"
     },
     {
       "command": "go north",
@@ -787,7 +787,7 @@
     },
     {
       "command": "go south",
-      "response": "Slide Room"
+      "response": "Slide Room\n\nSomeone carrying a large bag is casually leaning against one of the walls here. He does not speak, but it is clear from his aspect that the bag will be taken only over his dead body."
     },
     {
       "command": "go down",
@@ -799,7 +799,7 @@
     },
     {
       "command": "inventory",
-      "response": "You are carrying:\n\nA jade figurine\n\nA torch\n(providing light)\n\nA huge diamond\n\nA clove of\ngarlic\n\nA brass\nlantern"
+      "response": "You are carrying:\n\nA jade figurine\n\nA torch (providing light)\n\nA huge diamond\n\nA sapphire-encrusted bracelet\n\nA clove of garlic\n\nA brass lantern\n\nA crystal skull"
     },
     {
       "command": "put jade in case",
@@ -851,7 +851,7 @@
     },
     {
       "command": "take pump",
-      "response": "Taken."
+      "response": "You already have that!"
     },
     {
       "command": "go north",
@@ -859,11 +859,11 @@
     },
     {
       "command": "take trident",
-      "response": "Your load is too heavy."
+      "response": "Taken."
     },
     {
       "command": "inventory",
-      "response": "You are carrying:\n\nA hand-held\nair pump\n\nA trunk of jewels\n\nA torch\n(providing light)\n\nA clove of\ngarlic\n\nA brass\nlantern (providing light)"
+      "response": "You are carrying:\n\nA crystal trident\n\nA hand-held air pump\n\nA trunk of jewels\n\nA torch (providing light)\n\nA sapphire-encrusted bracelet\n\nA clove of garlic\n\nA brass lantern (providing light)\n\nA crystal skull"
     },
     {
       "command": "drop torch",
@@ -871,7 +871,7 @@
     },
     {
       "command": "take trident",
-      "response": "Taken."
+      "response": "You already have that!"
     },
     {
       "command": "go south",
@@ -891,7 +891,7 @@
     },
     {
       "command": "go east",
-      "response": "Dam Base\n\nYou are at the base of Flood Control Dam #3, which looms\nabove you and to the north. The river Frigid is flowing by here. Along the\nriver are the White Cliffs which seem to form giant walls stretching from north\nto south along the shores of the river as it winds its way downstream.\n\nThere is a folded pile of plastic here which has a small\nvalve attached."
+      "response": "Dam Base\n\nYou are at the base of Flood Control Dam #3, which looms\nabove you and to the north. The river Frigid is flowing by here. Along the\nriver are the White Cliffs which seem to form giant walls stretching from north\nto south along the shores of the river as it winds its way downstream."
     },
     {
       "command": "inflate plastic with pump",

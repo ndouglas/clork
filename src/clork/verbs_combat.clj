@@ -59,7 +59,8 @@
         (if (gs/set-thing-flag? gs winner :staggered)
           (-> gs
               (gs/unset-thing-flag winner :staggered)
-              (utils/tell "You are still recovering from that last blow, so your attack is ineffective."))
+              ;; Paragraph break for separation from subsequent combat message
+              (utils/tell "You are still recovering from that last blow, so your attack is ineffective.\n"))
 
           ;; Normal attack
           (let [att (max 1 (health/fight-strength gs))
@@ -139,9 +140,10 @@
       (zero? new-strength)
       (-> gs
           (gs/unset-thing-flag villain-id :fight)
-          (utils/tell (str "\nAlmost as soon as the " (combat/get-thing-name gs villain-id)
+          ;; Paragraph break for proper separation
+          (utils/tell (str "\n\nAlmost as soon as the " (combat/get-thing-name gs villain-id)
                            " breathes his last breath, a cloud of sinister black fog "
-                           "envelops him, and when the fog lifts, the carcass has disappeared."))
+                           "envelops him, and when the fog lifts, the carcass has disappeared.\n"))
           ;; Move villain to limbo
           (assoc-in [:objects villain-id :in] :limbo)
           ;; Call villain's F-DEAD action (will be handled by troll action handler)

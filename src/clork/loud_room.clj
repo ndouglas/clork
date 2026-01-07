@@ -97,7 +97,8 @@
 
             (not quiet?)
             (utils/tell " The room is deafeningly loud with an undetermined rushing sound. The sound seems to reverberate from all of the walls, making it difficult even to think."))
-          (utils/crlf)))
+          ;; Paragraph break after room description
+          (utils/tell "\n\n")))
 
     ;; M-END: Called at end of turn - check if player should be ejected
     :m-end

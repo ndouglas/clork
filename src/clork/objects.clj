@@ -1327,7 +1327,8 @@ You are the privileged owner of ZORK I: The Great Underground Empire, a self-con
                      (if (and (= here :end-of-rainbow)
                               (= (gs/get-thing-loc-id gs :pot-of-gold) :end-of-rainbow))
                        (-> gs
-                           (utils/crlf)
+                           ;; Paragraph break before pot of gold message
+                           (utils/tell "\n\n")
                            (utils/tell "A shimmering pot of gold appears at the end of the rainbow."))
                        gs)))
 
@@ -1770,7 +1771,7 @@ Surely thou shalt repent of thy cunning."})
 (def jade-figurine
   {:id :jade-figurine
    :in :bat-room
-   :synonym ["figurine" "treasure"]
+   :synonym ["figurine" "treasure" "jade"]
    :adjective ["exquisite" "jade"]
    :desc "jade figurine"
    :flags (flags/flags :take)
@@ -1804,7 +1805,8 @@ Surely thou shalt repent of thy cunning."})
         (utils/tell (if has-garlic?
                       "In the corner of the room on the ceiling is a large vampire bat who is obviously deranged and holding his nose."
                       "A large vampire bat, hanging from the ceiling, swoops down at you!"))
-        (utils/crlf))))
+        ;; Paragraph break after bat description
+        (utils/tell "\n\n"))))
 
 (def bat
   {:id :bat
