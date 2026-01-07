@@ -414,9 +414,9 @@
    ZIL: SAND-FUNCTION in 1actions.zil (lines 2868-2882)
 
    Dig in the sand with a shovel to find the scarab:
-   - Dig 1-2: Progressive messages
-   - Dig 3: Reveal scarab if not already taken
-   - Dig 4+: Hole collapses, killing player"
+   - Dig 1-3: Progressive messages from dig-messages
+   - Dig 4: Reveal scarab if not already taken
+   - Dig 5+: Hole collapses, killing player"
   [game-state]
   (let [prsa (parser-state/get-prsa game-state)
         prsi (parser-state/get-prsi game-state)]
@@ -426,26 +426,27 @@
       (let [beach-dig (get game-state :beach-dig 0)
             new-dig (inc beach-dig)]
         (cond
-          ;; Dig 4+: collapse!
-          (> new-dig 3)
+          ;; Dig 5+: collapse!
+          (> new-dig 4)
           (let [gs (-> game-state
                        (assoc :beach-dig 0))]
             ;; If scarab still here and visible, hide it again
             (death/jigs-up gs "The hole collapses, smothering you."))
 
-          ;; Dig 3: reveal scarab
-          (= new-dig 3)
+          ;; Dig 4: reveal scarab
+          (= new-dig 4)
           (let [scarab-invisible? (gs/set-thing-flag? game-state :jeweled-scarab :invisible)]
             (if scarab-invisible?
               (-> game-state
                   (assoc :beach-dig new-dig)
                   (gs/unset-thing-flag :jeweled-scarab :invisible)
                   (utils/tell "You can see a scarab here in the sand."))
+              ;; If scarab already visible/taken, just give the last dig message
               (-> game-state
                   (assoc :beach-dig new-dig)
                   (utils/tell (nth dig-messages 2)))))
 
-          ;; Dig 1-2: progressive message
+          ;; Dig 1-3: progressive message
           :else
           (-> game-state
               (assoc :beach-dig new-dig)

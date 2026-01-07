@@ -34,22 +34,6 @@
   (let [obj (gs/get-thing game-state obj-id)]
     (or (:capacity obj) 0)))
 
-(defn- get-size
-  "Get the size of an object. Returns 0 if not specified."
-  [game-state obj-id]
-  (let [obj (gs/get-thing game-state obj-id)]
-    (or (:size obj) 0)))
-
-(defn- weight
-  "Calculate the total weight of an object including contents.
-
-   ZIL: WEIGHT routine."
-  [game-state obj-id]
-  (let [base-size (get-size game-state obj-id)
-        contents (gs/get-contents game-state obj-id)
-        contents-weight (reduce + 0 (map #(weight game-state %) contents))]
-    (+ base-size contents-weight)))
-
 (defn- room-for?
   "Check if there's room in the container for the object.
 
@@ -57,9 +41,9 @@
             <GETP ,PRSI ,P?CAPACITY>>"
   [game-state obj-id container-id]
   (let [capacity (get-capacity game-state container-id)
-        container-size (get-size game-state container-id)
-        container-weight (weight game-state container-id)
-        obj-weight (weight game-state obj-id)
+        container-size (gs/get-size game-state container-id)
+        container-weight (gs/weight game-state container-id)
+        obj-weight (gs/weight game-state obj-id)
         ;; ZIL checks: (container_weight + obj_weight - container_size) > capacity
         ;; Which means: used space + obj_weight > capacity
         used-space (- container-weight container-size)

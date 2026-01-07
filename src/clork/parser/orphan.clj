@@ -200,10 +200,13 @@
       (and (lexer/wt? first-word :object true)
            (zero? (parser-state/get-ncn gs)))
       ;; Treat as noun clause to fill orphan
-      (let [gs (-> gs
+      ;; Set nc1 = 0 (start of lexv) and nc1l = lexv length (entire input is the noun)
+      (let [lexv-len (lexer/lexv-count gs)
+            gs (-> gs
                    (parser-state/set-itbl :verb 0)
                    (parser-state/set-itbl :verbn 0)
-                   (parser-state/set-itbl :nc1 0)  ; Will be set by clause copy
+                   (parser-state/set-itbl :nc1 0)   ; Start of noun phrase
+                   (parser-state/set-itbl :nc1l lexv-len)  ; End of noun phrase
                    (parser-state/set-ncn 1))]
         (merge-to-nc1 gs false))
 
@@ -216,7 +219,9 @@
    Helper for orphan-merge when filling the first object slot."
   [game-state adj?]
   (let [;; Check preposition compatibility
+        ;; Note: 0 means "no prep" in the table, treat as nil
         prep-from-itbl (parser-state/get-itbl game-state :prep1)
+        prep-from-itbl (when (and prep-from-itbl (not= prep-from-itbl 0)) prep-from-itbl)
         prep-from-otbl (parser-state/get-otbl game-state :prep1)]
 
     (if (or (= prep-from-itbl prep-from-otbl)
@@ -241,7 +246,9 @@
 
    Helper for orphan-merge when filling the second object slot."
   [game-state adj?]
-  (let [prep-from-itbl (parser-state/get-itbl game-state :prep1)
+  (let [;; Note: 0 means "no prep" in the table, treat as nil
+        prep-from-itbl (parser-state/get-itbl game-state :prep1)
+        prep-from-itbl (when (and prep-from-itbl (not= prep-from-itbl 0)) prep-from-itbl)
         prep-from-otbl (parser-state/get-otbl game-state :prep2)]
 
     (if (or (= prep-from-itbl prep-from-otbl)
@@ -356,22 +363,30 @@
    ZIL: CLAUSE-COPY routine, lines 860-879
 
    Copies noun clause boundaries and associated data from one table
-   to another, using the pointers in P-CCTBL."
-  [game-state src-table dest-table]
-  ;; Get the pointers
-  (let [sb (get-in game-state [:parser :cctbl :sbptr])
-        se (get-in game-state [:parser :cctbl :septr])
-        db (get-in game-state [:parser :cctbl :dbptr])
-        de (get-in game-state [:parser :cctbl :deptr])
+   to another, using either:
+   - CCTBL pointers (3-arg form)
+   - Explicit pointer keys (5-arg form): src-table, dest-table, begin-key, end-key"
+  ([game-state src-table dest-table]
+   ;; Use CCTBL pointers
+   (let [sb (get-in game-state [:parser :cctbl :sbptr])
+         se (get-in game-state [:parser :cctbl :septr])
+         db (get-in game-state [:parser :cctbl :dbptr])
+         de (get-in game-state [:parser :cctbl :deptr])
+         src-begin (get-in game-state [:parser src-table sb])
+         src-end (get-in game-state [:parser src-table se])]
+     (-> game-state
+         (assoc-in [:parser dest-table db] src-begin)
+         (assoc-in [:parser dest-table de] src-end))))
 
-        ;; Get source values
-        src-begin (get-in game-state [:parser src-table sb])
-        src-end (get-in game-state [:parser src-table se])]
-
-    ;; Store in destination
-    (-> game-state
-        (assoc-in [:parser dest-table db] src-begin)
-        (assoc-in [:parser dest-table de] src-end))))
+  ([game-state src-table dest-table begin-key end-key]
+   ;; Use explicit keys to copy nc1/nc1l or nc2/nc2l
+   (let [begin-idx (get parser-state/itbl-indices begin-key)
+         end-idx (get parser-state/itbl-indices end-key)
+         src-begin (get-in game-state [:parser src-table begin-idx])
+         src-end (get-in game-state [:parser src-table end-idx])]
+     (-> game-state
+         (assoc-in [:parser dest-table begin-idx] src-begin)
+         (assoc-in [:parser dest-table end-idx] src-end)))))
 
 (defn clause-copy-with-adj
   "Copy clause data while inserting an adjective.

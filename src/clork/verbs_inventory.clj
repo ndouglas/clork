@@ -118,6 +118,25 @@
         (not (takeable? obj))
         (utils/tell game-state (random/rand-nth* yuks))
 
+        ;; Too heavy to carry - ZIL: ITAKE check (gverbs.zil lines 1947-1956)
+        ;; Only check weight if object is NOT inside something winner is carrying
+        ;; (if it's inside something they're carrying, weight is already counted)
+        (let [obj-loc (gs/get-thing-loc-id game-state prso)
+              winner (:winner game-state)
+              load-allowed (or (:load-allowed game-state) 100)
+              load-max (or (:load-max game-state) 100)
+              obj-weight (gs/weight game-state prso)
+              winner-weight (gs/weight game-state winner)]
+          (and (not= obj-loc winner)  ; Not already inside winner's carried items
+               (> (+ obj-weight winner-weight) load-allowed)))
+        (let [load-allowed (or (:load-allowed game-state) 100)
+              load-max (or (:load-max game-state) 100)]
+          (if (< load-allowed load-max)
+            ;; Player is injured (reduced capacity)
+            (utils/tell game-state "Your load is too heavy, especially in light of your condition.")
+            ;; Normal capacity
+            (utils/tell game-state "Your load is too heavy.")))
+
         ;; Success - take the object
         :else
         (let [state (-> game-state
@@ -197,6 +216,13 @@
        <COND (<IDROP>
               <TELL \"Dropped.\" CR>)>>
 
+   PRE-DROP (line 490):
+     <ROUTINE PRE-DROP ()
+       <COND (<EQUAL? ,PRSO <LOC ,WINNER>>
+              <PERFORM ,V?DISEMBARK ,PRSO>
+              <RTRUE>)>>
+   If PRSO is the player's vehicle, redirect to DISEMBARK.
+
    IDROP (line 1982):
    - Check if not carrying: \"You're not carrying the X.\"
    - Check if in closed container: \"The X is closed.\"
@@ -205,19 +231,37 @@
    First checks the object's action handler (e.g., rope in dome room)."
   [game-state]
   (let [prso (parser-state/get-prso game-state)
-        obj (gs/get-thing game-state prso)
-        action-fn (:action obj)
-        desc (:desc obj)]
-    ;; First try the object's action handler
-    (if-let [result (when action-fn (action-fn game-state))]
-      result
-      ;; Default behavior
-      (cond
-        ;; Not carrying it
-        (not (carrying? game-state prso))
-        (utils/tell game-state (str "You're not carrying the " desc "."))
+        winner (:winner game-state)
+        player-loc (gs/get-thing-loc-id game-state winner)]
+    ;; PRE-DROP: If PRSO is the player's vehicle, redirect to disembark
+    (if (= prso player-loc)
+      ;; Player is inside PRSO - this is a disembark request
+      (let [here (:here game-state)
+            here-room (gs/get-thing game-state here)
+            has-rland? (contains? (or (:flags here-room) #{}) :rland)]
+        (cond
+          ;; Room has RLAND - can safely disembark
+          has-rland?
+          (-> game-state
+              (assoc-in [:objects winner :in] here)
+              (utils/tell "You are on your own feet again."))
+          ;; Can't disembark here (would be fatal - in water, etc.)
+          :else
+          (utils/tell game-state "You realize that getting out here would be fatal.")))
+      ;; Normal drop logic
+      (let [obj (gs/get-thing game-state prso)
+            action-fn (:action obj)
+            desc (:desc obj)]
+        ;; First try the object's action handler
+        (if-let [result (when action-fn (action-fn game-state))]
+          result
+          ;; Default behavior
+          (cond
+            ;; Not carrying it
+            (not (carrying? game-state prso))
+            (utils/tell game-state (str "You're not carrying the " desc "."))
 
-        ;; Success - drop the object
-        :else
-        (let [state (drop-to-room game-state prso)]
-          (utils/tell state "Dropped."))))))
+            ;; Success - drop the object
+            :else
+            (let [state (drop-to-room game-state prso)]
+              (utils/tell state "Dropped."))))))))

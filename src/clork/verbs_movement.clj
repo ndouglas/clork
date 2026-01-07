@@ -144,14 +144,46 @@
    - Call room action with M-ENTER
    - Call V-FIRST-LOOK to describe room
 
+   Also handles boat landing (ZIL gverbs.zil lines 2087-2093):
+   - If moving from water room to land room while in vehicle
+   - Print 'The [vehicle] comes to a rest on the shore.'
+   - Move the vehicle to the new room
+
    Returns updated game-state."
   [game-state room-id]
   (let [gs (trace/trace-enter game-state :verbs "goto" {:room room-id})
         winner (:winner gs)
-        ;; Move the winner to the new room
-        gs (assoc-in gs [:objects winner :in] room-id)
-        ;; Update HERE
-        gs (assoc gs :here room-id)
+        here (:here gs)
+        ;; Check for boat landing scenario
+        player-loc (gs/get-thing-loc-id gs winner)
+        in-vehicle? (and (keyword? player-loc)
+                         (not= player-loc here)
+                         (gs/set-thing-flag? gs player-loc :vehicle))
+        vehicle-id (when in-vehicle? player-loc)
+        current-room (gs/get-thing gs here)
+        dest-room (gs/get-thing gs room-id)
+        from-water? (contains? (or (:flags current-room) #{}) :rwater)
+        to-land? (contains? (or (:flags dest-room) #{}) :rland)
+        boat-landing? (and in-vehicle? from-water? to-land?)
+        ;; Print boat landing message if applicable
+        gs (if boat-landing?
+             (let [vehicle (gs/get-thing gs vehicle-id)
+                   vehicle-desc (:desc vehicle)]
+               (-> gs
+                   (utils/tell (str "The " vehicle-desc " comes to a rest on the shore."))
+                   (utils/crlf)
+                   (utils/crlf)
+                   ;; Move the boat to the new room
+                   (assoc-in [:objects vehicle-id :in] room-id)))
+             gs)
+        ;; Move the winner to the new room (or keep in vehicle if boat landing)
+        gs (if boat-landing?
+             ;; Player stays in boat, boat moves to room
+             (assoc gs :here room-id)
+             ;; Normal movement
+             (-> gs
+                 (assoc-in [:objects winner :in] room-id)
+                 (assoc :here room-id)))
         ;; Update LIT flag
         gs (assoc gs :lit (room-lit? gs room-id))
         ;; Score the room (ZIL: SCORE-OBJ .RM in gverbs.zil line 2138)

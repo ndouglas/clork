@@ -627,13 +627,17 @@
   (let [nc1 (parser-state/get-itbl game-state :nc1)
         nc1l (parser-state/get-itbl game-state :nc1l)
         nc2 (parser-state/get-itbl game-state :nc2)
-        nc2l (parser-state/get-itbl game-state :nc2l)]
+        nc2l (parser-state/get-itbl game-state :nc2l)
+        ncn (parser-state/get-ncn game-state)]
     ;; Clear buts table
     (let [gs (assoc-in game-state [:parser :buts] [])
 
           ;; Process indirect object first (NC2)
+          ;; Use ncn to determine if NC2 exists (ncn >= 2)
+          ;; Also skip if PRSI is already set (e.g., by GWIM)
           gs-after-nc2
-          (if (and nc2 (not (zero? nc2)))
+          (if (and (>= ncn 2)
+                   (nil? (parser-state/get-prsi gs)))
             (let [result (snarfem gs nc2 nc2l :prsi)]
               (if (:success result)
                 (:game-state result)
@@ -643,7 +647,10 @@
       (if (reduced? gs-after-nc2)  ; Check if it's an error result
         @gs-after-nc2  ; Unwrap the Reduced to get the error
         ;; Process direct object (NC1)
-        (if (and nc1 (not (zero? nc1)))
+        ;; Use ncn to determine if NC1 exists (ncn >= 1)
+        ;; Also skip if PRSO is already set (e.g., by GWIM)
+        (if (and (>= ncn 1)
+                 (nil? (parser-state/get-prso gs-after-nc2)))
           (snarfem gs-after-nc2 nc1 nc1l :prso)
           {:success true :game-state gs-after-nc2})))))
 

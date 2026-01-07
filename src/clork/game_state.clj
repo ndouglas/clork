@@ -56,6 +56,9 @@
    :base-score 0
    :score-max 350
    :moves 0
+   ;; Load capacity - ZIL: LOAD-MAX, LOAD-ALLOWED (gglobals.zil lines 92-94)
+   :load-max 100
+   :load-allowed 100
    ;; Combat flags - ZIL: TROLL-FLAG, CYCLOPS-FLAG, MAGIC-FLAG, CYCLOWRATH
    :troll-flag false
    :cyclops-flag false  ; Cyclops asleep/defeated
@@ -256,6 +259,35 @@
                         ;; No inv-seq: use :order for stable initial ordering
                         [0 (or (:order obj) 999)])))
            (map first)))))
+
+;;; ---------------------------------------------------------------------------
+;;; WEIGHT CALCULATION
+;;; ---------------------------------------------------------------------------
+
+(defn get-size
+  "Get the size of an object.
+
+   ZIL: <PROPDEF SIZE 5> in zork1.zil line 32
+   Default SIZE is 5, not 0."
+  [game-state obj-id]
+  (let [obj (get-thing game-state obj-id)]
+    (or (:size obj) 5)))
+
+(defn weight
+  "Calculate the total weight of an object including contents.
+
+   ZIL: WEIGHT routine in gverbs.zil
+     <ROUTINE WEIGHT (OBJ)
+       <SET WT <GETP .OBJ ,P?SIZE>>
+       <DO-SL .OBJ>  ; Recursively add contents
+       <RETURN .WT>>
+
+   Returns the sum of the object's :size and the weight of all contained objects."
+  [game-state obj-id]
+  (let [base-size (get-size game-state obj-id)
+        contents (get-contents game-state obj-id)
+        contents-weight (reduce + 0 (map #(weight game-state %) contents))]
+    (+ base-size contents-weight)))
 
 (defn verbose?
   "Indicate whether we should be operating in verbose mode."

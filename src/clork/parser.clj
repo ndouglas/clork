@@ -399,11 +399,23 @@
                (assoc-in [:parser :won] false)  ; Reset - will be set true on success
                (assoc-in [:parser :dir] nil)
                (set-ncn 0)
-               (assoc-in [:parser :getflags] 0))]
+               (assoc-in [:parser :getflags] 0))
 
-    ;; === Main Parsing Loop ===
+        ;; === Try Orphan Merge BEFORE Normal Parsing ===
+        ;; ZIL: ORPHAN-MERGE is called early, before normal token parsing.
+        ;; If we're in orphan mode and the new input completes the orphan,
+        ;; the merge sets up ITBL with the verb and noun clause ready to go.
+        [gs merged?] (if (get-in gs [:parser :oflag])
+                       (if-let [merged-gs (orphan/orphan-merge gs)]
+                         [merged-gs true]
+                         [gs false])
+                       [gs false])]
+
+    ;; === Main Parsing Loop (skip if already merged) ===
     ;; Scan through tokens identifying verbs, preps, nouns
-    (let [result (parse-tokens gs)]
+    (let [result (if merged?
+                   {:game-state gs :error nil}  ; Skip parsing, use merged state
+                   (parse-tokens gs))]
 
       (if (:error result)
         ;; Parsing failed - return game-state with error set
@@ -425,10 +437,7 @@
                 (set-parser-error nil))
 
             ;; Normal command processing
-            (let [;; Try orphan merge if in orphan mode
-                  gs (if (get-in gs [:parser :oflag])
-                       (or (orphan/orphan-merge gs) gs)
-                       gs)
+            (let [gs gs  ; Orphan merge already handled above
 
                   ;; Clear walk-dir
                   gs (-> gs

@@ -67,6 +67,9 @@
          is-verbose? (if maze? true is-verbose?)
          vehicle? (get-in location [:flags :vehicle] false)
          here (gs/get-here game-state)
+         ;; Check if vehicle is beached (in the current room, not on water)
+         vehicle-loc (when vehicle? (gs/get-thing-loc-id game-state (:id location)))
+         beached-vehicle? (and vehicle? (= vehicle-loc (:here game-state)))
          act (:action here)]
      (if (not lit?)
        ;; Dark room - tell them and return (ZIL: <RFALSE> after this)
@@ -76,12 +79,21 @@
        ;; ZIL: <TELL D ,HERE> <CRLF> -- print room name first
        ;; Use double newline for paragraph separation from description
        (let [room-name (:desc here)
+             vehicle-desc (when vehicle? (:desc location))
+             ;; For beached boat: "Room Name, in the magic boat"
+             ;; For floating boat: just room name (handled elsewhere)
+             ;; For non-vehicle: just room name
+             header (if beached-vehicle?
+                      (str room-name ", in the " vehicle-desc)
+                      room-name)
              state (-> game-state
-                       (cond-> room-name (utils/tell room-name))
-                       (cond-> room-name (utils/tell "\n\n"))
+                       (cond-> header (utils/tell header))
+                       (cond-> header (utils/tell "\n\n"))
                        (gs/set-here-flag :touch)
                        (cond-> maze? (gs/unset-here-flag :touch))
-                       (cond-> vehicle? (utils/tell (str "(You are in the " (:desc location) ".)"))))
+                       ;; Only show "(You are in the X.)" if NOT beached
+                       (cond-> (and vehicle? (not beached-vehicle?))
+                         (utils/tell (str "(You are in the " vehicle-desc ".)"))))
              ;; ZIL pattern: action returns game-state with :use-default-handling to signal fallback
              ;; If action signals use-default or doesn't exist, fall back to :ldesc
              state (cond
@@ -208,6 +220,19 @@
             wear? (gs/set-thing-flag? game-state obj-id :wear)
             fdesc (:fdesc obj)
             ldesc (:ldesc obj)
+            ;; ZIL: Check if player is in a vehicle (for "(outside the X)" suffix)
+            ;; Lines 1738-1741: <COND (<AND <0? .LEVEL> <SET AV <LOC ,WINNER>> <FSET? .AV ,VEHBIT>>
+            winner (:winner game-state)
+            player-loc (gs/get-thing-loc-id game-state winner)
+            in-vehicle? (and (keyword? player-loc)
+                             (gs/set-thing-flag? game-state player-loc :vehicle))
+            vehicle-desc (when in-vehicle?
+                           (:desc (gs/get-thing game-state player-loc)))
+            ;; Helper to add vehicle suffix at level 0
+            add-vehicle-suffix (fn [state]
+                                 (if (and (zero? level) in-vehicle?)
+                                   (utils/tell state (str " (outside the " vehicle-desc ")"))
+                                   state))
             ;; Helper to add contents description if visible
             add-contents (fn [state]
                            (if (and (see-inside? game-state obj-id)
@@ -224,19 +249,23 @@
           (let [str (if (and (not touched?) fdesc) fdesc ldesc)
                 state (utils/tell game-state str)]
             (-> state
+                add-vehicle-suffix
                 ;; Double newline for paragraph separation at room floor level
                 (utils/tell "\n\n")
                 add-contents))
 
           ;; Level 0, generic description
           ;; ZIL (line 1719-1722): "There is a X here" + "(providing light)" if ONBIT
+          ;; Then lines 1738-1741: "(outside the X)" if in vehicle
           (zero? level)
           (let [state (utils/tell game-state (str "There is " (get-article game-state obj-id) desc " here"))
                 state (if on?
                         (utils/tell state " (providing light)")
-                        state)]
+                        state)
+                state (utils/tell state ".")]
             (-> state
-                (utils/tell ".\n\n")
+                add-vehicle-suffix
+                (utils/tell "\n\n")
                 add-contents))
 
           ;; Level 1: first container contents (no indent, paragraph breaks)
@@ -285,9 +314,16 @@
   ([game-state obj-id verbose? level]
    (let [contents (gs/get-contents game-state obj-id)
          winner (:winner game-state)
-         ;; Filter out invisible objects and the player
+         ;; ZIL: Check if player is in a vehicle - skip vehicle from room contents
+         ;; Lines 1791, 1813: (<EQUAL? .Y .AV>) - skip the vehicle when iterating
+         player-loc (gs/get-thing-loc-id game-state winner)
+         player-vehicle (when (and (keyword? player-loc)
+                                   (gs/set-thing-flag? game-state player-loc :vehicle))
+                          player-loc)
+         ;; Filter out invisible objects, the player, and the player's vehicle
          visible-contents (remove (fn [id]
                                     (or (= id winner)
+                                        (= id player-vehicle)
                                         (has-flag? game-state id :invisible)))
                                   contents)]
      (if (empty? visible-contents)
@@ -347,10 +383,18 @@
                                  describable)))]
            ;; Then describe ndesc containers' contents (like trophy case)
            ;; Pass level 0 so firster gets called (e.g. "Your collection of treasures consists of:")
-           (reduce (fn [st id]
-                     (print-cont st id verbose? 0))
-                   state
-                   ndesc-containers)))))))
+           (let [state (reduce (fn [st id]
+                                 (print-cont st id verbose? 0))
+                               state
+                               ndesc-containers)]
+             ;; ZIL lines 1809-1811: After room contents, if player is in a vehicle,
+             ;; print the vehicle's contents (e.g., "The magic boat contains:")
+             (if (and player-vehicle
+                      (= level -1)  ;; Only at room floor level
+                      (see-inside? game-state player-vehicle)
+                      (seq (gs/get-contents game-state player-vehicle)))
+               (print-cont state player-vehicle verbose? 0)
+               state))))))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; DESCRIBE-OBJECTS

@@ -559,11 +559,45 @@
 
 (defn v-dig
   "Handle DIG verb.
-   Note: Requires shovel implementation."
+
+   ZIL: V-DIG in gverbs.zil
+     1. Try PRSO's action handler first (e.g., sand handles its own dig logic)
+     2. If not handled and PRSI is a tool, say 'no reason to dig here'
+     3. Otherwise, default messages based on PRSI"
   [game-state]
-  (-> game-state
-      (utils/tell "Digging without a shovel is quite difficult.")
-      (utils/crlf)))
+  (let [prso (parser-state/get-prso game-state)
+        prsi (parser-state/get-prsi game-state)
+        prsa (parser-state/get-prsa game-state)
+        obj (when prso (gs/get-thing game-state prso))
+        action-fn (:action obj)]
+    ;; First try the object's action handler (e.g., sand-action handles dig)
+    (if-let [result (when action-fn (action-fn game-state))]
+      result
+      ;; Default behavior - ZIL: V-DIG fallback
+      (cond
+        ;; No tool - digging by hand
+        (nil? prsi)
+        (-> game-state
+            (utils/tell "Digging without a shovel is quite difficult.")
+            (utils/crlf))
+
+        ;; Have the shovel but not digging in something special
+        (= prsi :shovel)
+        (-> game-state
+            (utils/tell "There's no reason to be digging here.")
+            (utils/crlf))
+
+        ;; Have a tool that's not the shovel
+        (gs/set-thing-flag? game-state prsi :tool)
+        (-> game-state
+            (utils/tell (str "Digging with the " (gs/thing-name game-state prsi) " is slow and tedious."))
+            (utils/crlf))
+
+        ;; Using something that's not a tool
+        :else
+        (-> game-state
+            (utils/tell (str "Digging with a " (gs/thing-name game-state prsi) " is silly."))
+            (utils/crlf))))))
 
 (defn v-burn
   "Handle BURN/IGNITE verb.

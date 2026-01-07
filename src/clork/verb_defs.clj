@@ -216,9 +216,19 @@
                           :loc1 #{:held :carried :in-room :on-ground :take}}
                 :handler verbs-inv/v-read}
 
+   ;; ZIL: <SYNTAX DROP OBJECT (HELD MANY HAVE) = V-DROP PRE-DROP>
+   ;; PRE-DROP checks if PRSO is the player's vehicle and redirects to DISEMBARK
    :drop       {:words   ["drop" "throw" "discard"]
                 :syntax  {:num-objects 1
                           :loc1 #{:held :many :have}}
+                :handler verbs-inv/v-drop}
+
+   ;; ZIL: <SYNTAX LEAVE OBJECT = V-DROP PRE-DROP>
+   ;; "leave X" uses V-DROP with PRE-DROP (disembark check)
+   ;; Needs location search that includes room objects but doesn't require HAVE
+   :leave      {:words   ["leave"]
+                :syntax  {:num-objects 1
+                          :loc1 #{:held :in-room :on-ground}}
                 :handler verbs-inv/v-drop}
 
    ;; ZIL: <SYNTAX PUT OBJECT (HELD MANY HAVE) IN OBJECT = V-PUT PRE-PUT>
@@ -836,11 +846,13 @@
                           :loc2 #{:held}}
                 :handler verbs-misc/v-cut}
 
-   ;; ZIL: <SYNTAX DIG OBJECT WITH OBJECT = V-DIG>
-   ;;      <SYNTAX DIG IN OBJECT WITH OBJECT = V-DIG>
+   ;; ZIL: <SYNTAX DIG IN OBJECT (ON-GROUND IN-ROOM) = V-DIG>
+   ;;      <SYNTAX DIG IN OBJECT WITH OBJECT (FIND TOOLBIT) (HAVE HELD CARRIED) = V-DIG>
+   ;;      <SYNTAX DIG OBJECT WITH OBJECT (FIND TOOLBIT) (HAVE HELD CARRIED) = V-DIG>
    :dig        {:words   ["dig"]
-                :syntax  [{:num-objects 1 :loc1 #{:in-room :on-ground}}
-                          {:num-objects 2 :prep2 :with :loc1 #{:in-room :on-ground} :loc2 #{:held}}]
+                :syntax  [{:num-objects 1 :prep1 :in :loc1 #{:in-room :on-ground}}
+                          {:num-objects 2 :prep1 :in :prep2 :with :loc1 #{:in-room :on-ground} :loc2 #{:held} :gwim2 :tool}
+                          {:num-objects 2 :prep2 :with :loc1 #{:in-room :on-ground} :loc2 #{:held} :gwim2 :tool}]
                 :handler verbs-misc/v-dig}
 
    ;; ZIL: <SYNTAX BURN OBJECT (ON-GROUND IN-ROOM) WITH OBJECT = V-BURN>

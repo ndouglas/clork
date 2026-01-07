@@ -16,7 +16,8 @@
             [clork.game-state :as game-state]
             [clork.verb-defs :as verb-defs]
             [clork.parser.state :as parser-state]
-            [clork.parser.objects :as objects]))
+            [clork.parser.objects :as objects]
+            [clork.parser.orphan :as orphan]))
 
 ;;;; ============================================================================
 ;;;; PARSER SYNTAX - Syntax Checking and GWIM
@@ -118,6 +119,10 @@
    - Number of objects (from P-NCN) against pattern requirement
    - Prepositions in ITBL against pattern requirements
 
+   For orphan mode support: when ncn=0, we don't require prep1 to match
+   because the user will provide the prep with the object in response.
+   Similarly for prep2 when ncn < num-objects.
+
    Returns true if the pattern could match this input."
   [game-state syntax]
   (let [ncn (parser-state/get-ncn game-state)
@@ -125,16 +130,21 @@
         prep2 (parser-state/get-itbl game-state :prep2)
         ;; Normalize prep values - 0 means nil (no prep)
         prep1 (when (and prep1 (not= prep1 0)) prep1)
-        prep2 (when (and prep2 (not= prep2 0)) prep2)]
+        prep2 (when (and prep2 (not= prep2 0)) prep2)
+        num-objects (:num-objects syntax)]
     (and
-     ;; Number of noun clauses must match or be handleable
-     (<= ncn (:num-objects syntax))
-     ;; Preposition 1 must match EXACTLY:
-     ;; - If input has prep1, pattern must expect that prep
-     ;; - If input has no prep1, pattern must not require one
-     (= prep1 (:prep1 syntax))
-     ;; Preposition 2 must match EXACTLY
-     (= prep2 (:prep2 syntax)))))
+     ;; Number of noun clauses must match or be handleable (GWIM/orphan)
+     (<= ncn num-objects)
+     ;; Preposition 1 matching:
+     ;; - If ncn=0, we're in orphan mode - prep1 will come with the noun, so don't check
+     ;; - Otherwise, prep1 must match exactly
+     (or (zero? ncn)
+         (= prep1 (:prep1 syntax)))
+     ;; Preposition 2 matching:
+     ;; - If ncn < 2, prep2 not yet parsed, so don't check
+     ;; - Otherwise, prep2 must match exactly
+     (or (< ncn 2)
+         (= prep2 (:prep2 syntax))))))
 
 (defn find-matching-syntax
   "Find all syntax patterns that could match the current parse.
@@ -154,8 +164,8 @@
    1. Gets the verb from ITBL
    2. Looks up valid syntax patterns for that verb
    3. Finds patterns matching the parsed prepositions and object count
-   4. If exact match: stores syntax and returns success
-   5. If missing objects: tries GWIM to infer them
+   4. First tries GWIM for patterns that need more objects (if they have GWIM hints)
+   5. Falls back to exact match if GWIM fails
    6. If still no match: enters orphan mode
 
    Returns: parser result (use parser-success/parser-error helpers)"
@@ -168,18 +178,37 @@
       ;; Find matching syntaxes
       (let [matches (find-matching-syntax game-state verb)
             ncn (parser-state/get-ncn game-state)
-            ;; Separate exact matches from those needing GWIM
+            merged? (get-in game-state [:parser :merged])
+            ;; Separate exact matches from those needing GWIM/orphan
             exact-matches (filter #(= (:num-objects %) ncn) matches)
-            gwim-matches (filter #(> (:num-objects %) ncn) matches)]
+            ;; Patterns that need more objects than provided (for GWIM or orphan mode)
+            higher-matches (filter #(> (:num-objects %) ncn) matches)
+            ;; Of those, which have GWIM hints for the missing object?
+            gwim-capable (filter #(cond
+                                    (zero? ncn) (:gwim1 %)
+                                    (= ncn 1) (:gwim2 %)
+                                    :else false)
+                                 higher-matches)]
 
         (cond
-          ;; Exact match - use it
+          ;; In merged mode (post-orphan), try GWIM first for higher-object syntaxes
+          ;; This handles "dig in sand" finding the shovel automatically
+          (and merged? (seq gwim-capable))
+          (let [gwim-result (try-gwim game-state gwim-capable)]
+            (if (:success gwim-result)
+              gwim-result
+              ;; GWIM failed - fall back to exact match
+              (if (seq exact-matches)
+                (syntax-found game-state (first exact-matches))
+                gwim-result)))
+
+          ;; Exact match - use it (normal mode or no GWIM patterns)
           (seq exact-matches)
           (syntax-found game-state (first exact-matches))
 
-          ;; Need GWIM for missing object(s)
-          (seq gwim-matches)
-          (try-gwim game-state gwim-matches)
+          ;; Need GWIM/orphan for missing object(s) (no exact match available)
+          (seq higher-matches)
+          (try-gwim game-state higher-matches)
 
           ;; No matching syntax at all
           :else
@@ -253,12 +282,15 @@
         (= (count matches) 1)
         (let [obj (first matches)
               ;; Print inference message: "(the brass lantern)"
+              ;; Also clear gwimbit so snarf-objects doesn't filter by it
+              ;; ZIL adds a blank line after the inference message
               gs-with-msg (-> gs-after
+                              (assoc-in [:parser :gwimbit] nil)  ; Clear after success
                               (utils/tell "(")
                               (cond-> (and prep (not (get-in gs-after [:parser :end-on-prep])))
                                 (utils/tell (str (name prep) " ")))
                               (utils/tell (str "the " (game-state/thing-name gs-after obj)))
-                              (utils/tell ")\n"))]
+                              (utils/tell ")\n\n"))]  ; Double newline for blank line
           {:found true
            :object obj
            :game-state gs-with-msg})
@@ -274,16 +306,29 @@
 
    Iterates through patterns that need GWIM (where num-objects > ncn)
    and tries to infer the missing object. Uses the first pattern
-   where GWIM succeeds."
+   where GWIM succeeds.
+
+   If GWIM fails for all patterns, enters orphan mode to ask the player
+   for the missing object."
   [game-state patterns]
   (let [ncn (parser-state/get-ncn game-state)]
     (loop [remaining patterns]
       (if (empty? remaining)
-        ;; No pattern worked with GWIM - couldn't find object with required flag
-        {:success false
-         :game-state game-state
-         :error {:type :need-object
-                 :message "You can't see any such thing."}}
+        ;; No pattern worked with GWIM - enter orphan mode to ask player
+        ;; ZIL: SYNTAX-CHECK enters orphan mode when GWIM fails
+        (let [pattern (first patterns)  ; Use first pattern for orphan prompt
+              missing-first? (and (zero? ncn)
+                                  (>= (:num-objects pattern) 1))
+              drive1 (when missing-first? pattern)
+              drive2 (when (not missing-first?) pattern)
+              gs (orphan/orphan game-state drive1 drive2)
+              ;; for-second-object? is the opposite of missing-first?
+              prompt (orphan/prompt-for-object gs pattern (not missing-first?))]
+          ;; Set oflag and return orphan error with prompt
+          {:success false
+           :game-state (assoc-in gs [:parser :oflag] true)
+           :error {:type :orphan
+                   :message prompt}})
         (let [pattern (first remaining)
               ;; Determine which object is missing
               missing-first? (and (zero? ncn)
