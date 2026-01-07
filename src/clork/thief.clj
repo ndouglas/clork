@@ -457,7 +457,7 @@
               (thief-in-treasure))
           ;; Thief not here - he rushes to defend
           (-> game-state
-              (utils/tell "You hear a scream of anguish as you violate the robber's hideaway. Using passages unknown to you, he rushes to its defense.")
+              (utils/tell "You hear a scream of anguish as you violate the robber's hideaway. Using passages unknown to you, he rushes to its defense.\n\n")
               (thief-in-treasure)))
         game-state))
 

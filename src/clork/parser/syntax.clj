@@ -136,9 +136,9 @@
      ;; Number of noun clauses must match or be handleable (GWIM/orphan)
      (<= ncn num-objects)
      ;; Preposition 1 matching:
-     ;; - If ncn=0, we're in orphan mode - prep1 will come with the noun, so don't check
-     ;; - Otherwise, prep1 must match exactly
-     (or (zero? ncn)
+     ;; - True orphan mode: ncn=0 AND no prep1 parsed yet (user will provide)
+     ;; - Otherwise, prep1 must match exactly (including both nil)
+     (or (and (zero? ncn) (nil? prep1))
          (= prep1 (:prep1 syntax)))
      ;; Preposition 2 matching:
      ;; - If ncn < 2, prep2 not yet parsed, so don't check
@@ -281,13 +281,18 @@
         ;; Exactly one match - use it with feedback message
         (= (count matches) 1)
         (let [obj (first matches)
-              ;; Print inference message: "(the brass lantern)"
+              ;; Print inference message: "(down the tree)" or "(the brass lantern)"
               ;; Also clear gwimbit so snarf-objects doesn't filter by it
               ;; ZIL adds a blank line after the inference message
+              ;;
+              ;; Note: ZIL checks P-END-ON-PREP but MIT transcript shows prepositions
+              ;; ARE printed for "climb down" -> "(down the tree)". The prepositional
+              ;; phrase is part of the inferred command, so we always print the prep
+              ;; when it's specified.
               gs-with-msg (-> gs-after
                               (assoc-in [:parser :gwimbit] nil)  ; Clear after success
                               (utils/tell "(")
-                              (cond-> (and prep (not (get-in gs-after [:parser :end-on-prep])))
+                              (cond-> prep
                                 (utils/tell (str (name prep) " ")))
                               (utils/tell (str "the " (game-state/thing-name gs-after obj)))
                               (utils/tell ")\n\n"))]  ; Double newline for blank line

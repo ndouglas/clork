@@ -8,7 +8,9 @@
             [clork.loud-room :as loud-room]
             [clork.death :as death]
             [clork.random :as random]
-            [clork.parser.state :as parser-state]))
+            [clork.parser.state :as parser-state]
+            [clork.verbs-movement :as verbs-movement]
+            [clork.forest :as forest]))
 
 ;;; ---------------------------------------------------------------------------
 ;;; ABOVE GROUND - HOUSE EXTERIOR
@@ -172,7 +174,8 @@
            :north :grating-clearing
            :east :forest-path
            :south :forest-3
-           :west "You would need a machete to go further west."}})
+           :west "You would need a machete to go further west."}
+   :action forest/forest-room-action})
 
 ;; <ROOM FOREST-3
 ;;       (IN ROOMS)
@@ -199,7 +202,8 @@
            :east :canyon-view  ; ZIL: CANYON-VIEW has (WEST TO FOREST-3)
            :south "Storm-tossed trees block your way."
            :west :forest-1
-           :nw :south-of-house}})
+           :nw :south-of-house}
+   :action forest/forest-room-action})
 
 ;; <ROOM PATH
 ;;       (IN ROOMS)
@@ -226,7 +230,8 @@
            :north :grating-clearing
            :east :forest-2
            :south :north-of-house
-           :west :forest-1}})
+           :west :forest-1}
+   :action forest/forest-room-action})
 
 ;; <ROOM CLEARING
 ;;       (IN ROOMS)
@@ -252,7 +257,8 @@
            :east :canyon-view  ; ZIL: (EAST TO CANYON-VIEW)
            :north :forest-2
            :south :forest-3
-           :west :behind-house}})
+           :west :behind-house}
+   :action forest/forest-room-action})
 
 ;; <ROOM UP-A-TREE
 ;;       (IN ROOMS)
@@ -263,14 +269,54 @@
 ;;       (FLAGS RLANDBIT ONBIT SACREDBIT)
 ;;       (GLOBAL TREE FOREST SONGBIRD WHITE-HOUSE)>
 
+(defn tree-room-action
+  "Room action for UP-A-TREE.
+   ZIL: TREE-ROOM (1actions.zil lines 2893-2908)
+
+   - M-ENTER: Enable forest daemon (UP-A-TREE is included in FOREST-ROOM?)
+   - M-BEG: Handle CLIMB-DOWN/CLIMB-UP to navigate the tree
+   - M-LOOK: Show room description (handled by ldesc)"
+  [game-state rarg]
+  (case rarg
+    ;; M-ENTER: Enable forest daemon like other forest rooms
+    :m-enter
+    (forest/forest-room-action game-state rarg)
+
+    ;; M-BEG: Handle climb commands
+    :m-beg
+    (let [prsa (parser-state/get-prsa game-state)
+          prso (parser-state/get-prso game-state)]
+      (cond
+        ;; ZIL: <AND <VERB? CLIMB-DOWN> <EQUAL? ,PRSO ,TREE ,ROOMS>>
+        ;; "climb down" or "climb down tree" -> go down
+        (and (= prsa :climb-down)
+             (or (= prso :tree) (= prso :rooms) (nil? prso)))
+        (-> (verbs-movement/do-walk game-state :down)
+            (assoc :command-handled true))
+
+        ;; ZIL: <AND <VERB? CLIMB-UP CLIMB-FOO> <EQUAL? ,PRSO ,TREE>>
+        ;; "climb up tree" or "climb tree" -> go up
+        (and (contains? #{:climb-up :climb} prsa)
+             (= prso :tree))
+        (-> (verbs-movement/do-walk game-state :up)
+            (assoc :command-handled true))
+
+        :else
+        (gs/use-default game-state)))
+
+    ;; Default: use default handling
+    (gs/use-default game-state)))
+
 (def up-a-tree
   {:id :up-a-tree
    :desc "Up a Tree"
-   :ldesc "You are about 10 feet above the ground nestled among some large branches. The nearest branch above you is above your reach. Beside you on the branch is a small bird's nest."
+   ;; Note: The nest description comes from the nest's :fdesc, not here
+   :ldesc "You are about 10 feet above the ground nestled among some large branches. The nearest branch above you is above your reach."
    :flags #{:lit :sacred}
    :globals #{:tree :white-house}  ; ZIL: (GLOBAL TREE FOREST SONGBIRD WHITE-HOUSE)
    :exits {:down :forest-path
-           :up "You cannot climb any higher."}})
+           :up "You cannot climb any higher."}
+   :action tree-room-action})
 
 ;; <ROOM GRATING-CLEARING
 ;;       (IN ROOMS)
@@ -349,7 +395,8 @@
            :north "The forest becomes impenetrable to the north."
            :east :mountains
            :south :clearing
-           :west :forest-path}})
+           :west :forest-path}
+   :action forest/forest-room-action})
 
 ;;; ---------------------------------------------------------------------------
 ;;; INSIDE THE HOUSE
@@ -773,7 +820,7 @@
 (def maze-5
   {:id :maze-5
    :desc "Maze"
-   :ldesc "This is part of a maze of twisty little passages, all alike."
+   :ldesc "This is part of a maze of twisty little passages, all alike. A skeleton, probably the remains of a luckless adventurer, lies here."
    :flags #{:maze}
    :exits {:east :dead-end-2
            :north :maze-3

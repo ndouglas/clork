@@ -18,6 +18,7 @@
             [clork.thief :as thief]
             [clork.cyclops :as cyclops]
             [clork.light :as light]
+            [clork.forest :as forest]
             [clojure.java.io :as io]))
 
 ;; Re-export the essential API for creating and running games
@@ -67,7 +68,10 @@
                        ;; ZIL: I-CANDLES in 1actions.zil line 2334
                        (daemon/register-daemon :i-candles light/i-candles :tick 20 :enabled false)
                        ;; ZIL: I-MATCH in 1actions.zil line 2321
-                       (daemon/register-daemon :i-match light/i-match :tick 2 :enabled false))]
+                       (daemon/register-daemon :i-match light/i-match :tick 2 :enabled false)
+                       ;; ZIL: I-FOREST-ROOM (1actions.zil line 3009)
+                       ;; Starts disabled, enabled when entering forest rooms
+                       (daemon/register-daemon :i-forest-room forest/i-forest-room :tick -1 :enabled false))]
        ;; Store initial state for restart
        (assoc init-gs :restart-state init-gs)))))
 
@@ -103,7 +107,10 @@
                        ;; ZIL: I-CANDLES in 1actions.zil line 2334
                        (daemon/register-daemon :i-candles light/i-candles :tick 20 :enabled false)
                        ;; ZIL: I-MATCH in 1actions.zil line 2321
-                       (daemon/register-daemon :i-match light/i-match :tick 2 :enabled false))
+                       (daemon/register-daemon :i-match light/i-match :tick 2 :enabled false)
+                       ;; ZIL: I-FOREST-ROOM (1actions.zil line 3009)
+                       ;; Starts disabled, enabled when entering forest rooms
+                       (daemon/register-daemon :i-forest-room forest/i-forest-room :tick -1 :enabled false))
            ;; Store initial state for restart (before version/look output)
            gs-with-restart (assoc init-gs :restart-state init-gs)]
        (-> gs-with-restart

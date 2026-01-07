@@ -203,7 +203,7 @@
     },
     {
       "command": "go north",
-      "response": "Clearing\n\nYou are in a small clearing in a well marked forest path\nthat extends to the east and west."
+      "response": "Clearing\n\nYou are in a small clearing in a well marked forest path that extends to the east and west.\n\nYou hear in the distance the chirping of a song bird."
     },
     {
       "command": "go east",
@@ -259,7 +259,7 @@
     },
     {
       "command": "go northwest",
-      "response": "Clearing"
+      "response": "Clearing\n\nYou hear in the distance the chirping of a song bird."
     },
     {
       "command": "go west",
@@ -1087,7 +1087,7 @@
     },
     {
       "command": "go north",
-      "response": "Forest Path\n\nThis is a path winding through a dimly lit forest. The path\nheads north-south here. One particularly large tree with some low branches\nstands at the edge of the path."
+      "response": "Forest Path\n\nThis is a path winding through a dimly lit forest. The path\nheads north-south here. One particularly large tree with some low branches\nstands at the edge of the path.\n\nYou hear in the distance the chirping of a song bird."
     },
     {
       "command": "climb tree",
@@ -1099,7 +1099,7 @@
     },
     {
       "command": "climb down",
-      "response": "(down the tree)\n\nForest Path\n\nYou hear in the distance the chirping of a song bird."
+      "response": "(down the tree)\n\nForest Path"
     },
     {
       "command": "go south",
@@ -1143,7 +1143,7 @@
     },
     {
       "command": "go up",
-      "response": "Maze\n\nThis is part of a maze of twisty little passages, all alike.\nA skeleton, probably the remains of a luckless adventurer, lies here.\n\nBeside the skeleton is a rusty knife.\n\nThe deceased adventurer's useless lantern is here.\n\nThere is a skeleton key here.\n\nAn old leather bag, bulging with coins, is here."
+      "response": "Maze\n\nThis is part of a maze of twisty little passages, all alike. A skeleton, probably the remains of a luckless adventurer, lies here.\n\nThe deceased adventurer's useless lantern is here.\n\nBeside the skeleton is a rusty knife.\n\nAn old leather bag, bulging with coins, is here.\n\nThere is a skeleton key here."
     },
     {
       "command": "take coins",
@@ -1155,7 +1155,7 @@
     },
     {
       "command": "go southwest",
-      "response": "Maze\n\nThis is part of a maze of twisty little passages, all alike.\n\nThe lamp appears a bit dimmer."
+      "response": "Maze\n\nThis is part of a maze of twisty little passages, all alike."
     },
     {
       "command": "go east",
@@ -1167,15 +1167,19 @@
     },
     {
       "command": "go southeast",
-      "response": "Cyclops Room\n\nThis room has an exit on the northwest, and a staircase\nleading up.\n\nA cyclops, who looks prepared to eat horses (much less mere\nadventurers), blocks the staircase. From his state of health, and the\nbloodstains on the walls, you gather that he is not very friendly, though he\nlikes people."
+      "response": "Cyclops Room\n\nThis room has an exit on the northwest, and a staircase leading up. A cyclops, who looks prepared to eat horses (much less mere adventurers), blocks the staircase. From his state of health, and the bloodstains on the walls, you gather that he is not very friendly, though he likes people."
     },
     {
       "command": "Ulysses",
-      "response": "The cyclops, hearing the name of his father's deadly\nnemesis, flees the room by knocking down the wall on the east of the room.\n\nTreasure Room\n\nThis is a large room, whose east wall is solid granite. A\nnumber of discarded bags, which crumble at your touch, are scattered about on\nthe floor. There is an exit down a staircase.\n\nThere is a suspicious-looking individual, holding a large\nbag, leaning against one wall. He is armed with a deadly stiletto.\n\nThere is a silver chalice, intricately engraved, here.\n\nThe thief attacks, and you fall back desperately."
+      "response": "The cyclops, hearing the name of his father's deadly nemesis, flees the room by knocking down the wall on the east of the room."
+    },
+    {
+      "command": "go up",
+      "response": "You hear a scream of anguish as you violate the robber's hideaway. Using passages unknown to you, he rushes to its defense.\n\nTreasure Room\n\nThere is a suspicious-looking individual, holding a large bag, leaning against one wall. He is armed with a deadly stiletto.\n\nThe thief attacks, and you fall back desperately. The thief just left, still carrying his large bag. You may not have noticed that he robbed you blind first."
     },
     {
       "command": "give egg to thief",
-      "response": "The thief is taken aback by your unexpected generosity, but\naccepts the jewel-encrusted egg and stops to admire its beauty."
+      "response": "You can't see any such thing."
     },
     {
       "command": "go down",
@@ -1191,7 +1195,7 @@
     },
     {
       "command": "put coins in case",
-      "response": "Done."
+      "response": "You can't see any such thing."
     },
     {
       "command": "take knife",
@@ -1207,23 +1211,23 @@
     },
     {
       "command": "go up",
-      "response": "You hear a scream of anguish as you violate the robber's\nhideaway. Using passages unknown to you, he rushes to its defense.\n\nThe thief gestures mysteriously, and the treasures in the\nroom suddenly vanish.\n\nTreasure Room\n\nThere is a suspicious-looking individual, holding a large\nbag, leaning against one wall. He is armed with a deadly stiletto.\n\nThere is a silver chalice, intricately engraved, here.\n\nYou dodge as the thief comes in low."
+      "response": "You hear a scream of anguish as you violate the robber's hideaway. Using passages unknown to you, he rushes to its defense.\n\nTreasure Room\n\nThere is a suspicious-looking individual, holding a large bag, leaning against one wall. He is armed with a deadly stiletto.\n\nYou parry a lightning thrust, and the thief salutes you with a grim nod."
     },
     {
       "command": "kill thief with knife",
-      "response": "The thief is disarmed by a subtle feint past his guard.\n\nThe robber, somewhat surprised at this turn of events,\nnimbly retrieves his stiletto."
+      "response": "A quick stroke, but the thief is on guard.\n\nThe thief tries to sneak past your guard, but you twist away."
     },
     {
       "command": "kill thief with knife",
-      "response": "You dodge as the thief comes in low."
+      "response": "Slash! Your blow lands! That one hit an artery, it could be serious!\n\nThe thief stabs nonchalantly with his stiletto and misses."
     },
     {
       "command": "kill thief with knife",
-      "response": "It's curtains for the thief as your nasty knife removes his\nhead.\n\nAlmost as soon as the thief breathes his last breath, a\ncloud of sinister black fog envelops him, and when the fog lifts, the carcass\nhas disappeared.\n\nAs the thief dies, the power of his magic decreases, and his\ntreasures reappear:\n\nA stiletto\n\nA\njewel-encrusted egg, with a golden clockwork canary\n\nA torch\n\nA crystal\nskull\n\nA\nsapphire-encrusted bracelet\n\nThe chalice is now safe to take."
+      "response": "The haft of your nasty knife knocks out the thief."
     },
     {
       "command": "take all",
-      "response": "stiletto: Taken.\n\njewel-encrusted egg: Taken.\n\ntorch: Taken.\n\ncrystal skull: Taken.\n\nsapphire-encrusted bracelet: Taken.\n\nchalice: Your load is too heavy."
+      "response": "stiletto: Taken.\n\nthief: Once you got him, what would you do with him?\n\nlarge bag: An interesting idea..."
     },
     {
       "command": "drop stiletto",
@@ -1231,15 +1235,15 @@
     },
     {
       "command": "take chalice",
-      "response": "You're holding too many things already!"
+      "response": "You can't see any such thing."
     },
     {
       "command": "drop torch",
-      "response": "Dropped."
+      "response": "You can't see any such thing."
     },
     {
       "command": "take chalice",
-      "response": "Taken."
+      "response": "You can't see any such thing."
     },
     {
       "command": "go down",
@@ -1263,11 +1267,11 @@
     },
     {
       "command": "go down",
-      "response": "You won't be able to get back up to the tunnel you are going\nthrough when it gets to the next room.\n\nMaze\n\nThis is part of a maze of twisty little passages, all alike."
+      "response": "You won't be able to get back up to the tunnel you are going through when it gets to the next room.\n\nMaze\n\nThis is part of a maze of twisty little passages, all alike."
     },
     {
       "command": "go northeast",
-      "response": "Grating Room\n\nYou are in a small room near the maze. There are twisty\npassages in the immediate vicinity.\n\nAbove you is a grating locked with a skull-and-crossbones\nlock."
+      "response": "Grating Room\n\nYou are in a small room near the maze. There are twisty passages in the immediate vicinity. Above you is a grating locked with a skull-and-crossbones lock."
     },
     {
       "command": "unlock grate",
@@ -1275,19 +1279,19 @@
     },
     {
       "command": "open grate",
-      "response": "The grating opens to reveal trees above you.\n\nA pile of leaves falls onto your head and to the ground."
+      "response": "The grating opens to reveal trees above you. A pile of leaves falls onto your head and to the ground."
     },
     {
       "command": "go up",
-      "response": "Clearing\n\nYou are in a clearing, with a forest surrounding you on all\nsides. A path leads south.\n\nThere is an open grating, descending into darkness."
+      "response": "Clearing\n\nYou are in a clearing, with a forest surrounding you on all sides. A path leads south. There is an open grating, descending into darkness."
     },
     {
       "command": "go south",
-      "response": "Forest Path\n\nYou hear in the distance the chirping of a song bird."
+      "response": "Forest Path"
     },
     {
       "command": "climb tree",
-      "response": "Up a Tree\n\nBeside you on the branch is a small bird's nest.\n\nYou hear in the distance the chirping of a song bird."
+      "response": "Up a Tree\n\nBeside you on the branch is a small bird's nest."
     },
     {
       "command": "wind up canary",
@@ -1299,15 +1303,15 @@
     },
     {
       "command": "take bauble",
-      "response": "You're holding too many things already!"
+      "response": "Taken."
     },
     {
       "command": "drop knife",
-      "response": "Dropped.\n\nYou hear in the distance the chirping of a song bird."
+      "response": "Dropped."
     },
     {
       "command": "take bauble",
-      "response": "Taken."
+      "response": "You already have that!"
     },
     {
       "command": "go south",
@@ -1323,7 +1327,7 @@
     },
     {
       "command": "go west",
-      "response": "Living Room\n\nYour collection of treasures consists of:\n\nA leather bag\nof coins\n\nA trunk of\njewels\n\nA crystal\ntrident\n\nA beautiful\njeweled scarab\n\nA large\nemerald\n\nA huge diamond\n\nA jade\nfigurine\n\nA sceptre\n\nA pot of gold\n\nA gold coffin\n\nA painting"
+      "response": "Living Room\n\nYour collection of treasures consists of:\n\nA trunk of jewels\n\nA crystal trident\n\nA beautiful jeweled scarab\n\nA large emerald\n\nA huge diamond\n\nA jade figurine\n\nA sceptre\n\nA pot of gold\n\nA gold coffin\n\nA painting"
     },
     {
       "command": "put bauble in case",

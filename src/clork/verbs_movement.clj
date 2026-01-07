@@ -232,6 +232,20 @@
 ;;; ---------------------------------------------------------------------------
 ;;; ZIL: V-WALK, DO-WALK in gverbs.zil
 
+(declare v-walk)
+
+(defn do-walk
+  "Walk in a specific direction. Helper function for room actions.
+
+   ZIL: DO-WALK in gverbs.zil
+   Sets up the parser state with the direction and calls v-walk.
+
+   Used by room actions that need to trigger movement (e.g., 'climb down' in tree)."
+  [game-state direction]
+  (-> game-state
+      (assoc-in [:parser :prso] [direction])
+      v-walk))
+
 (defn v-walk
   "Move in a direction.
 
@@ -292,11 +306,12 @@
                         gs))
 
                     ;; Can go through - optionally print message, apply side-effect, then move
+                    ;; ZIL uses CR CR (double newline) for paragraph break before room description
                     (:destination result)
                     (let [gs (if (:message result)
                                (-> game-state
                                    (utils/tell (:message result))
-                                   (utils/crlf))
+                                   (utils/tell "\n\n"))
                                game-state)
                           ;; Apply side-effect function if present (e.g., clear TOUCHBIT)
                           gs (if-let [side-effect (:side-effect result)]
@@ -317,7 +332,14 @@
                 (utils/tell game-state "You can't go that way."))
 
               ;; Door is invisible (hidden) - can't go that way
-              (and door (gs/set-thing-flag? game-state door :invisible))
+              ;; BUT: if the door is in the room's :globals, it's visible from here
+              ;; (e.g., grate is invisible from above under leaves, but visible from below)
+              (and door
+                   (gs/set-thing-flag? game-state door :invisible)
+                   (let [here (:here game-state)
+                         room (get-in game-state [:rooms here])
+                         room-globals (or (:globals room) #{})]
+                     (not (contains? room-globals door))))
               (utils/tell game-state "You can't go that way.")
 
               ;; Conditional on a door being open

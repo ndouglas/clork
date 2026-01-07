@@ -431,19 +431,32 @@
    ;; Note: RMUNGBIT allows finding room as pseudo-object for bare "climb up/down".
    ;; Without RMUNGBIT, users should use "up"/"down" or "climb <object>".
    :climb      {:words   ["climb" "sit"]
-                :syntax  [;; CLIMB UP OBJECT (FIND RMUNGBIT) - climb up (no object, defaults to ROOMS)
+                :syntax  [;; CLIMBBIT patterns come first so GWIM finds real objects before falling back to ROOMS
+                          ;; In ZIL, the syntax loop overwrites DRIVE1, so LAST match wins.
+                          ;; Our implementation tries patterns in order, so we put CLIMBBIT first.
+
+                          ;; CLIMB UP OBJECT (FIND CLIMBBIT) - climb up tree
+                          ;; ZIL: <SYNTAX CLIMB UP OBJECT (FIND CLIMBBIT) (ON-GROUND IN-ROOM) = V-CLIMB-UP>
+                          {:num-objects 1
+                           :prep1 :up
+                           :gwim1 :climb  ; FIND CLIMBBIT - find climbable objects like tree
+                           :loc1 #{:in-room :on-ground}
+                           :action :climb-up}
+
+                          ;; CLIMB UP OBJECT (FIND RMUNGBIT) - climb up (no object, defaults to ROOMS)
                           ;; ZIL: <SYNTAX CLIMB UP OBJECT (FIND RMUNGBIT) = V-CLIMB-UP>
                           {:num-objects 1
                            :prep1 :up
                            :gwim1 :room  ; RMUNGBIT - returns :rooms pseudo-object
                            :action :climb-up}
 
-                          ;; CLIMB UP OBJECT (FIND CLIMBBIT) - climb up tree
-                          ;; ZIL: <SYNTAX CLIMB UP OBJECT (FIND CLIMBBIT) (ON-GROUND IN-ROOM) = V-CLIMB-UP>
+                          ;; CLIMB DOWN OBJECT (FIND CLIMBBIT) - climb down tree
+                          ;; ZIL: <SYNTAX CLIMB DOWN OBJECT (FIND CLIMBBIT) (ON-GROUND IN-ROOM) = V-CLIMB-DOWN>
                           {:num-objects 1
-                           :prep1 :up
+                           :prep1 :down
+                           :gwim1 :climb  ; FIND CLIMBBIT - find climbable objects like tree
                            :loc1 #{:in-room :on-ground}
-                           :action :climb-up}
+                           :action :climb-down}
 
                           ;; CLIMB DOWN OBJECT (FIND RMUNGBIT) - climb down (no object, defaults to ROOMS)
                           ;; ZIL: <SYNTAX CLIMB DOWN OBJECT (FIND RMUNGBIT) = V-CLIMB-DOWN>
@@ -452,16 +465,10 @@
                            :gwim1 :room  ; RMUNGBIT
                            :action :climb-down}
 
-                          ;; CLIMB DOWN OBJECT (FIND CLIMBBIT) - climb down tree
-                          ;; ZIL: <SYNTAX CLIMB DOWN OBJECT (FIND CLIMBBIT) (ON-GROUND IN-ROOM) = V-CLIMB-DOWN>
-                          {:num-objects 1
-                           :prep1 :down
-                           :loc1 #{:in-room :on-ground}
-                           :action :climb-down}
-
                           ;; CLIMB OBJECT (FIND CLIMBBIT) - climb tree (no direction, defaults to up)
                           ;; ZIL: <SYNTAX CLIMB OBJECT (FIND CLIMBBIT) (ON-GROUND IN-ROOM) = V-CLIMB-FOO>
                           {:num-objects 1
+                           :gwim1 :climb  ; FIND CLIMBBIT - find climbable objects like tree
                            :loc1 #{:in-room :on-ground}
                            :action :climb-foo}
 
@@ -1041,8 +1048,10 @@
                 :handler verbs-misc/v-spin}
 
    ;; ZIL: <SYNTAX WIND OBJECT = V-WIND>
+   ;;      <SYNTAX WIND UP OBJECT = V-WIND>
    :wind       {:words   ["wind"]
-                :syntax  {:num-objects 1 :loc1 #{:held :in-room :on-ground}}
+                :syntax  [{:num-objects 1 :loc1 #{:held :carried :in-room :on-ground}}
+                          {:num-objects 1 :prep1 :up :loc1 #{:held :carried :in-room :on-ground}}]
                 :handler verbs-misc/v-wind}
 
    ;; ZIL: <SYNTAX PICK OBJECT = V-PICK>

@@ -1698,12 +1698,12 @@ Surely thou shalt repent of thy cunning."})
                (cond
                  ;; WIND in forest room
                  (and (= prsa :wind) in-forest? (not sung?))
-                 (let [bauble-loc (if (= here :up-a-tree) :path here)]
+                 (let [bauble-loc (if (= here :up-a-tree) :forest-path here)]
                    (-> game-state
                        (assoc :canary-sung true)
                        (assoc-in [:objects :brass-bauble :in] bauble-loc)
                        (gs/unset-thing-flag :brass-bauble :invisible)
-                       (utils/tell "The canary chirps, slightly off-key, an aria from a forgotten opera. From out of the greenery appears a scarlet songbird with ruby eyes, who pauses briefly to listen to the mechanical bird's song. It drops a small brass bauble at your feet and flies away.")))
+                       (utils/tell "The canary chirps, slightly off-key, an aria from a forgotten opera. From out of the greenery flies a lovely songbird. It perches on a limb just over your head and opens its beak to sing. As it does so a beautiful brass bauble drops from its mouth, bounces off the top of your head, and lands glimmering in the grass. As the canary winds down, the songbird flies away.")))
 
                  ;; WIND but already sang
                  (and (= prsa :wind) in-forest? sung?)

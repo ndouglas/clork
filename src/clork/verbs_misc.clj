@@ -1021,11 +1021,25 @@
 
 (defn v-wind
   "Handle WIND/WIND UP verb.
-   ZIL: V-WIND in gverbs.zil lines 1623-1624"
+   ZIL: V-WIND in gverbs.zil lines 1623-1624
+
+   First tries the object's action handler, then falls back to default message."
   [game-state]
-  (-> game-state
-      (utils/tell (str "You cannot wind up a " (gs/thing-name game-state (:prso game-state)) "."))
-      (utils/crlf)))
+  (let [prso (first (get-in game-state [:parser :prso]))]
+    (if (nil? prso)
+      ;; No object specified
+      (-> game-state
+          (utils/tell "Wind what?")
+          (utils/crlf))
+      (let [obj (gs/get-thing game-state prso)
+            action-fn (:action obj)]
+        ;; Try object's action handler first
+        (if-let [result (and action-fn (action-fn game-state))]
+          result
+          ;; Default: can't wind this object
+          (-> game-state
+              (utils/tell (str "You cannot wind up a " (gs/thing-name game-state prso) "."))
+              (utils/crlf)))))))
 
 (defn v-pick
   "Handle PICK verb (pick lock).

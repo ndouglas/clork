@@ -211,6 +211,7 @@
    :i-fight 20
    :i-thief 30
    :i-cyclops 40
+   :i-forest-room 50  ; Songbird chirping in forest rooms
    :i-lantern 100
    :i-candles 110
    :i-match 120

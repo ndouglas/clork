@@ -394,6 +394,42 @@
 ;;; GLOBAL-CHECK - Global Object Search
 ;;; ---------------------------------------------------------------------------
 
+(defn- this-it-global?
+  "Like this-it? but skips the invisible check.
+
+   For global objects explicitly listed in a room's :globals set,
+   we skip the invisible check since the room declares them visible.
+   This handles cases like the grating being visible from grating-room
+   even though it starts invisible (hidden under leaves from above)."
+  [game-state obj-id]
+  (let [obj (game-state/get-thing game-state obj-id)
+        nam (get-in game-state [:parser :nam])
+        adj (get-in game-state [:parser :adj])
+        gwimbit (get-in game-state [:parser :gwimbit])
+        synonyms (set (map clojure.string/lower-case (or (:synonym obj) [])))
+        adjectives (let [a (:adjective obj)]
+                     (set (map clojure.string/lower-case
+                               (cond
+                                 (nil? a) []
+                                 (string? a) [a]
+                                 (sequential? a) a
+                                 :else []))))]
+    (and
+     ;; NOTE: No invisible check here - room's :globals overrides invisibility
+
+     ;; Name matches (if specified)
+     (or (nil? nam)
+         (contains? synonyms (clojure.string/lower-case (str nam))))
+
+     ;; Adjective matches (if specified)
+     (or (nil? adj)
+         (contains? adjectives (clojure.string/lower-case (str adj))))
+
+     ;; GWIM flag matches (if specified)
+     (or (nil? gwimbit)
+         (and (number? gwimbit) (zero? gwimbit))
+         (game-state/set-thing-flag? game-state obj-id gwimbit)))))
+
 (defn global-check
   "Search global and pseudo objects.
 
@@ -405,17 +441,32 @@
 
    This is called when local search finds nothing.
 
-   We search for objects with :in :local-globals which should be visible
-   from many rooms (like the white house, forest, etc.)"
+   We search for objects with :in :local-globals, but ONLY if they're
+   listed in the current room's :globals set. Each room specifies which
+   global objects are visible from that location.
+
+   NOTE: We skip the invisible check for room globals. If a room lists
+   an object in its :globals, that room considers it visible regardless
+   of the object's :invisible flag. This handles cases like the grating
+   being visible from below (grating-room) even though it's hidden under
+   leaves from above (grating-clearing)."
   [game-state match-table]
-  (let [;; Find all objects with :in :local-globals
+  (let [;; Get the current room's globals set
+        here (:here game-state)
+        room (get-in game-state [:rooms here])
+        room-globals (or (:globals room) #{})
+
+        ;; Find all objects with :in :local-globals that are visible from here
         global-objects (->> (vals (:objects game-state))
-                            (filter #(= (:in %) :local-globals)))
+                            (filter #(= (:in %) :local-globals))
+                            ;; Only include if this room lists it in :globals
+                            (filter #(contains? room-globals (:id %))))
 
         ;; Filter to objects that match the current search criteria
+        ;; Use this-it-global? which skips invisible check
         matching-objects
         (filter (fn [obj]
-                  (this-it? game-state (:id obj)))
+                  (this-it-global? game-state (:id obj)))
                 global-objects)]
 
     ;; Add matching objects to match-table
