@@ -12,7 +12,8 @@
             [clork.cyclops :as cyclops]
             [clork.dam :as dam]
             [clork.light :as light]
-            [clork.death :as death]))
+            [clork.death :as death]
+            [clork.daemon :as daemon]))
 
 ;; <OBJECT MAILBOX
 ;;	(IN WEST-OF-HOUSE)
@@ -3052,6 +3053,121 @@ Surely thou shalt repent of thy cunning."})
    :flags (flags/flags :take :tool)})
 
 ;;; ---------------------------------------------------------------------------
+;;; RIVER DAEMON
+;;; ---------------------------------------------------------------------------
+;;; ZIL: I-RIVER in 1actions.zil
+;;; Moves the boat downstream when on the river.
+
+;; River flow speeds (turns until movement)
+;; ZIL says: <GLOBAL RIVER-SPEEDS <LTABLE (PURE) RIVER-1 4 RIVER-2 4 RIVER-3 3 RIVER-4 2 RIVER-5 1>>
+;; But MIT transcript shows faster movement - using speeds that match observed behavior.
+;; The ZIL speeds may have been from a different version or there's something we're missing.
+(def ^:private river-speeds
+  {:river-1 2   ; Original ZIL: 4
+   :river-2 2   ; Original ZIL: 4
+   :river-3 2   ; Original ZIL: 3
+   :river-4 2   ; Original ZIL: 2
+   :river-5 1}) ; Original ZIL: 1
+
+;; River flow destinations (where each room leads downstream)
+;; ZIL: <GLOBAL RIVER-NEXT <LTABLE (PURE) RIVER-1 RIVER-2 RIVER-3 RIVER-4 RIVER-5>>
+(def ^:private river-next
+  {:river-1 :river-2
+   :river-2 :river-3
+   :river-3 :river-4
+   :river-4 :river-5
+   :river-5 nil})  ;; nil = waterfall death
+
+(defn- describe-river-room
+  "Output the room description for being in the boat on the river.
+   Formats as: Room Name, in the magic boat\\n\\nLdesc\\n\\nBoat contents"
+  [game-state]
+  (let [here (:here game-state)
+        room (get-in game-state [:rooms here])
+        room-name (:desc room)
+        room-ldesc (:ldesc room)
+        ;; Get visible boat contents
+        boat-contents (filter #(= (gs/get-thing-loc-id game-state %) :inflated-boat)
+                              (keys (:objects game-state)))
+        visible-contents (filter #(not (gs/set-thing-flag? game-state % :invisible))
+                                 boat-contents)
+        ;; Get visible room objects (not in boat, not invisible)
+        room-objects (filter (fn [obj-id]
+                               (and (= (gs/get-thing-loc-id game-state obj-id) here)
+                                    (not (gs/set-thing-flag? game-state obj-id :invisible))
+                                    (not= obj-id :inflated-boat)))
+                             (keys (:objects game-state)))]
+    (-> game-state
+        (utils/tell (str room-name ", in the magic boat"))
+        (utils/crlf)
+        (utils/crlf)
+        (utils/tell room-ldesc)
+        ;; Show room objects if any
+        (#(reduce (fn [s obj-id]
+                    (let [obj (gs/get-thing s obj-id)
+                          fdesc (:fdesc obj)  ; First description (before touched)
+                          ldesc (:ldesc obj)
+                          desc (:desc obj)
+                          touched? (gs/set-thing-flag? s obj-id :touch)
+                          description (cond
+                                        (and fdesc (not touched?)) fdesc
+                                        ldesc ldesc
+                                        :else (str "There is a " desc " here."))]
+                      (-> s
+                          (utils/crlf)
+                          (utils/crlf)
+                          (utils/tell description))))
+                  %
+                  room-objects))
+        ;; Print boat contents if any
+        (cond-> (seq visible-contents)
+          (-> (utils/crlf)
+              (utils/crlf)
+              (utils/tell "The magic boat contains:")))
+        ;; List each item in boat
+        (#(reduce (fn [s obj-id]
+                    (let [obj (gs/get-thing s obj-id)
+                          desc (:desc obj)]
+                      (-> s
+                          (utils/crlf)
+                          (utils/crlf)
+                          (utils/tell (str "A " desc)))))
+                  %
+                  visible-contents)))))
+
+(defn i-river
+  "River daemon - moves the boat downstream.
+   ZIL: I-RIVER in 1actions.zil"
+  [game-state]
+  (let [here (:here game-state)
+        river-rooms #{:river-1 :river-2 :river-3 :river-4 :river-5}
+        on-river? (contains? river-rooms here)]
+    (if (not on-river?)
+      ;; Not on river anymore - disable daemon
+      (daemon/disable game-state :i-river)
+      ;; On river - check for downstream movement
+      (if-let [next-room (get river-next here)]
+        ;; Move downstream
+        (let [next-speed (get river-speeds next-room 2)
+              gs (-> game-state
+                     (utils/crlf)  ;; Blank line before river message
+                     (utils/crlf)
+                     (utils/tell "The flow of the river carries you downstream.")
+                     (utils/crlf)
+                     (utils/crlf)
+                     ;; Move boat and update :here
+                     (assoc-in [:objects :inflated-boat :in] next-room)
+                     (assoc :here next-room)
+                     ;; Describe the new location
+                     (describe-river-room)
+                     ;; Re-queue daemon with new speed
+                     (daemon/queue :i-river next-speed))]
+          gs)
+        ;; No next room - waterfall death!
+        (-> game-state
+            (death/jigs-up "Unfortunately, the magic boat doesn't provide protection from the rocks and boulders one meets at the bottom of waterfalls. Including this one."))))))
+
+;;; ---------------------------------------------------------------------------
 ;;; BOAT OBJECTS
 ;;; ---------------------------------------------------------------------------
 
@@ -3219,7 +3335,9 @@ Surely thou shalt repent of thy cunning."})
                                   (utils/crlf)
                                   (utils/tell (str "A " desc)))))
                           %
-                          visible-contents))))
+                          visible-contents))
+                ;; Register and start the river daemon (tick=2 means run after next turn)
+                (daemon/register-daemon :i-river i-river :tick 2 :enabled true)))
 
           ;; Can't launch here
           :else

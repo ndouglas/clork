@@ -55,8 +55,8 @@
   (testing "v-wait increments moves counter"
     (let [gs (assoc (gs/initial-game-state) :moves 10)
           [_ state] (with-captured-output (verbs-meta/v-wait gs))]
-      ;; Waits 3 turns by default, so moves should increase by 3
-      (is (= 13 (:moves state)))))
+      ;; Waits 1 turn by default, so moves should increase by 1
+      (is (= 11 (:moves state)))))
 
   (testing "v-wait with custom turn count"
     (let [gs (assoc (gs/initial-game-state) :moves 5)

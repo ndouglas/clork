@@ -89,10 +89,12 @@
           ;; Parsing failed - error already in output
           [gs (str output)]
           ;; Parsing succeeded - perform the action, then run daemons
-          (let [gs (-> gs
-                       (verb-defs/perform)
-                       (daemon/clocker)
-                       (utils/crlf))]
+          (let [gs (verb-defs/perform gs)
+                ;; Check if verb already handled clocker (e.g., wait)
+                gs (if (:clock-wait gs)
+                     (dissoc gs :clock-wait)  ; Clear flag, skip clocker
+                     (daemon/clocker gs))     ; Run clocker normally
+                gs (utils/crlf gs)]
             [gs (str output)]))))))
 
 ;;; ---------------------------------------------------------------------------
@@ -191,10 +193,10 @@
 
 ;; Maximum commands to run before stopping.
 ;; Set to nil to run full transcript.
-;; Currently limited to 227 because:
-;; - Commands 228+ require the river flow daemon (I-RIVER) for boat drifting
-;; - After implementing river daemon, extend this to continue testing
-(def max-verified-commands 227)
+;; Currently limited to 233 because:
+;; - Command 234 requires boat landing message "comes to a rest on the shore"
+;; - This needs vehicle movement handling in verbs_movement.clj
+(def max-verified-commands 233)
 
 (defn run-transcript-test
   "Run through the transcript, comparing outputs.

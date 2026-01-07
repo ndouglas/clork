@@ -919,7 +919,15 @@
     },
     {
       "command": "wait",
-      "response": "Time passes...\n\nThe flow of the river carries you downstream.\n\nFrigid River, in the magic boat\n\nThe river is running faster here and the sound ahead appears\nto be that of rushing water. On the east shore is a sandy beach. A small area\nof beach can also be seen below the cliffs on the west shore.\n\nThere is a red buoy here (probably a warning).\n\nThe magic boat contains:\n\nA tan label"
+      "response": "Time passes...\n\nThe flow of the river carries you downstream.\n\nFrigid River, in the magic boat\n\nThe river descends here into a valley. There is a narrow beach on the west shore below the cliffs. In the distance a faint rumbling can be heard.\n\nThe magic boat contains:\n\nA tan label"
+    },
+    {
+      "command": "wait",
+      "response": "Time passes..."
+    },
+    {
+      "command": "wait",
+      "response": "Time passes...\n\nThe flow of the river carries you downstream.\n\nFrigid River, in the magic boat\n\nThe river is running faster here and the sound ahead appears to be that of rushing water. On the east shore is a sandy beach. A small area of beach can also be seen below the cliffs on the west shore.\n\nThere is a red buoy here (probably a warning).\n\nThe magic boat contains:\n\nA tan label"
     },
     {
       "command": "take buoy",

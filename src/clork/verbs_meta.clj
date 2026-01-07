@@ -103,11 +103,14 @@
                (<CLOCKER> <RETURN>)>>
        <SETG CLOCK-WAIT T>>
 
-   Waits for 3 turns by default, calling CLOCKER each turn.
+   Calls CLOCKER for one turn by default.
    If something 'interesting' happens (combat, death, etc.), stops early.
-   Sets CLOCK-WAIT to prevent the normal post-action CLOCKER from running."
+   Sets CLOCK-WAIT to prevent the normal post-action CLOCKER from running.
+
+   Note: ZIL code shows NUM=3 default, but actual Zork behavior processes
+   one turn per 'wait' command based on MIT transcript analysis."
   ([game-state]
-   (v-wait game-state 3))
+   (v-wait game-state 1))
   ([game-state num-turns]
    (let [gs (utils/tell game-state "Time passes...")]
      (loop [gs gs
