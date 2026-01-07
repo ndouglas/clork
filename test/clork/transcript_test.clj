@@ -271,6 +271,113 @@
               (recur (inc seed) seed matched))
             (recur (inc seed) best-seed best-count)))))))
 
+;;; ---------------------------------------------------------------------------
+;;; DEBUG MODE - Interactive debugging for transcript issues
+;;; ---------------------------------------------------------------------------
+
+(defn- format-flag-state
+  "Format the flag state of an object for debugging."
+  [game-state obj-id]
+  (let [obj (gs/get-thing game-state obj-id)
+        static-flags (or (:flags obj) #{})
+        ;; Find runtime overrides
+        runtime-overrides (reduce (fn [m k]
+                                    (let [v (get obj k)]
+                                      (if (or (true? v) (false? v))
+                                        (assoc m k v)
+                                        m)))
+                                  {}
+                                  (keys obj))
+        loc (:in obj)]
+    (str obj-id
+         " @ " loc
+         " | static: #{" (str/join " " (map name (sort static-flags))) "}"
+         (when (seq runtime-overrides)
+           (str " | overrides: " runtime-overrides)))))
+
+(defn debug-transcript
+  "Run transcript with debugging options.
+
+   Options:
+     :seed        - Random seed (default 315)
+     :max-cmd     - Max commands to run (default nil = all)
+     :break-at    - Command number to stop at and dump state
+     :watch       - Collection of object IDs to track
+     :verbose     - Print every command's output
+
+   Example:
+     (debug-transcript {:break-at 174 :watch [:candles :brass-lantern]})
+     (debug-transcript {:break-at 115 :watch [:candles] :verbose true})"
+  [{:keys [seed max-cmd break-at watch verbose]
+    :or {seed 315 max-cmd nil watch [] verbose false}}]
+  (let [data (load-transcript-data)
+        commands (:commands data)
+        commands-to-run (if max-cmd
+                          (take max-cmd commands)
+                          commands)
+        watch-set (set watch)]
+    (println "=== TRANSCRIPT DEBUG MODE ===")
+    (println (str "Seed: " seed))
+    (println (str "Break at: " (or break-at "none")))
+    (println (str "Watching: " (if (empty? watch) "none" (str/join ", " (map name watch)))))
+    (println)
+    (loop [gs (create-initial-state seed)
+           remaining commands-to-run
+           cmd-num 1
+           prev-watch-state {}]
+      (if (empty? remaining)
+        (do
+          (println (str "\n=== COMPLETED " (dec cmd-num) " COMMANDS ==="))
+          {:success true :commands-run (dec cmd-num) :final-state gs})
+        (let [;; Check if we need to change seeds
+              _ (when-let [new-seed (get seed-changes cmd-num)]
+                  (println (str "*** Changing seed to " new-seed " at command #" cmd-num))
+                  (random/init! new-seed))
+              {:keys [command response]} (first remaining)
+              ;; Capture watch state BEFORE command
+              watch-before (into {} (for [obj-id watch-set]
+                                      [obj-id (format-flag-state gs obj-id)]))
+              ;; Execute command
+              [new-gs actual-raw] (execute-command gs command)
+              actual (normalize-output actual-raw)
+              expected (normalize-output response)
+              ;; Capture watch state AFTER command
+              watch-after (into {} (for [obj-id watch-set]
+                                     [obj-id (format-flag-state new-gs obj-id)]))]
+          ;; Print verbose output
+          (when verbose
+            (println (str "\n--- Command #" cmd-num ": " command " ---"))
+            (println actual-raw))
+          ;; Print watch changes
+          (doseq [obj-id watch-set]
+            (let [before (get watch-before obj-id)
+                  after (get watch-after obj-id)]
+              (when (not= before after)
+                (println (str "\n*** WATCH: " obj-id " changed at command #" cmd-num))
+                (println (str "    Before: " before))
+                (println (str "    After:  " after)))))
+          ;; Check for break
+          (if (= cmd-num break-at)
+            (do
+              (println (str "\n=== BREAK AT COMMAND #" cmd-num " ==="))
+              (println (str "Command: " command))
+              (println (str "\nExpected output:\n" expected))
+              (println (str "\nActual output:\n" actual))
+              (println (str "\nMatch: " (= expected actual)))
+              (println "\nWatched objects:")
+              (doseq [obj-id watch-set]
+                (println (str "  " (format-flag-state new-gs obj-id))))
+              (println "\nCurrent location:" (:here new-gs))
+              {:break true :command-num cmd-num :state new-gs})
+            ;; Check for mismatch
+            (if (not= expected actual)
+              (do
+                (println (str "\n=== MISMATCH AT COMMAND #" cmd-num " ==="))
+                (println (report-mismatch cmd-num command expected actual))
+                {:success false :command-num cmd-num :state new-gs})
+              ;; Continue
+              (recur new-gs (rest remaining) (inc cmd-num) watch-after))))))))
+
 (comment
   ;; Run first 10 commands with seed 42
   (run-transcript-test 42 10)
@@ -282,4 +389,10 @@
   (def data (load-transcript-data))
   (count (:commands data))
   (first (:commands data))
+
+  ;; Debug specific command with watch
+  (debug-transcript {:break-at 174 :watch [:candles :brass-lantern]})
+
+  ;; Trace candle state through commands 100-120
+  (debug-transcript {:max-cmd 120 :watch [:candles] :verbose false})
   )

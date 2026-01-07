@@ -89,6 +89,20 @@
 ;;; ---------------------------------------------------------------------------
 ;;; Generic flag operations for objects, rooms, and other entities.
 ;;;
+;;; *** IMPORTANT: TWO-LAYER FLAG SYSTEM ***
+;;;
+;;; Flags have two sources:
+;;;   1. Static :flags set - defined in object/room definitions (e.g., #{:take :light})
+;;;   2. Runtime overrides - set via set-flag/unset-flag as separate keys
+;;;
+;;; When checking flags, ALWAYS use set-thing-flag? (or flag?), which checks both.
+;;;
+;;; NEVER use (contains? (:flags obj) :xxx) - this only checks the static set
+;;; and will miss runtime changes. This pattern causes bugs like objects showing
+;;; wrong states (e.g., "(providing light)" when turned off).
+;;;
+;;; The flag lint test (flag_lint_test.clj) will catch these issues.
+;;;
 ;;; Base functions:
 ;;;   set-flag, unset-flag, flag? - work with entity-type (:objects, :rooms)
 ;;;

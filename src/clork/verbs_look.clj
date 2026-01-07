@@ -197,13 +197,15 @@
   "Describe a single object. Level 0 is room floor, >0 is inside containers."
   [game-state obj-id verbose? level]
   (let [obj (gs/get-thing game-state obj-id)
-        desc (:desc obj)
-        flags (or (:flags obj) #{})]
+        desc (:desc obj)]
     ;; Check for custom description function first
     (if-let [descfcn (:descfcn obj)]
       (descfcn game-state :objdesc)
       ;; Standard description logic
-      (let [touched? (contains? flags :touch)
+      ;; Use gs/set-thing-flag? for all flag checks to handle runtime flag changes
+      (let [touched? (gs/set-thing-flag? game-state obj-id :touch)
+            on? (gs/set-thing-flag? game-state obj-id :on)
+            wear? (gs/set-thing-flag? game-state obj-id :wear)
             fdesc (:fdesc obj)
             ldesc (:ldesc obj)
             ;; Helper to add contents description if visible
@@ -214,15 +216,13 @@
                              state))]
         (cond
           ;; Level 0 with fdesc (first description) or ldesc
+          ;; ZIL (lines 1714-1718): When using FDESC/LDESC, just print the string
+          ;; NO "(providing light)" annotation - that's only for generic descriptions
           (and (zero? level)
                (or (and (not touched?) fdesc)
                    ldesc))
           (let [str (if (and (not touched?) fdesc) fdesc ldesc)
-                state (utils/tell game-state str)
-                ;; Add lighting annotation
-                state (if (contains? flags :on)
-                        (utils/tell state " (providing light)")
-                        state)]
+                state (utils/tell game-state str)]
             (-> state
                 ;; Double newline for paragraph separation at room floor level
                 (utils/tell "\n\n")
@@ -232,7 +232,7 @@
           ;; ZIL (line 1719-1722): "There is a X here" + "(providing light)" if ONBIT
           (zero? level)
           (let [state (utils/tell game-state (str "There is " (get-article game-state obj-id) desc " here"))
-                state (if (contains? flags :on)
+                state (if on?
                         (utils/tell state " (providing light)")
                         state)]
             (-> state
@@ -243,10 +243,10 @@
           (= level 1)
           (let [state (utils/tell game-state (str "A " desc))
                 state (cond
-                        (contains? flags :on)
+                        on?
                         (utils/tell state " (providing light)")
 
-                        (and (contains? flags :wear)
+                        (and wear?
                              (= (:in obj) (:winner game-state)))
                         (utils/tell state " (being worn)")
 
@@ -260,10 +260,10 @@
           (let [state (utils/tell game-state (get-indent level))
                 state (utils/tell state (str "A " desc))
                 state (cond
-                        (contains? flags :on)
+                        on?
                         (utils/tell state " (providing light)")
 
-                        (and (contains? flags :wear)
+                        (and wear?
                              (= (:in obj) (:winner game-state)))
                         (utils/tell state " (being worn)")
 

@@ -22,6 +22,7 @@
             [clork.debug.test :as debug-test]
             [clork.debug.thief :as debug-thief]
             [clork.debug.scenarios :as debug-scenarios]
+            [clork.debug.inspect :as debug-inspect]
             [clork.undo :as undo]))
 
 ;;; ---------------------------------------------------------------------------
@@ -209,6 +210,9 @@
   ;; Quick state inspection
   (register-command! :state debug-state/cmd-state
                      "Quick state inspection ($state <key>)")
+  ;; Deep inspection with flag analysis
+  (register-command! :inspect debug-inspect/cmd-inspect
+                     "Deep object/room inspection with flag analysis")
   ;; Test scenarios
   (register-command! :scenario debug-scenarios/cmd-scenario
                      "Load test scenarios (equipped player, troll dead, etc.)"
