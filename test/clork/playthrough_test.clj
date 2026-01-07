@@ -45,6 +45,24 @@
       (str/join "\n\n" normalized))))
 
 ;;; ---------------------------------------------------------------------------
+;;; MOVE COUNTING
+;;; ---------------------------------------------------------------------------
+;;; Must match main_loop.clj behavior - meta-verbs don't count as moves.
+
+(def ^:private meta-verbs
+  "Verbs that don't count as moves (meta/system commands)."
+  #{:verbose :brief :super-brief :version :diagnose :score :quit :verify
+    :restart :save :restore :script :unscript})
+
+(defn- increment-moves-if-needed
+  "Increment the move counter if the action is not a meta-verb."
+  [game-state]
+  (let [action (get-in game-state [:parser :prsa])]
+    (if (contains? meta-verbs action)
+      game-state
+      (update game-state :moves (fnil inc 0)))))
+
+;;; ---------------------------------------------------------------------------
 ;;; COMMAND EXECUTION
 ;;; ---------------------------------------------------------------------------
 
@@ -68,6 +86,7 @@
         (if (parser/get-parser-error gs)
           [gs (str output)]
           (let [gs (verb-defs/perform gs)
+                gs (increment-moves-if-needed gs)
                 gs (if (:clock-wait gs)
                      (dissoc gs :clock-wait)
                      (daemon/clocker gs))

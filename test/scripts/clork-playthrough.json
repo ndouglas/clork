@@ -337,7 +337,7 @@
     },
     {
       "command": "score",
-      "response": "Your score is 74 (total of 350 points), in 0 moves. This gives you the rank of Novice Adventurer."
+      "response": "Your score is 74 (total of 350 points), in 83 moves. This gives you the rank of Novice Adventurer."
     },
     {
       "command": "inventory",
@@ -425,7 +425,7 @@
     },
     {
       "command": "score",
-      "response": "Your score is 89 (total of 350 points), in 0 moves. This gives you the rank of Novice Adventurer."
+      "response": "Your score is 89 (total of 350 points), in 104 moves. This gives you the rank of Novice Adventurer."
     },
     {
       "command": "inventory",
@@ -465,7 +465,7 @@
     },
     {
       "command": "score",
-      "response": "Your score is 99 (total of 350 points), in 0 moves. This gives you the rank of Novice Adventurer."
+      "response": "Your score is 99 (total of 350 points), in 113 moves. This gives you the rank of Novice Adventurer."
     },
     {
       "command": "go east",
