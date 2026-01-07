@@ -120,7 +120,8 @@
   (testing "state remains valid after moving through rooms with actions"
     ;; Walk through multiple rooms, including behind-house which has an action
     ;; that returns nil for :m-enter. This was the root cause of the bug.
-    (let [script "open window\nenter\nw\ne\nn\n$quit\n"
+    ;; Start at west-of-house, go south then east to behind-house, open window, enter
+    (let [script "s\ne\nopen window\nenter\nw\ne\n$quit\n"
           result (run-script script :strict true)]
       (is (= 0 (:exit-code result))
           "Should complete without errors")
@@ -202,3 +203,22 @@
           result (run-script script :strict true)]
       (is (= 3 (:moves (:game-state result)))
           "look, open, and inventory should count as moves"))))
+
+(deftest victory-test
+  (testing "game ends with victory when entering barrow after winning"
+    ;; Set up initial state with :won flag set (simulates score reaching 350)
+    (random/init! 12345)
+    (let [initial-gs (-> (game-state/initial-game-state)
+                         (assoc :won true)
+                         (assoc :score 350)
+                         (assoc :script-config {:script-mode? true
+                                                :quiet true}))]
+      ;; Run script that goes SW to stone-barrow and enters
+      (let [output (with-out-str
+                     (with-in-str "sw\nenter\n"
+                       (core/go initial-gs {:script-mode? true :quiet true})))]
+        ;; Check that the victory message was displayed
+        (is (re-find #"Inside the Barrow" output)
+            (str "Should display victory message. Output:\n" output))
+        (is (re-find #"ZORK trilogy" output)
+            (str "Should mention ZORK trilogy. Output:\n" output))))))

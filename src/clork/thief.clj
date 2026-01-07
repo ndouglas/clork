@@ -130,7 +130,7 @@
               (as-> gs
                     (let [room-contents (gs/get-contents gs :treasure-room)
                           hidden-treasures (filter (fn [obj-id]
-                                                     (and (not (#{:chalice :thief :adventurer} obj-id))
+                                                     (and (not (#{:silver-chalice :thief :adventurer} obj-id))
                                                           (gs/set-thing-flag? gs obj-id :invisible)))
                                                    room-contents)]
                       (if (seq hidden-treasures)
@@ -417,7 +417,7 @@
               (let [obj (gs/get-thing state obj-id)
                     tvalue (get obj :tvalue 0)]
                 (if (and (pos? tvalue)
-                         (not= obj-id :chalice))  ; Chalice is special in ZIL
+                         (not= obj-id :silver-chalice))  ; Chalice is special in ZIL
                   (gs/set-thing-flag state obj-id :invisible)
                   state)))
             game-state

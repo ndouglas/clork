@@ -1530,7 +1530,27 @@
    :desc "Stone Barrow"
    :ldesc "You are standing in front of a massive barrow of stone. In the east face is a huge stone door which is open. You cannot see into the dark of the tomb."
    :flags #{:lit :sacred}
-   :exits {:ne :west-of-house}})
+   :exits {:ne :west-of-house}
+   :action (fn [game-state rarg]
+             ;; ZIL: STONE-BARROW-FCN (1actions.zil lines 416-443)
+             ;; When player tries to enter the barrow, trigger the endgame
+             (if (and (= rarg :m-beg)
+                      (let [verb (get-in game-state [:parser :prsa])
+                            prso (get-in game-state [:parser :prso])
+                            ;; prso may be a vector of directions
+                            prso-kw (if (sequential? prso) (first prso) prso)]
+                        (or (= verb :enter)
+                            (= verb :through)
+                            (and (= verb :walk)
+                                 (contains? #{:west :in} prso-kw)))))
+               ;; Victory! Display endgame text and finish the game
+               (-> game-state
+                   (utils/tell "Inside the Barrow\n")
+                   (utils/tell "As you enter the barrow, the door closes inexorably behind you. Around you it is dark, but ahead is an enormous cavern, brightly lit. Through its center runs a wide stream. Spanning the stream is a small wooden footbridge, and beyond a path leads into a dark tunnel. Above the bridge, floating in the air, is a large sign. It reads:  All ye who stand before this bridge have completed a great and perilous adventure which has tested your wit and courage. You have mastered the first part of the ZORK trilogy. Those who pass over this bridge must be prepared to undertake an even greater adventure that will severely test your skill and bravery!\n\n")
+                   (utils/tell "The ZORK trilogy continues with \"ZORK II: The Wizard of Frobozz\" and is completed in \"ZORK III: The Dungeon Master.\"\n")
+                   (assoc :finished true)
+                   (assoc :command-handled true))
+               game-state))})
 
 ;;; ---------------------------------------------------------------------------
 ;;; CANYON / FALLS / RAINBOW AREA

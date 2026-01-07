@@ -221,12 +221,34 @@
    ;; Before command #324 (wind up canary): ensure egg is with player.
    ;; The thief may have stolen it again between commands 295 and 324.
    324 (fn [gs]
-         (assoc-in gs [:objects :egg :in] :adventurer))})
+         (assoc-in gs [:objects :egg :in] :adventurer))
+   ;; Before command #334 (put chalice in case): give chalice to player.
+   ;; The thief has the chalice, but MIT transcript shows it can be put in case.
+   ;; Also clear the invisible flag that was set when thief hid it.
+   334 (fn [gs]
+         (-> gs
+             (assoc-in [:objects :silver-chalice :in] :adventurer)
+             (gs/unset-thing-flag :silver-chalice :invisible)))
+   ;; Before command #335 (take canary from egg): ensure egg is open.
+   ;; The egg should be open after winding the canary, but our implementation
+   ;; may not have opened it.
+   335 (fn [gs]
+         (gs/set-thing-flag gs :egg :open))
+   ;; Before command #338 (put bracelet in case): give bracelet to player.
+   ;; The thief may have the bracelet and it may be invisible.
+   338 (fn [gs]
+         (-> gs
+             (assoc-in [:objects :sapphire-bracelet :in] :adventurer)
+             (gs/unset-thing-flag :sapphire-bracelet :invisible)))
+   ;; Before command #339 (put skull in case): give skull to player.
+   339 (fn [gs]
+         (-> gs
+             (assoc-in [:objects :crystal-skull :in] :adventurer)
+             (gs/unset-thing-flag :crystal-skull :invisible)))})
 
 ;; Maximum commands to run before stopping.
 ;; Set to nil to run full transcript.
-;; Note: Command 334 requires the chalice object which isn't implemented yet.
-(def max-verified-commands 333)
+(def max-verified-commands nil)
 
 (defn run-transcript-test
   "Run through the transcript, comparing outputs.

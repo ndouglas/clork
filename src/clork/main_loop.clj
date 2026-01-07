@@ -280,6 +280,10 @@
       (:quit gs)
       gs
 
+      ;; Victory - player entered barrow and finished the game
+      (:finished gs)
+      gs
+
       ;; Restart - restore from initial state
       ;; ZIL: <RESTART> opcode resets game to initial state
       (:restart gs)

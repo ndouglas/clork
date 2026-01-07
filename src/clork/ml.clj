@@ -356,12 +356,12 @@
 
    Game over conditions:
    - Player has quit (:quit)
-   - Player has won (:won)
+   - Player has finished (entered barrow after winning)
    - Player has died permanently (3+ deaths)
    - Player is in 'dead' state (zombified in Hades)"
   [game-state]
   (or (:quit game-state)
-      (:won game-state)
+      (:finished game-state)
       (>= (:deaths game-state 0) 3)
       (:dead game-state)))
 
@@ -369,7 +369,7 @@
   "Return the reason for game over, or nil if game is not over."
   [game-state]
   (cond
-    (:won game-state) :won
+    (:finished game-state) :won  ; Entered barrow - true victory
     (:quit game-state) :quit
     (>= (:deaths game-state 0) 3) :permanent-death
     (:dead game-state) :dead-but-playing  ; Hades state - can still play but dead

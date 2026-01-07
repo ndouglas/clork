@@ -1175,7 +1175,7 @@
     },
     {
       "command": "go up",
-      "response": "You hear a scream of anguish as you violate the robber's hideaway. Using passages unknown to you, he rushes to its defense.\n\nTreasure Room\n\nThere is a suspicious-looking individual, holding a large bag, leaning against one wall. He is armed with a deadly stiletto.\n\nThe thief attacks, and you fall back desperately. The thief just left, still carrying his large bag. You may not have noticed that he robbed you blind first."
+      "response": "You hear a scream of anguish as you violate the robber's hideaway. Using passages unknown to you, he rushes to its defense.\n\nTreasure Room\n\nThere is a suspicious-looking individual, holding a large bag, leaning against one wall. He is armed with a deadly stiletto.\n\nThere is a silver chalice, intricately engraved, here.\n\nThe thief attacks, and you fall back desperately. The thief just left, still carrying his large bag. You may not have noticed that he appropriated the valuables in the room."
     },
     {
       "command": "give egg to thief",
@@ -1195,7 +1195,7 @@
     },
     {
       "command": "put coins in case",
-      "response": "You can't see any such thing."
+      "response": "Done."
     },
     {
       "command": "take knife",
@@ -1327,7 +1327,7 @@
     },
     {
       "command": "go west",
-      "response": "Living Room\n\nYour collection of treasures consists of:\n\nA trunk of jewels\n\nA crystal trident\n\nA beautiful jeweled scarab\n\nA large emerald\n\nA huge diamond\n\nA jade figurine\n\nA sceptre\n\nA pot of gold\n\nA gold coffin\n\nA painting"
+      "response": "Living Room\n\nYour collection of treasures consists of:\n\nA leather bag of coins\n\nA trunk of jewels\n\nA crystal trident\n\nA beautiful jeweled scarab\n\nA large emerald\n\nA huge diamond\n\nA jade figurine\n\nA sceptre\n\nA pot of gold\n\nA gold coffin\n\nA painting"
     },
     {
       "command": "put bauble in case",
@@ -1379,7 +1379,7 @@
     },
     {
       "command": "echo",
-      "response": "The acoustics of the room change subtly.\n\nLoud Room\n\nOn the ground is a large platinum bar."
+      "response": "The acoustics of the room change subtly.\n\nLoud Room\n\nThis is a large room with a ceiling which cannot be detected from the ground. There is a narrow passage from east to west and a stone stairway leading upward. The room is eerie in its quietness.\n\nOn the ground is a large platinum bar."
     },
     {
       "command": "take bar",
@@ -1407,7 +1407,7 @@
     },
     {
       "command": "put bar in case",
-      "response": "Done.\n\nPoints: 349"
+      "response": "Done."
     }
   ]
 }

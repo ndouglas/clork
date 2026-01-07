@@ -20,6 +20,7 @@
             [clork.parser.state :as parser-state]
             [clork.debug.trace :as trace]
             [clork.random :as random]
+            [clork.verbs-look :as look]
             [clojure.string :as str]))
 
 ;;; ---------------------------------------------------------------------------
@@ -178,16 +179,19 @@
    In the Loud Room, saying 'echo' solves the puzzle.
    Elsewhere, it just echoes back what was said.
 
-   ZIL: V-ECHO (gverbs.zil lines 542-564)"
+   ZIL: V-ECHO (gverbs.zil lines 542-564)
+        LOUD-ROOM-FCN (1actions.zil lines 1732-1738)"
   [game-state]
   (if (= (:here game-state) :loud-room)
     ;; In Loud Room - solve the puzzle!
+    ;; ZIL: Returns from special input mode, then game loop shows room
     (-> game-state
         (assoc :loud-flag true)
         ;; Remove SACREDBIT from the platinum bar (can now be taken)
         (gs/unset-thing-flag :platinum-bar :sacred)
-        (utils/tell "The acoustics of the room change subtly.")
-        (utils/crlf))
+        (utils/tell "The acoustics of the room change subtly.\n\n")
+        ;; After solving, show the room description (ZIL returns to main loop which does this)
+        (look/v-look))
     ;; Not in Loud Room - just echo
     (-> game-state
         (utils/tell "echo echo ...")
