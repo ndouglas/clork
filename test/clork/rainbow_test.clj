@@ -106,13 +106,14 @@
       ;; Should see description of rainbow solidifying
       (is (get gs' :rainbow-flag false)))))
 
-(deftest wave-sceptre-again-keeps-rainbow-solid-test
-  (testing "waving sceptre again at solid rainbow keeps it solid"
+(deftest wave-sceptre-again-toggles-rainbow-off-test
+  (testing "waving sceptre again at solid rainbow toggles it off (ZIL behavior)"
+    ;; ZIL: SCEPTRE-FUNCTION toggles rainbow - if already solid, it becomes run-of-the-mill
     (let [gs (-> (make-test-state)
                  (assoc :here :aragain-falls)
                  (assoc :rainbow-flag true)
                  (assoc-in [:objects :sceptre :in] :adventurer))
           [output gs'] (run-command gs "wave sceptre")]
-      ;; Rainbow stays solid, get message "seems as solid as ever"
-      (is (clojure.string/includes? output "solid"))
-      (is (get gs' :rainbow-flag false)))))
+      ;; Rainbow becomes non-solid, get "run-of-the-mill" message
+      (is (clojure.string/includes? output "run-of-the-mill"))
+      (is (not (get gs' :rainbow-flag false))))))

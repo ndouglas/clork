@@ -229,13 +229,15 @@
                 add-contents))
 
           ;; Level 0, generic description
-          ;; Note: "(providing light)" is NOT added at ground level per ZIL behavior
-          ;; Objects with custom :ldesc include their own parenthetical (e.g., lantern)
+          ;; ZIL (line 1719-1722): "There is a X here" + "(providing light)" if ONBIT
           (zero? level)
-          (-> game-state
-              ;; Double newline for paragraph separation at room floor level
-              (utils/tell (str "There is " (get-article game-state obj-id) desc " here.\n\n"))
-              add-contents)
+          (let [state (utils/tell game-state (str "There is " (get-article game-state obj-id) desc " here"))
+                state (if (contains? flags :on)
+                        (utils/tell state " (providing light)")
+                        state)]
+            (-> state
+                (utils/tell ".\n\n")
+                add-contents))
 
           ;; Level 1: first container contents (no indent, paragraph breaks)
           (= level 1)

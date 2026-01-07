@@ -350,10 +350,14 @@
       (is (= 50 (:score result3)) "Re-entering should not award more points")))
 
   (testing "rooms without :value don't affect score"
-    (let [gs (-> (make-test-state)
-                 (assoc :here :west-of-house)
-                 (assoc-in [:objects :adventurer :in] :west-of-house)
-                 (assoc-in [:parser :prso] :south))
+    ;; Create rooms without :value to test that no points are awarded
+    (let [start-room {:id :test-start :desc "Start" :exits {:north :test-target} :flags #{:lit}}
+          target-room {:id :test-target :desc "Target" :exits {} :flags #{:lit}} ;; No :value
+          gs (-> (make-test-state)
+                 (gs/add-rooms [start-room target-room])
+                 (assoc :here :test-start)
+                 (assoc-in [:objects :adventurer :in] :test-start)
+                 (assoc-in [:parser :prso] :north))
           [_ result] (with-captured-output (verbs-movement/v-walk gs))]
       (is (= 0 (:score result)) "Entering room without :value should not change score"))))
 

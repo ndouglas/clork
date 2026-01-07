@@ -30,19 +30,17 @@
     (let [gs (-> (make-test-state)
                  (assoc :here :south-temple)
                  (assoc :lit true))
-          _ (println "Before v-pray - :here =" (:here gs))
-          gs' (verbs-misc/v-pray gs)
-          _ (println "After v-pray - :here =" (:here gs'))]
+          gs' (verbs-misc/v-pray gs)]
       (is (= :forest-1 (:here gs'))))))
 
 (deftest pray-via-parser-test
   (testing "pray command via parser should teleport to forest-1"
+    ;; ZIL: V-PRAY at south-temple just does <GOTO ,FOREST-1> with no message.
+    ;; The "If you pray enough..." message only appears when NOT at south-temple.
     (let [gs (-> (make-test-state)
                  (assoc :here :south-temple)
                  (assoc :lit true))
-          _ (println "Before run-command - :here =" (:here gs))
-          [output gs'] (run-command gs "pray")
-          _ (println "Output:" output)
-          _ (println "After run-command - :here =" (:here gs'))]
-      (is (clojure.string/includes? output "answered"))
+          [output gs'] (run-command gs "pray")]
+      ;; Should show forest description (the GOTO result)
+      (is (clojure.string/includes? output "Forest"))
       (is (= :forest-1 (:here gs'))))))

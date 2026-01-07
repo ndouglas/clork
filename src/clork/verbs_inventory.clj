@@ -28,10 +28,15 @@
   (contains? (or (:flags obj) #{}) :take))
 
 (defn in-closed-container?
-  "Returns true if the object is inside a closed container."
+  "Returns true if the object is inside a closed container.
+   Returns false for objects in special locations like :local-globals."
   [game-state obj-id]
   (let [loc-id (gs/get-thing-loc-id game-state obj-id)]
-    (and (gs/set-thing-flag? game-state loc-id :cont)
+    ;; Only check container flags if loc-id is an actual object
+    ;; (not nil, not :local-globals, not a room)
+    (and loc-id
+         (contains? (:objects game-state) loc-id)
+         (gs/set-thing-flag? game-state loc-id :cont)
          (not (gs/set-thing-flag? game-state loc-id :open)))))
 
 (defn move-to-inventory
