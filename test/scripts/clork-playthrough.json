@@ -114,6 +114,182 @@
     {
       "command": "turn off lamp",
       "response": "The brass lantern is now off."
+    },
+    {
+      "command": "go down",
+      "response": "Temple\n\nThis is the north end of a large temple. On the east wall is an ancient inscription, probably a prayer in a long-forgotten language. Below the prayer is a staircase leading down. The west wall is solid granite. The exit to the north end of the room is through huge marble pillars.\n\nThere is a brass bell here."
+    },
+    {
+      "command": "take bell",
+      "response": "Taken."
+    },
+    {
+      "command": "go south",
+      "response": "Altar\n\nThis is the south end of a large temple. In front of you is what appears to be an altar. In one corner is a small hole in the floor which leads into darkness. You probably could not get back up it.\n\nOn the two ends of the altar are burning candles.\n\nOn the altar is a large black book, open to page 569."
+    },
+    {
+      "command": "pray",
+      "response": "Forest\n\nThis is a forest, with trees in all directions. To the east, there appears to be sunlight."
+    },
+    {
+      "command": "go east",
+      "response": "Forest Path\n\nThis is a path winding through a dimly lit forest. The path heads north-south here. One particularly large tree with some low branches stands at the edge of the path.\n\nYou hear in the distance the chirping of a song bird."
+    },
+    {
+      "command": "go north",
+      "response": "Clearing\n\nYou are in a clearing, with a forest surrounding you on all sides. A path leads south. On the ground is a pile of leaves."
+    },
+    {
+      "command": "go east",
+      "response": "Forest\n\nThis is a dimly lit forest, with large trees all around."
+    },
+    {
+      "command": "go south",
+      "response": "Clearing\n\nYou are in a small clearing in a well marked forest path that extends to the east and west."
+    },
+    {
+      "command": "go east",
+      "response": "Canyon View\n\nYou are at the top of the Great Canyon on its west wall. From here there is a marvelous view of the canyon and parts of the Frigid River upstream. Across the canyon, the walls of the White Cliffs join the mighty ramparts of the Flathead Mountains to the east. Following the Canyon upstream to the north, Aragain Falls may be seen, complete with rainbow. The mighty Frigid River flows out from a great dark cavern. To the west and south can be seen an immense forest, stretching for miles around. A path leads northwest. It is possible to climb down into the canyon from here."
+    },
+    {
+      "command": "go nw",
+      "response": "Clearing"
+    },
+    {
+      "command": "go west",
+      "response": "Behind House"
+    },
+    {
+      "command": "enter",
+      "response": "Kitchen\n\nA bottle is sitting on the table.\n\nThe glass bottle contains:\n\nA quantity of water"
+    },
+    {
+      "command": "go west",
+      "response": "Living Room"
+    },
+    {
+      "command": "open trap door",
+      "response": "The door reluctantly opens to reveal a rickety staircase descending into darkness."
+    },
+    {
+      "command": "go down",
+      "response": "Cellar"
+    },
+    {
+      "command": "go north",
+      "response": "The Troll Room\n\nThere is a sword here.\n\nThere is a bloody axe here.\n\nSomeone carrying a large bag is casually leaning against one of the walls here. He does not speak, but it is clear from his aspect that the bag will be taken only over his dead body."
+    },
+    {
+      "command": "go east",
+      "response": "East-West Passage"
+    },
+    {
+      "command": "go east",
+      "response": "Round Room"
+    },
+    {
+      "command": "go east",
+      "response": "Loud Room\n\nThis is a large room with a ceiling which cannot be detected from the ground. There is a narrow passage from east to west and a stone stairway leading upward. The room is deafeningly loud with an undetermined rushing sound. The sound seems to reverberate from all of the walls, making it difficult even to think.\n\nOn the ground is a large platinum bar."
+    },
+    {
+      "command": "go up",
+      "response": "Deep Canyon\n\nYou are on the south edge of a deep canyon. Passages lead off to the east, northwest and southwest. A stairway leads down. You can hear the sound of flowing water from below."
+    },
+    {
+      "command": "go east",
+      "response": "Dam\n\nYou are standing on the top of the Flood Control Dam #3, which was quite a tourist attraction in times far distant. There are paths to the north, south, and west, and a scramble down.\n\nThe sluice gates on the dam are closed. Behind the dam, there can be seen a wide reservoir. Water is pouring over the top of the now abandoned dam.\n\nThere is a control panel here, on which a large metal bolt is mounted. Directly above the bolt is a small green plastic bubble."
+    },
+    {
+      "command": "go north",
+      "response": "Dam Lobby\n\nThis room appears to have been the waiting room for groups touring the dam. There are open doorways here to the north and east marked \"Private\", and there is a path leading south over the top of the dam.\n\nSome guidebooks entitled \"Flood Control Dam #3\" are on the reception desk.\n\nThere is a matchbook whose cover says \"Visit Beautiful FCD#3\" here."
+    },
+    {
+      "command": "take matchbook",
+      "response": "Taken."
+    },
+    {
+      "command": "go south",
+      "response": "Dam"
+    },
+    {
+      "command": "go south",
+      "response": "Deep Canyon"
+    },
+    {
+      "command": "go down",
+      "response": "Loud Room\n\nOn the ground is a large platinum bar."
+    },
+    {
+      "command": "go west",
+      "response": "Round Room"
+    },
+    {
+      "command": "go se",
+      "response": "Engravings Cave\n\nThere are old engravings on the walls here."
+    },
+    {
+      "command": "go east",
+      "response": "Dome Room"
+    },
+    {
+      "command": "go down",
+      "response": "Torch Room"
+    },
+    {
+      "command": "go south",
+      "response": "Temple"
+    },
+    {
+      "command": "go south",
+      "response": "Altar\n\nOn the two ends of the altar are burning candles.\n\nOn the altar is a large black book, open to page 569."
+    },
+    {
+      "command": "ring bell",
+      "response": "Ding, dong."
+    },
+    {
+      "command": "take candles",
+      "response": "Taken."
+    },
+    {
+      "command": "light candles with matches",
+      "response": "The candles are already lit."
+    },
+    {
+      "command": "read book",
+      "response": "(Taken)\n\nCommandment #12592\n\nOh ye who go about saying unto each: \"Hello sailor\": Dost thou know the magnitude of thy sin before the gods? Yea, verily, thou shalt be ground between two stones. Shall the angry gods cast thy body into the whirlpool? Surely, thy eye shall be put out with a sharp stick! Even unto the ends of the earth shalt thou wander and Unto the land of the dead shalt thou be sent at last. Surely thou shalt repent of thy cunning."
+    },
+    {
+      "command": "go down",
+      "response": "Cave\n\nThis is a tiny cave with entrances west and north, and a dark, forbidding staircase leading down."
+    },
+    {
+      "command": "go down",
+      "response": "Entrance to Hades\n\nYou are outside a large gateway, on which is inscribed\n\nAbandon every hope all ye who enter here!\n\nThe gate is open; through it you can see a desolation, with a pile of mangled bodies in one corner. Thousands of voices, lamenting some hideous fate, can be heard.\n\nThe way through the gate is barred by evil spirits, who jeer at your attempts to pass."
+    },
+    {
+      "command": "ring bell",
+      "response": "The bell suddenly becomes red hot and falls to the ground. The wraiths, as if paralyzed, stop their jeering and slowly turn to face you. On their ashen faces, the expression of a long-forgotten terror takes shape.\n\nIn your confusion, the candles drop to the ground (and they are out)."
+    },
+    {
+      "command": "take candles",
+      "response": "Taken."
+    },
+    {
+      "command": "light candles with matches",
+      "response": "The candles are lit.\n\nThe flames flicker wildly and appear to dance. The earth beneath your feet trembles, and your legs nearly buckle beneath you. The spirits cower at your unearthly power."
+    },
+    {
+      "command": "read book",
+      "response": "Each word of the prayer reverberates through the hall in a deafening confusion. As the last word fades, a voice, loud and commanding, speaks: \"Begone, fiends!\" A heart-stopping scream fills the cavern, and the spirits, sensing a greater power, flee through the walls."
+    },
+    {
+      "command": "go in",
+      "response": "Land of the Dead\n\nYou have entered the Land of the Living Dead. Thousands of lost souls can be heard weeping and moaning. In the corner are stacked the remains of dozens of previous adventurers less fortunate than yourself. A passage exits to the north.\n\nLying in one corner of the room is a beautifully carved crystal skull. It appears to be grinning at you rather nastily."
+    },
+    {
+      "command": "take skull",
+      "response": "Taken."
     }
   ]
 }
