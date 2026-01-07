@@ -99,7 +99,7 @@
         (>= i len)
         (when (not= (count expected) (count actual))
           [i (if (< i (count expected)) (get expected i) :eof)
-             (if (< i (count actual)) (get actual i) :eof)])
+           (if (< i (count actual)) (get actual i) :eof)])
 
         (not= (get expected i) (get actual i))
         [i (get expected i) (get actual i)]

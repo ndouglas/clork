@@ -290,6 +290,182 @@
     {
       "command": "take skull",
       "response": "Taken."
+    },
+    {
+      "command": "go north",
+      "response": "Entrance to Hades\n\nOn the ground is a red hot bell."
+    },
+    {
+      "command": "go up",
+      "response": "Cave\n\nA gust of wind blows out your candles!"
+    },
+    {
+      "command": "go north",
+      "response": "Mirror Room\n\nYou are in a large square room with tall ceilings. On the south wall is an enormous mirror which fills the entire wall. There are exits on the other three sides of the room."
+    },
+    {
+      "command": "go north",
+      "response": "Narrow Passage\n\nThis is a long and narrow corridor where a long north-south passageway briefly narrows even further."
+    },
+    {
+      "command": "go north",
+      "response": "Round Room"
+    },
+    {
+      "command": "go west",
+      "response": "East-West Passage"
+    },
+    {
+      "command": "go west",
+      "response": "The Troll Room\n\nThere is a sword here.\n\nThere is a bloody axe here."
+    },
+    {
+      "command": "go south",
+      "response": "Cellar"
+    },
+    {
+      "command": "go up",
+      "response": "Living Room"
+    },
+    {
+      "command": "open trophy case",
+      "response": "Opened."
+    },
+    {
+      "command": "put skull in trophy case",
+      "response": "Done."
+    },
+    {
+      "command": "score",
+      "response": "Your score is 74 (total of 350 points), in 0 moves. This gives you the rank of Novice Adventurer."
+    },
+    {
+      "command": "inventory",
+      "response": "You are carrying:\n\nA pair of candles\n\nA matchbook\n\nA torch (providing light)\n\nA brass lantern\n\nA brown sack\n\nA black book"
+    },
+    {
+      "command": "drop candles",
+      "response": "Dropped."
+    },
+    {
+      "command": "drop matchbook",
+      "response": "Dropped."
+    },
+    {
+      "command": "drop book",
+      "response": "Dropped."
+    },
+    {
+      "command": "go down",
+      "response": "Cellar\n\nA seedy-looking individual with a large bag just wandered through the room. On the way through, he quietly abstracted some valuables from your possession, mumbling something about \"Doing unto others before...\""
+    },
+    {
+      "command": "go north",
+      "response": "It is pitch black. You are likely to be eaten by a grue."
+    },
+    {
+      "command": "turn on lamp",
+      "response": "The brass lantern is now on. The Troll Room\n\nThis is a small room with passages to the east and south and a forbidding hole leading west. Bloodstains and deep scratches (perhaps made by an axe) mar the walls.\n\nThere is a sword here.\n\nThere is a bloody axe here."
+    },
+    {
+      "command": "look",
+      "response": "The Troll Room\n\nThis is a small room with passages to the east and south and a forbidding hole leading west. Bloodstains and deep scratches (perhaps made by an axe) mar the walls.\n\nThere is a sword here.\n\nThere is a bloody axe here."
+    },
+    {
+      "command": "inventory",
+      "response": "You are carrying:\n\nA brass lantern (providing light)\n\nA brown sack"
+    },
+    {
+      "command": "go south",
+      "response": "Cellar"
+    },
+    {
+      "command": "go north",
+      "response": "The Troll Room\n\nThere is a sword here.\n\nThere is a bloody axe here."
+    },
+    {
+      "command": "go east",
+      "response": "East-West Passage"
+    },
+    {
+      "command": "go east",
+      "response": "Round Room"
+    },
+    {
+      "command": "go east",
+      "response": "Loud Room\n\nOn the ground is a large platinum bar."
+    },
+    {
+      "command": "take bar",
+      "response": "Taken."
+    },
+    {
+      "command": "go west",
+      "response": "Round Room"
+    },
+    {
+      "command": "go west",
+      "response": "East-West Passage"
+    },
+    {
+      "command": "go west",
+      "response": "The Troll Room\n\nThere is a sword here.\n\nThere is a bloody axe here."
+    },
+    {
+      "command": "go south",
+      "response": "Cellar"
+    },
+    {
+      "command": "go up",
+      "response": "Living Room\n\nThere is a black book here.\n\nThere is a matchbook whose cover says \"Visit Beautiful FCD#3\" here.\n\nThere is a pair of candles here.\n\nYour collection of treasures consists of:\n\nA crystal skull"
+    },
+    {
+      "command": "put bar in case",
+      "response": "Done."
+    },
+    {
+      "command": "score",
+      "response": "Your score is 89 (total of 350 points), in 0 moves. This gives you the rank of Novice Adventurer."
+    },
+    {
+      "command": "inventory",
+      "response": "You are carrying:\n\nA brass lantern (providing light)\n\nA brown sack"
+    },
+    {
+      "command": "go down",
+      "response": "Cellar"
+    },
+    {
+      "command": "go south",
+      "response": "East of Chasm\n\nYou are on the east edge of a chasm, the bottom of which cannot be seen. A narrow passage goes north, and the path you are on continues to the east."
+    },
+    {
+      "command": "go east",
+      "response": "Gallery\n\nThis is an art gallery. Most of the paintings have been stolen by vandals with exceptional taste. The vandals left through either the north or west exits.\n\nFortunately, there is still one chance for you to be a vandal, for on the far wall is a painting of unparalleled beauty."
+    },
+    {
+      "command": "take painting",
+      "response": "Taken."
+    },
+    {
+      "command": "go west",
+      "response": "East of Chasm"
+    },
+    {
+      "command": "go north",
+      "response": "Cellar"
+    },
+    {
+      "command": "go up",
+      "response": "Living Room\n\nThere is a black book here.\n\nThere is a matchbook whose cover says \"Visit Beautiful FCD#3\" here.\n\nThere is a pair of candles here.\n\nYour collection of treasures consists of:\n\nA platinum bar\n\nA crystal skull"
+    },
+    {
+      "command": "put painting in case",
+      "response": "Done."
+    },
+    {
+      "command": "score",
+      "response": "Your score is 99 (total of 350 points), in 0 moves. This gives you the rank of Novice Adventurer."
     }
   ]
 }

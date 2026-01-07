@@ -771,7 +771,7 @@
     (if (and obj (contains? (:flags obj #{}) :actor))
       (-> game-state
           (utils/tell (str "The " (gs/thing-name game-state prso)
-                          " pauses for a moment, perhaps thinking that you should reread the manual."))
+                           " pauses for a moment, perhaps thinking that you should reread the manual."))
           (utils/crlf))
       (-> game-state
           (utils/tell (str "You can't talk to the " (gs/thing-name game-state prso) "!"))
@@ -873,7 +873,7 @@
     (if (and obj (contains? (:flags obj #{}) :actor))
       (-> game-state
           (utils/tell (str "Since you aren't versed in hand-to-hand combat, you'd better attack the "
-                          (gs/thing-name game-state prso) " with a weapon."))
+                           (gs/thing-name game-state prso) " with a weapon."))
           (utils/crlf))
       ;; Non-actor: try to light it (strike a match)
       (-> game-state
@@ -899,7 +899,7 @@
         (= prsi :me)
         (-> game-state
             (utils/tell (str "A terrific throw! The " (gs/thing-name game-state prso)
-                            " hits you squarely in the head. Normally, this wouldn't do much damage, but by incredible mischance, you fall over backwards trying to duck, and break your neck, justice being swift and merciful in the Great Underground Empire."))
+                             " hits you squarely in the head. Normally, this wouldn't do much damage, but by incredible mischance, you fall over backwards trying to duck, and break your neck, justice being swift and merciful in the Great Underground Empire."))
             (utils/crlf)
             (assoc :dead true))
 
@@ -909,8 +909,8 @@
                (contains? (:flags target #{}) :actor)))
         (-> game-state
             (utils/tell (str "The " (gs/thing-name game-state prsi)
-                            " ducks as the " (gs/thing-name game-state prso)
-                            " flies by and crashes to the ground."))
+                             " ducks as the " (gs/thing-name game-state prso)
+                             " flies by and crashes to the ground."))
             (utils/crlf))
 
         ;; Default
@@ -1197,7 +1197,7 @@
     (if (and obj (contains? (:flags obj #{}) :actor))
       (-> game-state
           (utils/tell (str "You become so engrossed in the role of the " (gs/thing-name game-state prso)
-                          " that you kill yourself, just as he might have done!"))
+                           " that you kill yourself, just as he might have done!"))
           (utils/crlf)
           (assoc :dead true))
       (-> game-state

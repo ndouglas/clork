@@ -340,12 +340,12 @@
           ;; Go back and enter again
           [_ result2] (with-captured-output
                         (verbs-movement/v-walk (-> result1
-                                          (assoc :here :treasure-vault)
-                                          (assoc-in [:parser :prso] :south))))
+                                                   (assoc :here :treasure-vault)
+                                                   (assoc-in [:parser :prso] :south))))
           [_ result3] (with-captured-output
                         (verbs-movement/v-walk (-> result2
-                                          (assoc :here :hallway)
-                                          (assoc-in [:parser :prso] :north))))]
+                                                   (assoc :here :hallway)
+                                                   (assoc-in [:parser :prso] :north))))]
       (is (= 50 (:score result1)) "First entry should award 50 points")
       (is (= 50 (:score result3)) "Re-entering should not award more points")))
 

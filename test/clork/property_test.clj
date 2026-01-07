@@ -127,17 +127,17 @@
 (defspec state-remains-valid-after-random-commands
   50  ;; number of test iterations
   (prop/for-all [commands gen-command-sequence]
-    (valid-state-after-commands? commands)))
+                (valid-state-after-commands? commands)))
 
 (defspec output-never-contains-bare-nil
   50
   (prop/for-all [commands gen-command-sequence]
-    (no-nil-in-output? commands)))
+                (no-nil-in-output? commands)))
 
 (defspec rooms-collection-never-empty
   50
   (prop/for-all [commands gen-command-sequence]
-    (rooms-never-empty? commands)))
+                (rooms-never-empty? commands)))
 
 ;;; ---------------------------------------------------------------------------
 ;;; TARGETED PROPERTY TESTS
@@ -152,7 +152,7 @@
 (defspec movement-then-look-preserves-state
   50
   (prop/for-all [commands gen-movement-then-look]
-    (valid-state-after-commands? commands)))
+                (valid-state-after-commands? commands)))
 
 ;; Commands that might trigger death and resurrection
 (def gen-dark-room-sequence
@@ -164,12 +164,12 @@
 (defspec dark-room-death-preserves-state
   20
   (prop/for-all [commands gen-dark-room-sequence]
-    (let [script (str (str/join "\n" commands) "\n$quit\n")
+                (let [script (str (str/join "\n" commands) "\n$quit\n")
           ;; Use seeds that are likely to trigger grue attack
-          results (for [seed [42 123 456 789 999]]
-                    (run-script script :seed seed :max-turns 50))
-          validations (map #(game-state/validate-state (:game-state %)) results)]
-      (every? :valid? validations))))
+                      results (for [seed [42 123 456 789 999]]
+                                (run-script script :seed seed :max-turns 50))
+                      validations (map #(game-state/validate-state (:game-state %)) results)]
+                  (every? :valid? validations))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; REGRESSION TESTS AS PROPERTIES

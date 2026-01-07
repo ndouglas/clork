@@ -360,7 +360,7 @@
                  (-> game-state
                      (utils/tell "You are in a clearing, with a forest surrounding you on all sides. A path leads south.")
                      (cond->
-                       grate-open?
+                      grate-open?
                        (-> (utils/crlf)
                            (utils/tell "There is an open grating, descending into darkness."))
 

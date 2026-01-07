@@ -146,7 +146,7 @@
           ;; Messages start with newline to separate from previous output
           (-> game-state
               (cond->
-                (= new-glow 2)
+               (= new-glow 2)
                 ;; Paragraph break before and after for proper separation
                 (utils/tell "\n\nYour sword has begun to glow very brightly.\n")
 

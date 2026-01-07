@@ -257,15 +257,27 @@
 
         :else
         ;; Turn on and enable daemon
+        ;; ZIL: <COND (<NOT ,LIT> <SETG LIT <LIT? ,HERE>> <CRLF> <V-LOOK>)>)>
         (let [stage-idx (get game-state :lamp-stage-index 0)
               stage (get lamp-stages stage-idx)
-              ticks (if stage (:ticks stage) 0)]
-          (-> game-state
-              (gs/set-thing-flag :brass-lantern :on)
-              (daemon/queue :i-lantern ticks)
-              (utils/tell "The brass lantern is now on."))))
+              ticks (if stage (:ticks stage) 0)
+              was-dark? (not (:lit game-state))
+              gs (-> game-state
+                     (gs/set-thing-flag :brass-lantern :on)
+                     (daemon/queue :i-lantern ticks)
+                     (utils/tell "The brass lantern is now on."))]
+          ;; Update :lit flag and show room if it was dark
+          (if was-dark?
+            (-> gs
+                (assoc :lit (validation/lit? gs (:here gs)))
+                utils/crlf
+                verbs-look/v-look)
+            (assoc gs :lit true))))
 
       ;; LAMP-OFF
+      ;; ZIL: <COND (,LIT <SETG LIT <LIT? ,HERE>>)>
+      ;;      <TELL "The " D ,PRSO " is now off." CR>
+      ;;      <COND (<NOT ,LIT> <TELL "It is now pitch black." CR>)>
       (= prsa :lamp-off)
       (cond
         burned-out?
@@ -275,10 +287,16 @@
         (utils/tell game-state "It is already off.")
 
         :else
-        (-> game-state
-            (gs/unset-thing-flag :brass-lantern :on)
-            (daemon/disable :i-lantern)
-            (utils/tell "The brass lantern is now off.")))
+        (let [gs (-> game-state
+                     (gs/unset-thing-flag :brass-lantern :on)
+                     (daemon/disable :i-lantern))
+              still-lit? (validation/lit? gs (:here gs))
+              gs (-> gs
+                     (assoc :lit still-lit?)
+                     (utils/tell "The brass lantern is now off."))]
+          (if (not still-lit?)
+            (utils/tell gs "It is now pitch black.")
+            gs)))
 
       ;; EXAMINE
       (= prsa :examine)

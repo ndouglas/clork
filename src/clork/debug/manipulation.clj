@@ -55,13 +55,13 @@
                      (assoc :here room-id)
                      ;; Update LIT flag based on room and carried light sources
                      (as-> gs
-                         (let [room-lit (contains? (or (:flags room) #{}) :lit)
-                               contents (gs/get-contents gs winner)
-                               has-light-on (some (fn [obj-id]
-                                                    (and (gs/set-thing-flag? gs obj-id :light)
-                                                         (gs/set-thing-flag? gs obj-id :on)))
-                                                  contents)]
-                           (assoc gs :lit (or room-lit has-light-on))))
+                           (let [room-lit (contains? (or (:flags room) #{}) :lit)
+                                 contents (gs/get-contents gs winner)
+                                 has-light-on (some (fn [obj-id]
+                                                      (and (gs/set-thing-flag? gs obj-id :light)
+                                                           (gs/set-thing-flag? gs obj-id :on)))
+                                                    contents)]
+                             (assoc gs :lit (or room-lit has-light-on))))
                      (tell-action (str "Teleported to " room-id " (" (:desc room) ")")))
               ;; Call room action with M-ENTER if it exists
               ;; This ensures special behaviors like loud-room-mode are triggered

@@ -418,8 +418,8 @@
                       (or (not (map? (:rooms game-state)))
                           (empty? (:rooms game-state))))
                  (conj (str ":rooms is not a non-empty map (got: "
-                           (type (:rooms game-state))
-                           " with " (count (:rooms game-state)) " entries)"))
+                            (type (:rooms game-state))
+                            " with " (count (:rooms game-state)) " entries)"))
 
                  ;; Check :objects is a non-empty map
                  (and (some? game-state)
@@ -427,8 +427,8 @@
                       (or (not (map? (:objects game-state)))
                           (empty? (:objects game-state))))
                  (conj (str ":objects is not a non-empty map (got: "
-                           (type (:objects game-state))
-                           " with " (count (:objects game-state)) " entries)"))
+                            (type (:objects game-state))
+                            " with " (count (:objects game-state)) " entries)"))
 
                  ;; Check :here refers to existing room
                  (and (some? game-state)

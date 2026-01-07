@@ -725,59 +725,59 @@
           winner (:winner game-state)
           ;; Process each villain
           [gs fight?] (reduce
-                        (fn [[gs fight?] [villain-id villain-entry]]
-                          (let [villain-loc (gs/get-thing-loc-id gs villain-id)
-                                in-room? (= villain-loc here)
-                                invisible? (gs/set-thing-flag? gs villain-id :invisible)
-                                strength (get-in gs [:objects villain-id :strength] 0)]
-                            (cond
+                       (fn [[gs fight?] [villain-id villain-entry]]
+                         (let [villain-loc (gs/get-thing-loc-id gs villain-id)
+                               in-room? (= villain-loc here)
+                               invisible? (gs/set-thing-flag? gs villain-id :invisible)
+                               strength (get-in gs [:objects villain-id :strength] 0)]
+                           (cond
                               ;; Villain not in room - clear fight flags if they were fighting
-                              (not in-room?)
-                              (let [was-fighting? (gs/set-thing-flag? gs villain-id :fight)]
-                                (if was-fighting?
-                                  [(-> gs
-                                       (gs/unset-thing-flag winner :staggered)
-                                       (gs/unset-thing-flag villain-id :staggered)
-                                       (gs/unset-thing-flag villain-id :fight)
-                                       (awaken villain-id))
-                                   fight?]
-                                  [gs fight?]))
+                             (not in-room?)
+                             (let [was-fighting? (gs/set-thing-flag? gs villain-id :fight)]
+                               (if was-fighting?
+                                 [(-> gs
+                                      (gs/unset-thing-flag winner :staggered)
+                                      (gs/unset-thing-flag villain-id :staggered)
+                                      (gs/unset-thing-flag villain-id :fight)
+                                      (awaken villain-id))
+                                  fight?]
+                                 [gs fight?]))
 
                               ;; Skip invisible villains
-                              invisible?
-                              [gs fight?]
+                             invisible?
+                             [gs fight?]
 
                               ;; Unconscious villain - maybe wake up
-                              (neg? strength)
-                              (let [wake-prob (get villain-entry :wake-prob 0)]
-                                (if (and (pos? wake-prob) (< (random/rand-int* 100) wake-prob))
+                             (neg? strength)
+                             (let [wake-prob (get villain-entry :wake-prob 0)]
+                               (if (and (pos? wake-prob) (< (random/rand-int* 100) wake-prob))
                                   ;; Wake up!
-                                  [(-> gs
-                                       (assoc-in [:villains villain-id :wake-prob] 0)
-                                       (awaken villain-id))
-                                   fight?]
+                                 [(-> gs
+                                      (assoc-in [:villains villain-id :wake-prob] 0)
+                                      (awaken villain-id))
+                                  fight?]
                                   ;; Stay asleep, but increase wake probability
-                                  [(update-in gs [:villains villain-id :wake-prob]
-                                              (fn [p] (min 100 (+ (or p 0) 25))))
-                                   fight?]))
+                                 [(update-in gs [:villains villain-id :wake-prob]
+                                             (fn [p] (min 100 (+ (or p 0) 25))))
+                                  fight?]))
 
                               ;; Active villain - check if wants to fight
-                              :else
-                              (let [has-fightbit? (gs/set-thing-flag? gs villain-id :fight)
+                             :else
+                             (let [has-fightbit? (gs/set-thing-flag? gs villain-id :fight)
                                     ;; Check F-FIRST? action - may return modified game-state with :fight flag set
-                                    [new-gs wants-first?]
-                                    (if has-fightbit?
-                                      [gs false]
-                                      (if-let [action (get-in gs [:objects villain-id :action])]
+                                   [new-gs wants-first?]
+                                   (if has-fightbit?
+                                     [gs false]
+                                     (if-let [action (get-in gs [:objects villain-id :action])]
                                         ;; F-FIRST? should return modified game-state to initiate combat
-                                        (let [result (action gs :f-first?)]
-                                          (if (and result (not= result gs))
-                                            [result true]  ; Use modified state
-                                            [gs false]))
-                                        [gs false]))]
-                                [new-gs (or fight? has-fightbit? wants-first?)]))))
-                        [game-state false]
-                        villains-map)]
+                                       (let [result (action gs :f-first?)]
+                                         (if (and result (not= result gs))
+                                           [result true]  ; Use modified state
+                                           [gs false]))
+                                       [gs false]))]
+                               [new-gs (or fight? has-fightbit? wants-first?)]))))
+                       [game-state false]
+                       villains-map)]
       ;; After checking all villains, fight if any want to
       (if fight?
         (do-fight gs villains-map)

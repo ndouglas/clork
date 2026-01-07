@@ -214,7 +214,7 @@
               (assoc-in [:objects prso :in] :thief)
               ;; Announce based on value
               (cond->
-                (pos? tvalue)
+               (pos? tvalue)
                 (-> (assoc :thief-engrossed true)
                     (utils/tell (str "The thief is taken aback by your unexpected generosity, but accepts the " (:desc obj) " and stops to admire its beauty.")))
 
@@ -664,66 +664,66 @@
                  gs)]
 
       ;; Check for player encounter
-      (if (and thief-in-player-room?
-               (not room-lit?)  ; Only in dark rooms
-               (not troll-here?))  ; Troll must not be present
+        (if (and thief-in-player-room?
+                 (not room-lit?)  ; Only in dark rooms
+                 (not troll-here?))  ; Troll must not be present
         ;; Handle thief-vs-adventurer encounter
-        (let [gs (trace/trace-thief gs "Encounter with player!")
-              [gs finished?] (thief-vs-adventurer gs thief-visible?)]
-          (if finished?
-            (trace/trace-thief gs "Encounter resolved")
+          (let [gs (trace/trace-thief gs "Encounter with player!")
+                [gs finished?] (thief-vs-adventurer gs thief-visible?)]
+            (if finished?
+              (trace/trace-thief gs "Encounter resolved")
             ;; If thief became invisible during encounter, he might leave
-            (if (gs/set-thing-flag? gs :thief :invisible)
-              (trace/trace-thief gs "Staying invisible")
-              gs)))
+              (if (gs/set-thing-flag? gs :thief :invisible)
+                (trace/trace-thief gs "Staying invisible")
+                gs)))
 
         ;; Normal wandering behavior
-        (let [;; If thief is visible and not in same room as player, become invisible
-              gs (if (and thief-visible? (not thief-in-player-room?))
-                   (-> gs
-                       (trace/trace-thief "Making self invisible")
-                       (gs/set-thing-flag :thief :invisible))
-                   gs)
+          (let [;; If thief is visible and not in same room as player, become invisible
+                gs (if (and thief-visible? (not thief-in-player-room?))
+                     (-> gs
+                         (trace/trace-thief "Making self invisible")
+                         (gs/set-thing-flag :thief :invisible))
+                     gs)
 
               ;; Steal from room if it has been visited (and thief is not with player)
-              [gs robbed?] (if (and room-touched? (not thief-in-player-room?))
-                             (let [[new-gs was-robbed?] (rob gs thief-loc :thief 75)]
-                               (if was-robbed?
-                                 [(trace/trace-thief new-gs (str "Robbed valuables from " thief-loc)) true]
-                                 [new-gs false]))
-                             [gs false])
+                [gs robbed?] (if (and room-touched? (not thief-in-player-room?))
+                               (let [[new-gs was-robbed?] (rob gs thief-loc :thief 75)]
+                                 (if was-robbed?
+                                   [(trace/trace-thief new-gs (str "Robbed valuables from " thief-loc)) true]
+                                   [new-gs false]))
+                               [gs false])
 
               ;; Also try to steal junk
-              [gs stolen?] (if (and room-touched? (not thief-in-player-room?))
-                             (let [[new-gs was-stolen?] (steal-junk gs thief-loc)]
-                               (if was-stolen?
-                                 [(trace/trace-thief new-gs (str "Stole junk from " thief-loc)) true]
-                                 [new-gs false]))
-                             [gs false])
+                [gs stolen?] (if (and room-touched? (not thief-in-player-room?))
+                               (let [[new-gs was-stolen?] (steal-junk gs thief-loc)]
+                                 (if was-stolen?
+                                   [(trace/trace-thief new-gs (str "Stole junk from " thief-loc)) true]
+                                   [new-gs false]))
+                               [gs false])
 
               ;; Find next room to move to
-              next-room (find-next-room gs thief-loc)]
+                next-room (find-next-room gs thief-loc)]
 
-          (if next-room
+            (if next-room
             ;; Move to next room
-            (let [gs (trace/trace-thief gs (str "Moving " thief-loc " -> " next-room))
-                  moved-gs (-> gs
+              (let [gs (trace/trace-thief gs (str "Moving " thief-loc " -> " next-room))
+                    moved-gs (-> gs
                                ;; Recover stiletto before moving
-                               (recover-stiletto)
+                                 (recover-stiletto)
                                ;; Move thief
-                               (assoc-in [:objects :thief :in] next-room)
+                                 (assoc-in [:objects :thief :in] next-room)
                                ;; Clear fight flag
-                               (gs/unset-thing-flag :thief :fight)
+                                 (gs/unset-thing-flag :thief :fight)
                                ;; Become invisible
-                               (gs/set-thing-flag :thief :invisible)
+                                 (gs/set-thing-flag :thief :invisible)
                                ;; Clear thief-here flag
-                               (assoc :thief-here false))]
+                                 (assoc :thief-here false))]
               ;; Drop junk if not in treasure room
-              (if (not= next-room :treasure-room)
-                (let [[dropped-gs dropped?] (drop-junk moved-gs next-room)]
-                  (if dropped?
-                    (trace/trace-thief dropped-gs "Dropped some junk")
-                    dropped-gs))
-                moved-gs))
+                (if (not= next-room :treasure-room)
+                  (let [[dropped-gs dropped?] (drop-junk moved-gs next-room)]
+                    (if dropped?
+                      (trace/trace-thief dropped-gs "Dropped some junk")
+                      dropped-gs))
+                  moved-gs))
             ;; No valid room found - stay put
-            (trace/trace-thief gs "No valid room found - staying put"))))))))  ; Extra paren for treasure room let
+              (trace/trace-thief gs "No valid room found - staying put"))))))))  ; Extra paren for treasure room let

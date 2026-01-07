@@ -452,5 +452,4 @@
   (debug-transcript {:break-at 174 :watch [:candles :brass-lantern]})
 
   ;; Trace candle state through commands 100-120
-  (debug-transcript {:max-cmd 120 :watch [:candles] :verbose false})
-  )
+  (debug-transcript {:max-cmd 120 :watch [:candles] :verbose false}))

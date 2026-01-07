@@ -118,11 +118,11 @@
   (let [obj (get-in game-state [:objects obj-id])]
     (if obj
       (let [flag-analysis (analyze-flags game-state :objects obj-id obj)
-        location (:in obj)
-        loc-desc (when location
-                   (if-let [loc-thing (gs/get-thing game-state location)]
-                     (str " (" (:desc loc-thing "?") ")")
-                     ""))]
+            location (:in obj)
+            loc-desc (when location
+                       (if-let [loc-thing (gs/get-thing game-state location)]
+                         (str " (" (:desc loc-thing "?") ")")
+                         ""))]
         (-> game-state
             (utils/tell (str "=== OBJECT: " obj-id " ===\n"))
             (tell-line "desc" (:desc obj "?"))

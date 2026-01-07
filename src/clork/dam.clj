@@ -61,7 +61,7 @@
           (utils/tell "\n\n")
           ;; Water level description based on state
           (cond->
-            (and low-tide? gates-open?)
+           (and low-tide? gates-open?)
             (-> (utils/tell "The water level behind the dam is low: The sluice gates have been opened. Water rushes through the dam and downstream.")
                 (utils/tell "\n\n"))
 
@@ -79,7 +79,7 @@
           ;; Control panel description
           (utils/tell "There is a control panel here, on which a large metal bolt is mounted. Directly above the bolt is a small green plastic bubble")
           (cond->
-            gate-flag?
+           gate-flag?
             (utils/tell " which is glowing serenely"))
           (utils/tell ".")
           ;; Paragraph break after room description
@@ -99,7 +99,7 @@
       (-> game-state
           ;; Main description based on water state
           (cond->
-            (and low-tide? gates-open?)
+           (and low-tide? gates-open?)
             (utils/tell "You are in a long room, to the north of which was formerly a lake. However, with the water level lowered, there is merely a wide stream running through the center of the room.")
 
             (and gates-open? (not low-tide?))
@@ -129,7 +129,7 @@
     (let [low-tide? (:low-tide game-state)]
       (-> game-state
           (cond->
-            low-tide?
+           low-tide?
             (utils/tell "You are on what used to be a large lake, but which is now a large mud pile. There are \"shores\" to the north and south.")
 
             (not low-tide?)
@@ -162,7 +162,7 @@
           gates-open? (:gates-open game-state)]
       (-> game-state
           (cond->
-            (and low-tide? gates-open?)
+           (and low-tide? gates-open?)
             (utils/tell "You are in a large cavernous room, the south of which was formerly a lake. However, with the water level lowered, there is merely a wide stream running through there.")
 
             (and gates-open? (not low-tide?))
@@ -430,7 +430,7 @@
         (daemon/unregister-daemon :i-rfill)
         ;; Location-specific messages
         (cond->
-          (= here :reservoir)
+         (= here :reservoir)
           ;; Player is in reservoir - they drown!
           (death/jigs-up "You are lifted up by the rising river! You try to swim, but the currents are too strong. You come closer, closer to the awesome structure of Flood Control Dam #3. The dam beckons to you. The roar of the water nearly deafens you, but you remain conscious as you tumble over the dam toward your certain doom among the rocks at its base.")
 
@@ -461,7 +461,7 @@
         (daemon/unregister-daemon :i-rempty)
         ;; Location-specific messages
         (cond->
-          (#{:reservoir-north :reservoir-south} here)
+         (#{:reservoir-north :reservoir-south} here)
           (-> (utils/tell "The water level is now quite low here and you could easily cross over to the other side.")
               (utils/crlf))))))
 
@@ -480,7 +480,7 @@
             new-water-level (inc water-level)
             gs (-> game-state
                    (cond->
-                     in-maint?
+                    in-maint?
                      (-> (utils/tell (str "The water level here is now " (get drownings level-idx)))
                          (utils/crlf)))
                    (assoc :water-level new-water-level))]
@@ -490,6 +490,6 @@
               (daemon/unregister-daemon :i-maint-room)
               ;; TODO: MUNG-ROOM - make room unenterable
               (cond->
-                in-maint?
+               in-maint?
                 (death/jigs-up "I'm afraid you have done drowned yourself.")))
           gs)))))

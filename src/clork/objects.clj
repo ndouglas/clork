@@ -3605,7 +3605,7 @@ Warning:
         (let [coal-in-machine? (= (gs/get-thing-loc-id game-state :coal) :machine)
               ;; Light show message
               gs (utils/tell game-state
-                   "The machine comes to life (figuratively) with a dazzling display of colored lights and bizarre noises. After a few moments, the excitement abates.")]
+                             "The machine comes to life (figuratively) with a dazzling display of colored lights and bizarre noises. After a few moments, the excitement abates.")]
           (if coal-in-machine?
             ;; Coal -> Diamond
             (-> gs

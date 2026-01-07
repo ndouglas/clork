@@ -93,7 +93,7 @@
       (-> game-state
           (utils/tell "This is a large room with a ceiling which cannot be detected from the ground. There is a narrow passage from east to west and a stone stairway leading upward.")
           (cond->
-            quiet?
+           quiet?
             (utils/tell " The room is eerie in its quietness.")
 
             (not quiet?)
@@ -154,7 +154,7 @@
           (utils/tell "You are on the south edge of a deep canyon. Passages lead off to the east, northwest and southwest. A stairway leads down.")
           (cond->
             ;; Gates open, water high - loud roaring
-            (and gates-open? (not low-tide?))
+           (and gates-open? (not low-tide?))
             (utils/tell " You can hear a loud roaring sound, like that of rushing water, from below.")
 
             ;; Gates closed, water low - quiet
