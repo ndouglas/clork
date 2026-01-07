@@ -466,6 +466,34 @@
     {
       "command": "score",
       "response": "Your score is 99 (total of 350 points), in 0 moves. This gives you the rank of Novice Adventurer."
+    },
+    {
+      "command": "go east",
+      "response": "Kitchen\n\nA bottle is sitting on the table.\n\nThe glass bottle contains:\n\nA quantity of water"
+    },
+    {
+      "command": "go east",
+      "response": "Behind House"
+    },
+    {
+      "command": "go north",
+      "response": "North of House\n\nYou are facing the north side of a white house. There is no door here, and all the windows are boarded up. To the north a narrow path winds through the trees."
+    },
+    {
+      "command": "go north",
+      "response": "Forest Path"
+    },
+    {
+      "command": "go up",
+      "response": "Up a Tree\n\nYou are about 10 feet above the ground nestled among some large branches. The nearest branch above you is above your reach.\n\nBeside you on the branch is a small bird's nest.\n\nIn the bird's nest is a large egg encrusted with precious jewels, apparently scavenged by a childless songbird. The egg is covered with fine gold inlay, and ornamented in lapis lazuli and mother-of-pearl. Unlike most eggs, this one is hinged and closed with a delicate looking clasp. The egg appears extremely fragile."
+    },
+    {
+      "command": "take egg",
+      "response": "Taken.\n\nYou hear in the distance the chirping of a song bird."
+    },
+    {
+      "command": "go down",
+      "response": "Forest Path"
     }
   ]
 }

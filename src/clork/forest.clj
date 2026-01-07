@@ -48,8 +48,9 @@
     (daemon/disable game-state :i-forest-room)
 
     ;; 15% chance of hearing songbird
+    ;; Use paragraph break to separate from previous action output
     (< (random/rand-int* 100) 15)
-    (utils/tell game-state "You hear in the distance the chirping of a song bird.")
+    (utils/tell game-state "\n\nYou hear in the distance the chirping of a song bird.")
 
     :else
     game-state))
