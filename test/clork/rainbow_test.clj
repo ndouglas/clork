@@ -58,7 +58,8 @@
                  (assoc :rainbow-flag true)
                  (assoc-in [:objects :rainbow :in] :aragain-falls))
           [output gs'] (run-command gs "cross rainbow")]
-      (is (clojure.string/includes? output "walk across"))
+      ;; ZIL: GOTO shows room name, no "walk across" message
+      (is (clojure.string/includes? output "End of Rainbow"))
       (is (= :end-of-rainbow (:here gs'))))))
 
 (deftest cross-rainbow-from-end-of-rainbow-test
@@ -68,7 +69,8 @@
                  (assoc :rainbow-flag true)
                  (assoc-in [:objects :rainbow :in] :end-of-rainbow))
           [output gs'] (run-command gs "cross rainbow")]
-      (is (clojure.string/includes? output "walk across"))
+      ;; ZIL: GOTO shows room name, no "walk across" message
+      (is (clojure.string/includes? output "Aragain Falls"))
       (is (= :aragain-falls (:here gs'))))))
 
 (deftest cross-rainbow-from-canyon-view-test

@@ -1674,6 +1674,7 @@
       (-> game-state
           (utils/tell "You are at the top of Aragain Falls, an enormous waterfall with a drop of about 450 feet. The only path here is on the north end.")
           (utils/crlf)
+          (utils/crlf)
           (utils/tell (if rainbow-solid?
                         "A solid rainbow spans the falls."
                         "A beautiful rainbow can be seen over the falls and to the west."))

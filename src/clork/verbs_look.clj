@@ -363,11 +363,21 @@
                                         (and (has-flag? game-state id :ndesc)
                                              (see-inside? game-state id)
                                              (seq (gs/get-contents game-state id))))
-                                      without-fdesc)]
+                                      without-fdesc)
+             ;; Special handling for surfaces: touched objects should be described
+             ;; at level 0 ("There is a X here.") rather than under "Sitting on..." header.
+             ;; This matches ZIL behavior where touched objects "lose" their surface context.
+             is-surface? (has-flag? game-state obj-id :surface)
+             ;; For surfaces, split describable into touched and untouched
+             touched-on-surface (when (and is-surface? (= level 0))
+                                  (filter (fn [id] (has-flag? game-state id :touch)) describable))
+             untouched-on-surface (if touched-on-surface
+                                    (remove (fn [id] (has-flag? game-state id :touch)) describable)
+                                    describable)]
 
          ;; First describe regular objects, then ndesc containers' contents
          ;; ZIL describes objects before container contents
-         (let [state (if (empty? describable)
+         (let [state (if (empty? untouched-on-surface)
                        state
                        ;; Print header for container (but not for room floor at level -1)
                        (let [state (if (and (not= obj-id (:here game-state))
@@ -380,7 +390,14 @@
                          (reduce (fn [st id]
                                    (describe-object st id verbose? new-level))
                                  state
-                                 describable)))]
+                                 untouched-on-surface)))
+               ;; Touched objects on surfaces get described at level 0 without header
+               state (if (seq touched-on-surface)
+                       (reduce (fn [st id]
+                                 (describe-object st id verbose? 0))
+                               state
+                               touched-on-surface)
+                       state)]
            ;; Then describe ndesc containers' contents (like trophy case)
            ;; Pass level 0 so firster gets called (e.g. "Your collection of treasures consists of:")
            (let [state (reduce (fn [st id]

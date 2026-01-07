@@ -1742,9 +1742,9 @@ Surely thou shalt repent of thy cunning."})
 ;;	(SYNONYM BUOY)
 ;;	(ADJECTIVE RED)
 ;;	(DESC "red buoy")
-;;	(FLAGS TAKEBIT CONTBIT SEARCHBIT OPENBIT)
+;;	(FLAGS TAKEBIT CONTBIT)
 ;;	(FDESC "There is a red buoy here (probably a warning).")
-;;	(ACTION BUOY-FCN)
+;;	(ACTION TREASURE-INSIDE)
 ;;	(CAPACITY 20)
 ;;	(SIZE 10)>
 
@@ -1754,7 +1754,7 @@ Surely thou shalt repent of thy cunning."})
    :synonym ["buoy"]
    :adjective ["red"]
    :desc "red buoy"
-   :flags (flags/flags :take :cont :search :open)
+   :flags (flags/flags :take :cont)
    :fdesc "There is a red buoy here (probably a warning)."
    :capacity 20
    :size 10})
@@ -3844,16 +3844,13 @@ Warning:
         (utils/tell game-state "From here?!?")
 
         ;; Rainbow is solid - can cross
+        ;; ZIL: <GOTO ,END-OF-RAINBOW> or <GOTO ,ARAGAIN-FALLS>
         rainbow-solid?
         (cond
           (= here :aragain-falls)
-          (-> game-state
-              (assoc :here :end-of-rainbow)
-              (utils/tell "You walk across the rainbow..."))
+          (verbs-movement/goto game-state :end-of-rainbow)
           (= here :end-of-rainbow)
-          (-> game-state
-              (assoc :here :aragain-falls)
-              (utils/tell "You walk across the rainbow..."))
+          (verbs-movement/goto game-state :aragain-falls)
           :else
           (utils/tell game-state "You'll have to say which way..."))
 
