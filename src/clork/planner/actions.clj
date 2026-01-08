@@ -281,7 +281,16 @@
      :inventory-remove #{}}
     :cost 3
     :reversible? false
-    :commands ["kill troll with sword"]}
+    ;; Combat uses loop construct instead of fixed commands
+    :combat
+    {:action "attack troll with sword"
+     :enemy :troll
+     :victory-flag :troll-flag           ; Flag set when enemy dies
+     :expected-rounds [2 5]              ; Typical range
+     :max-rounds 15                      ; Abort threshold
+     :retreat-dir "south"                ; Direction to flee for RNG reset
+     :retry-actions ["wait" "north"]}    ; Actions to change RNG state
+    :commands ["attack troll with sword"]}
 
    :scare-cyclops
    {:id :scare-cyclops
@@ -518,7 +527,16 @@
      :inventory-remove #{}}
     :cost 10  ; Combat takes many turns, sword is harder
     :reversible? false
-    :commands ["kill thief with sword"]
+    :combat
+    {:action "attack thief with sword"
+     :enemy :thief
+     :victory-flag :thief-dead
+     :expected-rounds [8 15]             ; Very variable, sword is weak vs thief
+     :max-rounds 30                      ; Thief combat can go very long
+     :retreat-dir "down"                 ; Go down stairs to flee
+     :retry-actions ["wait" "up"]        ; Wait changes RNG, return
+     :score-requirement 210}             ; Minimum score for even match
+    :commands ["attack thief with sword"]
     :notes "Requires high score (210+) for reliable success. Sword is less effective."}
 
    ;; Nasty knife is thief's weakness (his "best weapon" in ZIL terms)
@@ -536,7 +554,16 @@
      :inventory-remove #{}}
     :cost 6  ; Faster with the knife (thief's weakness)
     :reversible? false
-    :commands ["kill thief with knife"]
+    :combat
+    {:action "attack thief with knife"
+     :enemy :thief
+     :victory-flag :thief-dead
+     :expected-rounds [4 8]              ; Knife is thief's weakness
+     :max-rounds 20
+     :retreat-dir "down"
+     :retry-actions ["wait" "up"]
+     :score-requirement 140}             ; Lower requirement with knife advantage
+    :commands ["attack thief with knife"]
     :notes "Nasty knife gives combat advantage vs thief. Still needs decent score."}
 
    ;; Loud room puzzle:

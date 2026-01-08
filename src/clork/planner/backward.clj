@@ -118,6 +118,13 @@
   (filter #(contains? (get-in % [:effects :inventory-add] #{}) item-id)
           (vals registry)))
 
+(defn find-achievers-for-location
+  "Find actions that move player to a specific room.
+   These are movement actions with :effects :new-location matching target."
+  [registry room-id]
+  (filter #(= room-id (get-in % [:effects :new-location]))
+          (vals registry)))
+
 (defn find-achievers
   "Find all actions that can achieve a goal."
   [registry goal]
@@ -127,6 +134,9 @@
 
     (and (vector? goal) (= :have (first goal)))
     (find-achievers-for-item registry (second goal))
+
+    (and (vector? goal) (= :at (first goal)))
+    (find-achievers-for-location registry (second goal))
 
     (keyword? goal)
     (find-achievers-for-flag registry goal)
@@ -219,52 +229,76 @@
          :error :max-iterations}
 
         :else
-        (let [goal (select-best-goal goals)
-              achievers (find-achievers registry goal)]
-          (if (empty? achievers)
-            ;; No achiever found - check if already satisfied
-            (if (case (goal-type goal)
-                  :flag (contains? (:flags achieved-state) goal)
-                  :have-item (contains? (:inventory achieved-state) (second goal))
-                  :deposit (contains? (:deposited achieved-state) (second goal))
-                  :location (= (:here achieved-state) (second goal))
-                  false)
-              ;; Goal already satisfied, remove it
-              (recur (disj goals goal)
+        (let [goal (select-best-goal goals)]
+          ;; Special handling for location goals:
+          ;; We treat them as implicitly satisfiable via A* pathfinding.
+          ;; The optimizer will generate actual navigation commands.
+          ;; However, we need to check if the room requires light!
+          (if (= :location (goal-type goal))
+            ;; Location goals are achievable from initial state
+            ;; But if the room is dark, we need a light source
+            (let [target-room (second goal)
+                  needs-light? (constraints/requires-light? target-room)
+                  ;; If dark room and no light in achieved inventory, add light goal
+                  has-light? (or (contains? (:inventory achieved-state) :brass-lantern)
+                                 (contains? (:inventory achieved-state) :ivory-torch))
+                  new-goals (if (and needs-light? (not has-light?))
+                              ;; Add lantern requirement (simplest light source)
+                              (-> goals
+                                  (disj goal)
+                                  (conj [:have :brass-lantern]))
+                              (disj goals goal))]
+              (recur new-goals
                      plan
                      achieved-state
                      visited-actions
-                     (inc iterations))
-              ;; Can't achieve goal
-              {:success? false
-               :plan (reverse plan)
-               :error {:type :no-achiever :goal goal}
-               :remaining-goals goals
-               :iterations iterations})
+                     (inc iterations)))
 
-            ;; Try to use an achiever
-            (let [achiever (select-best-achiever
-                           (remove #(contains? visited-actions (:id %)) achievers)
-                           achieved-state)]
-              (if (nil? achiever)
-                ;; All achievers already tried
-                {:success? false
-                 :plan (reverse plan)
-                 :error {:type :cycle :goal goal}
-                 :remaining-goals goals
-                 :iterations iterations}
+            ;; Normal goal processing
+            (let [achievers (find-achievers registry goal)]
+              (if (empty? achievers)
+                ;; No achiever found - check if already satisfied
+                (if (case (goal-type goal)
+                      :flag (contains? (:flags achieved-state) goal)
+                      :have-item (contains? (:inventory achieved-state) (second goal))
+                      :deposit (contains? (:deposited achieved-state) (second goal))
+                      false)
+                  ;; Goal already satisfied, remove it
+                  (recur (disj goals goal)
+                         plan
+                         achieved-state
+                         visited-actions
+                         (inc iterations))
+                  ;; Can't achieve goal
+                  {:success? false
+                   :plan (reverse plan)
+                   :error {:type :no-achiever :goal goal}
+                   :remaining-goals goals
+                   :iterations iterations})
 
-                ;; Add achiever to plan
-                (let [new-precond-goals (action-preconditions-as-goals achiever)
-                      new-achieved (actions/apply-action-effects achiever achieved-state)
-                      remaining-goals (-> goals
-                                          (disj goal)
-                                          (set/union new-precond-goals))]
-                  (recur remaining-goals
-                         (conj plan achiever)
-                         new-achieved
-                         (conj visited-actions (:id achiever))
-                         (inc iterations)))))))))))
+                ;; Try to use an achiever
+                (let [achiever (select-best-achiever
+                               (remove #(contains? visited-actions (:id %)) achievers)
+                               achieved-state)]
+                  (if (nil? achiever)
+                    ;; All achievers already tried
+                    {:success? false
+                     :plan (reverse plan)
+                     :error {:type :cycle :goal goal}
+                     :remaining-goals goals
+                     :iterations iterations}
+
+                    ;; Add achiever to plan
+                    (let [new-precond-goals (action-preconditions-as-goals achiever)
+                          new-achieved (actions/apply-action-effects achiever achieved-state)
+                          remaining-goals (-> goals
+                                              (disj goal)
+                                              (set/union new-precond-goals))]
+                      (recur remaining-goals
+                             (conj plan achiever)
+                             new-achieved
+                             (conj visited-actions (:id achiever))
+                             (inc iterations)))))))))))))
 
 ;; =============================================================================
 ;; High-Level Planning

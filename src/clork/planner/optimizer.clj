@@ -193,6 +193,86 @@
   [action]
   (or (:commands action) []))
 
+;; =============================================================================
+;; Combat Execution (handles RNG and retry logic)
+;; =============================================================================
+
+(defn expand-combat-action
+  "Expand a combat action into an executable command block.
+
+   Combat actions have a :combat spec with:
+   - :action           - The attack command
+   - :enemy            - Enemy keyword for state checking
+   - :victory-flag     - Flag set when enemy dies
+   - :expected-rounds  - [min max] typical range
+   - :max-rounds       - Abort threshold for timeout
+   - :retreat-dir      - Direction to flee for RNG reset
+   - :retry-actions    - Commands to change RNG state before retry
+
+   Returns a command block that can be interpreted by the executor:
+   {:type :combat-loop
+    :action \"attack X with Y\"
+    :check-victory (fn [state] ...)
+    :max-rounds N
+    :on-timeout {:retreat \"dir\" :reset [\"cmd\"...] :retry true}}"
+  [action]
+  (if-let [combat (:combat action)]
+    ;; Return structured combat block
+    {:type :combat-loop
+     :action (:action combat)
+     :enemy (:enemy combat)
+     :victory-flag (:victory-flag combat)
+     :max-rounds (:max-rounds combat 15)
+     :expected-rounds (:expected-rounds combat [2 5])
+     :on-timeout {:retreat (:retreat-dir combat)
+                  :reset (:retry-actions combat [])
+                  :retry true}
+     :score-requirement (:score-requirement combat 0)}
+    ;; Fallback to simple commands
+    {:type :simple
+     :commands (expand-action-to-commands action)}))
+
+(defn generate-combat-commands
+  "Generate combat commands for transcript output.
+
+   For simple output (non-interactive), generates expected number of attacks
+   plus a few extra for variance. Real execution would use the loop construct.
+
+   Options:
+   - :mode :optimistic  - Use lower bound of expected rounds
+   - :mode :pessimistic - Use upper bound + buffer
+   - :mode :with-retry  - Include retreat/retry sequence"
+  [combat-spec & {:keys [mode] :or {mode :pessimistic}}]
+  (let [{:keys [action expected-rounds max-rounds on-timeout]} combat-spec
+        [min-rounds max-expected] expected-rounds
+        attack-count (case mode
+                       :optimistic min-rounds
+                       :pessimistic (+ max-expected 3)
+                       :with-retry max-rounds)
+        attacks (vec (repeat attack-count action))]
+    (if (= mode :with-retry)
+      ;; Include retry sequence after attacks
+      (-> attacks
+          (conj (:retreat on-timeout))
+          (into (:reset on-timeout))
+          (into (repeat 5 action)))  ; More attacks after RNG reset
+      attacks)))
+
+(defn action-is-combat?
+  "Check if an action is a combat action with loop spec."
+  [action]
+  (and (= :combat (:type action))
+       (some? (:combat action))))
+
+(defn expand-action-for-transcript
+  "Expand an action to commands suitable for transcript testing.
+   Handles combat loops specially."
+  [action & {:keys [combat-mode] :or {combat-mode :pessimistic}}]
+  (if (action-is-combat? action)
+    (let [combat-spec (expand-combat-action action)]
+      (generate-combat-commands combat-spec :mode combat-mode))
+    (expand-action-to-commands action)))
+
 (defn plan-to-command-sequence
   "Convert a plan to an executable command sequence.
 
@@ -200,27 +280,36 @@
    - game-state: Current game state for navigation
    - plan: Sequence of actions
    - start-room: Starting location
+   - opts: {:combat-mode :optimistic|:pessimistic|:with-retry}
 
    Returns:
    {:commands [\"cmd\" ...]
     :total-moves n
-    :by-action [{:action :id :commands [...]}]}"
-  [game-state plan start-room]
+    :by-action [{:action :id :commands [...]}]
+    :combat-actions [{:action :id :spec {...}}]}"
+  [game-state plan start-room & {:keys [combat-mode] :or {combat-mode :pessimistic}}]
   (loop [remaining plan
          current-room start-room
          all-commands []
-         by-action []]
+         by-action []
+         combat-actions []]
     (if (empty? remaining)
       {:commands all-commands
        :total-moves (count all-commands)
-       :by-action by-action}
+       :by-action by-action
+       :combat-actions combat-actions}
       (let [action (first remaining)
             dest-room (action-location action)
             nav (when (and dest-room (not= dest-room current-room))
                   (generate-navigation game-state current-room dest-room))
             nav-commands (or (:commands nav) [])
-            action-commands (expand-action-to-commands action)
-            combined (into nav-commands action-commands)]
+            ;; Use combat-aware expansion
+            action-commands (expand-action-for-transcript action :combat-mode combat-mode)
+            combined (into nav-commands action-commands)
+            ;; Track combat actions separately
+            combat-info (when (action-is-combat? action)
+                          {:action (:id action)
+                           :spec (expand-combat-action action)})]
         (recur (rest remaining)
                (or dest-room current-room)
                (into all-commands combined)
@@ -228,7 +317,11 @@
                                 :from current-room
                                 :to dest-room
                                 :nav-commands nav-commands
-                                :action-commands action-commands}))))))
+                                :action-commands action-commands
+                                :is-combat? (action-is-combat? action)})
+               (if combat-info
+                 (conj combat-actions combat-info)
+                 combat-actions))))))
 
 ;; =============================================================================
 ;; Deposit Trip Insertion
