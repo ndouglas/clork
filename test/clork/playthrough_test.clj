@@ -8,6 +8,9 @@
 
    Someone's walkthrough said it could be done in < 225; can we beat that?
 
+   Feel free to add additional tools, especially debugging tools, to help
+   optimize the playthrough.
+
    Workflow:
     - Run the test to see what happens:
       - if it passes and the game is won in < 250 moves, you're done!
