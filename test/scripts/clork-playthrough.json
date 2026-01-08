@@ -494,6 +494,542 @@
     {
       "command": "go down",
       "response": "Forest Path"
+    },
+    {
+      "command": "go south",
+      "response": "North of House"
+    },
+    {
+      "command": "go east",
+      "response": "Behind House"
+    },
+    {
+      "command": "go west",
+      "response": "Kitchen\n\nA bottle is sitting on the table.\n\nThe glass bottle contains:\n\nA quantity of water"
+    },
+    {
+      "command": "go west",
+      "response": "Living Room\n\nThere is a black book here.\n\nThere is a matchbook whose cover says \"Visit Beautiful FCD#3\" here.\n\nThere is a pair of candles here.\n\nYour collection of treasures consists of:\n\nA painting\n\nA platinum bar\n\nA crystal skull"
+    },
+    {
+      "command": "go down",
+      "response": "Cellar"
+    },
+    {
+      "command": "go north",
+      "response": "The Troll Room\n\nThere is a sword here."
+    },
+    {
+      "command": "go west",
+      "response": "Maze\n\nThis is part of a maze of twisty little passages, all alike."
+    },
+    {
+      "command": "go south",
+      "response": "Maze\n\nThis is part of a maze of twisty little passages, all alike.\n\nThere is a bloody axe here."
+    },
+    {
+      "command": "go east",
+      "response": "Maze\n\nThis is part of a maze of twisty little passages, all alike."
+    },
+    {
+      "command": "go up",
+      "response": "Maze\n\nThis is part of a maze of twisty little passages, all alike. A skeleton, probably the remains of a luckless adventurer, lies here.\n\nThe deceased adventurer's useless lantern is here.\n\nBeside the skeleton is a rusty knife.\n\nAn old leather bag, bulging with coins, is here.\n\nThere is a skeleton key here."
+    },
+    {
+      "command": "take coins",
+      "response": "Taken."
+    },
+    {
+      "command": "take key",
+      "response": "Taken."
+    },
+    {
+      "command": "go southwest",
+      "response": "Maze\n\nThis is part of a maze of twisty little passages, all alike."
+    },
+    {
+      "command": "go east",
+      "response": "Maze\n\nThis is part of a maze of twisty little passages, all alike."
+    },
+    {
+      "command": "go south",
+      "response": "Maze\n\nThis is part of a maze of twisty little passages, all alike."
+    },
+    {
+      "command": "go southeast",
+      "response": "Cyclops Room\n\nThis room has an exit on the northwest, and a staircase leading up. A cyclops, who looks prepared to eat horses (much less mere adventurers), blocks the staircase. From his state of health, and the bloodstains on the walls, you gather that he is not very friendly, though he likes people."
+    },
+    {
+      "command": "ulysses",
+      "response": "The cyclops, hearing the name of his father's deadly nemesis, flees the room by knocking down the wall on the east of the room."
+    },
+    {
+      "command": "go up",
+      "response": "You hear a scream of anguish as you violate the robber's hideaway. Using passages unknown to you, he rushes to its defense.\n\nTreasure Room\n\nThere is a suspicious-looking individual, holding a large bag, leaning against one wall. He is armed with a deadly stiletto.\n\nThere is a silver chalice, intricately engraved, here.\n\nYou dodge as the thief comes in low."
+    },
+    {
+      "command": "go down",
+      "response": "Cyclops Room"
+    },
+    {
+      "command": "go east",
+      "response": "Strange Passage\n\nThis is a long passage. To the west is one entrance. On the east there is an old wooden door, with a large opening in it (about cyclops sized)."
+    },
+    {
+      "command": "go east",
+      "response": "Living Room\n\nThere is a black book here.\n\nThere is a matchbook whose cover says \"Visit Beautiful FCD#3\" here.\n\nThere is a pair of candles here.\n\nYour collection of treasures consists of:\n\nA painting\n\nA platinum bar\n\nA crystal skull"
+    },
+    {
+      "command": "put egg in case",
+      "response": "Done."
+    },
+    {
+      "command": "put coins in case",
+      "response": "Done."
+    },
+    {
+      "command": "score",
+      "response": "Your score is 149 (total of 350 points), in 143 moves. This gives you the rank of Junior Adventurer."
+    },
+    {
+      "command": "take candles",
+      "response": "Taken."
+    },
+    {
+      "command": "take matches",
+      "response": "Taken."
+    },
+    {
+      "command": "take book",
+      "response": "Taken."
+    },
+    {
+      "command": "go down",
+      "response": "Cellar"
+    },
+    {
+      "command": "go south",
+      "response": "East of Chasm"
+    },
+    {
+      "command": "go east",
+      "response": "Gallery"
+    },
+    {
+      "command": "go north",
+      "response": "Studio\n\nThis appears to have been an artist's studio. The walls and floors are splattered with paints of 69 different colors. Strangely enough, nothing of value is hanging here. At the south end of the room is an open door (also covered with paint). A dark and narrow chimney leads up from a fireplace; although you might be able to get up it, it seems unlikely you could get back down.\n\nLoosely attached to a wall is a small piece of paper."
+    },
+    {
+      "command": "go south",
+      "response": "Gallery"
+    },
+    {
+      "command": "go west",
+      "response": "East of Chasm"
+    },
+    {
+      "command": "go north",
+      "response": "Cellar"
+    },
+    {
+      "command": "go north",
+      "response": "The Troll Room\n\nThere is a sword here."
+    },
+    {
+      "command": "take sword",
+      "response": "Taken."
+    },
+    {
+      "command": "go east",
+      "response": "East-West Passage"
+    },
+    {
+      "command": "go east",
+      "response": "Round Room"
+    },
+    {
+      "command": "go southeast",
+      "response": "Engravings Cave\n\nThere are old engravings on the walls here."
+    },
+    {
+      "command": "go east",
+      "response": "Dome Room"
+    },
+    {
+      "command": "go down",
+      "response": "Torch Room"
+    },
+    {
+      "command": "go south",
+      "response": "Temple"
+    },
+    {
+      "command": "go south",
+      "response": "Altar"
+    },
+    {
+      "command": "go down",
+      "response": "Cave"
+    },
+    {
+      "command": "go down",
+      "response": "Entrance to Hades\n\nOn the ground is a red hot bell."
+    },
+    {
+      "command": "go south",
+      "response": "Land of the Dead"
+    },
+    {
+      "command": "go north",
+      "response": "Entrance to Hades\n\nOn the ground is a red hot bell."
+    },
+    {
+      "command": "go up",
+      "response": "Cave"
+    },
+    {
+      "command": "go north",
+      "response": "Mirror Room"
+    },
+    {
+      "command": "touch mirror",
+      "response": "There is a rumble from deep within the earth and the room shakes."
+    },
+    {
+      "command": "go north",
+      "response": "Cold Passage\n\nThis is a cold and damp corridor where a long east-west passageway turns into a southward path."
+    },
+    {
+      "command": "go west",
+      "response": "Slide Room\n\nThis is a small chamber, which appears to have been part of a coal mine. On the south wall of the chamber the letters \"Granite Wall\" are etched in the rock. To the east is a long passage, and there is a steep metal slide twisting downward. To the north is a small opening."
+    },
+    {
+      "command": "go north",
+      "response": "Mine Entrance\n\nYou are standing at the entrance of what might have been a coal mine. The shaft enters the west wall, and there is another exit on the south end of the room."
+    },
+    {
+      "command": "go west",
+      "response": "Squeaky Room\n\nYou are in a small room. Strange squeaky sounds may be heard coming from the passage at the north end. You may also escape to the east.\n\nYour sword is glowing with a faint blue glow."
+    },
+    {
+      "command": "go north",
+      "response": "Fweep! Fweep! Fweep! Fweep!\n\nThe bat grabs you by the scruff of your neck and lifts you away....\n\nLadder Top\n\nThis is a very small room. In the corner is a rickety wooden ladder, leading downward. It might be safe to descend. There is also a staircase leading upward.\n\nYour sword is no longer glowing."
+    },
+    {
+      "command": "go down",
+      "response": "Ladder Bottom\n\nThis is a rather wide room. On one side is the bottom of a narrow wooden ladder. To the west and the south are passages leaving the room."
+    },
+    {
+      "command": "go south",
+      "response": "Dead End\n\nYou have come to a dead end in the mine.\n\nThere is a small pile of coal here."
+    },
+    {
+      "command": "drop book",
+      "response": "Dropped."
+    },
+    {
+      "command": "drop sword",
+      "response": "Dropped."
+    },
+    {
+      "command": "take coal",
+      "response": "Taken."
+    },
+    {
+      "command": "go north",
+      "response": "Ladder Bottom"
+    },
+    {
+      "command": "go west",
+      "response": "Timber Room\n\nThis is a long and narrow passage, which is cluttered with broken timbers. A wide passage comes from the east and turns at the west end of the room into a very narrow passageway. From the west comes a strong draft.\n\nThere is a broken timber here."
+    },
+    {
+      "command": "go west",
+      "response": "Drafty Room\n\nThis is a small drafty room in which is the bottom of a long shaft. To the south is a passageway and to the east a very narrow passage. In the shaft can be seen a heavy iron chain.\n\nFrom the chain is suspended a basket."
+    },
+    {
+      "command": "go south",
+      "response": "Machine Room\n\nThis is a large, cold room whose sole exit is to the north. In one corner there is a machine which is reminiscent of a clothes dryer. On its face is a switch which is labelled \"START\". The switch does not appear to be manipulable by any human hand (unless the fingers are about 1/16 by 1/4 inch). On the front of the machine is a large lid, which is closed."
+    },
+    {
+      "command": "drop coal",
+      "response": "Dropped."
+    },
+    {
+      "command": "go north",
+      "response": "Drafty Room\n\nFrom the chain is suspended a basket."
+    },
+    {
+      "command": "go east",
+      "response": "Timber Room\n\nThere is a broken timber here.\n\nThe lamp appears a bit dimmer."
+    },
+    {
+      "command": "go east",
+      "response": "Ladder Bottom"
+    },
+    {
+      "command": "go up",
+      "response": "Ladder Top"
+    },
+    {
+      "command": "go up",
+      "response": "Coal Mine\n\nThis is a non-descript part of a coal mine."
+    },
+    {
+      "command": "go north",
+      "response": "Coal Mine\n\nThis is a non-descript part of a coal mine."
+    },
+    {
+      "command": "go east",
+      "response": "Coal Mine\n\nThis is a non-descript part of a coal mine."
+    },
+    {
+      "command": "go south",
+      "response": "Coal Mine\n\nThis is a non-descript part of a coal mine."
+    },
+    {
+      "command": "go north",
+      "response": "Gas Room\n\nThis is a small room which smells strongly of coal gas. There is a short climb up some stairs and a narrow tunnel leading east.\n\nThere is a sapphire-encrusted bracelet here."
+    },
+    {
+      "command": "take bracelet",
+      "response": "Taken."
+    },
+    {
+      "command": "go up",
+      "response": "Smelly Room\n\nThis is a small non-descript room. However, from the direction of a small descending staircase a foul odor can be detected. To the south is a narrow tunnel."
+    },
+    {
+      "command": "go south",
+      "response": "Shaft Room\n\nThis is a large room, in the middle of which is a small shaft descending through the floor into darkness below. To the west and the north are exits from this room. Constructed over the top of the shaft is a metal framework to which a heavy iron chain is attached.\n\nAt the end of the chain is a basket."
+    },
+    {
+      "command": "go west",
+      "response": "Fweep! Fweep! Fweep! Fweep!\n\nThe bat grabs you by the scruff of your neck and lifts you away....\n\nCoal Mine"
+    },
+    {
+      "command": "take garlic",
+      "response": "Taken."
+    },
+    {
+      "command": "go east",
+      "response": "Coal Mine"
+    },
+    {
+      "command": "go south",
+      "response": "Coal Mine"
+    },
+    {
+      "command": "go north",
+      "response": "Gas Room"
+    },
+    {
+      "command": "go up",
+      "response": "Smelly Room"
+    },
+    {
+      "command": "go south",
+      "response": "Shaft Room\n\nAt the end of the chain is a basket."
+    },
+    {
+      "command": "go west",
+      "response": "Bat Room\n\nYou are in a small room which has doors only to the east and south.\n\nIn the corner of the room on the ceiling is a large vampire bat who is obviously deranged and holding his nose.\n\nThere is an exquisite jade figurine here."
+    },
+    {
+      "command": "take figurine",
+      "response": "Taken."
+    },
+    {
+      "command": "go south",
+      "response": "Squeaky Room"
+    },
+    {
+      "command": "go east",
+      "response": "Mine Entrance"
+    },
+    {
+      "command": "go south",
+      "response": "Slide Room"
+    },
+    {
+      "command": "go down",
+      "response": "Cellar"
+    },
+    {
+      "command": "go up",
+      "response": "Living Room\n\nYour collection of treasures consists of:\n\nA leather bag of coins\n\nA jewel-encrusted egg\n\nA painting\n\nA platinum bar\n\nA crystal skull"
+    },
+    {
+      "command": "put figurine in case",
+      "response": "Done."
+    },
+    {
+      "command": "put bracelet in case",
+      "response": "Done."
+    },
+    {
+      "command": "go down",
+      "response": "Cellar"
+    },
+    {
+      "command": "go south",
+      "response": "East of Chasm"
+    },
+    {
+      "command": "go east",
+      "response": "Gallery"
+    },
+    {
+      "command": "go west",
+      "response": "East of Chasm"
+    },
+    {
+      "command": "go north",
+      "response": "Cellar"
+    },
+    {
+      "command": "go north",
+      "response": "The Troll Room"
+    },
+    {
+      "command": "go east",
+      "response": "East-West Passage"
+    },
+    {
+      "command": "go east",
+      "response": "Round Room\n\nSomeone carrying a large bag is casually leaning against one of the walls here. He does not speak, but it is clear from his aspect that the bag will be taken only over his dead body."
+    },
+    {
+      "command": "go north",
+      "response": "North-South Passage\n\nThis is a high north-south passage, which forks to the northeast."
+    },
+    {
+      "command": "go northeast",
+      "response": "Deep Canyon"
+    },
+    {
+      "command": "go east",
+      "response": "Dam"
+    },
+    {
+      "command": "go north",
+      "response": "Dam Lobby\n\nSome guidebooks entitled \"Flood Control Dam #3\" are on the reception desk."
+    },
+    {
+      "command": "go north",
+      "response": "Maintenance Room\n\nThis is what appears to have been the maintenance room for Flood Control Dam #3. Apparently, this room has been ransacked recently, for most of the valuable equipment is gone. On the wall in front of you is a group of buttons colored blue, yellow, brown, and red. There are doorways to the west and south.\n\nThere is a group of tool chests here.\n\nThere is a wrench here.\n\nThere is an object which looks like a tube of toothpaste here.\n\nThere is a screwdriver here."
+    },
+    {
+      "command": "take screwdriver",
+      "response": "Taken."
+    },
+    {
+      "command": "go south",
+      "response": "Dam Lobby\n\nSome guidebooks entitled \"Flood Control Dam #3\" are on the reception desk."
+    },
+    {
+      "command": "go south",
+      "response": "Dam"
+    },
+    {
+      "command": "go west",
+      "response": "Reservoir South\n\nYou are in a long room on the south shore of a large lake, far too deep and wide for crossing.\n\nThere is a path along the stream to the east or west, a steep pathway climbing southwest along the edge of a chasm, and a path leading into a canyon to the southeast."
+    },
+    {
+      "command": "go southeast",
+      "response": "Deep Canyon"
+    },
+    {
+      "command": "go southwest",
+      "response": "North-South Passage"
+    },
+    {
+      "command": "go south",
+      "response": "Round Room"
+    },
+    {
+      "command": "go west",
+      "response": "East-West Passage"
+    },
+    {
+      "command": "go west",
+      "response": "The Troll Room"
+    },
+    {
+      "command": "go west",
+      "response": "Maze\n\nThis is part of a maze of twisty little passages, all alike."
+    },
+    {
+      "command": "go south",
+      "response": "Maze\n\nThis is part of a maze of twisty little passages, all alike.\n\nThere is a bloody axe here."
+    },
+    {
+      "command": "go east",
+      "response": "Maze\n\nThis is part of a maze of twisty little passages, all alike."
+    },
+    {
+      "command": "go up",
+      "response": "Maze\n\nThis is part of a maze of twisty little passages, all alike. A skeleton, probably the remains of a luckless adventurer, lies here.\n\nThe deceased adventurer's useless lantern is here.\n\nBeside the skeleton is a rusty knife."
+    },
+    {
+      "command": "go southwest",
+      "response": "Maze\n\nThis is part of a maze of twisty little passages, all alike."
+    },
+    {
+      "command": "go east",
+      "response": "Maze\n\nThis is part of a maze of twisty little passages, all alike.\n\nA \"lean and hungry\" gentleman just wandered through, carrying a large bag. Finding nothing of value, he left disgruntled."
+    },
+    {
+      "command": "go south",
+      "response": "Maze\n\nThis is part of a maze of twisty little passages, all alike."
+    },
+    {
+      "command": "go southeast",
+      "response": "Cyclops Room"
+    },
+    {
+      "command": "go up",
+      "response": "You hear a scream of anguish as you violate the robber's hideaway. Using passages unknown to you, he rushes to its defense.\n\nTreasure Room\n\nThere is a suspicious-looking individual, holding a large bag, leaning against one wall. He is armed with a deadly stiletto.\n\nThere is a silver chalice, intricately engraved, here.\n\nThe thief attacks, and you fall back desperately."
+    },
+    {
+      "command": "go down",
+      "response": "Cyclops Room"
+    },
+    {
+      "command": "go east",
+      "response": "Strange Passage"
+    },
+    {
+      "command": "go east",
+      "response": "Living Room\n\nYour collection of treasures consists of:\n\nA sapphire-encrusted bracelet\n\nA jade figurine\n\nA leather bag of coins\n\nA jewel-encrusted egg\n\nA painting\n\nA platinum bar\n\nA crystal skull"
+    },
+    {
+      "command": "go down",
+      "response": "Cellar"
+    },
+    {
+      "command": "go south",
+      "response": "East of Chasm"
+    },
+    {
+      "command": "go east",
+      "response": "Gallery"
+    },
+    {
+      "command": "go north",
+      "response": "Studio\n\nLoosely attached to a wall is a small piece of paper."
+    },
+    {
+      "command": "go south",
+      "response": "Gallery"
+    },
+    {
+      "command": "go west",
+      "response": "East of Chasm"
+    },
+    {
+      "command": "go north",
+      "response": "Cellar"
     }
   ]
 }

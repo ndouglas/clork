@@ -516,10 +516,12 @@
              (utils/tell "Someone carrying a large bag is casually leaning against one of the walls here. He does not speak, but it is clear from his aspect that the bag will be taken only over his dead body."))
          true]
 
-        ;; If visible, fighting, and losing - retreat
+        ;; If visible, fighting, and losing - retreat (but NEVER from treasure room!)
+        ;; In the treasure room, thief fights to the death
         (and thief-visible?
              fighting?
-             (not (winning? game-state :thief)))
+             (not (winning? game-state :thief))
+             (not= here :treasure-room))
         [(-> game-state
              (trace/trace-thief "VS-ADV: Losing fight, retreating!")
              (utils/tell "Your opponent, determining discretion to be the better part of valor, decides to terminate this little contretemps. With a rueful nod of his head, he steps backward into the gloom and disappears.")
@@ -591,8 +593,9 @@
         [(trace/trace-thief game-state "VS-ADV: No action taken") false])
 
       ;; Thief already announced (here?)
+      ;; If fighting, don't use robbery logic - combat is handled elsewhere
       :else
-      (if (and thief-visible? (< (random/rand-int* 100) 30))
+      (if (and thief-visible? (not fighting?) (< (random/rand-int* 100) 30))
         ;; 30% chance to rob and leave
         (let [gs (trace/trace-thief game-state "VS-ADV: Announced, trying to rob and leave...")
               [gs room-robbed?] (rob gs here :thief 100)
