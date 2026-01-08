@@ -146,8 +146,24 @@
                     s))
                 s))
             #{}
-            exits)]
-       (assoc graph room-id (set/union regular-destinations computed-destinations))))
+            exits)
+           ;; Add destinations from teleport edges (e.g., prayer at altar)
+           teleport-destinations
+           (reduce-kv
+            (fn [s [from to] spec]
+              (if (= from room-id)
+                (let [required-flags (get spec :flags #{})
+                      flags-ok? (or (empty? required-flags)
+                                    (set/subset? required-flags available-flags))]
+                  (if flags-ok?
+                    (conj s to)
+                    s))
+                s))
+            #{}
+            actions/teleport-edges)]
+       (assoc graph room-id (set/union regular-destinations
+                                       computed-destinations
+                                       teleport-destinations))))
    {}
    (:rooms game-state)))
 
@@ -206,8 +222,25 @@
                     m))
                 m))
             {}
-            exits)]
-       (assoc graph room-id (merge regular-dir-map computed-dir-map))))
+            exits)
+           ;; Add direction map from teleport edges (e.g., prayer at altar)
+           ;; Uses the command as a keyword (e.g., :pray) which path-to-directions
+           ;; will convert to the string "pray"
+           teleport-dir-map
+           (reduce-kv
+            (fn [m [from to] spec]
+              (if (= from room-id)
+                (let [required-flags (get spec :flags #{})
+                      flags-ok? (or (empty? required-flags)
+                                    (set/subset? required-flags available-flags))
+                      cmd (keyword (get spec :command))]
+                  (if flags-ok?
+                    (assoc m to cmd)
+                    m))
+                m))
+            {}
+            actions/teleport-edges)]
+       (assoc graph room-id (merge regular-dir-map computed-dir-map teleport-dir-map))))
    {}
    (:rooms game-state)))
 

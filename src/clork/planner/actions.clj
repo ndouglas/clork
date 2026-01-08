@@ -214,6 +214,18 @@
    ;; whether we're underground and have magic-flag/grating-unlocked
    })
 
+(def teleport-edges
+  "Map of special teleport actions that aren't normal room exits.
+
+   These are one-way shortcuts triggered by verbs rather than movement.
+   Format: {[from-room to-room] {:command \"verb\" :flags #{...}}}"
+  {;; Praying at the south temple altar teleports you to the forest
+   ;; This is a significant shortcut from underground back to the surface
+   [:south-temple :forest-1]
+   {:command "pray"
+    :flags #{}
+    :notes "Praying at altar teleports to forest (one-way)"}})
+
 (defn get-computed-exit
   "Get the destination and preconditions for a computed exit.
    Returns nil if the exit is not known."
