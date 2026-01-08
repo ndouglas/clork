@@ -5,7 +5,8 @@
    - Merges adjacent movement actions into efficient routes
    - Optimizes multi-destination routes (traveling salesman approach)
    - Handles inventory constraints (deposit trips)
-   - Generates executable command sequences"
+   - Generates executable command sequences
+   - Validates paths by running them through the game engine"
   (:require [clojure.set :as set]
             [clork.planner.actions :as actions]
             [clork.planner.constraints :as constraints]
@@ -91,28 +92,58 @@
 
 (defn build-nav-graph
   "Build navigation graph from game state.
-   Includes both regular exits and known computed exits."
-  [game-state]
+   Includes both regular exits and known computed exits.
+
+   Options:
+   - :available-flags - set of flags currently available. Flag-gated exits
+     are excluded unless their required flag is in this set. Default #{} (conservative).
+   - :inventory-size - current number of items in inventory. Exits with :max-inventory
+     constraints are excluded if inventory exceeds the limit. Default nil (no check)."
+  [game-state & {:keys [available-flags inventory-size]
+                 :or {available-flags #{} inventory-size nil}}]
   (reduce-kv
    (fn [graph room-id room-def]
      (let [exits (:exits room-def {})
-           ;; Get destinations from regular exits
+           ;; Get destinations from regular exits (excluding flag-gated ones we can't use)
            regular-destinations
            (reduce-kv
             (fn [s dir exit]
-              (let [target (actions/parse-exit exit dir)]
-                (if (:to target)
-                  (conj s (:to target))
+              (let [target (actions/parse-exit exit dir)
+                    dest (:to target)
+                    ;; Check room-definition level flags
+                    required-flags (get-in target [:requires :flags] #{})
+                    ;; Also check door-gated-exits map for this transition
+                    door-gate (get actions/door-gated-exits [room-id dest])
+                    door-flags (get door-gate :flags #{})
+                    all-required-flags (set/union required-flags door-flags)
+                    ;; Only include if no flag required, or we have all required flags
+                    flags-ok? (or (empty? all-required-flags)
+                                  (set/subset? all-required-flags available-flags))]
+                (if (and dest flags-ok?)
+                  (conj s dest)
                   s)))
             #{}
             exits)
-           ;; Add destinations from known computed exits
+           ;; Add destinations from known computed exits (with flag AND inventory checks)
            computed-destinations
            (reduce-kv
             (fn [s dir exit]
               (if (and (map? exit) (:per exit))
-                (let [dest (get actions/computed-exit-destinations [room-id (:per exit)])]
-                  (if dest (conj s dest) s))
+                (let [per-fn (:per exit)
+                      spec (actions/get-computed-exit room-id per-fn)
+                      dest (get actions/computed-exit-destinations [room-id per-fn])
+                      ;; Check flag constraints
+                      required-flags (get-in spec [:preconditions :flags] #{})
+                      flags-ok? (or (empty? required-flags)
+                                    (set/subset? required-flags available-flags))
+                      ;; Check inventory constraints (e.g., chimney max 2 items)
+                      max-inv (get-in spec [:preconditions :max-inventory])
+                      inv-ok? (or (nil? max-inv)
+                                  (nil? inventory-size)
+                                  (<= inventory-size max-inv))]
+                  (if (and dest flags-ok? inv-ok?)
+                    (conj s dest)
+                    s))
                 s))
             #{}
             exits)]
@@ -122,28 +153,57 @@
 
 (defn build-room-graph-with-directions
   "Build graph that tracks direction for each connection.
-   Includes both regular exits and known computed exits."
-  [game-state]
+   Includes both regular exits and known computed exits.
+
+   Options:
+   - :available-flags - set of flags currently available. Flag-gated exits
+     are excluded unless their required flag is in this set. Default #{} (conservative).
+   - :inventory-size - current number of items in inventory. Exits with :max-inventory
+     constraints are excluded if inventory exceeds the limit. Default nil (no check)."
+  [game-state & {:keys [available-flags inventory-size]
+                 :or {available-flags #{} inventory-size nil}}]
   (reduce-kv
    (fn [graph room-id room-def]
      (let [exits (:exits room-def {})
-           ;; Get direction map from regular exits
+           ;; Get direction map from regular exits (excluding flag-gated ones we can't use)
            regular-dir-map
            (reduce-kv
             (fn [m dir exit]
-              (let [parsed (actions/parse-exit exit dir)]
-                (if (:to parsed)
-                  (assoc m (:to parsed) dir)
+              (let [parsed (actions/parse-exit exit dir)
+                    dest (:to parsed)
+                    ;; Check room-definition level flags
+                    required-flags (get-in parsed [:requires :flags] #{})
+                    ;; Also check door-gated-exits map for this transition
+                    door-gate (get actions/door-gated-exits [room-id dest])
+                    door-flags (get door-gate :flags #{})
+                    all-required-flags (set/union required-flags door-flags)
+                    flags-ok? (or (empty? all-required-flags)
+                                  (set/subset? all-required-flags available-flags))]
+                (if (and dest flags-ok?)
+                  (assoc m dest dir)
                   m)))
             {}
             exits)
-           ;; Add direction map from known computed exits
+           ;; Add direction map from known computed exits (with flag AND inventory checks)
            computed-dir-map
            (reduce-kv
             (fn [m dir exit]
               (if (and (map? exit) (:per exit))
-                (let [dest (get actions/computed-exit-destinations [room-id (:per exit)])]
-                  (if dest (assoc m dest dir) m))
+                (let [per-fn (:per exit)
+                      spec (actions/get-computed-exit room-id per-fn)
+                      dest (get actions/computed-exit-destinations [room-id per-fn])
+                      ;; Check flag constraints
+                      required-flags (get-in spec [:preconditions :flags] #{})
+                      flags-ok? (or (empty? required-flags)
+                                    (set/subset? required-flags available-flags))
+                      ;; Check inventory constraints (e.g., chimney max 2 items)
+                      max-inv (get-in spec [:preconditions :max-inventory])
+                      inv-ok? (or (nil? max-inv)
+                                  (nil? inventory-size)
+                                  (<= inventory-size max-inv))]
+                  (if (and dest flags-ok? inv-ok?)
+                    (assoc m dest dir)
+                    m))
                 m))
             {}
             exits)]
@@ -173,9 +233,14 @@
 
 (def door-setup-commands
   "Commands required before traversing certain room transitions.
-   Format: {[from-room to-room] [commands...]}"
-  {[:behind-house :kitchen] ["open window"]
-   [:living-room :cellar] ["move rug" "open trap door"]})
+   Format: {[from-room to-room] {:commands [...] :skip-if-flags #{...}}}
+
+   When :skip-if-flags is provided, the commands are skipped if ALL of those
+   flags are already achieved (meaning the setup has already been done)."
+  {[:behind-house :kitchen] {:commands ["open window"]
+                             :skip-if-flags #{}}  ; Window stays open
+   [:living-room :cellar] {:commands ["move rug" "open trap door"]
+                           :skip-if-flags #{:rug-moved :trap-door-open}}})
 
 (def conditional-one-way-transitions
   "Transitions that are one-way UNTIL certain flags are set.
@@ -199,8 +264,8 @@
   "When you can't return the way you came, use these routes.
    Format: {blocked-return-to alternative-route-via}"
   {:living-room {:via :strange-passage
-                 :requires #{:magic-flag}
-                 :from-rooms #{:cyclops-room}}})
+                 :requires #{:cyclops-flag}
+                 :from-rooms #{:cyclops-room :treasure-room :strange-passage}}})
 
 (def underground-rooms
   "Rooms that are 'underground' - below the one-way trap door.
@@ -224,18 +289,36 @@
   (contains? underground-rooms room))
 
 (defn door-commands-for-transition
-  "Get door/setup commands needed for a room transition."
-  [from-room to-room]
-  (get door-setup-commands [from-room to-room] []))
+  "Get door/setup commands needed for a room transition.
+
+   If available-flags is provided and contains ALL skip-if-flags for this
+   transition, returns empty (the setup has already been done)."
+  ([from-room to-room]
+   (door-commands-for-transition from-room to-room #{}))
+  ([from-room to-room available-flags]
+   (if-let [entry (get door-setup-commands [from-room to-room])]
+     (let [{:keys [commands skip-if-flags]} entry]
+       (if (and (seq skip-if-flags)
+                (set/subset? skip-if-flags available-flags))
+         []  ; All flags achieved, skip commands
+         commands))
+     [])))
 
 (defn generate-navigation
   "Generate navigation commands from current location to destination.
    Includes door-opening commands when needed.
 
-   Optional :blocked-edges parameter excludes specific room transitions
-   from pathfinding (e.g., #{[:cellar :living-room]} when trap door is barred)."
-  [game-state current-room dest-room & {:keys [blocked-edges] :or {blocked-edges #{}}}]
-  (let [base-graph (build-nav-graph game-state)
+   Options:
+   - :blocked-edges - set of [from to] pairs to exclude from pathfinding
+   - :available-flags - set of flags currently available. Flag-gated exits
+     are only used if their required flag is in this set. Default #{} (conservative).
+   - :inventory-size - current number of items in inventory. Computed exits with
+     :max-inventory constraints are excluded if inventory exceeds limit."
+  [game-state current-room dest-room & {:keys [blocked-edges available-flags inventory-size]
+                                         :or {blocked-edges #{} available-flags #{} inventory-size nil}}]
+  (let [base-graph (build-nav-graph game-state
+                                     :available-flags available-flags
+                                     :inventory-size inventory-size)
         ;; Remove blocked edges from graph
         graph (reduce (fn [g [from to]]
                         (if (contains? (get g from #{}) to)
@@ -243,7 +326,9 @@
                           g))
                       base-graph
                       blocked-edges)
-        room-graph (build-room-graph-with-directions game-state)
+        room-graph (build-room-graph-with-directions game-state
+                                                      :available-flags available-flags
+                                                      :inventory-size inventory-size)
         path (find-path graph current-room dest-room)]
     (when path
       (let [;; Generate direction commands with door handling
@@ -254,7 +339,8 @@
                 commands
                 (let [from (first remaining)
                       to (second remaining)
-                      door-cmds (door-commands-for-transition from to)
+                      ;; Pass available-flags to skip commands for already-achieved setup
+                      door-cmds (door-commands-for-transition from to available-flags)
                       dir-map (get room-graph from {})
                       dir (get dir-map to)]
                   (if dir
@@ -409,6 +495,9 @@
    - After going down through trap door, cellar->living-room is blocked
    - Until magic-flag or grating-unlocked is achieved
 
+   Also tracks inventory to avoid routes with inventory constraints (e.g., chimney
+   requires <= 2 items).
+
    Returns:
    {:commands [\"cmd\" ...]
     :total-moves n
@@ -422,7 +511,11 @@
          combat-actions []
          ;; Track underground state
          underground? false
-         has-return-unlock? false]
+         has-return-unlock? false
+         ;; Track available flags (accumulates as actions set flags)
+         available-flags #{}
+         ;; Track current inventory (set of item IDs)
+         current-inventory #{}]
     (if (empty? remaining)
       {:commands all-commands
        :total-moves (count all-commands)
@@ -432,14 +525,24 @@
             dest-room (action-location action)
 
             ;; Calculate blocked edges based on current state
-            ;; Trap door return is blocked when underground without unlock
-            blocked-edges (if (and underground? (not has-return-unlock?))
-                            #{[:cellar :living-room]}
+            ;; Once you go down through the trap door, it bars itself PERMANENTLY.
+            ;; Having magic-flag or grating-unlocked doesn't unbar the trap door -
+            ;; those flags just open alternative routes (strange-passage, grating).
+            ;; The trap door is blocked in BOTH directions forever after first use:
+            ;; - Can't go UP from cellar (bars block you)
+            ;; - Can't go DOWN from living-room (trap door closed and barred)
+            blocked-edges (if underground?
+                            #{[:cellar :living-room]
+                              [:living-room :cellar]}
                             #{})
 
+            ;; Generate navigation with current inventory size
+            ;; This excludes routes with inventory constraints we can't meet
             nav (when (and dest-room (not= dest-room current-room))
                   (generate-navigation game-state current-room dest-room
-                                       :blocked-edges blocked-edges))
+                                       :blocked-edges blocked-edges
+                                       :available-flags available-flags
+                                       :inventory-size (count current-inventory)))
             nav-commands (or (:commands nav) [])
 
             ;; Use combat-aware expansion
@@ -460,7 +563,18 @@
             ;; magic-flag or grating-unlocked allows return via trap door
             just-unlocked? (or (action-sets-flag? action :magic-flag)
                                (action-sets-flag? action :grating-unlocked))
-            new-has-unlock? (or has-return-unlock? just-unlocked?)]
+            new-has-unlock? (or has-return-unlock? just-unlocked?)
+
+            ;; Update available flags with flags set by this action
+            new-flags (get-in action [:effects :flags-set] #{})
+            new-available-flags (set/union available-flags new-flags)
+
+            ;; Update inventory based on action effects
+            items-added (get-in action [:effects :inventory-add] #{})
+            items-removed (get-in action [:effects :inventory-remove] #{})
+            new-inventory (-> current-inventory
+                              (set/union items-added)
+                              (set/difference items-removed))]
 
         (recur (rest remaining)
                (or dest-room current-room)
@@ -475,7 +589,9 @@
                  (conj combat-actions combat-info)
                  combat-actions)
                new-underground?
-               new-has-unlock?)))))
+               new-has-unlock?
+               new-available-flags
+               new-inventory)))))
 
 ;; =============================================================================
 ;; Deposit Trip Insertion
@@ -644,3 +760,181 @@
       (pos? diff) (println (str "Route 2 is " diff " moves shorter"))
       (neg? diff) (println (str "Route 1 is " (- diff) " moves shorter"))
       :else (println "Routes are equal length"))))
+
+;; =============================================================================
+;; Plan Validation
+;; =============================================================================
+;; Note: Actual validation via game execution is in clork.planner.validator
+;; These functions provide the interface for validated plan generation.
+
+(defn validate-command-sequence
+  "Validate a command sequence by executing it through the game engine.
+
+   Parameters:
+   - game-state: Initialized game state to start from
+   - command-seq: Output from plan-to-command-sequence
+
+   Returns:
+   {:valid? boolean
+    :validations [{:action id :valid? bool ...}]
+    :first-failure (if any) {:action id :error {...}}
+    :final-state game-state (if valid)}
+
+   Requires clork.planner.validator to be loaded."
+  [game-state command-seq]
+  ;; Lazy require to avoid circular dependency
+  (require 'clork.planner.validator)
+  (let [validate-fn (resolve 'clork.planner.validator/validate-plan-navigations)]
+    (validate-fn game-state (:by-action command-seq))))
+
+(defn plan-to-validated-command-sequence
+  "Convert a plan to commands AND validate each navigation segment.
+
+   Like plan-to-command-sequence, but actually runs each navigation
+   through the game engine to verify it works.
+
+   Parameters:
+   - game-state: Initialized game state (used for both nav graph AND validation)
+   - plan: Sequence of actions
+   - start-room: Starting location
+   - opts: {:combat-mode :optimistic|:pessimistic|:with-retry}
+
+   Returns:
+   {:commands [...]
+    :total-moves n
+    :by-action [...]
+    :combat-actions [...]
+    :validation {:valid? bool :validations [...] :first-failure {...}}}
+
+   Throws assertion error if validation fails."
+  [game-state plan start-room & {:keys [combat-mode] :or {combat-mode :pessimistic}}]
+  (let [;; Generate command sequence
+        cmd-seq (plan-to-command-sequence game-state plan start-room
+                                          :combat-mode combat-mode)
+        ;; Validate navigations
+        validation (validate-command-sequence game-state cmd-seq)]
+    (when-not (:valid? validation)
+      (throw (ex-info "Plan validation failed"
+                      {:type :validation-failed
+                       :first-failure (:first-failure validation)
+                       :command-sequence cmd-seq})))
+    (assoc cmd-seq :validation validation)))
+
+;; =============================================================================
+;; Location Dependency Detection
+;; =============================================================================
+
+(def flag-gated-regions
+  "Map of flags to the rooms they unlock access to.
+   Format: {flag #{rooms...}}
+
+   When a room is in a flag-gated region, reaching that room requires
+   the corresponding flag to be achieved first."
+  {:troll-flag
+   ;; Troll blocks west exit from troll-room to maze-1
+   ;; All maze rooms require troll-flag
+   #{:maze-1 :maze-2 :maze-3 :maze-4 :maze-5 :maze-6 :maze-7 :maze-8
+     :maze-9 :maze-10 :maze-11 :maze-12 :maze-13 :maze-14 :maze-15
+     :dead-end :grating-room
+     ;; Also deep canyon direction from troll-room
+     :deep-canyon :loud-room :round-room
+     ;; And chasm area (needs :troll-flag for safe passage)
+     :east-of-chasm :west-of-chasm}
+
+   :cyclops-flag
+   ;; Cyclops blocks up from cyclops-room to treasure-room
+   #{:treasure-room :strange-passage}
+
+   :dome-flag
+   ;; Rope must be tied at dome-room to access torch-room
+   #{:torch-room}
+
+   :lld-flag
+   ;; Exorcism required to enter land of living dead
+   #{:land-of-living-dead :entrance-to-hades}
+
+   ;; Trap door access - these rooms are reached via trap door from living room
+   ;; Requires moving rug and opening trap door first
+   :rug-moved
+   #{:cellar :troll-room}
+
+   :trap-door-open
+   #{:cellar :troll-room}})
+
+(def flag-gated-rooms
+  "Inverse map: room -> set of flags required to reach it.
+   Built from flag-gated-regions."
+  (reduce-kv
+   (fn [m flag rooms]
+     (reduce (fn [m room]
+               (update m room (fnil conj #{}) flag))
+             m
+             rooms))
+   {}
+   flag-gated-regions))
+
+(defn flags-required-for-room
+  "Get the set of flags required to reach a specific room.
+   Returns empty set if room is always accessible."
+  [room-id]
+  (get flag-gated-rooms room-id #{}))
+
+(defn find-flags-for-path
+  "Find what additional flags are needed to reach dest-room from start-room.
+
+   Parameters:
+   - game-state: Game state with room definitions
+   - start-room: Starting location
+   - dest-room: Target location
+   - available-flags: Flags already available
+
+   Returns:
+   {:reachable? boolean
+    :required-flags #{flags needed but not available}
+    :path path-if-reachable}"
+  [game-state start-room dest-room available-flags]
+  ;; First try with current flags
+  (let [graph (build-nav-graph game-state :available-flags available-flags)
+        path (find-path graph start-room dest-room)]
+    (if path
+      {:reachable? true
+       :required-flags #{}
+       :path path}
+      ;; No path found - check what flags would help
+      ;; Try adding flags progressively to see which ones enable the path
+      (let [all-flags (set (keys flag-gated-regions))
+            missing-flags (set/difference all-flags available-flags)
+            ;; Try with each additional flag to see which enables path
+            helpful-flags
+            (filter (fn [flag]
+                      (let [test-flags (conj available-flags flag)
+                            test-graph (build-nav-graph game-state :available-flags test-flags)
+                            test-path (find-path test-graph start-room dest-room)]
+                        (some? test-path)))
+                    missing-flags)]
+        (if (seq helpful-flags)
+          {:reachable? false
+           :required-flags (set helpful-flags)
+           :path nil}
+          ;; No single flag helps - might need multiple or path doesn't exist
+          ;; Try with all flags as sanity check
+          (let [full-graph (build-nav-graph game-state :available-flags all-flags)
+                full-path (find-path full-graph start-room dest-room)]
+            (if full-path
+              ;; Path exists with all flags - return required region flags
+              {:reachable? false
+               :required-flags (flags-required-for-room dest-room)
+               :path nil}
+              ;; Path doesn't exist even with all flags - truly unreachable
+              {:reachable? false
+               :required-flags #{}
+               :path nil
+               :error :no-path})))))))
+
+(defn location-dependencies
+  "Get all flag dependencies for reaching a location.
+   Returns set of flags that must be achieved before going to this room."
+  [game-state dest-room]
+  (let [start-room :west-of-house  ; Game always starts here
+        result (find-flags-for-path game-state start-room dest-room #{})]
+    (:required-flags result #{})))

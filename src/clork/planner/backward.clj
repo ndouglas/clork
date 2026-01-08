@@ -12,10 +12,12 @@
    - Flag dependencies (troll-flag before cyclops-room)
    - Inventory constraints (deposit trips when overloaded)
    - One-way paths (collect items before committing)
-   - Light requirements (lamp/torch in dark areas)"
+   - Light requirements (lamp/torch in dark areas)
+   - Location dependencies (flags required to reach destinations)"
   (:require [clojure.set :as set]
             [clork.planner.actions :as actions]
-            [clork.planner.constraints :as constraints]))
+            [clork.planner.constraints :as constraints]
+            [clork.planner.optimizer :as optimizer]))
 
 ;; Forward declaration for plan ordering
 (declare sort-plan-by-dependencies)
@@ -236,13 +238,20 @@
           ;; Special handling for location goals:
           ;; We treat them as implicitly satisfiable via A* pathfinding.
           ;; The optimizer will generate actual navigation commands.
-          ;; However, we need to check constraints!
+          ;; However, we need to check constraints AND location dependencies!
           (if (= :location (goal-type goal))
             (let [target-room (second goal)
                   ;; Check: Light requirements for dark rooms
+                  ;; Need both the lantern AND have it turned on
                   needs-light? (constraints/requires-light? target-room)
-                  has-light? (or (contains? (:inventory achieved-state) :brass-lantern)
-                                 (contains? (:inventory achieved-state) :ivory-torch))
+                  has-lantern? (or (contains? (:inventory achieved-state) :brass-lantern)
+                                   (contains? (:inventory achieved-state) :ivory-torch))
+                  lantern-on? (contains? (:flags achieved-state) :lantern-on)
+
+                  ;; Check: Location dependencies (flags required to reach this room)
+                  ;; This ensures actions at flag-gated destinations get properly ordered
+                  required-flags (optimizer/flags-required-for-room target-room)
+                  missing-location-flags (set/difference required-flags (:flags achieved-state))
 
                   ;; NOTE: We no longer add magic-flag requirement for underground return.
                   ;; The chimney (studio -> kitchen) provides an alternate exit from underground
@@ -251,9 +260,17 @@
 
                   ;; Build new goals
                   base-goals (disj goals goal)
-                  final-goals (if (and needs-light? (not has-light?))
-                                (conj base-goals [:have :brass-lantern])
-                                base-goals)]
+                  ;; Add light requirements if needed:
+                  ;; 1. Need to have the lantern
+                  ;; 2. Need to turn it on (adds :lantern-on flag goal)
+                  with-lantern (if (and needs-light? (not has-lantern?))
+                                 (conj base-goals [:have :brass-lantern])
+                                 base-goals)
+                  with-light (if (and needs-light? (not lantern-on?))
+                               (conj with-lantern :lantern-on)
+                               with-lantern)
+                  ;; Add location dependency flags as goals
+                  final-goals (set/union with-light missing-location-flags)]
               (recur final-goals
                      plan
                      achieved-state
@@ -299,7 +316,7 @@
 
                         ;; Add achiever to plan
                         (let [new-precond-goals (action-preconditions-as-goals achiever)
-                              new-achieved (actions/apply-action-effects achiever achieved-state)
+                              new-achieved (actions/apply-action-effects achieved-state achiever)
                               remaining-goals (-> goals
                                                   (disj goal)
                                                   (set/union new-precond-goals))]
@@ -367,6 +384,7 @@
    2. Actions that add items come before actions that need them
    3. Take actions come before deposit actions for same item
    4. If plan has underground actions, deposit actions depend on magic-flag provider
+   5. Actions at flag-gated locations depend on flag providers
    Uses Kahn's algorithm."
   [plan]
   (if (< (count plan) 2)
@@ -390,7 +408,7 @@
                 (for [a plan]
                   [(:id a)
                    (set/union
-                    ;; Flag dependencies
+                    ;; Flag dependencies (explicit preconditions)
                     (set (for [flag (action-requires a)
                                :when (contains? flag-providers flag)]
                            (get flag-providers flag)))
@@ -398,6 +416,14 @@
                     (set (for [item (action-requires-in-inventory a)
                                :when (contains? item-providers item)]
                            (get item-providers item)))
+                    ;; Location dependencies:
+                    ;; Actions at flag-gated locations depend on flag providers
+                    (let [location (action-location a)
+                          required-flags (when location
+                                           (optimizer/flags-required-for-room location))]
+                      (set (for [flag required-flags
+                                 :when (contains? flag-providers flag)]
+                             (get flag-providers flag))))
                     ;; Deposit depends on take for same item
                     (when-let [treasure (action-deposits-item a)]
                       (if-let [provider (get item-providers treasure)]
@@ -542,6 +568,66 @@
     (plan-backward goal-state initial-state registry)))
 
 ;; =============================================================================
+;; Treasure Categories
+;; =============================================================================
+
+(def easy-treasures
+  "Treasures that can be collected with just troll-flag.
+   These are accessible via trap door + maze without additional puzzles."
+  [:bag-of-coins   ; maze-5 - just need to navigate maze
+   :jeweled-egg    ; tree/forest - on surface, no flags needed
+   :painting])     ; gallery - accessible via cellar
+
+(def medium-treasures
+  "Treasures requiring additional flags or puzzle solutions."
+  [:ivory-torch    ; torch-room - needs dome-flag (rope tied)
+   :emerald        ; reservoir - needs dam-opened
+   :platinum-bar   ; loud-room - needs loud-room-solved
+   :sceptre        ; temple - needs navigation through maze
+   :gold-coffin    ; egyptian room - just navigation
+   :crystal-skull  ; hades - needs lld-flag (exorcism)
+   :pot-of-gold])  ; end-of-rainbow - needs rainbow-flag
+
+(def hard-treasures
+  "Treasures requiring killing the thief."
+  [:jade-figurine       ; treasure-room - needs thief-dead
+   :sapphire-bracelet   ; treasure-room - needs thief-dead
+   :clockwork-canary    ; in egg, opened by thief
+   :huge-diamond        ; coal mine shaft - needs thief-dead or timing
+   :scarab])            ; coal mine - needs complex navigation
+
+;; =============================================================================
+;; Treasure Planning
+;; =============================================================================
+
+(defn plan-treasure-list
+  "Plan collection of a specific list of treasures.
+   Returns {:success? bool :plans [...] :final-state state}"
+  [registry initial-state treasure-list]
+  (loop [remaining treasure-list
+         state initial-state
+         plans []]
+    (if (empty? remaining)
+      {:success? true :plans plans :final-state state}
+      (let [treasure (first remaining)
+            _ (println "  Planning for" treasure "...")
+            plan-result (plan-treasure-collection registry treasure state)]
+        (if (:success? plan-result)
+          (let [final-state (reduce actions/apply-action-effects
+                                    state
+                                    (:plan plan-result))]
+            (recur (rest remaining)
+                   final-state
+                   (conj plans {:treasure treasure
+                                :plan (:plan plan-result)})))
+          ;; Skip this treasure and continue with others
+          (do
+            (println "  ! Could not plan for" treasure "- skipping")
+            (recur (rest remaining)
+                   state
+                   plans)))))))
+
+;; =============================================================================
 ;; Complete Speedrun Planning
 ;; =============================================================================
 
@@ -549,9 +635,9 @@
   "Generate a complete speedrun plan.
 
    Strategy:
-   1. Achieve essential flags first (unlock areas)
-   2. Collect and deposit treasures in efficient order
-   3. Navigate to stone barrow to win
+   1. Achieve troll-flag (opens underground)
+   2. Achieve cyclops-flag (opens strange-passage for return trips)
+   3. Collect treasures with return route available
 
    Returns:
    {:success? bool
@@ -562,26 +648,64 @@
   (let [registry (actions/build-action-registry game-state)
         initial-state (constraints/initial-planning-state game-state)]
 
-    ;; Phase 1: Essential flags
-    (println "Planning Phase 1: Essential flags...")
-    (let [flag-plan (plan-flag-achievement registry :troll-flag initial-state)]
-      (if-not (:success? flag-plan)
-        {:success? false :error "Failed to plan troll flag" :details flag-plan}
+    ;; Phase 1: Kill troll
+    (println "Planning Phase 1: Kill troll...")
+    (let [troll-plan (plan-flag-achievement registry :troll-flag initial-state)]
+      (if-not (:success? troll-plan)
+        {:success? false :error "Failed to plan troll flag" :details troll-plan}
 
-        ;; Phase 2: More flags + treasures
-        (do
-          (println "Planning Phase 2: Additional flags and treasures...")
-          (let [state-after-troll (reduce actions/apply-action-effects
-                                          initial-state
-                                          (:plan flag-plan))
-                ;; Simplified: just return the flag plan for now
-                ;; Full implementation would continue with treasure collection
-                ]
-            {:success? true
-             :phases [{:name :troll-setup
-                       :actions (:plan flag-plan)}]
-             :total-actions (count (:plan flag-plan))
-             :estimated-moves (* 2 (count (:plan flag-plan)))}))))))
+        (let [state-after-troll (reduce actions/apply-action-effects
+                                        initial-state
+                                        (:plan troll-plan))
+              troll-phase {:name :kill-troll :actions (:plan troll-plan)}]
+
+          ;; Phase 2: Defeat cyclops (opens strange-passage for return trips)
+          ;; This is REQUIRED before collecting underground treasures because:
+          ;; - Trap door bars after going down (can't return via cellar)
+          ;; - Chimney has inventory limit of 2 (can't carry treasures + lamp + sword)
+          ;; - Strange passage provides unlimited-inventory return route
+          (println "Planning Phase 2: Defeat cyclops (open return route)...")
+          (let [cyclops-plan (plan-flag-achievement registry :cyclops-flag state-after-troll)]
+            (if-not (:success? cyclops-plan)
+              ;; Can't defeat cyclops - return just troll phase
+              (do
+                (println "  ! Could not plan cyclops defeat - limited treasure collection")
+                {:success? true
+                 :phases [troll-phase]
+                 :total-actions (count (:plan troll-plan))
+                 :estimated-moves (* 2 (count (:plan troll-plan)))})
+
+              (let [state-after-cyclops (reduce actions/apply-action-effects
+                                                state-after-troll
+                                                (:plan cyclops-plan))
+                    cyclops-phase {:name :defeat-cyclops :actions (:plan cyclops-plan)}
+                    phases [troll-phase cyclops-phase]]
+
+                ;; Phase 3: Collect treasures (with return route available)
+                (println "Planning Phase 3: Collect treasures...")
+                (let [treasure-result (plan-treasure-list registry state-after-cyclops easy-treasures)]
+                  (if (empty? (:plans treasure-result))
+                    ;; No treasures planned
+                    {:success? true
+                     :phases phases
+                     :total-actions (+ (count (:plan troll-plan))
+                                       (count (:plan cyclops-plan)))
+                     :estimated-moves (* 2 (+ (count (:plan troll-plan))
+                                              (count (:plan cyclops-plan))))}
+
+                    ;; Success with treasures
+                    (let [all-treasure-actions (mapcat :plan (:plans treasure-result))
+                          all-phases (conj phases {:name :collect-treasures
+                                                   :actions all-treasure-actions
+                                                   :details (:plans treasure-result)})
+                          total-actions (+ (count (:plan troll-plan))
+                                           (count (:plan cyclops-plan))
+                                           (count all-treasure-actions))]
+                      {:success? true
+                       :phases all-phases
+                       :total-actions total-actions
+                       :estimated-moves (* 2 total-actions)
+                       :treasures-planned (map :treasure (:plans treasure-result))})))))))))))
 
 ;; =============================================================================
 ;; Debug Utilities

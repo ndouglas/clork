@@ -19,7 +19,62 @@
     :cost         1               ; estimated moves
     :reversible?  true            ; can action be undone?
     :commands     [\"cmd\" ...]}" ; actual game commands
-  (:require [clojure.set :as set]))
+  (:require [clojure.set :as set]
+            [clojure.string :as str]))
+
+;; =============================================================================
+;; Object Name Generation
+;; =============================================================================
+;; The parser expects natural language object names, not object IDs.
+;; Object IDs use hyphens (e.g., :brass-lantern) but the parser expects
+;; words separated by spaces or just the noun (e.g., "brass lantern" or "lantern").
+
+(defn object-id->parser-name
+  "Convert an object ID to a parser-friendly name.
+
+   Uses the object's :synonym (nouns) and :adjective fields to generate
+   a name the parser will understand. Prefers the first synonym.
+
+   Examples:
+   :brass-lantern -> \"lantern\" (uses first synonym)
+   :jeweled-egg -> \"egg\" (uses first synonym)
+   :elvish-sword -> \"sword\" (uses first synonym)"
+  [game-state obj-id]
+  (let [obj (get-in game-state [:objects obj-id])
+        synonyms (:synonym obj)
+        ;; Use first synonym if available, otherwise derive from ID
+        base-name (if (seq synonyms)
+                    (first synonyms)
+                    ;; Fallback: convert :some-thing to "thing" (last word)
+                    (last (str/split (name obj-id) #"-")))]
+    base-name))
+
+(defn object-id->full-parser-name
+  "Convert an object ID to a full parser-friendly name with adjective.
+
+   Uses adjective + noun format when the object has an adjective defined.
+   This can help disambiguate when multiple objects share a noun.
+
+   Examples:
+   :brass-lantern -> \"brass lantern\"
+   :elvish-sword -> \"elvish sword\"
+   :jeweled-egg -> \"jeweled egg\""
+  [game-state obj-id]
+  (let [obj (get-in game-state [:objects obj-id])
+        synonyms (:synonym obj)
+        adjectives (:adjective obj)
+        ;; Get base noun
+        base-name (if (seq synonyms)
+                    (first synonyms)
+                    (last (str/split (name obj-id) #"-")))
+        ;; Get adjective (first if multiple)
+        adj (cond
+              (string? adjectives) adjectives
+              (seq adjectives) (first adjectives)
+              :else nil)]
+    (if adj
+      (str adj " " base-name)
+      base-name)))
 
 ;; =============================================================================
 ;; Exit Parsing
@@ -118,7 +173,7 @@
     :one-way? true
     :notes "Can only climb with lantern and 1-2 items"}
 
-   ;; Grating: clearing -> grating-room
+   ;; Grating: clearing -> grating-room (going DOWN)
    ;; Requires grate to be revealed and open
    [:grating-clearing :grating-exit]
    {:to :grating-room
@@ -135,6 +190,29 @@
    {:to :maze-11 :preconditions {} :one-way? true}
    [:maze-12 :maze-diodes]
    {:to :maze-5 :preconditions {} :one-way? true}})
+
+(def door-gated-exits
+  "Map of [from-room to-room] -> {:flags #{...}} for regular door-gated exits.
+
+   These are exits that require specific game-state flags to use.
+   The navigation graph builder checks this map for regular exits
+   (not computed :per exits, which are handled by per-exit-specs)."
+  {;; Grating: grating-room -> grating-clearing (going UP)
+   ;; Requires grate to be revealed and open
+   [:grating-room :grating-clearing]
+   {:flags #{:grate-revealed :grate-open}
+    :notes "Grate must be revealed (move leaves) and opened"}
+
+   ;; Trap door: living-room -> cellar (going DOWN)
+   ;; Rug must be moved and trap door opened
+   [:living-room :cellar]
+   {:flags #{:rug-moved :trap-door-open}
+    :notes "Rug must be moved and trap door opened"}
+
+   ;; Note: trap door return (cellar -> living-room) is handled separately
+   ;; via blocked-edges in plan-to-command-sequence because it depends on
+   ;; whether we're underground and have magic-flag/grating-unlocked
+   })
 
 (defn get-computed-exit
   "Get the destination and preconditions for a computed exit.
@@ -286,7 +364,9 @@
   "Generate a take action for an object."
   [game-state obj-id obj-def]
   (let [room (find-object-room game-state obj-id)
-        size (get obj-def :size 0)]
+        size (get obj-def :size 0)
+        ;; Use parser-friendly object name instead of raw ID
+        parser-name (object-id->parser-name game-state obj-id)]
     (when room
       {:id (keyword (str "take-" (name obj-id)))
        :type :take
@@ -302,7 +382,7 @@
         :removes-from-room obj-id}
        :cost 1
        :reversible? true
-       :commands [(str "take " (name obj-id))]
+       :commands [(str "take " parser-name)]
        :object obj-id
        :weight size})))
 
@@ -332,35 +412,47 @@
     :gold-bar :emerald :painting :pot-of-gold :platinum-bar :scarab})
 
 (defn generate-deposit-action
-  "Generate an action to deposit a treasure in the trophy case."
-  [treasure-id]
-  (let [deposit-flag (keyword (str (name treasure-id) "-in-trophy-case"))]
-    {:id (keyword (str "deposit-" (name treasure-id)))
-     :type :deposit
-     :preconditions
-     {:here :living-room
-      :inventory #{treasure-id}
-      :flags #{}}
-     :effects
-     {:flags-set #{deposit-flag}
-      :flags-clear #{}
-      :inventory-add #{}
-      :inventory-remove #{treasure-id}
-      :deposits treasure-id}
-     :cost 2 ; open case + put item
-     :reversible? true
-     :commands ["open case" (str "put " (name treasure-id) " in case")]
-     :treasure treasure-id}))
+  "Generate an action to deposit a treasure in the trophy case.
+
+   If game-state is provided, uses parser-friendly object names.
+   Otherwise falls back to deriving name from object ID."
+  ([treasure-id]
+   (generate-deposit-action nil treasure-id))
+  ([game-state treasure-id]
+   (let [deposit-flag (keyword (str (name treasure-id) "-in-trophy-case"))
+         ;; Use parser-friendly name if game-state available
+         parser-name (if game-state
+                       (object-id->parser-name game-state treasure-id)
+                       ;; Fallback: derive from ID (e.g., :bag-of-coins -> "coins")
+                       (last (str/split (name treasure-id) #"-")))]
+     {:id (keyword (str "deposit-" (name treasure-id)))
+      :type :deposit
+      :preconditions
+      {:here :living-room
+       :inventory #{treasure-id}
+       :flags #{}}
+      :effects
+      {:flags-set #{deposit-flag}
+       :flags-clear #{}
+       :inventory-add #{}
+       :inventory-remove #{treasure-id}
+       :deposits treasure-id}
+      :cost 2 ; open case + put item
+      :reversible? true
+      :commands ["open case" (str "put " parser-name " in case")]
+      :treasure treasure-id})))
 
 (defn generate-deposit-actions
   "Generate deposit actions for all treasures.
    Returns map of action-id -> action."
-  []
-  (reduce (fn [m treasure-id]
-            (let [action (generate-deposit-action treasure-id)]
-              (assoc m (:id action) action)))
-          {}
-          treasures))
+  ([]
+   (generate-deposit-actions nil))
+  ([game-state]
+   (reduce (fn [m treasure-id]
+             (let [action (generate-deposit-action game-state treasure-id)]
+               (assoc m (:id action) action)))
+           {}
+           treasures)))
 
 ;; =============================================================================
 ;; Puzzle/Combat Actions (Manual Definitions)
@@ -370,6 +462,26 @@
   "Manually defined puzzle and combat actions.
    These require specific knowledge about game mechanics."
   {;; =========================================================================
+   ;; LIGHT SOURCE ACTIONS
+   ;; Must turn on lantern before entering dark areas
+   ;; =========================================================================
+
+   :turn-on-lantern
+   {:id :turn-on-lantern
+    :type :setup
+    :preconditions
+    {:inventory #{:brass-lantern}
+     :flags #{}}
+    :effects
+    {:flags-set #{:lantern-on}
+     :flags-clear #{}
+     :inventory-add #{}
+     :inventory-remove #{}}
+    :cost 1
+    :reversible? true
+    :commands ["turn on lantern"]}
+
+   ;; =========================================================================
    ;; DOOR/ACCESS SETUP ACTIONS
    ;; These must be performed before certain movements are possible
    ;; =========================================================================
@@ -979,7 +1091,7 @@
   (merge
    (extract-movement-actions game-state)
    (extract-take-actions game-state)
-   (generate-deposit-actions)
+   (generate-deposit-actions game-state)
    puzzle-actions))
 
 (defn actions-requiring-flag
@@ -1030,8 +1142,10 @@
 
 (defn apply-action-effects
   "Apply action effects to state.
-   Returns updated state."
-  [action state]
+   Returns updated state.
+
+   Note: Arguments ordered for use with reduce: (reduce apply-action-effects state actions)"
+  [state action]
   (let [effects (:effects action)]
     (-> state
         (update :flags set/union (:flags-set effects #{}))
