@@ -280,8 +280,9 @@
     :loud-room :deep-canyon :damp-cave :white-cliffs-beach-north
     :white-cliffs-beach-south :dam :dam-base :dam-lobby :maintenance-room
     :chasm-room :ns-passage :dome-room :torch-room :temple
-    :egyptian-room :altar :cave :cave-north :twisting-passage
-    :engravings-cave :north-south-crawlway :west-of-chasm})
+    :egypt-room :altar :cave :cave-north :twisting-passage
+    :engravings-cave :north-south-crawlway :west-of-chasm
+    :north-temple :south-temple})
 
 (defn room-is-underground?
   "Check if a room is underground (below trap door)."
@@ -489,7 +490,9 @@
    - game-state: Current game state for navigation
    - plan: Sequence of actions
    - start-room: Starting location
-   - opts: {:combat-mode :optimistic|:pessimistic|:with-retry}
+   - opts: {:combat-mode :optimistic|:pessimistic|:with-retry
+            :initial-flags #{flags already achieved before this plan}
+            :initial-inventory #{items already in inventory}}
 
    Tracks underground state to properly route around the barred trap door:
    - After going down through trap door, cellar->living-room is blocked
@@ -503,19 +506,27 @@
     :total-moves n
     :by-action [{:action :id :commands [...]}]
     :combat-actions [{:action :id :spec {...}}]}"
-  [game-state plan start-room & {:keys [combat-mode] :or {combat-mode :pessimistic}}]
-  (loop [remaining plan
-         current-room start-room
-         all-commands []
-         by-action []
-         combat-actions []
-         ;; Track underground state
-         underground? false
-         has-return-unlock? false
-         ;; Track available flags (accumulates as actions set flags)
-         available-flags #{}
-         ;; Track current inventory (set of item IDs)
-         current-inventory #{}]
+  [game-state plan start-room & {:keys [combat-mode initial-flags initial-inventory]
+                                  :or {combat-mode :pessimistic
+                                       initial-flags #{}
+                                       initial-inventory #{}}}]
+  ;; Determine initial underground state based on initial-flags
+  ;; If we have rug-moved + trap-door-open, we've been underground
+  (let [been-underground? (and (contains? initial-flags :rug-moved)
+                               (contains? initial-flags :trap-door-open))]
+    (loop [remaining plan
+           current-room start-room
+           all-commands []
+           by-action []
+           combat-actions []
+           ;; Track underground state - start as underground if flags indicate we've been there
+           underground? been-underground?
+           has-return-unlock? (or (contains? initial-flags :magic-flag)
+                                  (contains? initial-flags :grating-unlocked))
+           ;; Track available flags (starts with initial-flags, accumulates as actions set flags)
+           available-flags initial-flags
+           ;; Track current inventory (starts with initial-inventory)
+           current-inventory initial-inventory]
     (if (empty? remaining)
       {:commands all-commands
        :total-moves (count all-commands)
@@ -591,7 +602,7 @@
                new-underground?
                new-has-unlock?
                new-available-flags
-               new-inventory)))))
+               new-inventory))))))  ;; Extra paren for outer let
 
 ;; =============================================================================
 ;; Deposit Trip Insertion
@@ -692,10 +703,17 @@
   "Generate complete speedrun command sequence.
 
    This is the main entry point for generating an optimized
-   speedrun from a high-level plan."
-  [game-state plan]
+   speedrun from a high-level plan.
+
+   Options:
+   - :initial-flags - flags already achieved before this plan
+   - :initial-inventory - items already in inventory"
+  [game-state plan & {:keys [initial-flags initial-inventory]
+                       :or {initial-flags #{} initial-inventory #{}}}]
   (let [;; Convert plan to commands
-        cmd-seq (plan-to-command-sequence game-state plan :west-of-house)
+        cmd-seq (plan-to-command-sequence game-state plan :west-of-house
+                                           :initial-flags initial-flags
+                                           :initial-inventory initial-inventory)
 
         ;; Calculate statistics
         by-type (group-by #(get-in % [:action] :unknown) (:by-action cmd-seq))]
@@ -797,7 +815,9 @@
    - game-state: Initialized game state (used for both nav graph AND validation)
    - plan: Sequence of actions
    - start-room: Starting location
-   - opts: {:combat-mode :optimistic|:pessimistic|:with-retry}
+   - opts: {:combat-mode :optimistic|:pessimistic|:with-retry
+            :initial-flags #{flags already achieved before this plan}
+            :initial-inventory #{items already in inventory}}
 
    Returns:
    {:commands [...]
@@ -807,10 +827,15 @@
     :validation {:valid? bool :validations [...] :first-failure {...}}}
 
    Throws assertion error if validation fails."
-  [game-state plan start-room & {:keys [combat-mode] :or {combat-mode :pessimistic}}]
+  [game-state plan start-room & {:keys [combat-mode initial-flags initial-inventory]
+                                  :or {combat-mode :pessimistic
+                                       initial-flags #{}
+                                       initial-inventory #{}}}]
   (let [;; Generate command sequence
         cmd-seq (plan-to-command-sequence game-state plan start-room
-                                          :combat-mode combat-mode)
+                                          :combat-mode combat-mode
+                                          :initial-flags initial-flags
+                                          :initial-inventory initial-inventory)
         ;; Validate navigations
         validation (validate-command-sequence game-state cmd-seq)]
     (when-not (:valid? validation)
@@ -847,7 +872,8 @@
 
    :dome-flag
    ;; Rope must be tied at dome-room to access torch-room
-   #{:torch-room}
+   ;; Egypt-room and temple rooms are only accessible through torch-room
+   #{:torch-room :north-temple :south-temple :egypt-room}
 
    :lld-flag
    ;; Exorcism required to enter land of living dead
@@ -859,7 +885,13 @@
    #{:cellar :troll-room}
 
    :trap-door-open
-   #{:cellar :troll-room}})
+   #{:cellar :troll-room}
+
+   ;; Coffin passage: south-temple -> tiny-cave requires not carrying gold-coffin
+   ;; This flag is effectively always set when not carrying the coffin.
+   ;; Rooms accessible only via this passage require it.
+   :coffin-cure
+   #{:tiny-cave}})
 
 (def flag-gated-rooms
   "Inverse map: room -> set of flags required to reach it.

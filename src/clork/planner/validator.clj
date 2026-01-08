@@ -13,13 +13,34 @@
             [clojure.string :as str]))
 
 ;; =============================================================================
+;; Vocabulary Registration
+;; =============================================================================
+
+(defonce ^:private vocab-registered? (atom false))
+
+(defn ensure-vocabulary-registered!
+  "Ensure object vocabulary is registered for the parser.
+   This is idempotent - calling multiple times is safe.
+
+   Must be called before executing commands, otherwise the parser
+   won't recognize object words like 'window', 'sword', etc."
+  [game-state]
+  (when-not @vocab-registered?
+    (verb-defs/register-object-vocabulary! (:objects game-state))
+    (reset! vocab-registered? true)))
+
+;; =============================================================================
 ;; Command Execution
 ;; =============================================================================
 
 (defn execute-command
   "Execute a single command and return [new-state output-string].
-   Simulates one iteration of the main loop without user interaction."
+   Simulates one iteration of the main loop without user interaction.
+
+   Ensures object vocabulary is registered before parsing."
   [game-state input]
+  ;; Ensure vocabulary is registered (idempotent)
+  (ensure-vocabulary-registered! game-state)
   (let [output (java.io.StringWriter.)]
     (binding [*out* output]
       (let [;; Initialize parser state

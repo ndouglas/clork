@@ -48,7 +48,7 @@
   (testing "Registry contains deposit actions"
     (let [game-state (full-game-state)
           registry (actions/build-action-registry game-state)]
-      (is (contains? registry :deposit-jeweled-egg))
+      (is (contains? registry :deposit-egg))
       (is (contains? registry :deposit-gold-coffin)))))
 
 ;; =============================================================================
@@ -123,7 +123,7 @@
   (testing "Deposit goals extraction"
     (let [goals (backward/extract-deposit-goals)]
       (is (set? goals))
-      (is (contains? goals [:deposit :jeweled-egg]))
+      (is (contains? goals [:deposit :egg]))
       (is (contains? goals [:deposit :gold-coffin])))))
 
 (deftest achiever-finding-test
@@ -137,9 +137,9 @@
   (testing "Find achievers for deposit"
     (let [game-state (full-game-state)
           registry (actions/build-action-registry game-state)
-          achievers (backward/find-achievers-for-deposit registry :jeweled-egg)]
+          achievers (backward/find-achievers-for-deposit registry :egg)]
       (is (seq achievers))
-      (is (some #(= :deposit-jeweled-egg (:id %)) achievers)))))
+      (is (some #(= :deposit-egg (:id %)) achievers)))))
 
 (deftest simple-plan-test
   (testing "Plan to achieve troll-flag"
@@ -195,7 +195,7 @@
                             :flags-clear #{}
                             :inventory-add #{}
                             :inventory-remove #{}}}
-          new-state (actions/apply-action-effects action state)]
+          new-state (actions/apply-action-effects state action)]
       (is (contains? (:flags new-state) :troll-flag)))))
 
 ;; =============================================================================

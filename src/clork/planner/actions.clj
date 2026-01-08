@@ -386,13 +386,22 @@
        :object obj-id
        :weight size})))
 
+;; Objects that need special handling (flag-gated, puzzles, etc.)
+;; These are excluded from auto-generation and defined in puzzle-actions
+(def special-take-objects
+  "Objects that shouldn't have auto-generated take actions.
+   These require puzzle solutions or flags to obtain."
+  #{:pot-of-gold})  ; Requires rainbow-flag (wave sceptre first)
+
 (defn extract-take-actions
   "Extract take actions for all takeable objects.
+   Excludes objects in special-take-objects (handled in puzzle-actions).
    Returns map of action-id -> action."
   [game-state]
   (reduce-kv
    (fn [actions obj-id obj-def]
-     (if (takeable? obj-def)
+     (if (and (takeable? obj-def)
+              (not (contains? special-take-objects obj-id)))
        (if-let [action (generate-take-action game-state obj-id obj-def)]
          (assoc actions (:id action) action)
          actions)
@@ -405,8 +414,9 @@
 ;; =============================================================================
 
 (def treasures
-  "List of all treasures in Zork I with their value when deposited."
-  #{:jeweled-egg :clockwork-canary :brass-bauble :gold-coffin :sceptre
+  "List of all treasures in Zork I with their value when deposited.
+   Note: IDs must match actual object :id values in objects.clj"
+  #{:egg :clockwork-canary :brass-bauble :gold-coffin :sceptre
     :ivory-torch :crystal-trident :jade-figurine :sapphire-bracelet
     :huge-diamond :bag-of-coins :crystal-skull :jewel-encrusted-trunk
     :gold-bar :emerald :painting :pot-of-gold :platinum-bar :scarab})

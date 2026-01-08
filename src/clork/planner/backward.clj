@@ -573,11 +573,12 @@
 ;; =============================================================================
 
 (def easy-treasures
-  "Treasures that can be collected with just troll-flag.
-   These are accessible via trap door + maze without additional puzzles."
+  "Treasures that can be collected with basic flags.
+   These are accessible without complex multi-step puzzles."
   [:bag-of-coins   ; maze-5 - just need to navigate maze
    :egg            ; up-a-tree (in nest) - on surface, no flags needed
-   :painting])     ; gallery - accessible via cellar
+   :painting       ; gallery - accessible via cellar
+   :pot-of-gold])  ; end-of-rainbow - needs sceptre + wave (planner handles this!)
 
 (def medium-treasures
   "Treasures requiring additional flags or puzzle solutions."
@@ -760,9 +761,13 @@
                 ;; Phase 3: Collect treasures (with return route available)
                 (println "Planning Phase 3: Collect treasures...")
                 ;; Use TSP to find optimal treasure collection order
+                ;; Note: :coffin-cure is always available when NOT carrying the gold-coffin
+                ;; (allows passage south-temple -> tiny-cave). Since our easy treasures
+                ;; don't include gold-coffin, this flag is effectively always set.
                 (let [available-flags (set/union (:flags state-after-cyclops)
                                                   #{:troll-flag :magic-flag :cyclops-flag
-                                                    :rug-moved :trap-door-open})
+                                                    :rug-moved :trap-door-open
+                                                    :coffin-cure})
                       tsp-result (optimize-treasure-order game-state easy-treasures
                                                           available-flags :living-room)
                       _ (println "  TSP optimal order:" (:optimized-order tsp-result))
