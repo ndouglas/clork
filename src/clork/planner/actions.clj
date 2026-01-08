@@ -233,22 +233,23 @@
 (defn generate-deposit-action
   "Generate an action to deposit a treasure in the trophy case."
   [treasure-id]
-  {:id (keyword (str "deposit-" (name treasure-id)))
-   :type :deposit
-   :preconditions
-   {:here :living-room
-    :inventory #{treasure-id}
-    :flags #{}}
-   :effects
-   {:flags-set #{}
-    :flags-clear #{}
-    :inventory-add #{}
-    :inventory-remove #{treasure-id}
-    :deposits treasure-id}
-   :cost 2 ; open case + put item
-   :reversible? true
-   :commands ["open case" (str "put " (name treasure-id) " in case")]
-   :treasure treasure-id})
+  (let [deposit-flag (keyword (str (name treasure-id) "-in-trophy-case"))]
+    {:id (keyword (str "deposit-" (name treasure-id)))
+     :type :deposit
+     :preconditions
+     {:here :living-room
+      :inventory #{treasure-id}
+      :flags #{}}
+     :effects
+     {:flags-set #{deposit-flag}
+      :flags-clear #{}
+      :inventory-add #{}
+      :inventory-remove #{treasure-id}
+      :deposits treasure-id}
+     :cost 2 ; open case + put item
+     :reversible? true
+     :commands ["open case" (str "put " (name treasure-id) " in case")]
+     :treasure treasure-id}))
 
 (defn generate-deposit-actions
   "Generate deposit actions for all treasures.
@@ -267,7 +268,69 @@
 (def puzzle-actions
   "Manually defined puzzle and combat actions.
    These require specific knowledge about game mechanics."
-  {:kill-troll
+  {;; =========================================================================
+   ;; DOOR/ACCESS SETUP ACTIONS
+   ;; These must be performed before certain movements are possible
+   ;; =========================================================================
+
+   :open-kitchen-window
+   {:id :open-kitchen-window
+    :type :setup
+    :preconditions
+    {:here :behind-house
+     :inventory #{}
+     :flags #{}}
+    :effects
+    {:flags-set #{:window-open}
+     :flags-clear #{}
+     :inventory-add #{}
+     :inventory-remove #{}}
+    :cost 1
+    :reversible? true
+    :commands ["open window"]}
+
+   :move-rug
+   {:id :move-rug
+    :type :setup
+    :preconditions
+    {:here :living-room
+     :inventory #{}
+     :flags #{}}
+    :effects
+    {:flags-set #{:rug-moved}
+     :flags-clear #{}
+     :inventory-add #{}
+     :inventory-remove #{}}
+    :cost 1
+    :reversible? false  ; Can't un-reveal the trap door
+    :commands ["move rug"]}
+
+   :open-trap-door
+   {:id :open-trap-door
+    :type :setup
+    :preconditions
+    {:here :living-room
+     :inventory #{}
+     :flags #{:rug-moved}}  ; Must move rug first!
+    :effects
+    {:flags-set #{:trap-door-open}
+     :flags-clear #{}
+     :inventory-add #{}
+     :inventory-remove #{}}
+    :cost 1
+    :reversible? true
+    :commands ["open trap door"]}
+
+   ;; Note: Going DOWN through trap door causes it to close and bar!
+   ;; This is a ONE-WAY transition. You cannot return via trap door.
+   ;; To return to living room from underground, must use:
+   ;; cyclops-room -> strange-passage -> living-room (requires :magic-flag)
+
+   ;; =========================================================================
+   ;; COMBAT ACTIONS
+   ;; =========================================================================
+
+   :kill-troll
    {:id :kill-troll
     :type :combat
     :preconditions

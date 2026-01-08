@@ -17,6 +17,9 @@
             [clork.planner.actions :as actions]
             [clork.planner.constraints :as constraints]))
 
+;; Forward declaration for plan ordering
+(declare sort-plan-by-dependencies)
+
 ;; =============================================================================
 ;; Win Condition
 ;; =============================================================================
@@ -218,7 +221,7 @@
         ;; Success - all goals met
         (empty? goals)
         {:success? true
-         :plan (reverse plan)
+         :plan (sort-plan-by-dependencies (reverse plan))
          :iterations iterations}
 
         ;; Iteration limit
@@ -233,72 +236,224 @@
           ;; Special handling for location goals:
           ;; We treat them as implicitly satisfiable via A* pathfinding.
           ;; The optimizer will generate actual navigation commands.
-          ;; However, we need to check if the room requires light!
+          ;; However, we need to check constraints!
           (if (= :location (goal-type goal))
-            ;; Location goals are achievable from initial state
-            ;; But if the room is dark, we need a light source
             (let [target-room (second goal)
+                  ;; Check 1: Light requirements for dark rooms
                   needs-light? (constraints/requires-light? target-room)
-                  ;; If dark room and no light in achieved inventory, add light goal
                   has-light? (or (contains? (:inventory achieved-state) :brass-lantern)
                                  (contains? (:inventory achieved-state) :ivory-torch))
-                  new-goals (if (and needs-light? (not has-light?))
-                              ;; Add lantern requirement (simplest light source)
-                              (-> goals
-                                  (disj goal)
-                                  (conj [:have :brass-lantern]))
-                              (disj goals goal))]
-              (recur new-goals
+
+                  ;; Check 2: Underground return constraint
+                  ;; If we need to return to living-room and plan visits underground,
+                  ;; we need magic-flag or grating-unlocked to keep trap door open
+                  underground-rooms #{:cellar :troll-room :east-of-chasm :gallery :studio
+                                      :cyclops-room :treasure-room :maze-1 :maze-2 :maze-3
+                                      :maze-4 :maze-5 :maze-6 :maze-7 :maze-8 :maze-9
+                                      :maze-10 :maze-11 :maze-12 :maze-13 :maze-14 :maze-15}
+                  plan-visits-underground? (some #(contains? underground-rooms
+                                                             (get-in % [:preconditions :here]))
+                                                 plan)
+                  needs-return-route? (and (= target-room :living-room)
+                                           plan-visits-underground?)
+                  has-return-flag? (or (contains? (:flags achieved-state) :magic-flag)
+                                       (contains? (:flags achieved-state) :grating-unlocked))
+
+                  ;; Build new goals
+                  base-goals (disj goals goal)
+                  goals-with-light (if (and needs-light? (not has-light?))
+                                     (conj base-goals [:have :brass-lantern])
+                                     base-goals)
+                  final-goals (if (and needs-return-route? (not has-return-flag?))
+                                ;; Need magic-flag to return from underground
+                                (conj goals-with-light :magic-flag)
+                                goals-with-light)]
+              (recur final-goals
                      plan
                      achieved-state
                      visited-actions
                      (inc iterations)))
 
             ;; Normal goal processing
-            (let [achievers (find-achievers registry goal)]
-              (if (empty? achievers)
-                ;; No achiever found - check if already satisfied
-                (if (case (goal-type goal)
-                      :flag (contains? (:flags achieved-state) goal)
-                      :have-item (contains? (:inventory achieved-state) (second goal))
-                      :deposit (contains? (:deposited achieved-state) (second goal))
-                      false)
-                  ;; Goal already satisfied, remove it
-                  (recur (disj goals goal)
-                         plan
-                         achieved-state
-                         visited-actions
-                         (inc iterations))
-                  ;; Can't achieve goal
-                  {:success? false
-                   :plan (reverse plan)
-                   :error {:type :no-achiever :goal goal}
-                   :remaining-goals goals
-                   :iterations iterations})
+            ;; FIRST check if goal is already satisfied by achieved state
+            (let [already-satisfied? (case (goal-type goal)
+                                       :flag (contains? (:flags achieved-state) goal)
+                                       :have-item (contains? (:inventory achieved-state) (second goal))
+                                       :deposit (contains? (:deposited achieved-state) (second goal))
+                                       false)]
+              (if already-satisfied?
+                ;; Goal already satisfied, just remove it
+                (recur (disj goals goal)
+                       plan
+                       achieved-state
+                       visited-actions
+                       (inc iterations))
 
-                ;; Try to use an achiever
-                (let [achiever (select-best-achiever
-                               (remove #(contains? visited-actions (:id %)) achievers)
-                               achieved-state)]
-                  (if (nil? achiever)
-                    ;; All achievers already tried
+                ;; Goal not satisfied, find achievers
+                (let [achievers (find-achievers registry goal)]
+                  (if (empty? achievers)
+                    ;; No achiever found
                     {:success? false
                      :plan (reverse plan)
-                     :error {:type :cycle :goal goal}
+                     :error {:type :no-achiever :goal goal}
                      :remaining-goals goals
                      :iterations iterations}
 
-                    ;; Add achiever to plan
-                    (let [new-precond-goals (action-preconditions-as-goals achiever)
-                          new-achieved (actions/apply-action-effects achiever achieved-state)
-                          remaining-goals (-> goals
-                                              (disj goal)
-                                              (set/union new-precond-goals))]
-                      (recur remaining-goals
-                             (conj plan achiever)
-                             new-achieved
-                             (conj visited-actions (:id achiever))
-                             (inc iterations)))))))))))))
+                    ;; Try to use an achiever
+                    (let [achiever (select-best-achiever
+                                   (remove #(contains? visited-actions (:id %)) achievers)
+                                   achieved-state)]
+                      (if (nil? achiever)
+                        ;; All achievers already tried
+                        {:success? false
+                         :plan (reverse plan)
+                         :error {:type :cycle :goal goal}
+                         :remaining-goals goals
+                         :iterations iterations}
+
+                        ;; Add achiever to plan
+                        (let [new-precond-goals (action-preconditions-as-goals achiever)
+                              new-achieved (actions/apply-action-effects achiever achieved-state)
+                              remaining-goals (-> goals
+                                                  (disj goal)
+                                                  (set/union new-precond-goals))]
+                          (recur remaining-goals
+                                 (conj plan achiever)
+                                 new-achieved
+                                 (conj visited-actions (:id achiever))
+                                 (inc iterations)))))))))))))))
+
+;; =============================================================================
+;; Plan Ordering (Topological Sort)
+;; =============================================================================
+
+(defn action-provides
+  "Get the set of flags an action provides."
+  [action]
+  (get-in action [:effects :flags-set] #{}))
+
+(defn action-requires
+  "Get the set of flags an action requires."
+  [action]
+  (get-in action [:preconditions :flags] #{}))
+
+(defn action-adds-to-inventory
+  "Get items an action adds to inventory."
+  [action]
+  (get-in action [:effects :inventory-add] #{}))
+
+(defn action-requires-in-inventory
+  "Get items an action requires in inventory."
+  [action]
+  (get-in action [:preconditions :inventory] #{}))
+
+(defn action-deposits-item
+  "Get the treasure ID if this is a deposit action."
+  [action]
+  (:treasure action))
+
+(def underground-rooms
+  "Rooms below the one-way trap door."
+  #{:cellar :troll-room :east-of-chasm :gallery :studio
+    :cyclops-room :treasure-room :maze-1 :maze-2 :maze-3
+    :maze-4 :maze-5 :maze-6 :maze-7 :maze-8 :maze-9
+    :maze-10 :maze-11 :maze-12 :maze-13 :maze-14 :maze-15})
+
+(defn action-location
+  "Get the location where an action must be performed."
+  [action]
+  (get-in action [:preconditions :here]))
+
+(defn action-is-underground?
+  "Check if an action takes place in an underground room."
+  [action]
+  (contains? underground-rooms (action-location action)))
+
+(defn action-is-surface?
+  "Check if an action takes place on the surface (above trap door)."
+  [action]
+  (let [loc (action-location action)]
+    (and loc (not (contains? underground-rooms loc)))))
+
+(defn sort-plan-by-dependencies
+  "Topologically sort a plan so:
+   1. Actions that provide flags come before actions that require them
+   2. Actions that add items come before actions that need them
+   3. Take actions come before deposit actions for same item
+   4. If plan has underground actions, deposit actions depend on magic-flag provider
+   Uses Kahn's algorithm."
+  [plan]
+  (if (< (count plan) 2)
+    plan
+    (let [;; Build maps of what each action provides
+          flag-providers (into {} (for [a plan
+                                        flag (action-provides a)]
+                                    [flag (:id a)]))
+
+          item-providers (into {} (for [a plan
+                                        item (action-adds-to-inventory a)]
+                                    [item (:id a)]))
+
+          ;; Check if plan visits underground (requires return route)
+          has-underground? (some action-is-underground? plan)
+          magic-provider (get flag-providers :magic-flag)
+
+          ;; Calculate dependencies for each action
+          action-deps
+          (into {}
+                (for [a plan]
+                  [(:id a)
+                   (set/union
+                    ;; Flag dependencies
+                    (set (for [flag (action-requires a)
+                               :when (contains? flag-providers flag)]
+                           (get flag-providers flag)))
+                    ;; Inventory dependencies (need item before requiring it)
+                    (set (for [item (action-requires-in-inventory a)
+                               :when (contains? item-providers item)]
+                           (get item-providers item)))
+                    ;; Deposit depends on take for same item
+                    (when-let [treasure (action-deposits-item a)]
+                      (if-let [provider (get item-providers treasure)]
+                        #{provider}
+                        #{}))
+                    ;; Underground return constraint:
+                    ;; Deposit actions depend on magic-flag when plan goes underground
+                    ;; (must unlock trap door before returning to living room)
+                    (when (and has-underground?
+                               magic-provider
+                               (= :deposit (:type a)))
+                      #{magic-provider}))]))
+
+          ;; Kahn's algorithm with strategic ordering
+          id->action (into {} (map (juxt :id identity) plan))
+          original-order (into {} (map-indexed (fn [i a] [(:id a) i]) plan))
+
+          ;; Scoring function for action priority:
+          ;; 1. Surface actions come before underground (to collect items before descending)
+          ;; 2. Ties broken by original order
+          action-priority (fn [action-id]
+                            (let [action (get id->action action-id)
+                                  surface-bonus (if (action-is-surface? action) 0 1000)]
+                              (+ surface-bonus (get original-order action-id 999))))]
+
+      (loop [result []
+             remaining (set (map :id plan))
+             deps action-deps]
+        (if (empty? remaining)
+          result
+          ;; Find actions with no unsatisfied dependencies
+          ;; Prefer surface actions, then by original order
+          (let [ready-actions (filter #(empty? (set/intersection (get deps %) remaining))
+                                      remaining)
+                ;; Sort by priority (surface first, then original order)
+                ready (first (sort-by action-priority ready-actions))]
+            (if ready
+              (recur (conj result (get id->action ready))
+                     (disj remaining ready)
+                     deps)
+              ;; No ready action - cycle detected, return original order
+              plan)))))))
 
 ;; =============================================================================
 ;; High-Level Planning

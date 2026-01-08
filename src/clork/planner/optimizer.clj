@@ -141,17 +141,109 @@
             (recur (conj directions dir) (rest remaining))
             nil))))))
 
+;; =============================================================================
+;; Door/Setup Requirements for Navigation
+;; =============================================================================
+
+(def door-setup-commands
+  "Commands required before traversing certain room transitions.
+   Format: {[from-room to-room] [commands...]}"
+  {[:behind-house :kitchen] ["open window"]
+   [:living-room :cellar] ["move rug" "open trap door"]})
+
+(def conditional-one-way-transitions
+  "Transitions that are one-way UNTIL certain flags are set.
+   Format: {[from-room to-room] {:unlocked-by #{flags...}}}"
+  {[:living-room :cellar] {:unlocked-by #{:magic-flag :grating-unlocked}
+                           :description "Trap door bars until alternate exit found"}})
+
+(defn transition-is-one-way?
+  "Check if a transition is currently one-way given achieved flags.
+   Returns false if any unlocking flag has been achieved."
+  ([from-room to-room]
+   ;; Without flag info, assume worst case (one-way)
+   (contains? conditional-one-way-transitions [from-room to-room]))
+  ([from-room to-room achieved-flags]
+   (if-let [constraint (get conditional-one-way-transitions [from-room to-room])]
+     ;; One-way unless we have an unlocking flag
+     (empty? (clojure.set/intersection (:unlocked-by constraint) achieved-flags))
+     false)))
+
+(def alternate-return-routes
+  "When you can't return the way you came, use these routes.
+   Format: {blocked-return-to alternative-route-via}"
+  {:living-room {:via :strange-passage
+                 :requires #{:magic-flag}
+                 :from-rooms #{:cyclops-room}}})
+
+(def underground-rooms
+  "Rooms that are 'underground' - below the one-way trap door.
+   Once you enter these, you cannot return via trap door."
+  #{:cellar :troll-room :east-of-chasm :gallery :studio
+    :east-west-passage :round-room :narrow-passage :mirror-room-south
+    :mirror-room-north :winding-passage :mine-entrance :squeaky-room
+    :bat-room :shaft-room :smelly-room :gas-room :coal-mine
+    :maze-1 :maze-2 :maze-3 :maze-4 :maze-5 :maze-6 :maze-7 :maze-8
+    :maze-9 :maze-10 :maze-11 :maze-12 :maze-13 :maze-14 :maze-15
+    :dead-end :grating-room :cyclops-room :strange-passage :treasure-room
+    :loud-room :deep-canyon :damp-cave :white-cliffs-beach-north
+    :white-cliffs-beach-south :dam :dam-base :dam-lobby :maintenance-room
+    :chasm-room :ns-passage :dome-room :torch-room :temple
+    :egyptian-room :altar :cave :cave-north :twisting-passage
+    :engravings-cave :north-south-crawlway :west-of-chasm})
+
+(defn room-is-underground?
+  "Check if a room is underground (below trap door)."
+  [room]
+  (contains? underground-rooms room))
+
+(defn door-commands-for-transition
+  "Get door/setup commands needed for a room transition."
+  [from-room to-room]
+  (get door-setup-commands [from-room to-room] []))
+
 (defn generate-navigation
-  "Generate navigation commands from current location to destination."
-  [game-state current-room dest-room]
-  (let [graph (build-nav-graph game-state)
+  "Generate navigation commands from current location to destination.
+   Includes door-opening commands when needed.
+
+   Optional :blocked-edges parameter excludes specific room transitions
+   from pathfinding (e.g., #{[:cellar :living-room]} when trap door is barred)."
+  [game-state current-room dest-room & {:keys [blocked-edges] :or {blocked-edges #{}}}]
+  (let [base-graph (build-nav-graph game-state)
+        ;; Remove blocked edges from graph
+        graph (reduce (fn [g [from to]]
+                        (if (contains? (get g from #{}) to)
+                          (update g from disj to)
+                          g))
+                      base-graph
+                      blocked-edges)
         room-graph (build-room-graph-with-directions game-state)
         path (find-path graph current-room dest-room)]
     (when path
-      (let [dirs (path-to-directions room-graph path)]
+      (let [;; Generate direction commands with door handling
+            commands-with-doors
+            (loop [remaining path
+                   commands []]
+              (if (< (count remaining) 2)
+                commands
+                (let [from (first remaining)
+                      to (second remaining)
+                      door-cmds (door-commands-for-transition from to)
+                      dir-map (get room-graph from {})
+                      dir (get dir-map to)]
+                  (if dir
+                    (recur (rest remaining)
+                           (-> commands
+                               (into door-cmds)
+                               (conj (name dir))))
+                    ;; No direction found - shouldn't happen
+                    commands))))]
         {:path path
-         :commands (mapv name dirs)
-         :moves (count dirs)}))))
+         :commands commands-with-doors
+         :moves (count commands-with-doors)
+         :has-one-way? (some (fn [[from to]]
+                               (transition-is-one-way? from to))
+                             (partition 2 1 path))}))))
 
 ;; =============================================================================
 ;; Route Optimization (Nearest Neighbor)
@@ -273,6 +365,11 @@
       (generate-combat-commands combat-spec :mode combat-mode))
     (expand-action-to-commands action)))
 
+(defn action-sets-flag?
+  "Check if an action sets a specific flag."
+  [action flag]
+  (contains? (get-in action [:effects :flags-set] #{}) flag))
+
 (defn plan-to-command-sequence
   "Convert a plan to an executable command sequence.
 
@@ -281,6 +378,10 @@
    - plan: Sequence of actions
    - start-room: Starting location
    - opts: {:combat-mode :optimistic|:pessimistic|:with-retry}
+
+   Tracks underground state to properly route around the barred trap door:
+   - After going down through trap door, cellar->living-room is blocked
+   - Until magic-flag or grating-unlocked is achieved
 
    Returns:
    {:commands [\"cmd\" ...]
@@ -292,7 +393,10 @@
          current-room start-room
          all-commands []
          by-action []
-         combat-actions []]
+         combat-actions []
+         ;; Track underground state
+         underground? false
+         has-return-unlock? false]
     (if (empty? remaining)
       {:commands all-commands
        :total-moves (count all-commands)
@@ -300,16 +404,38 @@
        :combat-actions combat-actions}
       (let [action (first remaining)
             dest-room (action-location action)
+
+            ;; Calculate blocked edges based on current state
+            ;; Trap door return is blocked when underground without unlock
+            blocked-edges (if (and underground? (not has-return-unlock?))
+                            #{[:cellar :living-room]}
+                            #{})
+
             nav (when (and dest-room (not= dest-room current-room))
-                  (generate-navigation game-state current-room dest-room))
+                  (generate-navigation game-state current-room dest-room
+                                       :blocked-edges blocked-edges))
             nav-commands (or (:commands nav) [])
+
             ;; Use combat-aware expansion
             action-commands (expand-action-for-transcript action :combat-mode combat-mode)
             combined (into nav-commands action-commands)
+
             ;; Track combat actions separately
             combat-info (when (action-is-combat? action)
                           {:action (:id action)
-                           :spec (expand-combat-action action)})]
+                           :spec (expand-combat-action action)})
+
+            ;; Update underground state
+            ;; We become underground when navigation goes through trap door
+            went-underground? (some #{"down"} nav-commands)
+            new-underground? (or underground? went-underground?)
+
+            ;; Update return unlock state
+            ;; magic-flag or grating-unlocked allows return via trap door
+            just-unlocked? (or (action-sets-flag? action :magic-flag)
+                               (action-sets-flag? action :grating-unlocked))
+            new-has-unlock? (or has-return-unlock? just-unlocked?)]
+
         (recur (rest remaining)
                (or dest-room current-room)
                (into all-commands combined)
@@ -321,7 +447,9 @@
                                 :is-combat? (action-is-combat? action)})
                (if combat-info
                  (conj combat-actions combat-info)
-                 combat-actions))))))
+                 combat-actions)
+               new-underground?
+               new-has-unlock?)))))
 
 ;; =============================================================================
 ;; Deposit Trip Insertion
