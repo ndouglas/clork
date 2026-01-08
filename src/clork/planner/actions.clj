@@ -224,7 +224,20 @@
    [:south-temple :forest-1]
    {:command "pray"
     :flags #{}
-    :notes "Praying at altar teleports to forest (one-way)"}})
+    :notes "Praying at altar teleports to forest (one-way)"}
+
+   ;; Mirror teleportation between the two mirror rooms
+   ;; Rubbing the mirror with hands teleports player and swaps room contents
+   ;; ZIL: MIRROR-MIRROR routine (1actions.zil lines 984-1011)
+   [:mirror-room-1 :mirror-room-2]
+   {:command "rub mirror"
+    :flags #{}
+    :notes "Mirror teleport (bidirectional)"}
+
+   [:mirror-room-2 :mirror-room-1]
+   {:command "rub mirror"
+    :flags #{}
+    :notes "Mirror teleport (bidirectional)"}})
 
 (defn get-computed-exit
   "Get the destination and preconditions for a computed exit.
@@ -643,7 +656,8 @@
     :type :puzzle
     :preconditions
     {:here :entrance-to-hades
-     :inventory #{:bell :book :candles :matchbook}
+     ;; Note: Use actual object IDs, not short names
+     :inventory #{:brass-bell :black-book :candles :matchbook}
      :flags #{}}
     :effects
     {:flags-set #{:lld-flag}

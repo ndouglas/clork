@@ -25,8 +25,8 @@
    :dam-area #{:emerald :platinum-bar :jewel-encrusted-trunk}
    :temple #{:ivory-torch :sceptre}
    :hades #{:crystal-skull}
-   :thief-lair #{:jade-figurine :sapphire-bracelet :gold-coffin :clockwork-canary}
-   :coal-mine #{:huge-diamond :scarab}
+   :thief-lair #{:jade-figurine :chalice :gold-coffin :clockwork-canary}
+   :coal-mine #{:huge-diamond :scarab :sapphire-bracelet}  ; bracelet is in gas-room
    :rainbow #{:pot-of-gold}
    :loud-room #{:gold-bar}
    :cyclops #{:brass-bauble}

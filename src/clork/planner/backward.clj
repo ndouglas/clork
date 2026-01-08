@@ -591,12 +591,13 @@
    :pot-of-gold])  ; end-of-rainbow - needs rainbow-flag
 
 (def hard-treasures
-  "Treasures requiring killing the thief."
+  "Treasures requiring killing the thief or complex navigation."
   [:jade-figurine       ; treasure-room - needs thief-dead
-   :sapphire-bracelet   ; treasure-room - needs thief-dead
+   :chalice             ; treasure-room - needs thief-dead
    :clockwork-canary    ; in egg, opened by thief
-   :huge-diamond        ; coal mine shaft - needs thief-dead or timing
-   :scarab])            ; coal mine - needs complex navigation
+   :huge-diamond        ; coal mine shaft - complex multi-step puzzle
+   :sapphire-bracelet   ; gas-room - needs mirror teleport
+   :scarab])            ; sandy-cave - needs digging + complex navigation
 
 ;; =============================================================================
 ;; Treasure Planning
