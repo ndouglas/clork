@@ -95,14 +95,60 @@
     :else
     {:to nil :requires nil :one-way? false :blocked? true}))
 
-;; Known one-way path destinations (computed exits)
-(def one-way-destinations
-  "Map of one-way :per functions to their actual destinations.
-   These are hardcoded because the destinations depend on current room."
-  {:maze-diodes {:maze-2 :maze-4
-                 :maze-7 :dead-end-1
-                 :maze-9 :maze-11
-                 :maze-12 :maze-5}})
+;; =============================================================================
+;; Computed Exit Specifications
+;; =============================================================================
+;; These define :per function exits with their destinations and preconditions.
+;; For speedrun planning, we "cheat" by knowing where computed exits go.
+
+(def per-exit-specs
+  "Specifications for :per function exits.
+   Format: {[room per-fn] {:to dest :preconditions {...} :one-way? bool}}
+
+   Preconditions can include:
+   - :inventory - items required in inventory
+   - :flags - flags that must be set
+   - :max-inventory - maximum number of items you can carry"
+  {;; Chimney: studio -> kitchen
+   ;; Requires brass-lantern and only 1-2 items total
+   [:studio :up-chimney-function]
+   {:to :kitchen
+    :preconditions {:inventory #{:brass-lantern}
+                    :max-inventory 2}
+    :one-way? true
+    :notes "Can only climb with lantern and 1-2 items"}
+
+   ;; Grating: clearing -> grating-room
+   ;; Requires grate to be revealed and open
+   [:grating-clearing :grating-exit]
+   {:to :grating-room
+    :preconditions {:flags #{:grate-revealed :grate-open}}
+    :one-way? false
+    :notes "Grate must be revealed (move leaves) and opened"}
+
+   ;; Maze diodes - one-way teleporters, no preconditions
+   [:maze-2 :maze-diodes]
+   {:to :maze-4 :preconditions {} :one-way? true}
+   [:maze-7 :maze-diodes]
+   {:to :dead-end-1 :preconditions {} :one-way? true}
+   [:maze-9 :maze-diodes]
+   {:to :maze-11 :preconditions {} :one-way? true}
+   [:maze-12 :maze-diodes]
+   {:to :maze-5 :preconditions {} :one-way? true}})
+
+(defn get-computed-exit
+  "Get the destination and preconditions for a computed exit.
+   Returns nil if the exit is not known."
+  [from-room per-fn]
+  (get per-exit-specs [from-room per-fn]))
+
+;; Convenience accessor for just the destination
+(def computed-exit-destinations
+  "Map of [room :per-function] -> destination room.
+   Derived from per-exit-specs for backwards compatibility."
+  (into {}
+        (for [[[room per-fn] spec] per-exit-specs]
+          [[room per-fn] (:to spec)])))
 
 ;; =============================================================================
 ;; Movement Action Extraction
@@ -139,19 +185,74 @@
        :door (get requires :door)
        :computed (get requires :computed)})))
 
+(defn generate-computed-exit-action
+  "Generate a movement action for a known computed exit.
+   Includes preconditions from per-exit-specs (inventory, flags, etc.)."
+  [from-room direction to-room per-fn]
+  (let [spec (get-computed-exit from-room per-fn)
+        preconds (:preconditions spec {})
+        required-inventory (get preconds :inventory #{})
+        required-flags (get preconds :flags #{})]
+    {:id (keyword (str (name from-room) "->" (name to-room)))
+     :type :movement
+     :preconditions
+     {:here from-room
+      :inventory required-inventory
+      :flags required-flags}
+     :effects
+     {:flags-set #{}
+      :flags-clear #{}
+      :inventory-add #{}
+      :inventory-remove #{}
+      :new-location to-room}
+     :cost 1
+     :reversible? (not (:one-way? spec true))
+     :commands [(name direction)]
+     :computed per-fn
+     :max-inventory (get preconds :max-inventory nil)
+     :notes (:notes spec)}))
+
 (defn extract-movement-actions
   "Extract all movement actions from game state.
-   Returns map of action-id -> action."
+   Returns map of action-id -> action.
+
+   Handles both regular exits and known computed (:per) exits
+   from the computed-exit-destinations map."
   [game-state]
-  (reduce-kv
-   (fn [actions room-id room-def]
-     (let [exits (extract-room-exits room-def)
-           move-actions (keep #(generate-movement-action room-id (:direction %) %) exits)]
-       (reduce (fn [m action] (assoc m (:id action) action))
-               actions
-               move-actions)))
-   {}
-   (:rooms game-state)))
+  (let [;; Extract regular movement actions
+        regular-actions
+        (reduce-kv
+         (fn [actions room-id room-def]
+           (let [exits (extract-room-exits room-def)
+                 move-actions (keep #(generate-movement-action room-id (:direction %) %) exits)]
+             (reduce (fn [m action] (assoc m (:id action) action))
+                     actions
+                     move-actions)))
+         {}
+         (:rooms game-state))
+
+        ;; Extract actions for known computed exits
+        computed-actions
+        (reduce-kv
+         (fn [actions room-id room-def]
+           (let [exits (:exits room-def {})]
+             (reduce-kv
+              (fn [m direction exit-def]
+                (if (and (map? exit-def) (:per exit-def))
+                  ;; This is a computed exit - check if we know the destination
+                  (let [per-fn (:per exit-def)
+                        dest (get computed-exit-destinations [room-id per-fn])]
+                    (if dest
+                      (let [action (generate-computed-exit-action room-id direction dest per-fn)]
+                        (assoc m (:id action) action))
+                      m))
+                  m))
+              actions
+              exits)))
+         {}
+         (:rooms game-state))]
+
+    (merge regular-actions computed-actions)))
 
 ;; =============================================================================
 ;; Take Action Extraction

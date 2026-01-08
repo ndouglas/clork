@@ -90,38 +90,64 @@
 ;; =============================================================================
 
 (defn build-nav-graph
-  "Build navigation graph from game state."
+  "Build navigation graph from game state.
+   Includes both regular exits and known computed exits."
   [game-state]
   (reduce-kv
    (fn [graph room-id room-def]
      (let [exits (:exits room-def {})
-           destinations (reduce-kv
-                         (fn [s dir exit]
-                           (let [target (actions/parse-exit exit dir)]
-                             (if (:to target)
-                               (conj s (:to target))
-                               s)))
-                         #{}
-                         exits)]
-       (assoc graph room-id destinations)))
+           ;; Get destinations from regular exits
+           regular-destinations
+           (reduce-kv
+            (fn [s dir exit]
+              (let [target (actions/parse-exit exit dir)]
+                (if (:to target)
+                  (conj s (:to target))
+                  s)))
+            #{}
+            exits)
+           ;; Add destinations from known computed exits
+           computed-destinations
+           (reduce-kv
+            (fn [s dir exit]
+              (if (and (map? exit) (:per exit))
+                (let [dest (get actions/computed-exit-destinations [room-id (:per exit)])]
+                  (if dest (conj s dest) s))
+                s))
+            #{}
+            exits)]
+       (assoc graph room-id (set/union regular-destinations computed-destinations))))
    {}
    (:rooms game-state)))
 
 (defn build-room-graph-with-directions
-  "Build graph that tracks direction for each connection."
+  "Build graph that tracks direction for each connection.
+   Includes both regular exits and known computed exits."
   [game-state]
   (reduce-kv
    (fn [graph room-id room-def]
      (let [exits (:exits room-def {})
-           dir-map (reduce-kv
-                    (fn [m dir exit]
-                      (let [parsed (actions/parse-exit exit dir)]
-                        (if (:to parsed)
-                          (assoc m (:to parsed) dir)
-                          m)))
-                    {}
-                    exits)]
-       (assoc graph room-id dir-map)))
+           ;; Get direction map from regular exits
+           regular-dir-map
+           (reduce-kv
+            (fn [m dir exit]
+              (let [parsed (actions/parse-exit exit dir)]
+                (if (:to parsed)
+                  (assoc m (:to parsed) dir)
+                  m)))
+            {}
+            exits)
+           ;; Add direction map from known computed exits
+           computed-dir-map
+           (reduce-kv
+            (fn [m dir exit]
+              (if (and (map? exit) (:per exit))
+                (let [dest (get actions/computed-exit-destinations [room-id (:per exit)])]
+                  (if dest (assoc m dest dir) m))
+                m))
+            {}
+            exits)]
+       (assoc graph room-id (merge regular-dir-map computed-dir-map))))
    {}
    (:rooms game-state)))
 

@@ -239,35 +239,21 @@
           ;; However, we need to check constraints!
           (if (= :location (goal-type goal))
             (let [target-room (second goal)
-                  ;; Check 1: Light requirements for dark rooms
+                  ;; Check: Light requirements for dark rooms
                   needs-light? (constraints/requires-light? target-room)
                   has-light? (or (contains? (:inventory achieved-state) :brass-lantern)
                                  (contains? (:inventory achieved-state) :ivory-torch))
 
-                  ;; Check 2: Underground return constraint
-                  ;; If we need to return to living-room and plan visits underground,
-                  ;; we need magic-flag or grating-unlocked to keep trap door open
-                  underground-rooms #{:cellar :troll-room :east-of-chasm :gallery :studio
-                                      :cyclops-room :treasure-room :maze-1 :maze-2 :maze-3
-                                      :maze-4 :maze-5 :maze-6 :maze-7 :maze-8 :maze-9
-                                      :maze-10 :maze-11 :maze-12 :maze-13 :maze-14 :maze-15}
-                  plan-visits-underground? (some #(contains? underground-rooms
-                                                             (get-in % [:preconditions :here]))
-                                                 plan)
-                  needs-return-route? (and (= target-room :living-room)
-                                           plan-visits-underground?)
-                  has-return-flag? (or (contains? (:flags achieved-state) :magic-flag)
-                                       (contains? (:flags achieved-state) :grating-unlocked))
+                  ;; NOTE: We no longer add magic-flag requirement for underground return.
+                  ;; The chimney (studio -> kitchen) provides an alternate exit from underground
+                  ;; that doesn't require any flags. The optimizer's navigation will find
+                  ;; the chimney route via A* when cellar->living-room is blocked.
 
                   ;; Build new goals
                   base-goals (disj goals goal)
-                  goals-with-light (if (and needs-light? (not has-light?))
-                                     (conj base-goals [:have :brass-lantern])
-                                     base-goals)
-                  final-goals (if (and needs-return-route? (not has-return-flag?))
-                                ;; Need magic-flag to return from underground
-                                (conj goals-with-light :magic-flag)
-                                goals-with-light)]
+                  final-goals (if (and needs-light? (not has-light?))
+                                (conj base-goals [:have :brass-lantern])
+                                base-goals)]
               (recur final-goals
                      plan
                      achieved-state
@@ -429,13 +415,37 @@
           id->action (into {} (map (juxt :id identity) plan))
           original-order (into {} (map-indexed (fn [i a] [(:id a) i]) plan))
 
+          ;; Categorize actions by type for smarter ordering:
+          ;; - "supply" actions (take items) should come first
+          ;; - "work" actions (kill, puzzle) come in the middle
+          ;; - "deposit" actions come last (after all items collected)
+          action-category (fn [action]
+                            (case (:type action)
+                              :take 0      ; Supply phase - get items first
+                              :deposit 2   ; Deposit phase - last
+                              1))          ; Work phase - middle
+
           ;; Scoring function for action priority:
-          ;; 1. Surface actions come before underground (to collect items before descending)
-          ;; 2. Ties broken by original order
+          ;; 1. Category (take -> work -> deposit)
+          ;; 2. Within same category, group by surface/underground
+          ;;    - Take actions: surface first (get items before going down)
+          ;;    - Work actions: underground first (do all underground work before returning)
+          ;;    - Deposit actions: surface (they're all at living-room anyway)
+          ;; 3. Ties broken by original order
           action-priority (fn [action-id]
                             (let [action (get id->action action-id)
-                                  surface-bonus (if (action-is-surface? action) 0 1000)]
-                              (+ surface-bonus (get original-order action-id 999))))]
+                                  category (action-category action)
+                                  is-surface? (action-is-surface? action)
+                                  ;; For take: surface before underground
+                                  ;; For work: underground before surface (do all underground work together)
+                                  ;; For deposit: doesn't matter (all surface)
+                                  location-bonus (case category
+                                                   0 (if is-surface? 0 100)   ; take: surface first
+                                                   1 (if is-surface? 100 0)   ; work: underground first
+                                                   2 0)]                       ; deposit: no preference
+                              (+ (* 1000 category)
+                                 location-bonus
+                                 (get original-order action-id 99))))]
 
       (loop [result []
              remaining (set (map :id plan))
