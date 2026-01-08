@@ -261,6 +261,12 @@
         (let [[new-gs _] (execute-command gs (:command (first remaining)))]
           (recur new-gs (rest remaining)))))))
 
+(defmacro yolo
+  "Run a debug command and discard the returned game-state.
+   Just prints output, returns nil."
+  [& body]
+  `(do ~@body nil))
+
 (defn show-state
   "Show current game state after running all commands in the playthrough."
   []
@@ -279,3 +285,42 @@
           gs)
         (let [[new-gs _] (execute-command gs (:command (first remaining)))]
           (recur new-gs (rest remaining)))))))
+
+(defn build-playthrough!
+  "Build a playthrough from a list of commands and save to JSON file.
+   Returns the final game state."
+  [commands & {:keys [seed] :or {seed 42}}]
+  (random/init! seed)
+  (let [output-writer (java.io.StringWriter.)]
+    (binding [*out* output-writer]
+      (let [init-gs (core/init-game nil)
+            header (str output-writer)]
+        ;; Run all commands and collect results
+        (loop [gs init-gs
+               remaining commands
+               results []
+               cmd-num 1]
+          (if (empty? remaining)
+            ;; Done - save to file
+            (let [playthrough {:description "A complete playthrough of Clork with seed 42"
+                               :seed seed
+                               :header (normalize-output header)
+                               :commands results}]
+              (with-open [w (io/writer "test/scripts/clork-playthrough.json")]
+                (json/write playthrough w :escape-slash false :indent true))
+              (println "\n=== Playthrough saved ===")
+              (println "Commands:" (count results))
+              (println "Location:" (:here gs))
+              (println "Score:" (:score gs 0))
+              (println "Moves:" (:moves gs 0))
+              gs)
+            ;; Execute next command
+            (let [cmd (first remaining)
+                  [new-gs output] (execute-command gs cmd)
+                  normalized (normalize-output output)]
+              (when (zero? (mod cmd-num 10))
+                (println (str "Command #" cmd-num ": " cmd)))
+              (recur new-gs
+                     (rest remaining)
+                     (conj results {:command cmd :response normalized})
+                     (inc cmd-num)))))))))

@@ -207,6 +207,48 @@
         (utils/tell game-state (str "Unknown object: " obj-id "\n"))))))
 
 ;;; ---------------------------------------------------------------------------
+;;; $where <obj>
+;;; ---------------------------------------------------------------------------
+
+(defn- get-location-chain
+  "Get the chain of containers for an object up to a room."
+  [game-state obj-id]
+  (loop [current obj-id
+         chain []]
+    (let [thing (gs/get-thing game-state current)
+          location (:in thing)]
+      (if (or (nil? location)
+              (get-in game-state [:rooms current]))
+        ;; We've reached a room or no location
+        (if (get-in game-state [:rooms current])
+          (conj chain current)
+          chain)
+        ;; Keep going up
+        (recur location (conj chain location))))))
+
+(defn cmd-where
+  "Find where an object is located, showing the full containment chain."
+  [game-state args]
+  (if (empty? args)
+    (-> game-state
+        (utils/tell "Usage: $where <object-id>\n")
+        (utils/tell "Find where any object is located in the game world.\n"))
+    (let [obj-id (parse-keyword (first args))
+          obj (get-in game-state [:objects obj-id])]
+      (if obj
+        (let [location (:in obj)
+              chain (get-location-chain game-state obj-id)
+              desc (:desc obj "?")]
+          (-> game-state
+              (utils/tell (str obj-id " (" desc ")\n"))
+              (utils/tell (str "  Location: " (or location "nowhere") "\n"))
+              (utils/tell (str "  Chain: " (str/join " -> " (map name chain)) "\n"))))
+        ;; Maybe it's a room?
+        (if-let [room (get-in game-state [:rooms obj-id])]
+          (utils/tell game-state (str obj-id " is a ROOM: " (:desc room) "\n"))
+          (utils/tell game-state (str "Unknown object: " obj-id "\n")))))))
+
+;;; ---------------------------------------------------------------------------
 ;;; COMMAND REGISTRATION
 ;;; ---------------------------------------------------------------------------
 ;;; These are registered directly in debug.clj as top-level $ commands.

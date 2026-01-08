@@ -176,31 +176,42 @@
   "Handle GIVE verb.
 
    ZIL: V-GIVE - Default handler for giving objects to NPCs.
+   - First tries the PRSI (recipient) object's action handler
    - If PRSI is not an actor: 'You can't give a X to a Y!'
    - Otherwise: 'The Y refuses it politely.'
 
-   Specific NPCs (cyclops, troll, thief) override this in their action handlers."
+   Specific NPCs (cyclops, troll, thief) override this in their action handlers.
+
+   Note: In ZIL, PERFORM calls PRSI action before verb handler (gmain.zil:252).
+   Since our perform doesn't do this systematically, we handle it here."
   [game-state]
   (let [prso (first (get-in game-state [:parser :prso]))
         prsi (first (get-in game-state [:parser :prsi]))
-        prso-name (gs/thing-name game-state prso)
-        prsi-name (gs/thing-name game-state prsi)
-        is-actor? (gs/set-thing-flag? game-state prsi :actor)]
-    (if (not is-actor?)
-      ;; Can't give to non-actors
-      (-> game-state
-          (utils/tell "You can't give a ")
-          (utils/tell prso-name)
-          (utils/tell " to a ")
-          (utils/tell prsi-name)
-          (utils/tell "!")
-          (utils/crlf))
-      ;; Actor refuses
-      (-> game-state
-          (utils/tell "The ")
-          (utils/tell prsi-name)
-          (utils/tell " refuses it politely.")
-          (utils/crlf)))))
+        prsi-obj (gs/get-thing game-state prsi)
+        action-fn (:action prsi-obj)]
+    ;; First try the PRSI (recipient) object's action handler
+    ;; ZIL: PERFORM calls PRSI action before verb handler
+    (if-let [result (when action-fn (action-fn game-state))]
+      result
+      ;; PRSI didn't handle it - use default response
+      (let [prso-name (gs/thing-name game-state prso)
+            prsi-name (gs/thing-name game-state prsi)
+            is-actor? (gs/set-thing-flag? game-state prsi :actor)]
+        (if (not is-actor?)
+          ;; Can't give to non-actors
+          (-> game-state
+              (utils/tell "You can't give a ")
+              (utils/tell prso-name)
+              (utils/tell " to a ")
+              (utils/tell prsi-name)
+              (utils/tell "!")
+              (utils/crlf))
+          ;; Actor refuses
+          (-> game-state
+              (utils/tell "The ")
+              (utils/tell prsi-name)
+              (utils/tell " refuses it politely.")
+              (utils/crlf)))))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; V-LOCK / V-UNLOCK

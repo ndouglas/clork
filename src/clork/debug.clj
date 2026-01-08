@@ -23,6 +23,7 @@
             [clork.debug.thief :as debug-thief]
             [clork.debug.scenarios :as debug-scenarios]
             [clork.debug.inspect :as debug-inspect]
+            [clork.debug.pathfind :as debug-pathfind]
             [clork.undo :as undo]))
 
 ;;; ---------------------------------------------------------------------------
@@ -184,6 +185,8 @@
                      "Clear a flag on object/room")
   (register-command! :frotz debug-manip/cmd-frotz
                      "Make object give light")
+  (register-command! :where debug-manip/cmd-where
+                     "Find where an object is located")
   ;; Undo commands
   (register-command! :undo undo/cmd-undo
                      "Undo last command(s)")
@@ -216,7 +219,16 @@
   ;; Test scenarios
   (register-command! :scenario debug-scenarios/cmd-scenario
                      "Load test scenarios (equipped player, troll dead, etc.)"
-                     :subcommands debug-scenarios/subcommands))
+                     :subcommands debug-scenarios/subcommands)
+  ;; Pathfinding commands
+  (register-command! :path debug-pathfind/cmd-path
+                     "Find shortest path between rooms")
+  (register-command! :path! debug-pathfind/cmd-path-strict
+                     "Find path using ONLY unconditional exits")
+  (register-command! :reachable debug-pathfind/cmd-reachable
+                     "Show all rooms reachable from a location")
+  (register-command! :route debug-pathfind/cmd-route
+                     "Plan optimal route through multiple rooms"))
 
 ;; Auto-initialize on namespace load
 (init-commands!)
