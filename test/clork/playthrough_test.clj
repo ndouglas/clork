@@ -4,6 +4,10 @@
    Unlike the MIT transcript test, this uses our own transcript generated
    by playing the game with a known seed, so no state adjustments are needed.
 
+   The goal is to win the game in as few moves as possible (under 250).
+
+   Someone's walkthrough said it could be done in < 225; can we beat that?
+
    Workflow:
     - Run the test to see what happens:
       - if it passes and the game is won in < 250 moves, you're done!
