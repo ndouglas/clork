@@ -17,7 +17,8 @@
   (:require [clojure.set :as set]
             [clork.planner.actions :as actions]
             [clork.planner.constraints :as constraints]
-            [clork.planner.optimizer :as optimizer]))
+            [clork.planner.optimizer :as optimizer]
+            [clork.planner.graph :as graph]))
 
 ;; Forward declaration for plan ordering
 (declare sort-plan-by-dependencies)
@@ -575,7 +576,7 @@
   "Treasures that can be collected with just troll-flag.
    These are accessible via trap door + maze without additional puzzles."
   [:bag-of-coins   ; maze-5 - just need to navigate maze
-   :jeweled-egg    ; tree/forest - on surface, no flags needed
+   :egg            ; up-a-tree (in nest) - on surface, no flags needed
    :painting])     ; gallery - accessible via cellar
 
 (def medium-treasures
@@ -599,6 +600,81 @@
 ;; =============================================================================
 ;; Treasure Planning
 ;; =============================================================================
+
+(defn get-treasure-location
+  "Find the room where a treasure is located.
+   Traverses container hierarchy (e.g., egg in nest in up-a-tree -> up-a-tree)."
+  [game-state treasure-id]
+  (loop [loc (get-in game-state [:objects treasure-id :in])
+         depth 0]
+    (cond
+      ;; Safety limit to avoid infinite loops
+      (> depth 10) nil
+
+      ;; No location
+      (nil? loc) nil
+
+      ;; It's a room - found it!
+      (contains? (:rooms game-state) loc) loc
+
+      ;; It's in another object (container) - recurse
+      (contains? (:objects game-state) loc)
+      (recur (get-in game-state [:objects loc :in]) (inc depth))
+
+      ;; Unknown location type
+      :else nil)))
+
+(defn optimize-treasure-order
+  "Use TSP to find optimal order for collecting treasures.
+
+   Parameters:
+   - game-state: Full game state with rooms/objects
+   - treasures: List of treasure IDs to collect
+   - available-flags: Flags available for navigation
+   - home: Starting/ending location (living-room)
+
+   Returns:
+   {:optimized-order [treasure-ids in optimal order]
+    :total-distance n
+    :original-order [original order for comparison]}"
+  [game-state treasures available-flags home]
+  (let [;; Build navigation graph with available flags
+        nav-graph (optimizer/build-nav-graph game-state :available-flags available-flags)
+
+        ;; Compute all-pairs shortest paths
+        apsp (graph/floyd-warshall nav-graph)
+
+        ;; Build treasure location map
+        treasure-locations (into []
+                                 (for [t treasures
+                                       :let [loc (get-treasure-location game-state t)]
+                                       :when loc]
+                                   {:id t :location loc}))
+
+        ;; Filter to only reachable treasures
+        reachable-treasures (filter #(graph/get-distance apsp home (:location %))
+                                    treasure-locations)]
+
+    (if (empty? reachable-treasures)
+      {:optimized-order []
+       :total-distance 0
+       :original-order treasures
+       :unreachable treasures}
+
+      ;; Solve TSP
+      (let [tsp-result (graph/optimal-treasure-order apsp reachable-treasures home)]
+        (if (:reachable? tsp-result)
+          {:optimized-order (mapv :id (:order tsp-result))
+           :total-distance (:total-distance tsp-result)
+           :tour (:tour tsp-result)
+           :original-order treasures
+           :unreachable (vec (remove (set (map :id reachable-treasures)) treasures))}
+
+          ;; TSP failed - return original order
+          {:optimized-order treasures
+           :total-distance nil
+           :original-order treasures
+           :unreachable []})))))
 
 (defn plan-treasure-list
   "Plan collection of a specific list of treasures.
@@ -683,7 +759,17 @@
 
                 ;; Phase 3: Collect treasures (with return route available)
                 (println "Planning Phase 3: Collect treasures...")
-                (let [treasure-result (plan-treasure-list registry state-after-cyclops easy-treasures)]
+                ;; Use TSP to find optimal treasure collection order
+                (let [available-flags (set/union (:flags state-after-cyclops)
+                                                  #{:troll-flag :magic-flag :cyclops-flag
+                                                    :rug-moved :trap-door-open})
+                      tsp-result (optimize-treasure-order game-state easy-treasures
+                                                          available-flags :living-room)
+                      _ (println "  TSP optimal order:" (:optimized-order tsp-result))
+                      _ (when (seq (:unreachable tsp-result))
+                          (println "  Unreachable:" (:unreachable tsp-result)))
+                      optimized-treasures (:optimized-order tsp-result)
+                      treasure-result (plan-treasure-list registry state-after-cyclops optimized-treasures)]
                   (if (empty? (:plans treasure-result))
                     ;; No treasures planned
                     {:success? true
