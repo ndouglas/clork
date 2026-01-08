@@ -219,15 +219,30 @@
   "Return the IDs of all objects inside the given container.
    For player/actor inventory, sorts by acquisition sequence (LIFO - newest first).
    For rooms, sorts by :order field with inv-seq as tie-breaker (for LIFO among dropped objects).
-   For object containers, sorts by inv-seq if present (LIFO), otherwise by :order."
+   For object containers, sorts by inv-seq if present (LIFO), otherwise by :order.
+
+   Note: When searching actor inventory, we normalize :player, :adventurer, and winner
+   to find objects regardless of which specific ID was used when placing them.
+   This handles the case where code might place objects :in :player or :in :adventurer."
   [game-state container-id]
   (let [winner (:winner game-state)
+        player (:player game-state)
         is-actor? (or (= container-id :adventurer)
                       (= container-id :player)
-                      (= container-id winner))
+                      (= container-id winner)
+                      (= container-id player))
+        ;; For actor inventory, search all equivalent actor IDs
+        ;; Use hash-set to allow duplicates (when winner/player are :adventurer)
+        actor-ids (when is-actor?
+                    (hash-set :adventurer :player winner player))
         is-room? (contains? (:rooms game-state) container-id)
         contents (->> (:objects game-state)
-                      (filter (fn [[_ obj]] (= (:in obj) container-id))))]
+                      (filter (fn [[_ obj]]
+                                (if is-actor?
+                                  ;; For actors, check if :in matches any equivalent ID
+                                  (contains? actor-ids (:in obj))
+                                  ;; For other containers, exact match
+                                  (= (:in obj) container-id)))))]
     (cond
       ;; Player inventory: sort by inv-seq descending (LIFO - newest first)
       is-actor?
