@@ -382,6 +382,34 @@
       (is (= :treasure-room (gs/get-thing-loc-id result :egg))
           "Valuable should be deposited in treasure room"))))
 
+(deftest thief-opens-egg-when-depositing-test
+  (testing "deposit-booty opens the egg but keeps it invisible"
+    ;; Test deposit-booty directly to verify egg behavior.
+    ;; Note: When thief is alone in treasure room, hack-treasures later reveals
+    ;; treasures. But deposit-booty itself should NOT reveal them.
+    (let [gs (-> (core/init-game)
+                 ;; Give thief the egg (stolen items get invisible flag)
+                 (assoc-in [:objects :egg :in] :thief)
+                 (gs/set-thing-flag :egg :invisible)  ; Stolen items are invisible
+                 (gs/unset-thing-flag :egg :open))  ; Ensure egg starts closed
+          ;; Call deposit-booty directly
+          result (thief/deposit-booty gs :treasure-room)]
+      ;; The egg should be in the treasure room now
+      (is (= :treasure-room (gs/get-thing-loc-id result :egg))
+          "Egg should be deposited in treasure room")
+      ;; The egg should be opened
+      (is (gs/set-thing-flag? result :egg :open)
+          "Thief should open the egg when depositing")
+      ;; The egg-solve flag should be set
+      (is (:egg-solve result)
+          "egg-solve flag should be set")
+      ;; The egg should STILL be invisible (treasures stay hidden until thief dies)
+      (is (gs/set-thing-flag? result :egg :invisible)
+          "Egg should remain invisible after deposit-booty (revealed later when thief dies)")
+      ;; The canary should still be inside the egg
+      (is (= :egg (gs/get-thing-loc-id result :clockwork-canary))
+          "Canary should still be inside the egg"))))
+
 (deftest thief-never-retreats-from-treasure-room-test
   (testing "Thief fights to the death in treasure room - never retreats"
     ;; This tests the bug fix: thief was incorrectly retreating from treasure room

@@ -58,7 +58,10 @@
 
 (defn deposit-booty
   "Move valuable items from thief to a room.
-   ZIL: DEPOSIT-BOOTY routine (1actions.zil lines 1910-1922)"
+   ZIL: DEPOSIT-BOOTY routine (1actions.zil lines 1910-1922)
+
+   Special case: When the thief deposits the egg, he opens it first.
+   This is the only way to safely open the egg (getting the canary intact)."
   [game-state room-id]
   (let [thief-contents (gs/get-contents game-state :thief)
         valuables (filter (fn [obj-id]
@@ -68,7 +71,12 @@
     (reduce (fn [gs obj-id]
               (-> gs
                   (assoc-in [:objects obj-id :in] room-id)
-                  (gs/unset-thing-flag obj-id :invisible)))
+                  ;; NOTE: Do NOT remove :invisible flag here!
+                  ;; Treasures stay invisible until thief dies (:f-dead handler)
+                  ;; ZIL lines 1919-1921: When depositing egg, thief opens it
+                  (cond-> (= obj-id :egg)
+                    (-> (assoc :egg-solve true)
+                        (gs/set-thing-flag :egg :open)))))
             game-state
             valuables)))
 
@@ -689,15 +697,20 @@
                      gs)
 
               ;; Steal from room if it has been visited (and thief is not with player)
-                [gs robbed?] (if (and room-touched? (not thief-in-player-room?))
+              ;; NOTE: Never steal from treasure room - that's the thief's lair!
+                [gs robbed?] (if (and room-touched?
+                                      (not thief-in-player-room?)
+                                      (not in-treasure-room?))
                                (let [[new-gs was-robbed?] (rob gs thief-loc :thief 75)]
                                  (if was-robbed?
                                    [(trace/trace-thief new-gs (str "Robbed valuables from " thief-loc)) true]
                                    [new-gs false]))
                                [gs false])
 
-              ;; Also try to steal junk
-                [gs stolen?] (if (and room-touched? (not thief-in-player-room?))
+              ;; Also try to steal junk (not from treasure room)
+                [gs stolen?] (if (and room-touched?
+                                      (not thief-in-player-room?)
+                                      (not in-treasure-room?))
                                (let [[new-gs was-stolen?] (steal-junk gs thief-loc)]
                                  (if was-stolen?
                                    [(trace/trace-thief new-gs (str "Stole junk from " thief-loc)) true]
