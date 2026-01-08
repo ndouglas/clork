@@ -612,29 +612,51 @@
    ;; Note: The thief is non-deterministic - he may not deposit immediately.
    ;; Must wait for him to actually deposit the egg.
 
+   ;; Phase 1: Give egg to thief (or let him steal it)
+   ;; The thief wanders, so we might encounter him anywhere underground
+   ;; For planning, we model this as happening in treasure-room (his home base)
    :give-egg-to-thief
    {:id :give-egg-to-thief
     :type :puzzle
     :preconditions
     {:here :treasure-room
-     :inventory #{:jeweled-egg}
+     :inventory #{:egg}
      :flags #{:cyclops-flag}}  ; Must reach treasure room
     :effects
-    {:flags-set #{}  ; egg-solve happens when thief deposits, not immediately
+    {:flags-set #{:thief-has-egg}
      :flags-clear #{}
      :inventory-add #{}
-     :inventory-remove #{:jeweled-egg}}
+     :inventory-remove #{:egg}}
     :cost 1
     :reversible? false
     :commands ["give egg to thief"]
-    :notes "Thief will eventually deposit egg, opening it safely."}
+    :notes "Thief takes egg, will eventually deposit and open it."}
+
+   ;; Phase 2: Wait for thief to deposit the egg
+   ;; This represents doing other tasks while the thief wanders and deposits
+   ;; In practice: do other underground tasks, thief will deposit eventually
+   :wait-for-egg-deposit
+   {:id :wait-for-egg-deposit
+    :type :puzzle
+    :preconditions
+    {:flags #{:thief-has-egg}}
+    :effects
+    {:flags-set #{:egg-solve}
+     :flags-clear #{}
+     :inventory-add #{}
+     :inventory-remove #{}}
+    :cost 10  ; Represents time spent doing other things
+    :reversible? false
+    :commands []  ; No explicit command - happens while doing other tasks
+    :notes "Thief deposits egg in treasure room, opening it safely. Do other tasks while waiting."}
 
    ;; After thief has deposited (opened) the egg and been killed
+   ;; The egg must be in inventory and open (egg-solve flag set)
    :take-canary-from-egg
    {:id :take-canary-from-egg
     :type :take
     :preconditions
-    {:inventory #{:jeweled-egg}
+    {:inventory #{:egg}
      :flags #{:egg-solve}}  ; Thief must have deposited/opened the egg
     :effects
     {:flags-set #{}
