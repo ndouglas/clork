@@ -1,0 +1,114 @@
+Zork I
+
+This is basically a tweak on Bill Piercy's strategy, with a few moves cut
+when leaving the mine, and one or two others saved elsewhere.  It also
+uses the "again" bug found by Steve Einbinder.  350 points are achieved
+at 223 moves, and the full game is finished at 228.  To my knowledge,
+this is the fastest possible solution.
+
+A few notes before we get started: first and foremost, this is not the most
+fun way to see the GUE.  It is, however, the fastest.  So, if you've never
+played it before, do yourself a favor and give it a shot unaided.  This
+solution makes use of some tricks and one bug in the programming in the
+interest of getting the minimum possible turn-count.  There's a lot of
+saving and restoring until you get the desired outcome from the RNG, but
+I've set it up so that you won't have to spend an inordinate amount of time
+doing so.  I've listed points and moves along the way, so you can see if you
+screwed something up without having to get all the way to the end.
+
+TRIP 1:  Egg/Dungeon Prep:  N, N, U, TAKE EGG, D, S, E, OPEN WINDOW, W, W,
+TAKE LAMP AND SWORD.  MOVE RUG, OPEN CASE, OPEN TRAP
+
+TRIP 2:  Troll/Cyclops/Thief/Treasure Room Trip:  D, TURN ON LAMP, S, E,
+TAKE PAINTING, W, and N. SAVE(44/21).  N, and KILL  TROLL WITH SWORD (keep
+restoring until you kill him on the first move). SAVE(44/23).
+
+Onto the maze -  W, S, E, U,  TAKE COINS. SW, E, S, SE.  You may run into
+the thief along the way.  If he "abstracted some valuables from your
+possession", great.  If he hurt you, restore.  You need him to steal the
+egg sooner or later.  If not, he'll get it soon.  Onto the Cyclops Room:
+
+ULYSSES (or ODYSSEUS), SAVE(54/33).  U.  The thief will attack you on first
+sight and you'll probably be hurt.  Restore until you make it in completely
+untouched, SAVE.  GET STILETTO.  He will swing it out of your reach.
+That's OK, just make sure he doesn't hit you back.  If he does, restore
+until he misses you, then go D.  Once you get back to the cyclops room, SAVE
+(79/36).  Type "G" without the quotes.  This will tell the computer to "Get
+Stiletto" again, and, due to some shoddy programming on Infocom's part, it'll
+respond with "Taken".  Hooray!  You can now kill the thief with your sword
+in one hit.
+
+If he didn't steal the egg earlier, you need him to do it now..  When you hit
+"G", you wanted this message.  If you didn't get it, restore and try again:
+
+"Taken.
+A seedy-looking individual with a large bag just wandered through the
+room. On
+the way through, he quietly abstracted some valuables from the room and from
+your possession, mumbling something about "Doing unto others before..."
+
+This will leave you with just your sword and your lamp.  Once you get that
+message, SAVE (79/37).  U.  Watch it, he can still hit you when you enter
+the room.  Make sure you get in unharmed.  Once you have, KILL THIEF WITH
+SWORD. Keep restoring and attacking until you kill him on the first hit. Once
+he's dead, SAVE(79/39).  You can now take a short break from the constant
+saving and restoring and get back to the game.
+
+TAKE BAG, PAINTING, CANARY, CHALICE AND EGG.  Then D, E and E to the Living
+Room. PUT ALL BUT LAMP AND CANARY INTO CASE. OPEN TRAPDOOR.  SAVE(116/45).
+
+TRIP 3: Gold Coffin and Bauble:  W, W, U, type in "TEMPLE" (without the
+quotes), D, OPEN COFFIN, TAKE COFFIN AND SCEPTRE.  U to Temple, then S and
+PRAY. You are now in the forest  Go E, WIND CANARY, TAKE BAUBLE, S, E, W, W,
+PUT ALL BUT LAMP AND SCEPTER IN CASE.  SAVE(151/63).
+
+TRIP 4:  Reservoir/Rainbow:  D, N, E, D, NE, E, N, N, PUSH YELLOW, TAKE
+WRENCH AND SCREWDRIVER. S, S, TURN BOLT WITH WRENCH (the sluice gates open),
+D, TAKE BOAT, U, W, DROP BOAT.  N and N again (won't work, but will wait out
+the reservoir draining and cost you two moves).  Then, N, N, N, and TAKE
+TRIDENT, S, TAKE PUMP, S, TAKE TRUNK, S, PUMP UP BOAT.  PUT ALL BUT LAMP AND
+PUMP IN BOAT.  DEFLATE BOAT.  TAKE BOAT.  SAVE(175/96).
+
+Then SE, D, ECHO, TAKE BAR, E, E, S, DROP BOAT.  PUMP UP BOAT, GET IN BOAT
+and LAUNCH.  TAKE BUOY.  Go E, GET OUT OF BOAT and walk N. TAKE SHOVEL, NE,
+DIG SAND WITH SHOVEL (four times!).  DROP BUOY AND SHOVEL.  OPEN BUOY,  TAKE
+SCARAB AND EMERALD.  SAVE(195/119).
+
+Then, SW, S, and PUT BAR AND EMERALD IN BOAT. TAKE SCEPTRE.  DEFLATE BOAT.
+TAKE BOAT. Then walk S.  WAVE SCEPTRE.  W, W, TAKE POT, SW, U, U, NW, W, W.
+TAKE SACK.  OPEN SACK.  W and PUT SCEPTRE AND POT AND SCARAB IN CASE.  DROP
+ALL BUT PUMP.  PUMP UP BOAT,  TAKE TRIDENT, TRUNK, BAR, AND EMERALD.  PUT
+ALL IN CASE.  TAKE LAMP, GARLIC AND SCREWDRIVER. SAVE(257/145).
+
+TRIP 5:  Hades/Mine:  W, W, U.  Type "TEMPLE", then N, TAKE TORCH, S, TAKE
+BELL, S, TAKE BOOK AND CANDLES.  SAVE(271/155). D. (keep restoring until you
+get through without having your candles blown out.)  D to the Entrance to
+Hades and DROP CANDLES.  RING BELL,  TAKE CANDLES.  READ BOOK. S. TAKE SKULL.
+Then, N.  SAVE(281/164).
+
+U.  Keep restoring until the wind blows out your candles.  N, TOUCH MIRROR, N,
+W, N, W, N, GET JADE, E, PUT TORCH, CLOVE AND SCREWDRIVER IN BASKET.
+SAVE(286/175).
+
+W, and keep reverting and going W until bat gives you a lift to the Ladder
+Bottom.  SAVE(286/176).  Then S, TAKE COAL, N, U, U, N, E, S, N to Gas Room.
+Then U, S, PUT COAL IN BASKET and LOWER BASKET down to Drafty Room.
+SAVE(286/189).
+
+Then W, and keep reverting and going W until you catch the Batmobile to the
+Ladder Top.  (You can't get carried back to the bottom again.)  D, W, DROP ALL,
+W, TAKE SCREWDRIVER, COAL AND TORCH.  S, OPEN LID, PUT COAL IN MACHINE and
+CLOSE LID.  FLIP SWITCH WITH SCREWDRIVER, OPEN LID and TAKE DIAMOND.  Then N
+and PUT ALL IN BASKET. Then E and TAKE SKULL, LAMP AND JADE and head for the
+Gas Room:  E, U, U, N, E, S, N.  TAKE BRACELET.  Then, U, S to the Shaft Room.
+RAISE BASKET and TAKE DIAMOND AND TORCH.  SAVE(314/218).
+
+W.  (keep restoring until the bat drops you off at Mine Entrance). S, D.  Go U
+and PUT ALL BUT LAMP IN CASE, scoring 350 points.  SAVE (as 350/223).  E. E. N.
+W. SW. ENTER BARROW.
+
+Your score is 350 (total of 350 points), in 228 moves.
+This gives you the rank
+of Master Adventurer.
+
+Copyright Jimmyhaha, first written 2/22/2009

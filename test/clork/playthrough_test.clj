@@ -2,7 +2,28 @@
   "Tests a complete Clork playthrough with a single fixed seed.
 
    Unlike the MIT transcript test, this uses our own transcript generated
-   by playing the game with a known seed, so no state adjustments are needed."
+   by playing the game with a known seed, so no state adjustments are needed.
+
+   Workflow:
+    - Run the test to see what happens:
+      - if it passes and the game is won in < 250 moves, you're done!
+      - if it passes and the game is won but in >= 250 moves:
+        - consult the walkthroughs and the transcript to find ways to optimize
+      - if it passes and the game is not won (score < 350):
+        - consult the walkthroughs in ./scripts/walkthroughs/ to find next steps
+        - use add-command! to add commands to the transcript JSON
+        - if the result looks wrong:
+          - use show-state to inspect the current game state
+          - debug as needed
+        - if the command succeeds:
+          - take the output and paste into the JSON file
+        - if the command fails:
+          - debug as needed
+      - if it fails:
+        - inspect the report printed to the console
+        - debug as needed
+    - repeat
+   "
   (:require [clojure.test :refer :all]
             [clojure.data.json :as json]
             [clojure.java.io :as io]

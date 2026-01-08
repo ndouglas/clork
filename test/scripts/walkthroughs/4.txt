@@ -1,0 +1,580 @@
+  |___  /          | |        |_   _|
+                         / /  ___  _ __| | __       | |
+                        / /  / _ \| '__| |/ /       | |
+                       / /__| (_) | |  |   <       _| |_
+                      /_____|\___/|_|  |_|\_\     |_____|
+
+
+                  O------------------------------------------O
+                  |   Zork I: The Great Underground Empire   |
+                  |            An FAQ/Walkthrough            |
+                  |              By KeyBlade999              |
+                  |                                          |
+                  |            File Size: 26.1 KB            |
+                  |          Current Version: Final          |
+                  |    Time of Update: 12:01 AM 11/6/2012    |
+                  O------------------------------------------O
+
+
+=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=
+                        Section Negative One: Donations             **ZORK_-1**
+=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=
+
+While I do write all of my guides for free, it does take a lot of time and
+effort to put them together. If you're feeling generous and want to show your
+appreciation, I am gladly accepting donations. I don't know exactly what the
+donations will be used for, but just know that you would definitely be helping
+me make more quality FAQs! Even the smallest donation amounts are appreciated,
+and are a great way to say how much you appreciate the work I do. If you do
+decide you'd like to donate, please send the donations through PayPal at the
+e-mail address listed below. Thank you so very much for considering this!!
+
+                          keyblade999.faqs@gmail.com
+
+By the way, this is also my contact e-mail, so if you want to contribute
+something to this or any of my other FAQs, or have a question to ask about one
+of them, go ahead and use this e-mail.
+
+
+=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=
+                        Section Zero: Table of Contents              **ZORK_0**
+=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=
+
+  [Section Title] .............................................. [CTRL+F Tag]
+
+  -1. Donations ................................................ **ZORK_-1**
+   0. Table of Contents ........................................ **ZORK_0**
+   1. Introduction ............................................. **ZORK_1**
+   2. Version History .......................................... **ZORK_2**
+   3. Legalities ............................................... **ZORK_3**
+
+   4. Command Schemes .......................................... **ZORK_4**
+   5. Main Walkthrough ......................................... **ZORK_5**
+
+
+=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=
+                           Section One: Introduction                 **ZORK_1**
+=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=
+
+Welcome to another FAQ of mine. This one covers the PC game known as Zork I.
+This magnificent game is part of a number of other Zork games, all of which are
+difficult text-based adventure games, which is probably the reason you came
+here. Well, you need help, and I shall do by best to give it.
+
+...
+
+Yeah, I don't know much to say about this. But try to enjoy.
+
+
+=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=
+                         Section Two: Version History                **ZORK_2**
+=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=
+
+Final - First and likely only version of this FAQ completed.
+        12:01 AM 11/6/2012
+
+
+=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=
+                           Section Three: Legalities                 **ZORK_3**
+=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=
+
+This FAQ may not be reproduced under any circumstances except for personal,
+private use. It may not be placed on any website or otherwise distributed
+publicly without advance written permission. Use of this guide on any other
+website or as a part of any public display is strictly prohibited, and a
+violation of copyright.
+
+All trademarks and copyrights contained in this document are owned by their
+respective trademark and copyright holders.
+
+© 2012 Daniel Chaviers (a.k.a. KeyBlade999).
+
+If you would wish to contact me concerning this or my other FAQs, use this
+e-mail: keyblade999.faqs@gmail.com, or PM (Private Message) me on the GameFAQs
+message boards.
+
+O-----------------------------------O    O------------------------------------O
+|     Allowed sites for my FAQs     |    |        Forever-Banned Sites        |
+O-----------------------------------O    O------------------------------------O
+|    GameFAQs (www.gamefaqs.com)    |    |      CheatCC (www.cheatcc.com)     |
+|   Neoseeker (www.neoseeker.com)   |    |       www.cheat-database.com       |
+| SuperCheats (www.supercheats.com) |    |  Cheat Index (www.cheatindex.com)  |
+|                                   |    | Cheat Search (www.cheatsearch.com) |
+|                                   |    |    www.panstudio.com/cheatstop     |
+|                                   |    | Game Express (www.gameexpress.com) |
+|                                   |    |             Mega Games             |
+|                                   |    |  Cheats Guru (www.cheatsguru.com)  |
+O-----------------------------------O    O------------------------------------O
+
+
+=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=
+                        Section Four: Command Schemes                **ZORK_4**
+=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=
+
+This game is one of a wide genre of text-based adventure games. In this game,
+like many of them, you'll directly enter your commands into the command prompt
+on-screen. There are a number of different ways to say things, but you had best
+be sure in what you want to say.
+
+
+Cardinal Directions:
+````````````````````
+
+These can say in the form "Go/head/walk ___", or just "___". The blank is the
+direction or an acceptable abbreviation as below.
+
+ - North     (N)
+ - East      (E)
+ - South     (S)
+ - West      (W)
+ - Northeast (NE)
+ - Northwest (NW)
+ - Southeast (SE)
+ - Southwest (SW)
+ - Up        (U)
+ - Down      (D)
+
+
+
+Actions:
+````````
+
+There are a number of things you are supposed to do. A lot of them can mean the
+same thing. Here are a number of them that function properly, thanks to TUI.
+
+                    ANSWER          FOLLOW          SAY
+                    ATTACK          GIVE            SEARCH
+                    BLOW            INFLATE         SHAKE
+                    BREAK           JUMP            SLIDE
+                    BURN            KICK            SMELL
+                    CLIMB           KNOCK           STAY
+                    CLOSE           LIGHT           STRIKE
+                    COUNT           LISTEN          SWIM
+                    CROSS           LOCK            TAKE
+                    CUT             LOOK            TELL
+                    DEFLATE         LOWER           THROW
+                    DIG             MOVE            TIE
+                    DRINK           OPEN            TOUCH
+                    DROP            POUR            TURN
+                    EAT             PRAY            UNLOCK
+                    ENTER           PULL            WAKE
+                    EXAMINE         PUSH            WALK
+                    EXIT            PUT             WAVE
+                    EXTINGUISH      RAISE           WEAR
+                    FILL            READ            WIND
+
+
+
+Spelling/Grammar:
+`````````````````
+
+It goes without saying. Don't screw it up. Most commands, except directions,
+should have a verb and noun in them.
+
+Also, be specific. Don't just say "fight". Like when fighting the troll near
+the start, saying "fight" assumes with your hands. Instead, say "Fight with
+sword" or, even better, "Fight troll with sword". This way, exactly what you
+want to do is conveyed properly.
+
+
+
+Miscellaneous Commands:
+```````````````````````
+
+There are a number of other commands available to you. Here are the ones I know
+of, with suitable abbreviations within parentheses, and grouped together by
+similar/related effects.
+
+ - Verbose   : Whenever you re-enter a room, you'll get another description.
+ - Brief     : Returns verbosity to normal, starting setting.
+ - Superbrief: Only a room's name and items are detailed.
+ - Look (L)  : Get a redescription of the room.
+
+ - Diagnose: Learn of current condition. Imagine your wound status like HP.
+             Perfect health is 3/3 HP, hit with a light wound is 2/3 HP, and
+             hit with a serious wound is 1/3 HP.
+
+ - Inventory (I): Find out all of the items on your person.
+
+ - Score: Get your rank, moves, and score. Scores are out of 350.
+
+ - Again (G): Repeat the last command you used.
+ - Wait (Z) : Use three moves consecutively with nothing occurring. Often used
+              to heal wounds.
+
+ - Save    : Save a game.
+ - Restore : Load a saved game.
+ - Restart : Begin a new game.
+ - Quit (Q): Completely exit the game.
+
+
+
+Absolute Randomness:
+````````````````````
+
+There are a number of things in this game you can do that have pretty much no
+use in the game at all, except for fun or something. This is just pretty much
+my documentation for random commands that result in rather humorous effects.
+There's nothing much to gain from doing any of these.
+
+And, no, I don't plan on adding to this list. What's here is what's here; if
+you find something else, great, but it's not pertinent to the game.
+
+
+ - Jump, Hop, Leap, etc.: Generally, you'll get insulted, but in some areas
+                          that are high up, you often get killed.
+
+ - Scream, Shout, etc.: "Aaaarrrrgggghhhh!"
+
+ - Cut Self: With the sword in your possession, you'll go all emo and die.
+
+ - Throw __ at Self: Basically the above. Can be done with the leaflet. May
+                     kill you, may not.
+
+ - Eat Self: "Auto-cannibalism is not the answer."
+
+ - Rape ___: "What an (ahem!) strange idea."
+
+ - Kiss Me: "I'd sooner kiss a pig."
+
+ - Love: "I don't know the word 'love'."
+
+ - Kill Me with Me: "You don't have the you."
+
+ - Zork: "At your service." I guess the narrator is named Zork?
+
+ - Down: When in the kitchen, "Only Santa Claus goes down chimneys."
+
+ - Read Door: When in living room, "This space intentionally left blank."
+
+
+=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=
+                        Section Five: Main Walkthrough               **ZORK_5**
+=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=
+
+ O---------------------------------------------------------------------------O
+ |                               NOTES ON THIS                               |
+ |                                                                           |
+ |  This section contains a full, rather verbose walkthrough for this game.  |
+ |  While the commands to input are vague, they are easily drawn out from    |
+ |  context. This walkthrough was designed to be less boring than a direct   |
+ |  listing of the commands to enter; if you want such a list, you'll have   |
+ |  to look at a different FAQ. (Not to bash those FAQs, of course. It just  |
+ |  gets rather mundane looking at the same commands over and over.)         |
+ |                                                                           |
+ |  Additionally, this walkthrough is one of the faster ways of completing   |
+ |  the game. Thusly, you won't readily explore it as much you would on your |
+ |  own. This will likely ruin the game for you, so I just suggest doing it  |
+ |  yourself first, or at least trying to do so.                             |
+ |                                                                           |
+ O---------------------------------------------------------------------------O
+
+
+House and Forest:
+`````````````````
+
+Once you begin, you can open the mailbox and read the leaflet if you want, but
+it is by no means required. (It is also fun to throw the leaflet at yourself.)
+Anyways, head north from the house twice and go up the tree there.
+
+At the top, in the bird's next, should be an ornate, jeweled egg. Bet that hurt
+coming out.  :P  Anyways, take it. Don't worry about opening it - while you can
+do so (just throw the egg while up here), it will damage the contents within,
+so forget about. We'll get someone else to open it.
+
+Go on down and south, then east. You should have a window near you on the
+house; open it and enter the house. Take the bottle and go west. Open the case
+there and take the sword and the lantern, which will become quite familiar to
+you as you continue throughout this and other Zork games.
+
+Next, go east and up the stairs to the attack. Turn on the lantern and take the
+rope. Turn off the lantern (it will eventually run out if left on, and we need
+it a lot in this game), then go back downstairs. Go west and move the rug in
+the living room.
+
+Open the trap door and go on down. As luck would have it, the door closes above
+you, preventing the need for you to do so yourself. ... Oh, wait.
+
+
+
+Trollz!:
+````````
+
+Here, turn the lantern on, lest a wandering grue devour you. (What the heck is
+a grue, anyways?) Then take note of how your sword is somewhat glowing - it
+glows like this with an enemy is in an adjacent room, and grows brightly when
+they are in the same room as yourself.
+
+Thusly, opt to "save" the game. That way, if you get your head chopped off or
+something, you can "restore" the game back to this point. Afterwards, go north
+and you'll find the troll. Pretty much just fight the troll with your sword -
+it may take more than one hit, but keep going until  *someone*  bites the dust.
+
+After the fight, "diagnose" your condition. If you're able to be killed with a
+light wound, I'd use the "wait" command until my wounds healed up a bit, as we
+will be fighting some enemies soon enough, but they generally won't seriously
+wound you.
+
+
+
+The Underground Maze:
+`````````````````````
+
+After defeat the troll, go west. You'll find this area to be one of the most
+baffling you'll ever encounter as, if you go one way, you generally cannot
+trace your steps back.  O_o  It would be prudent to follow my directions to
+the letter.
+
+Also, during the course of the maze, you may meet up with some kind of man, who
+may steal from you. You don't particularly want this, so save before going any
+further. He can also attack you. You will want to check your inventory (just
+use "inventory") after the encounters. If you have a sword, lantern, bottle,
+and coins (if you're that far), then there's no real need to worry about
+restoring, since you want him to take the jeweled egg. Otherwise, restore.
+(If you don't get him to steal it, don't worry.)
+
+Anyways, once in the maze, go south, east, and up. Don't mess with the
+skeleton here or you'll lose everything, and that is not good. Take just the
+bag of coins, then go southwest, east, south, and southeast to the Cyclops's
+room.
+
+What do you do about him? Well, anyone remember Greek mythology? Basically,
+just input the command "Say 'Ulysses'" and the Cyclops will run off, leaving
+a metaphorical trail of urine behind him.
+
+
+
+The Land of the Living Dead:
+````````````````````````````
+
+Did the thief take the egg from you? If not, save in the Cyclops room and go
+up. You'll find the thief's hideout; he may wound you, but it is very unlikely
+to be serious. Give the egg to the thief and go back down. We'll kill him
+later, don't worry.  >:)
+
+Then go southeast, east, and east. Hey, this area's familiar. Put the treasures
+into the case, open the trap door, and go down. Head north, east, north,
+northeast, and east. Go north into the dam lobby and take the matchbook. Go
+south twice to the Deep Canyon and go down.
+
+Then go west, southeast, and east to the Dome Room. Save and jump for a bit of
+fun, but it is counterintuitive (you lose items, even if you go where you need
+to). After that, tie the rope to the railing and head down to the Torch Room.
+
+Go south and take the bell, then south again. Take the book and the candles.
+Also consider reading the book, though it isn't required. Go down from here
+and repeat this action.
+
+Welcome to Hell! That is to say, the Entrance to Hades. So, Greek Hell. Now,
+then, let us exorcise the crap out of those devilish spirits...
+
+Open the matchbook, then ring the bell to stop the spirits. This will cause
+you to drop the candles; don't worry. Light a match, then light the candles
+with this match. Wave the candles and you'll scare the living crap out of
+those spirits. Read the book (again, possibly) to get rid of them. Nice.
+
+Pour some water on the bell, then take the bell - it grew hot and you dropped
+it, too, remember? Put out the candles as well, then drop the bottle. Go south
+you'll find an ornate skull. Take it.
+
+
+
+The Thief:
+``````````
+
+After taking the skull, go north, up, north, north, north, west, west, south,
+south, and east. Take the painting here and go west, north, and up. Hey, I
+know this place! Put the painting into the case to lighten your load.
+
+Take the bag of coins and go west, then west again to the Cyclops room. Save
+here and we can deal with the thief. There are two big methods as to how to do
+so.
+
+The main one is the most obvious. Go up and restore the game until you end up
+not getting hit upon entrance. Then give the coins to the thief, then "Kill
+thief with sword". You may get a hit on him; you need to give him a light wound
+at least. Otherwise, restore. Then repeat this, but hand over the skull first.
+Then just keep bashing at him. You might get lucky.
+
+The second one is a lot easier. Go up and "Get stiletto". You'll likely fail;
+don't worry. Go back down and use the "G" command. Due to some bad programming,
+you'll then actually receive the stiletto. Go upstairs and repeatedly try to
+kill the thief with the stiletto. Lot easier, ain't it? As with the previous
+method, you can give the thief the coins/skull to distract him as needed.
+
+Once you win the battle, take all of the treasures. (Let your wounds heal if
+needed.) Then go down, east, and east. Put all of the treasures into the case.
+Go west, west, and up, take the stiletto (if you need to), then go down, east,
+and east. (If you already had the stiletto, for whatever reason, ignore this
+last bit.)
+
+
+
+Draining the Reservoir:
+```````````````````````
+
+After the above, save. Take the clockwork canary (it is what was in the jeweled
+egg), then go east, east, north, north, and up. Wind the canary. Huh.
+
+Go down and take the brass bauble, and go south, east, west, west, and put all
+of the treasures into the case. Save if you want.
+
+Now, onto the actual business. Go down, north, east, north, northeast, and east
+to find the controls for the dam. We'll mess with it later - go north and north
+again. Switch off the lantern and press the red button. Only take the
+screwdriver, then push the yellow button. Go south two times and turn the bolt
+with the wrench.
+
+Wait a few times and the reservoir will soon drain. Go west and turn on the
+lantern, then north. Drop all but the lantern and go north twice. Take the
+trident - you know who that's a reference to, right? - and go south twice. Take
+the trunk and go south, southwest, southwest, west, south, and up. Put all of
+the treasures in the case.
+
+
+
+Coal and Diamonds:
+``````````````````
+
+Go east and open the sack there. Take the garlic - as if you'd eat it! - and go
+west, down, north, east, north, northeast, and north. Take all the crap you
+dropped before. Go north twice.
+
+Then go up, north, north, west, north, west, and north. Get the figurine and go
+east. Put the screwdriver, matchbook, and candles into the basket; we'll do
+more with this later.
+
+Go north, down, and take the bracelet. Then go east, northeast, southeast,
+southwest, down, down, and west. Drop all but the lantern here and go east,
+south, take the coal, north, up, up, north, east, south, north, up, and
+south. Phew!
+
+Take the candles and the matchbook. Light a match and then light the candle
+with it. Put the candles and coal into the basket, then lower it. Go north,
+down, east, northeast, southeast, southwest, down, down, and west.
+
+Drop all of your stuff and go west. Hey, look! It's the basket! Take the
+candles, screwdriver, and the coal. Head south and open the lid. Put the coal
+into this machine and close the lid. Move the switch with the screwdriver, then
+open the lid for a big freakin' diamond! Take it and go north.
+
+Put the candles, diamond, and screwdriver into the basket. Go east and take
+everything except the stiletto and timber, then go east, up, up, north, east,
+south, north, up, and south. Raise the basket and take the candles and the
+diamond.
+
+May as well return to the treasure case. Go west, south, east, south, down, and
+up. Put all treasures into the case.
+
+
+
+Silence is Golden:
+``````````````````
+
+Go down, north, east, east, north, northeast, east, south, and down.
+
+Whatever logic it seems to defy, say "Echo", and, for some random reason, the
+room becomes quiet. Huh. That was easy. Take the platinum bar and go southeast,
+east, and down. Turn off the lantern, then drop the lantern and the candles.
+Take the torch now, which will eternally be lit.
+
+Go south and east. Open the coffin and take the sceptre. Go west, south, down,
+north, north, north, west, west, south, and up. Put all of the treasures
+EXCEPT the sceptre and torch into the case. We still got stuff to do with them
+pretty soon.
+
+Go east four times, down twice, and north. You'll find the rainbow, but no
+random leprechaun, north a pot of gold. Perhaps on the other side? Wave the
+sceptre so we can see. Yup, that worked - take the pot of gold.
+
+Then head east twice, north twice, and take the shovel. Go northeast and
+dig in the sand with the shovel. You'll eventually, after a few repetitions of
+this action, find a scarab. After this, drop the shovel, as you will no longer
+need to use it. Take the scarab and go southwest, south twice, west, twice,
+southwest, up twice, northwest, and west thrice. Put all treasures EXCEPT the
+torch into the case.
+
+
+Row, Row, Row Your Boat...:
+```````````````````````````
+
+Go down, north, east thrice, up, northwest, and north twice. Take the air pump,
+as you'll obviously need it later. Go south twice, east, down, and take the
+plastic. This pile of random plastic actually is an air boat. We'll use it
+momentarily.
+
+Go up, south, down, and east twice. Drop all but the pump and torch, then
+"inflate plastic". Then get into the boat and launch it. Wait around for a bit
+until you read something about a red buoy. Take it and land to the east.
+
+Here, open the buoy to find an emerald. Weird place to keep treasure, but I've
+seen weirder, I guess. Drop the buoy, get out of the boat, deflate the boat,
+and get the plastic. Go south until you reach Aragain Falls. (Note: Niagara.)
+
+There, go west twice, southwest, up twice, northwest, and west four times. Put
+the emerald into the case, then go down, north, and east five times. Take all
+but the label. (It won't be there if you read it, which is just as okay.)
+
+
+
+Continued in Zork II...:
+````````````````````````
+
+Oh, heck no, I ain't letting you off that easily.  :P   We'll actually finish
+this journey.
+
+Go west three times, southeast, east, down, south, and east. Take the coffin -
+if needed, drop all but the torch. Go west and south. Pray to find yourself
+in the forest.  O_o  Now head east, south, east, and west twice. Put all of the
+treasures into the case.
+
+Read the parchment you caused to fall. Interesting... Go east twice, southwest,
+northwest, and southwest. Go into the tomb and...
+
+Huh. My game closed off. Well, given that Zork II starts in the Stone Barrow,
+it is quite likely that this is the end of the game.
+
+
+
+End-Game Evaluation:
+````````````````````
+
+When replaying the game with my walkthrough as above, making minute changes as
+needed, this was my end result. Of course, the game didn't let me finish - it
+just closed off, but I made my case above here - but I hit "restart" and the
+game gave me the below. As such, this proves the completionistic nature of this
+guide. Thanks for reading.
+
+
+ O--------------------------------------------------------------------------O
+ |    "Your score is 350 ([out of a] total of 350 points), in 554 moves.    |
+ |              This gives you the rank of Master Adventurer."              |
+ O--------------------------------------------------------------------------O
+
+
+
+
+
+O=============================================================================O
+|                      This is the end of KeyBlade999's                       |
+|                       FAQ/Walkthrough for the PC game                       |
+|                    Zork I: The Great Underground Empire.                    |
+O=============================================================================O
+           ________________
+          |  ____________  |
+          | |            | |
+          | |            | |
+          | |____________| |________________________________________
+          | |____________| |_________________________               |
+          | |            | |                         | |\   /\   /| |
+          | |            | |                         | | \ /  \ / | |
+          | |____________| |                         | | (_)  (_) | |
+          |________________|                         |_|          |_|
+                          ___       ___       ___
+                         /'__`\    /'__`\    /'__`\
+                        /\ \_\ \  /\ \_\ \  /\ \_\ \
+                        \ \___, \ \ \___, \ \ \___, \
+                         \/__,/\ \ \/__,/\ \ \/__,/\ \
+                              \ \_\     \ \_\     \ \_\
+                               \/_/      \/_/      \/_/
+                                                               KeyBlade999

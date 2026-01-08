@@ -1030,6 +1030,830 @@
     {
       "command": "go north",
       "response": "Cellar"
+    },
+    {
+      "command": "go up",
+      "response": "Living Room\n\nYour collection of treasures consists of:\n\nA sapphire-encrusted bracelet\n\nA jade figurine\n\nA leather bag of coins\n\nA jewel-encrusted egg\n\nA painting\n\nA platinum bar\n\nA crystal skull"
+    },
+    {
+      "command": "go east",
+      "response": "Kitchen\n\nA bottle is sitting on the table.\n\nThe glass bottle contains:\n\nA quantity of water"
+    },
+    {
+      "command": "go east",
+      "response": "Behind House\n\nThe lamp is definitely dimmer now."
+    },
+    {
+      "command": "go south",
+      "response": "South of House"
+    },
+    {
+      "command": "go south",
+      "response": "Forest\n\nThis is a dimly lit forest, with large trees all around.\n\nYou hear in the distance the chirping of a song bird."
+    },
+    {
+      "command": "go east",
+      "response": "Canyon View"
+    },
+    {
+      "command": "go down",
+      "response": "Rocky Ledge\n\nYou are on a ledge about halfway up the wall of the river canyon. You can see from here that the main flow from Aragain Falls twists along a passage which it is impossible for you to enter. Below you is the canyon bottom. Above you is more cliff, which appears climbable."
+    },
+    {
+      "command": "go down",
+      "response": "Canyon Bottom\n\nYou are beneath the walls of the river canyon which may be climbable here. The lesser part of the runoff of Aragain Falls flows by below. To the north is a narrow path."
+    },
+    {
+      "command": "go north",
+      "response": "End of Rainbow\n\nYou are on a small, rocky beach on the continuation of the Frigid River past the Falls. The beach is narrow due to the presence of the White Cliffs. The river canyon opens here and sunlight shines in from above. A rainbow crosses over the falls to the east and a narrow path continues to the southwest."
+    },
+    {
+      "command": "go southwest",
+      "response": "Canyon Bottom"
+    },
+    {
+      "command": "go up",
+      "response": "Rocky Ledge"
+    },
+    {
+      "command": "go up",
+      "response": "Canyon View"
+    },
+    {
+      "command": "go west",
+      "response": "Forest"
+    },
+    {
+      "command": "go north",
+      "response": "Clearing\n\nYou hear in the distance the chirping of a song bird."
+    },
+    {
+      "command": "go west",
+      "response": "Behind House"
+    },
+    {
+      "command": "go west",
+      "response": "Kitchen\n\nA bottle is sitting on the table.\n\nThe glass bottle contains:\n\nA quantity of water"
+    },
+    {
+      "command": "go west",
+      "response": "Living Room\n\nYour collection of treasures consists of:\n\nA sapphire-encrusted bracelet\n\nA jade figurine\n\nA leather bag of coins\n\nA jewel-encrusted egg\n\nA painting\n\nA platinum bar\n\nA crystal skull"
+    },
+    {
+      "command": "go down",
+      "response": "Cellar\n\nThe lamp is nearly out."
+    },
+    {
+      "command": "go north",
+      "response": "The Troll Room"
+    },
+    {
+      "command": "go east",
+      "response": "East-West Passage"
+    },
+    {
+      "command": "go east",
+      "response": "Round Room"
+    },
+    {
+      "command": "go southeast",
+      "response": "Engravings Cave\n\nThere are old engravings on the walls here."
+    },
+    {
+      "command": "go east",
+      "response": "Dome Room"
+    },
+    {
+      "command": "go down",
+      "response": "Torch Room"
+    },
+    {
+      "command": "go down",
+      "response": "Temple"
+    },
+    {
+      "command": "go down",
+      "response": "Egyptian Room\n\nThis is a room which looks like an Egyptian tomb. There is an ascending staircase to the west.\n\nThe solid-gold coffin used for the burial of Ramses II is here."
+    },
+    {
+      "command": "drop sack",
+      "response": "Dropped."
+    },
+    {
+      "command": "drop screwdriver",
+      "response": "Dropped."
+    },
+    {
+      "command": "drop matchbook",
+      "response": "Dropped."
+    },
+    {
+      "command": "drop candles",
+      "response": "Dropped."
+    },
+    {
+      "command": "drop garlic",
+      "response": "Dropped."
+    },
+    {
+      "command": "drop key",
+      "response": "Dropped."
+    },
+    {
+      "command": "take coffin",
+      "response": "Taken."
+    },
+    {
+      "command": "open coffin",
+      "response": "The gold coffin opens.\n\nA sceptre, possibly that of ancient Egypt itself, is in the coffin. The sceptre is ornamented with colored enamel, and tapers to a sharp point."
+    },
+    {
+      "command": "take sceptre",
+      "response": "Taken."
+    },
+    {
+      "command": "go up",
+      "response": "Temple"
+    },
+    {
+      "command": "go south",
+      "response": "Altar"
+    },
+    {
+      "command": "pray",
+      "response": "Forest"
+    },
+    {
+      "command": "go east",
+      "response": "Forest Path\n\nYou hear in the distance the chirping of a song bird."
+    },
+    {
+      "command": "go south",
+      "response": "North of House"
+    },
+    {
+      "command": "go southeast",
+      "response": "Behind House"
+    },
+    {
+      "command": "go west",
+      "response": "Kitchen\n\nA bottle is sitting on the table.\n\nThe glass bottle contains:\n\nA quantity of water"
+    },
+    {
+      "command": "go west",
+      "response": "Living Room\n\nYour collection of treasures consists of:\n\nA sapphire-encrusted bracelet\n\nA jade figurine\n\nA leather bag of coins\n\nA jewel-encrusted egg\n\nA painting\n\nA platinum bar\n\nA crystal skull"
+    },
+    {
+      "command": "put coffin in case",
+      "response": "Done."
+    },
+    {
+      "command": "go east",
+      "response": "Kitchen\n\nA bottle is sitting on the table.\n\nThe glass bottle contains:\n\nA quantity of water"
+    },
+    {
+      "command": "go east",
+      "response": "Behind House"
+    },
+    {
+      "command": "go south",
+      "response": "South of House"
+    },
+    {
+      "command": "go south",
+      "response": "Forest\n\nYou hear in the distance the chirping of a song bird."
+    },
+    {
+      "command": "go east",
+      "response": "Canyon View"
+    },
+    {
+      "command": "go down",
+      "response": "Rocky Ledge"
+    },
+    {
+      "command": "go down",
+      "response": "Canyon Bottom"
+    },
+    {
+      "command": "go north",
+      "response": "End of Rainbow"
+    },
+    {
+      "command": "wave sceptre",
+      "response": "Suddenly, the rainbow appears to become solid and, I venture, walkable (I think the giveaway was the stairs and bannister).\n\nA shimmering pot of gold appears at the end of the rainbow."
+    },
+    {
+      "command": "take pot",
+      "response": "Taken."
+    },
+    {
+      "command": "go southwest",
+      "response": "Canyon Bottom"
+    },
+    {
+      "command": "go up",
+      "response": "Rocky Ledge"
+    },
+    {
+      "command": "go up",
+      "response": "Canyon View"
+    },
+    {
+      "command": "go west",
+      "response": "Forest"
+    },
+    {
+      "command": "go north",
+      "response": "Clearing\n\nYou hear in the distance the chirping of a song bird."
+    },
+    {
+      "command": "go west",
+      "response": "Behind House"
+    },
+    {
+      "command": "go west",
+      "response": "Kitchen\n\nA bottle is sitting on the table.\n\nThe glass bottle contains:\n\nA quantity of water"
+    },
+    {
+      "command": "go west",
+      "response": "Living Room\n\nYour collection of treasures consists of:\n\nA gold coffin\n\nA sapphire-encrusted bracelet\n\nA jade figurine\n\nA leather bag of coins\n\nA jewel-encrusted egg\n\nA painting\n\nA platinum bar\n\nA crystal skull"
+    },
+    {
+      "command": "put pot in case",
+      "response": "Done."
+    },
+    {
+      "command": "put sceptre in case",
+      "response": "Done."
+    },
+    {
+      "command": "go down",
+      "response": "Cellar"
+    },
+    {
+      "command": "go north",
+      "response": "The Troll Room"
+    },
+    {
+      "command": "go east",
+      "response": "East-West Passage"
+    },
+    {
+      "command": "go north",
+      "response": "Chasm\n\nA chasm runs southwest to northeast and the path follows it. You are on the south side of the chasm, where a crack opens into a passage."
+    },
+    {
+      "command": "go northeast",
+      "response": "Reservoir South"
+    },
+    {
+      "command": "go east",
+      "response": "Dam"
+    },
+    {
+      "command": "go north",
+      "response": "Dam Lobby"
+    },
+    {
+      "command": "go east",
+      "response": "Maintenance Room\n\nThere is a group of tool chests here.\n\nThere is a wrench here.\n\nThere is an object which looks like a tube of toothpaste here."
+    },
+    {
+      "command": "take wrench",
+      "response": "Taken."
+    },
+    {
+      "command": "push yellow button",
+      "response": "Click."
+    },
+    {
+      "command": "go south",
+      "response": "Dam Lobby"
+    },
+    {
+      "command": "go south",
+      "response": "Dam\n\nYou are standing on the top of the Flood Control Dam #3, which was quite a tourist attraction in times far distant. There are paths to the north, south, and west, and a scramble down.\n\nThe sluice gates on the dam are closed. Behind the dam, there can be seen a wide reservoir. Water is pouring over the top of the now abandoned dam.\n\nThere is a control panel here, on which a large metal bolt is mounted. Directly above the bolt is a small green plastic bubble which is glowing serenely."
+    },
+    {
+      "command": "turn bolt with wrench",
+      "response": "The sluice gates open and water pours through the dam."
+    },
+    {
+      "command": "wait",
+      "response": "Time passes..."
+    },
+    {
+      "command": "wait",
+      "response": "Time passes..."
+    },
+    {
+      "command": "wait",
+      "response": "Time passes..."
+    },
+    {
+      "command": "wait",
+      "response": "Time passes..."
+    },
+    {
+      "command": "wait",
+      "response": "Time passes..."
+    },
+    {
+      "command": "wait",
+      "response": "Time passes...Someone carrying a large bag is casually leaning against one of the walls here. He does not speak, but it is clear from his aspect that the bag will be taken only over his dead body."
+    },
+    {
+      "command": "wait",
+      "response": "Time passes..."
+    },
+    {
+      "command": "wait",
+      "response": "Time passes...The thief, finding nothing of value, left disgusted."
+    },
+    {
+      "command": "wait",
+      "response": "Time passes..."
+    },
+    {
+      "command": "go west",
+      "response": "Reservoir South\n\nYou are in a long room, to the north of which was formerly a lake. However, with the water level lowered, there is merely a wide stream running through the center of the room.\n\nThere is a path along the stream to the east or west, a steep pathway climbing southwest along the edge of a chasm, and a path leading into a canyon to the southeast."
+    },
+    {
+      "command": "go north",
+      "response": "Reservoir\n\nYou are on what used to be a large lake, but which is now a large mud pile. There are \"shores\" to the north and south.\n\nLying half buried in the mud is an old trunk, bulging with jewels."
+    },
+    {
+      "command": "take trunk",
+      "response": "Taken."
+    },
+    {
+      "command": "go north",
+      "response": "Reservoir North\n\nYou are in a large cavernous room, the south of which was formerly a lake. However, with the water level lowered, there is merely a wide stream running through there.\n\nThere is a slimy stairway leaving the room to the north.\n\nThere is a hand-held air pump here."
+    },
+    {
+      "command": "go north",
+      "response": "Atlantis Room\n\nThis is an ancient room, long under water. There is an exit to the south and a staircase leading up.\n\nOn the shore lies Poseidon's own crystal trident."
+    },
+    {
+      "command": "take trident",
+      "response": "Taken."
+    },
+    {
+      "command": "go south",
+      "response": "Reservoir North\n\nThere is a hand-held air pump here."
+    },
+    {
+      "command": "go south",
+      "response": "Reservoir"
+    },
+    {
+      "command": "go south",
+      "response": "Reservoir South"
+    },
+    {
+      "command": "go southwest",
+      "response": "Chasm"
+    },
+    {
+      "command": "go southwest",
+      "response": "East-West Passage"
+    },
+    {
+      "command": "go west",
+      "response": "The Troll Room"
+    },
+    {
+      "command": "go south",
+      "response": "Cellar"
+    },
+    {
+      "command": "go up",
+      "response": "Living Room\n\nYour collection of treasures consists of:\n\nA sceptre\n\nA pot of gold\n\nA gold coffin\n\nA sapphire-encrusted bracelet\n\nA jade figurine\n\nA leather bag of coins\n\nA jewel-encrusted egg\n\nA painting\n\nA platinum bar\n\nA crystal skull"
+    },
+    {
+      "command": "put trunk in case",
+      "response": "Done."
+    },
+    {
+      "command": "put trident in case",
+      "response": "Done."
+    },
+    {
+      "command": "score",
+      "response": "Your score is 259 (total of 350 points), in 364 moves. This gives you the rank of Adventurer."
+    },
+    {
+      "command": "go down",
+      "response": "Cellar"
+    },
+    {
+      "command": "go north",
+      "response": "The Troll Room"
+    },
+    {
+      "command": "go east",
+      "response": "East-West Passage"
+    },
+    {
+      "command": "go north",
+      "response": "Chasm"
+    },
+    {
+      "command": "go northeast",
+      "response": "Reservoir South"
+    },
+    {
+      "command": "go east",
+      "response": "Dam"
+    },
+    {
+      "command": "go down",
+      "response": "Dam Base\n\nYou are at the base of Flood Control Dam #3, which looms above you and to the north. The river Frigid is flowing by here. Along the river are the White Cliffs which seem to form giant walls stretching from north to south along the shores of the river as it winds its way downstream.\n\nThere is a folded pile of plastic here which has a small valve attached."
+    },
+    {
+      "command": "take pile",
+      "response": "Taken."
+    },
+    {
+      "command": "go up",
+      "response": "Dam"
+    },
+    {
+      "command": "go west",
+      "response": "Reservoir South"
+    },
+    {
+      "command": "go north",
+      "response": "Reservoir"
+    },
+    {
+      "command": "go north",
+      "response": "Reservoir North\n\nThere is a hand-held air pump here."
+    },
+    {
+      "command": "take pump",
+      "response": "Taken."
+    },
+    {
+      "command": "drop pile",
+      "response": "Dropped."
+    },
+    {
+      "command": "inflate pile with pump",
+      "response": "The boat inflates and appears seaworthy.\n\nA tan label is lying inside the boat."
+    },
+    {
+      "command": "take boat",
+      "response": "Taken."
+    },
+    {
+      "command": "go south",
+      "response": "Reservoir"
+    },
+    {
+      "command": "go south",
+      "response": "Reservoir South"
+    },
+    {
+      "command": "go east",
+      "response": "Dam"
+    },
+    {
+      "command": "go down",
+      "response": "Dam Base"
+    },
+    {
+      "command": "drop boat",
+      "response": "Dropped."
+    },
+    {
+      "command": "enter boat",
+      "response": "You are now in the magic boat."
+    },
+    {
+      "command": "launch",
+      "response": "(magic boat)\n\nFrigid River, in the magic boat\n\nYou are on the Frigid River in the vicinity of the Dam. The river flows quietly here. There is a landing on the west shore.\n\nThe magic boat contains:\n\nA tan label"
+    },
+    {
+      "command": "go down",
+      "response": "Frigid River\n\nThe river turns a corner here making it impossible to see the Dam. The White Cliffs loom on the east bank and large rocks prevent landing on the west.\n\nThe flow of the river carries you downstream.\n\nFrigid River, in the magic boat\n\nThe river descends here into a valley. There is a narrow beach on the west shore below the cliffs. In the distance a faint rumbling can be heard.\n\nThe magic boat contains:\n\nA tan label"
+    },
+    {
+      "command": "go down",
+      "response": "Frigid River\n\nThe river is running faster here and the sound ahead appears to be that of rushing water. On the east shore is a sandy beach. A small area of beach can also be seen below the cliffs on the west shore.\n\nThere is a red buoy here (probably a warning)."
+    },
+    {
+      "command": "take buoy",
+      "response": "Taken.\n\nThe flow of the river carries you downstream.\n\nFrigid River, in the magic boat\n\nThe sound of rushing water is nearly unbearable here. On the east shore is a large landing area.\n\nThe magic boat contains:\n\nA tan label"
+    },
+    {
+      "command": "land",
+      "response": "Shore\n\nYou are on the east shore of the river. The water here seems somewhat treacherous. A path travels from north to south here, the south end quickly turning around a sharp corner."
+    },
+    {
+      "command": "open buoy",
+      "response": "Opening the red buoy reveals a large emerald."
+    },
+    {
+      "command": "take emerald",
+      "response": "Taken."
+    },
+    {
+      "command": "go south",
+      "response": "Aragain Falls\n\nYou are at the top of Aragain Falls, an enormous waterfall with a drop of about 450 feet. The only path here is on the north end.\n\nA solid rainbow spans the falls."
+    },
+    {
+      "command": "go west",
+      "response": "On the Rainbow\n\nYou are on top of a rainbow (I bet you never thought you would walk on a rainbow), with a magnificent view of the Falls. The rainbow travels east-west here."
+    },
+    {
+      "command": "go west",
+      "response": "End of Rainbow"
+    },
+    {
+      "command": "go southwest",
+      "response": "Canyon Bottom"
+    },
+    {
+      "command": "go up",
+      "response": "Rocky Ledge"
+    },
+    {
+      "command": "go up",
+      "response": "Canyon View"
+    },
+    {
+      "command": "go west",
+      "response": "Forest"
+    },
+    {
+      "command": "go north",
+      "response": "Clearing"
+    },
+    {
+      "command": "go west",
+      "response": "Behind House"
+    },
+    {
+      "command": "go west",
+      "response": "Kitchen\n\nA bottle is sitting on the table.\n\nThe glass bottle contains:\n\nA quantity of water"
+    },
+    {
+      "command": "go west",
+      "response": "Living Room\n\nYour collection of treasures consists of:\n\nA crystal trident\n\nA trunk of jewels\n\nA sceptre\n\nA pot of gold\n\nA gold coffin\n\nA sapphire-encrusted bracelet\n\nA jade figurine\n\nA leather bag of coins\n\nA jewel-encrusted egg\n\nA painting\n\nA platinum bar\n\nA crystal skull"
+    },
+    {
+      "command": "put emerald in case",
+      "response": "Done."
+    },
+    {
+      "command": "score",
+      "response": "Your score is 274 (total of 350 points), in 405 moves. This gives you the rank of Adventurer."
+    },
+    {
+      "command": "drop pump",
+      "response": "Dropped."
+    },
+    {
+      "command": "drop wrench",
+      "response": "Dropped."
+    },
+    {
+      "command": "drop buoy",
+      "response": "Dropped."
+    },
+    {
+      "command": "go down",
+      "response": "Cellar"
+    },
+    {
+      "command": "score",
+      "response": "Your score is 274 (total of 350 points), in 409 moves. This gives you the rank of Adventurer."
+    },
+    {
+      "command": "go north",
+      "response": "The Troll Room"
+    },
+    {
+      "command": "go east",
+      "response": "East-West Passage"
+    },
+    {
+      "command": "go down",
+      "response": "Chasm"
+    },
+    {
+      "command": "go ne",
+      "response": "Reservoir South"
+    },
+    {
+      "command": "go north",
+      "response": "Reservoir"
+    },
+    {
+      "command": "go north",
+      "response": "Reservoir North"
+    },
+    {
+      "command": "go north",
+      "response": "Atlantis Room"
+    },
+    {
+      "command": "go up",
+      "response": "Cave\n\nThis is a tiny cave with entrances west and north, and a staircase leading down."
+    },
+    {
+      "command": "go north",
+      "response": "Mirror Room\n\nYou are in a large square room with tall ceilings. On the south wall is an enormous mirror which fills the entire wall. There are exits on the other three sides of the room."
+    },
+    {
+      "command": "go north",
+      "response": "Cold Passage"
+    },
+    {
+      "command": "go west",
+      "response": "Slide Room"
+    },
+    {
+      "command": "go north",
+      "response": "Mine Entrance"
+    },
+    {
+      "command": "go south",
+      "response": "Slide Room"
+    },
+    {
+      "command": "go down",
+      "response": "Cellar"
+    },
+    {
+      "command": "go north",
+      "response": "The Troll Room"
+    },
+    {
+      "command": "go east",
+      "response": "East-West Passage"
+    },
+    {
+      "command": "go east",
+      "response": "Round Room"
+    },
+    {
+      "command": "go se",
+      "response": "Engravings Cave\n\nThere are old engravings on the walls here."
+    },
+    {
+      "command": "go east",
+      "response": "Dome Room"
+    },
+    {
+      "command": "go down",
+      "response": "Torch Room"
+    },
+    {
+      "command": "go down",
+      "response": "Temple"
+    },
+    {
+      "command": "go down",
+      "response": "Egyptian Room\n\nThere is a clove of garlic here.\n\nThere is a matchbook whose cover says \"Visit Beautiful FCD#3\" here.\n\nThere is a screwdriver here.\n\nThere is a brown sack here.\n\nThe brown sack contains:\n\nA lunch"
+    },
+    {
+      "command": "take garlic",
+      "response": "Taken."
+    },
+    {
+      "command": "go up",
+      "response": "Temple"
+    },
+    {
+      "command": "go south",
+      "response": "Altar"
+    },
+    {
+      "command": "pray",
+      "response": "Forest"
+    },
+    {
+      "command": "go south",
+      "response": "Forest"
+    },
+    {
+      "command": "go nw",
+      "response": "South of House"
+    },
+    {
+      "command": "go east",
+      "response": "Behind House"
+    },
+    {
+      "command": "go west",
+      "response": "Kitchen\n\nA bottle is sitting on the table.\n\nThe glass bottle contains:\n\nA quantity of water"
+    },
+    {
+      "command": "go up",
+      "response": "Attic\n\nOn a table is a nasty-looking knife."
+    },
+    {
+      "command": "take knife",
+      "response": "Taken."
+    },
+    {
+      "command": "go down",
+      "response": "Kitchen\n\nA bottle is sitting on the table.\n\nThe glass bottle contains:\n\nA quantity of water"
+    },
+    {
+      "command": "go west",
+      "response": "Living Room\n\nThere is a red buoy here.\n\nThere is a wrench here.\n\nThere is a hand-held air pump here.\n\nYour collection of treasures consists of:\n\nA large emerald\n\nA crystal trident\n\nA trunk of jewels\n\nA sceptre\n\nA pot of gold\n\nA gold coffin\n\nA sapphire-encrusted bracelet\n\nA jade figurine\n\nA leather bag of coins\n\nA jewel-encrusted egg\n\nA painting\n\nA platinum bar\n\nA crystal skull"
+    },
+    {
+      "command": "go west",
+      "response": "Strange Passage"
+    },
+    {
+      "command": "go west",
+      "response": "Cyclops Room"
+    },
+    {
+      "command": "go up",
+      "response": "You hear a scream of anguish as you violate the robber's hideaway. Using passages unknown to you, he rushes to its defense.\n\nTreasure Room\n\nThere is a suspicious-looking individual, holding a large bag, leaning against one wall. He is armed with a deadly stiletto.\n\nYou parry a lightning thrust, and the thief salutes you with a grim nod."
+    },
+    {
+      "command": "kill thief with knife",
+      "response": "A quick stroke, but the thief is on guard.\n\nThe thief draws blood, raking his stiletto across your arm."
+    },
+    {
+      "command": "kill thief with knife",
+      "response": "The thief is confused and can't fight back.\n\nThe thief slowly regains his feet."
+    },
+    {
+      "command": "kill thief with knife",
+      "response": "Your stroke lands, but it was only the flat of the blade.\n\nA quick thrust pinks your left arm, and blood starts to trickle down."
+    },
+    {
+      "command": "kill thief with knife",
+      "response": "A good stroke, but it's too slow; the thief dodges.\n\nYou parry a lightning thrust, and the thief salutes you with a grim nod."
+    },
+    {
+      "command": "kill thief with knife",
+      "response": "The thief takes a fatal blow and slumps to the floor dead.\n\nAlmost as soon as the thief breathes his last breath, a cloud of sinister black fog envelops him, and when the fog lifts, the carcass has disappeared."
+    },
+    {
+      "command": "take torch",
+      "response": "Taken."
+    },
+    {
+      "command": "take chalice",
+      "response": "Taken."
+    },
+    {
+      "command": "go down",
+      "response": "Cyclops Room"
+    },
+    {
+      "command": "go east",
+      "response": "Strange Passage"
+    },
+    {
+      "command": "go east",
+      "response": "Living Room\n\nThere is a red buoy here.\n\nThere is a wrench here.\n\nThere is a hand-held air pump here.\n\nYour collection of treasures consists of:\n\nA large emerald\n\nA crystal trident\n\nA trunk of jewels\n\nA sceptre\n\nA pot of gold\n\nA gold coffin\n\nA sapphire-encrusted bracelet\n\nA jade figurine\n\nA leather bag of coins\n\nA jewel-encrusted egg\n\nA painting\n\nA platinum bar\n\nA crystal skull"
+    },
+    {
+      "command": "put torch in case",
+      "response": "Done."
+    },
+    {
+      "command": "put chalice in case",
+      "response": "Done."
+    },
+    {
+      "command": "score",
+      "response": "Your score is 295 (total of 350 points), in 458 moves. This gives you the rank of Adventurer."
+    },
+    {
+      "command": "go east",
+      "response": "Kitchen\n\nA bottle is sitting on the table.\n\nThe glass bottle contains:\n\nA quantity of water"
+    },
+    {
+      "command": "go east",
+      "response": "Behind House"
+    },
+    {
+      "command": "go nw",
+      "response": "North of House"
+    },
+    {
+      "command": "go sw",
+      "response": "West of House\n\nYou are standing in an open field west of a white house, with a boarded front door. There is a small mailbox here.\n\nThe small mailbox contains:\n\nA leaflet"
+    },
+    {
+      "command": "go sw",
+      "response": "You can't go that way."
+    },
+    {
+      "command": "score",
+      "response": "Your score is 295 (total of 350 points), in 463 moves. This gives you the rank of Adventurer."
     }
   ]
 }

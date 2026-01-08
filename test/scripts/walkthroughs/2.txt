@@ -1,0 +1,580 @@
+     ______          _           _____
+                    |___  /         | |         |_   _|
+                       / / ___  _ __| | __        | |
+                      / / / _ \| '__| |/ /        | |
+                     / /_| (_) | |  |   <        _| |_
+                    /_____\___/|_|  |_|\_\      |_____|
+
+                       THE GREAT UNDERGROUND EMPIRE
+                           FAQ/Walkthrough v 1.3
+                      by TUI: The Unknown Individual
+
+___           _   _  _
+ | _.|_ | _  / \_|_ /  _ .__|_ _ .__|_ _
+ |(_||_)|(/_ \_/ |  \_(_)| ||_(/_| ||__>
+:::::::::::::::::::::::table of contents
+
+1) Intro
+2) Basic Sentence Structure
+3) Common Verbs
+4) Walkthrough
+   a) The Jeweled Egg
+   b) The Troll
+   c) The Dead Adventurer
+   d) Cyclops
+   e) Exorcism
+   f) A Quick Detour
+   g) Fighting the Thief
+   h) The Treasure Chest in the Reservior
+   i) Coal Mines
+   j) Eerie Silence
+   k) The End of the Rainbow
+   l) Row, Row, Row Your Boat
+   m) Ramses Coffin
+   o) Into the Tomb...
+5) Ways to Lose
+6) Treasure List
+7) Useless Stuff
+8) Outtro
+
+___
+ | .__|_.__
+_|_| ||_|(_)
+:::::::intro
+
+"Zork 1: The Great Underground Empire" is an old text-based adventure
+game. The game plays much like a standard adventure with one major
+exception: there are no graphics whatsoever. Each time you enter a
+room, you are given a brief description of the room and its contents.
+To perform an action, you type in a command.
+
+This game is currently classified "abandonware," which means that its
+owners have released their rights to it and it is now available for
+download. You can get Zork I, Zork II, and Zork III all from
+www.dosgames.com (as well as a bunch of other cool DOS games as well).
+
+The idea behind Zork I is simple: find all nineteen treasures
+scattered across the game and return them all to the trophy case inside
+the white house. It's a lot harder than it seems.
+
+ _           __                     __
+|_) _. _o _ (_  _ .__|_ _ ._  _ _  (__|_._   __|_   .__
+|_)(_|_>|(_ __)(/_| ||_(/_| |(_(/_ __)|_||_|(_ |_|_||(/_
+::::::::::::::::::::::::::::::::basic sentence structure
+
+Sentences in Zork I are very basic indeed, usually consisting solely of
+a verb and a noun, and sometimes not even that complicated. Typical
+sentences give an action and a direct object to perform that action on,
+such as "OPEN CASE" or "GET SWORD."
+
+Movement commands can be made as complicated or as easy as you want. To
+move, you can use either the "GO" or "WALK" commands in conjunction with
+one of 12 directions. You can also skip the verb if you wish, and merely
+type the direction, i.e., "SOUTH." You can even abbreviate some directions
+even further, i.e., "NW." The 12 directions Zork recognizes are:
+
+NORTH        SOUTH        EAST         WEST
+NORTHEAST    SOUTHEAST    NORTHWEST    SOUTHWEST
+UP           DOWN         IN           OUT
+
+The second most important set of commands used in the game are "TAKE,"
+"DROP," and "PUT." You can use these commands to take items from the
+room, drop items in the room, and put items inside other items (such
+as a trophy case, for example).
+
+Ex: "TAKE SWORD"  "DROP BELL"  "PUT TREASURE IN CASE"
+
+You can also compound these commands:
+
+Ex: "TAKE SWORD, BELL"  "TAKE ALL"  "DROP ALL BUT SWORD, BELL"
+
+Most commands are quite intuitive, and you should get the hang of it in
+no time at all.
+
+ _
+/  _ ._ _ ._ _  _ ._  \  /_ ._|_  _
+\_(_)| | || | |(_)| |  \/(/_| |_)_>
+:::::::::::::::::::::::common verbs
+
+Part A: Common commands and abbreviations
+-----------------------------------------
+AGAIN (G): Repeat previous command.
+BRIEF: Commands the narrator to only describe a room the first time you
+       enter it. Subsequent visits will only result in the name of the
+       room and a list of items in it.
+DIAGNOSE: Tells your current physical condition.
+INVENTORY (I): Lists all the items you currently have.
+LOOK (L): Describes the room you are currently in.
+QUIT (Q): Quits the game.
+RESTART: Restarts the game from the beginning.
+RESTORE: Loads a saved game.
+SAVE: Saves a game.
+SCORE: Shows your current score, number of turns, and current rank.
+SUPERBRIEF: Commands the narrator to never describe a room; only give
+            its name and items.
+VERBOSE: Commands the narrator to always describe a room regardless of
+         whether or not you have visited it before.
+WAIT (Z): Causes a turn to pass without anything occurring (for
+          instance, if you are waiting for a slight wound to heal).
+
+Part B: Common verb list
+
+ANSWER          FOLLOW          SAY
+ATTACK          GIVE            SEARCH
+BLOW            INFLATE         SHAKE
+BREAK           JUMP            SLIDE
+BURN            KICK            SMELL
+CLIMB           KNOCK           STAY
+CLOSE           LIGHT           STRIKE
+COUNT           LISTEN          SWIM
+CROSS           LOCK            TAKE
+CUT             LOOK            TELL
+DEFLATE         LOWER           THROW
+DIG             MOVE            TIE
+DRINK           OPEN            TOUCH
+DROP            POUR            TURN
+EAT             PRAY            UNLOCK
+ENTER           PULL            WAKE
+EXAMINE         PUSH            WALK
+EXIT            PUT             WAVE
+EXTINGUISH      RAISE           WEAR
+FILL            READ            WIND
+
+\    /_.||_|_|_ .__     _ |_
+ \/\/(_|||<|_| ||(_)|_|(_|| |
+                        _|
+::::::::::::::::::walkthrough
+
+A) The Jeweled Egg
+------------------
+If you care to, you can OPEN MAILBOX and READ LEAFLET, but it's not
+important. Go NORTH twice, then CLIMB TREE. In the bird's nest is a
+jeweled egg, so go ahead and TAKE EGG. You can't open it with what you
+have, and even if you had the right tools you don't have the
+expertise, so we'll have to find someone who can.
+
+B) The Troll
+------------
+Go DOWN, SOUTH, then EAST. You are now behind the house and a window
+is ajar. OPEN WINDOW, then go WEST. Take the BOTTLE and go WEST. Go
+ahead and OPEN CASE and TAKE SWORD, LANTERN. Go EAST and UP. The attic
+is dark, so TURN LANTERN ON and TAKE ROPE. TURN LANTERN OFF (to save
+battery power) and go DOWN, WEST.
+
+There's a very suspicious rug on the floor, so MOVE RUG to reveal a
+trap door. OPEN TRAP DOOR and go DOWN. The door closes above you and is
+locked (by the Cyclops; we'll defeat him later). It's dark here too, so
+TURN LANTERN ON. Your sword is glowing, indicating a dangerous enemy
+nearby, so get ready to fight. SAVE your game before the fight; if you
+take any damage at all, RESTORE; there's no point in going around with
+a wound.
+
+Go NORTH and FIGHT TROLL WITH SWORD. Repeat the process until the troll
+is dead. Once he is dead, DIAGNOSE. If you are in anything other than
+perfect health, RESTORE and try again until you beat him with perfect
+health.
+
+C) The Dead Adventurer
+----------------------
+Go WEST into the Maze. This is one of the most confusing parts of the
+game, so it would be helpful to either have a map or to follow my
+instructions to the letter (realize that just because you go north into
+one room, going south won't necessarily get you back). You can consult
+the MAZE MAP on www.gamefaqs.com if you need help.
+
+During the maze you may encounter a "seedy" man, a "hungry" man, or a
+thief. If he steals from you, don't worry about it. Any treasures he
+takes from you can be recovered later; and actually, you want him to
+take the jeweled egg. He has the expertise and the tools to open it, so
+if you encounter him, GIVE EGG TO THIEF, then immediately leave the room
+and come back.
+
+Go SOUTH, EAST, UP to reach the dead adventurer. Whatever you do, don't
+disturb the skeleton or a ghost will arise and take every piece of
+treasure you have and banish it to the Land of the Living Dead (which
+takes some doing to access). Besides, we really don't want that fragile
+egg damaged, and we're still looking for someone to take care of it for
+us.
+
+TAKE COINS, then go SOUTHWEST, EAST, SOUTH, and SOUTHEAST.
+
+D) Cyclops
+----------
+Oh my! How in the world can you beat this guy? Fighting him with a
+sword would be suicide, so we're going to have to figure out a clever
+way to either kill him, make him docile, or make him leave.
+
+SAY "ULYSSES"
+
+I'm not quite sure what that means, but apparently Ulysses was some
+character from Greek mythology that either killed the Cyclops or his
+father or something like that. Who cares; by saying that name the
+Cyclops runs in fear out of the room. You now have safe passage back
+to the house. Go NORTHWEST and DROP COINS (trust me) then go back
+SOUTHEAST.
+
+Now, SAVE your game. If you haven't already given the egg to the thief,
+go UP. You will enter the thief's hideout, and he will rush to defend
+it. If he harms you, RESTORE your game and keep trying until he doesn't
+do any damage to you. Then GIVE EGG TO THIEF and immediately go DOWN
+and NORTHWEST. TAKE COINS, then go SOUTHEAST, EAST, and EAST.
+
+OPEN CASE and PUT TREASURE IN CASE. SAVE your game. At this point,
+you should have one of nineteen treasures in the case: "A leather bag
+of coins."
+
+E) Exorcism
+-----------
+Go back DOWN and prepare for the exorcism process. Just in case you're
+curious, the cellar area leads to a room called "Entrance to Hades,"
+which is currently blocked by a gang of evil spirits denying you
+entrance (although why you would want to go into Hades is beyond me).
+The exorcism process is fairly complicated and requires items from
+across the map, so hang with me here.
+
+Go NORTH then EAST to the East-West Passage. From here go NORTH to the
+Chasm, NORTHEAST to Reservior South, and EAST to the Dam. Go NORTH to
+the Dam Lobby and TAKE MATCHBOOK.
+
+At this point, go back SOUTH and SOUTH again to the Deep Canyon. From
+here, go DOWN to the Loud Room. You can't do anything in this room
+while the noise is so loud, so for now just go WEST. The Round Room has
+exits in all directions, but most are blocked off. For now you want to
+go SOUTHEAST to the Engravings room and EAST to the Dome Room.
+
+You are high up in the Dome Room, and you quite obviously would like to
+go down. Jumping would be suicide, so why don't you use a little
+ingenuity and TIE ROPE TO RAILING, then go DOWN.
+
+You are now in the Torch Room. The Torch is a treasure, but we'll hold
+off on taking it for now. Go SOUTH and TAKE BELL. Go SOUTH again to the
+Altar. TAKE CANDLES and TAKE BOOK. A rather sad commandment, isn't it?
+
+Go DOWN. At this point, you can't go back up (although there is another
+way to get back). You are in a cave. A dark, forbidding staircase leads
+down. So go DOWN of course! Welcome to the Entrance to Hades. Fighting the
+spirits would be suicide; besides, you can't attack a spirit with a
+material weapon. So now, let the exorcism process begin!
+
+First off, OPEN MATCHBOOK to get that out of the way. To begin, RING
+BELL. The spirits are shaken, and stop jeering. In the confusion, you
+drop the candles. LIGHT MATCH, then LIGHT CANDLES WITH MATCH. Now, show
+the spirits your unearthly power and WAVE CANDLES. The spirits are in
+complete fear, and it won't take much to completely eliminate them. Now
+finish them off and READ BOOK.
+
+The spirits are gone. You now have access to the Land of the Living
+Dead, so now would be a good time to SAVE. By the way, if you want to
+get the bell back, you can POUR WATER ON BELL and then TAKE BELL. Also,
+you'll want to PUT CANDLES OUT so as to save the wax. Your lantern
+won't last forever, and there are only a limited number of light
+supplies in the game so you'll want to conserve light whenever
+possible. Go ahead and DROP BOTTLE too (you won't need it).
+
+Go SOUTH into the Land of the Living Dead and TAKE SKULL. Getting back
+will take a while, but it's not too bad: NORTH, UP, NORTH, NORTH,
+NORTH, WEST, WEST, and SOUTH.
+
+F) A Quick Detour
+-----------------
+We'll make a quick detour to grab a treasure while we can. Go SOUTH and
+EAST. Now become a vandal and TAKE PAINTING. Retrace your steps and go
+WEST, NORTH, UP.
+
+G) Fighting the Thief
+---------------------
+Beating the thief requires a combination of luck and ingenuity. To
+begin, TAKE COINS, then go WEST twice. SAVE here (you'll be restoring
+your game a lot if your luck goes sour). To begin the fight, go NORTH.
+
+You need a good advantage. There is a random chance that the thief will
+not immediately attack when you enter the room, and that is your
+advantage. If he does not attack you when you first enter, RESTORE and
+try again.
+
+If he does not immediately attack, or you avoid his attack, GIVE COINS
+TO THIEF. Your goal is to catch him off guard, so when he takes the
+coins, immediately KILL THIEF WITH SWORD. Hopefully you'll get a good
+hit on him; if you don't at least give him a minor wound, RESTORE and
+try again.
+
+If you get a hit on him, then play to his weakness again and GIVE
+SKULL TO THIEF. Repeat the process; if you do damage or if you knock
+him back or knock him out, then keep going by using the AGAIN command.
+Continue until one of you dies. If he dies, SAVE, then go DOWN, EAST,
+and EAST again. TURN LANTERN OFF and DIAGNOSE. WAIT however many turns
+it takes to heal your wounds before continuing.
+
+Now, go WEST, WEST, and UP. Here, take all of the treasures. Go DOWN,
+EAST, and EAST and PUT ALL TREASURES IN CASE. Return to the Thief's
+Hideout and take the stiletto. Return to the treasure case and SAVE.
+
+Go ahead and quickly TAKE CANARY, go EAST twice, then go NORTH TWICE.
+Go UP and WIND CANARY. I can't believe I never thought to do this; it
+was right in front of my eyes! Go DOWN and TAKE BAUBLE. SOUTH, EAST,
+WEST, WEST, PUT ALL TREASURE IN CASE. SAVE.
+
+H) The Treasure Chest in the Reservior
+--------------------------------------
+You'll need to drain the reservior to get the treasure chest, so let's
+get to it. Draining the reservior requires turning the dam control, so
+getting to the dam is the first priority. From the case, go DOWN,
+NORTH, EAST, NORTH, NORTHEAST, and EAST. This is the dam control, and
+it is quite obvious what your ultimate goal is. But you need a couple
+things first.
+
+Go NORTH twice. PUSH RED BUTTON and TURN LANTERN OFF (to save
+batteries). Now TAKE WRENCH, SCREWDRIVER and PUSH YELLOW BUTTON. From
+here go SOUTH twice. Notice that the bubble is currently glowing? You
+can now TURN BOLT WITH WRENCH. It will take a little while for the
+reservior to drain, so WAIT a few turns until it happens.
+
+From here, go WEST (you'll need to TURN LANTERN ON) and then NORTH to the
+reservior. DROP ALL BUT LANTERN and go NORTH twice. TAKE TRIDENT,
+then go SOUTH twice. TAKE TRUNK. Return to the trophy case: SOUTH,
+SOUTHWEST, SOUTHWEST, WEST, SOUTH, UP. PUT ALL TREASURE IN CASE and
+SAVE.
+
+I) The Coal Mines
+-----------------
+Before we enter the coal mines we need a little insurance against a
+very annoying vampire bat, so go EAST. OPEN SACK and TAKE GARLIC. Go
+back WEST, then DOWN, NORTH, EAST, NORTH, NORTHEAST, and NORTH. TAKE
+ALL (the stuff you dropped earlier).
+
+Pretty soon you'll get message saying that your lamp appears dimmer.
+This is due to the fact that the batteries are dying - we'll need to
+finish our trip to the coal mines before they die out (because
+fire-based light sources are dangerous in the coal mines).
+
+From here go NORTH, UP, NORTH, NORTH, WEST, NORTH, WEST, NORTH. TAKE
+FIGURINE and go EAST. PUT SCREWDRIVER IN BASKET. You won't actually be
+doing anything with the basket right now, but since you're here, you
+might as well drop it off here seeing as how you won't use it anywhere
+else. To conserve space, you might as well DROP MATCHBOK, CANDLES as
+well.
+
+Go NORTH, then DOWN. TAKE BRACELET, then go EAST, NORTHEAST, SOUTHEAST,
+SOUTHWEST, DOWN, DOWN, and WEST. Here, DROP ALL BUT LANTERN. Go EAST,
+then SOUTH. TAKE COAL, then go NORTH, UP, UP, NORTH, EAST, SOUTH, and
+NORTH. From here go UP and then SOUTH.
+
+TAKE CANDLES, MATCHBOOK. LIGHT MATCH, then LIGHT CANDLE WITH MATCH. PUT
+CANDLE, COAL IN BASKET and then LOWER BASKET. The basket should only
+contain a screwdriver, lit candles (for light), and a small pile of
+coal. You should only have a matchbook and a lantern.
+
+Go NORTH, DOWN, EAST, NORTHEAST, SOUTHEAST, SOUTHWEST, DOWN, WEST. At
+this point, DROP ALL, then GO WEST. That basket that you lowered is now
+in this room, so go ahead and TAKE CANDLES, COAL, SCREWDRIVER and go
+SOUTH.
+
+Ready for some fun? OPEN LID, PUT COAL IN MACHINE, CLOSE LID, and MOVE
+SWITCH WITH SCREWDRIVER. OPEN LID to reveal a huge diamond! TAKE
+DIAMOND, then go NORTH and PUT CANDLE, DIAMOND, SCREWDRIVER IN BASKET.
+GO EAST.
+
+Here, TAKE ALL BUT TIMBER, STILETTO and then backtrack. EAST, UP, UP,
+NORTH, EAST, SOUTH, NORTH, UP, SOUTH. RAISE BASKET and TAKE CANDLE,
+DIAMOND. We've got three pieces of treasure on us, so we need to get
+back to the trophy case right quick. Go WEST, SOUTH, EAST, SOUTH,
+DOWN, UP. Now PUT ALL TREASURE IN CASE. SAVE.
+
+J) Eerie Silence
+----------------
+Go back DOWN, then go NORTH, EAST, EAST, NORTH, NORTHEAST, and EAST.
+Now TURN BOLT WITH WRENCH. What you've done is cause the dam to stop
+up again. When it was closed, the Loud Room was loud because of the
+water pouring over the top. Then you opened it. The Loud Room is still
+loud because water is still pouring over. However, now that you've
+closed it, the Loud Room has become quiet because water is no longer
+rushing over the top anymore.
+
+However, this will only last a few turns, so quickly go SOUTH and then
+DOWN. TAKE BAR and go WEST.
+
+ALTERNATE PATH: Recently I read online of another way to make the Loud
+Room become quiet. Apparently if you SAY "ECHO" the room becomes quiet;
+why I don't know. It makes no sense; I personally don't see how anybody
+could have figured that one out.
+
+By now, the batteries in your lantern are really draining, so you need
+an alternate light source; and fast. So go SOUTHEAST, EAST, and DOWN.
+TURN LANTERN OFF, DROP LANTERN, CANDLES and TAKE TORCH. The torch is
+actually another treasure, but it's also an effectively inexhaustable
+light source, so you can't lose. Now go SOUTH and EAST. OPEN COFFIN
+and TAKE SCEPTRE. Go WEST, SOUTH, DOWN, NORTH, NORTH, NORTH, WEST,
+WEST, SOUTH, and UP. You know the drill, but this time it's a little
+different, just to let you know. PUT ALL TREASURE BUT SCEPTRE IN CASE.
+SAVE.
+
+K) End of the Rainbow
+---------------------
+From the case go EAST, EAST, EAST, EAST, DOWN, DOWN, NORTH. The rainbow
+is currently not solid (as in, you can't walk on it), but as you know
+there is always a pot of gold at the end of any rainbow. WAVE SCEPTRE.
+Amazing! TAKE POT. Oh, but this is far from over - go EAST, EAST,
+NORTH, NORTH. TAKE SWORD and go NORTHEAST. Now, DIG IN SAND WITH
+SHOVEL until you reach the scarab. Take it - it's another treasure.
+Backtrack all the way to the trophy case: SOUTHWEST, SOUTH, SOUTH,
+WEST, WEST, SOUTHWEST, UP, UP, NORTHWEST, WEST, WEST, WEST. PUT ALL
+TREASURE BUT TORCH IN CASE.
+
+L) Row, Row, Row Your Boat
+--------------------------
+Two more treasures; the fun never stops. Go DOWN, NORTH, EAST, EAST,
+EAST, UP, NORTHWEST, NORTH, and NORTH. TAKE PUMP. Now go SOUTH, SOUTH,
+EAST, DOWN, and TAKE PLASTIC. This pile of plastic is actually an
+inflatable boat, and you'll use the hand air pump to inflate it. But we
+need a good place to launch the boat; so here goes:
+
+Go UP, SOUTH, DOWN, EAST, and EAST. From here, DROP ALL BUT PUMP, TORCH
+and prepare to INFLATE PLASTIC. The plastic will inflate into a boat
+complete with a tan label inside. You don't have to, but if you feel
+like it you can READ LABEL (just be sure to drop it; it's unimportant).
+
+GET IN BOAT and LAUNCH BOAT. You can't control the path of the boat;
+its completely dependent upon the flow of the river. WAIT until you
+reach an area with a red buoy and TAKE BUOY. Now LAND (to the EAST).
+Of course, the buoy isn't the treasure you dope - but if you OPEN BUOY
+you'll find a large emerald. TAKE EMERALD and DROP BUOY. GET OUT OF
+BOAT, DEFLATE BOAT, and TAKE PLASTIC. How convenient! The path back
+to the treasure case is SOUTH (once or twice, depending). At "Aragain
+Falls" go WEST, WEST, SOUTHWEST, UP, UP, NORTHWEST, WEST, WEST, WEST,
+and WEST one more time. There you go - PUT EMERALD IN CASE.
+
+You'll want your items back, I'm sure, so go DOWN, NORTH, EAST (five
+times). TAKE ALL BUT LABEL and SAVE.
+
+M) Ramses Coffin
+----------------
+You know this coffin; you've seen it before. Now it's time to add it to
+your collection. You should be at White Cliffs Beach, so go WEST, WEST,
+WEST, SOUTHEAST, EAST, DOWN, SOUTH, and EAST. TAKE COFFIN, dropping
+whatever is necessary to take it (anything but the torch; you need it
+because it is the last treasure).
+
+It's almost over! Go SOUTH, and then PRAY. Incredible! You couldn't get
+the coffin out any other way, but a magic warp is always acceptable. Go
+WEST, SOUTH, SOUTHEAST, WEST, and WEST. Here, PUT ALL TREASURE IN CASE.
+
+O) Into the Tomb
+----------------
+By filling the trophy case with treasure, you caused a secret parchment
+to appear. READ PARCHMENT to learn about a secret path out of the
+largest clearing (the one with the house; the one that you're in). Go
+EAST, EAST, SOUTHWEST, NORTHWEST, and SOUTHWEST to reach the entrance
+to the tomb. From here, go IN...
+
+\    /_.   _ _|_ _  |  _  _ _
+ \/\/(_|\/_>  |_(_) |_(_)_>(/_
+::::::::/:::::::::ways to lose
+
+This section chronicles the different subtle ways you can lose. Doing
+these things will make the game impossible to beat but you won't
+necessarily realize that you have lost.
+
+1) If you EAT GARLIC before you have passed through the coal mines for
+the first time, you can't win. There is a jade figurine in the bat room
+that you can't get if you don't have the garlic on your possession.
+
+2) If you KILL THIEF before you GIVE EGG TO THIEF, you won't be able to
+open the egg and get the canary or the brass bauble.
+
+3) If you fail the exorcism (i.e, the demons return to their normal
+state before you exorcise them) you only have one more chance; you can
+POUR WATER ON BELL and try again. Also, if you carry the candles around
+too long and they burn out, you can't do the exorcism either.
+
+4) If your lantern goes out before you pass through the coal mines, you
+can't win because you need a non-flame-based light source to get
+through the gas room.
+
+5) If you puncture the boat (try to get into it while carrying a sword)
+you can't get the large emerald.
+
+6) The torch is an eternal light source, but if the thief takes it and
+you run out of other light sources, you're stuck.
+
+7) If you PUSH BLUE BUTTON in the maintence room and the room fills up
+with water before you get the wrench and screwdriver out of there, you
+can't get either the treasure chest or the huge diamond.
+
+                  __      _  _
+| | _ _ | _  _ _ (__|_  _|__|_
+|_|_>(/_|(/__>_> __)|_|_||  |
+:::::::::::::::::useless stuff
+
+This is my personal collection of useless stuff you can do in the game;
+little tidbits that the programmers threw in. Whenever I come up with
+anything else I'll add it in here.
+
+1) Screaming. If you feel like it, you can SCREAM at any point you
+would care to. Nothing happens except that you, well, scream.
+
+2) Do you know the narrator's name? It's "Zork," actually. How can you
+tell? SAY "ZORK" and the narrator will say "At your service!"
+
+3) JUMP to receive a few taunts from the narrator, such as
+"Congratulations. You can now pass the second grade."
+
+4) Suicide is possible; KILL SELF WITH SWORD. Although why you would
+want to is beyond me.
+
+___                 _
+ |.__  _. _   .__  / |_  _  _| |o __|_
+ ||(/_(_|_>|_||(/_ \_| |(/_(_|<||_> |_
+:::::::::::::::::::::treasure checklist
+
+Treasures that require other treasures to get are marked with both the
+name of the room they are in as well as the treasure required.
+
+[ ] Brass Bauble (Up A Tree/Jeweled Egg)
+[ ] Crystal Skull (Land of the Living Dead)
+[ ] Leather Bag of Coins (Atlantis Room)
+[ ] Golden Clockwork Canary (Thief's Hideout/Jeweled Egg)
+[ ] Huge Diamond (Machine Room)
+[ ] Ivory Torch (Torch Room)
+[ ] Jade Figurine (Bat Room)
+[ ] Jeweled Scarab (Sandy Cave/Ramses Sceptre)
+[ ] Jewel-Encrusted Egg (Up A Tree)
+[ ] Large Emerald (Frigid River)
+[ ] Platinum Bar (Loud Room)
+[ ] Posiedon's Trident (Atlantis Room)
+[ ] Pot of Gold (End of Rainbow/Ramses Sceptre)
+[ ] Ramses Coffin (Egyptian Room)
+[ ] Ramses Sceptre (Egyptian Room)
+[ ] Sapphire Bracelet (Gas Room)
+[ ] Silver Chalice (Thief's Hideout)
+[ ] Trunk of Jewels (Reservior)
+[ ] Valuable Painting (Gallery)
+
+ _
+/ \  _|__|_.__
+\_/|_||_ |_|(_)
+:::::::::outtro
+Thanks to DKW001 for his Zork I FAQ that got me through the fight with
+the Cyclops and that found the bauble. Thanks to my cousin for
+suggesting the mirror warp and the first method for making the loud
+room quiet. Thanks to my uncle who discovered the inflatable boat. And
+thanks to everyone who put up with me playing this antiquated yet
+insanely fun game.
+
+All ASCII art by FIGlet: www.figlet.com
+
+This has been a Zork I FAQ by TUI: The Unknown Individual.
+This FAQ may only be found at:
+   http://www.gamefaqs.com
+   http://www.dh.net
+
+TUI can be contacted at:
+onceuponatimetherewasasquirrelwholived@hotmail.com
+
+That is, Once Upon A Time There Was A Squirrel Who Lived At Hotmail
+Dot Com
+
+This FAQ is Copyright (C) 2002 by TUI, the Unknown Individual. Any
+unauthorized reproduction of this document will be prosecuted under the
+fullest extent of the law.
+
+END OF TRANSMISSION...
