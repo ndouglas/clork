@@ -381,3 +381,43 @@
       ;; The valuable should be deposited in treasure room
       (is (= :treasure-room (gs/get-thing-loc-id result :egg))
           "Valuable should be deposited in treasure room"))))
+
+(deftest thief-never-retreats-from-treasure-room-test
+  (testing "Thief fights to the death in treasure room - never retreats"
+    ;; This tests the bug fix: thief was incorrectly retreating from treasure room
+    (let [gs (-> (core/init-game)
+                 (assoc :here :treasure-room)
+                 (assoc-in [:objects :thief :in] :treasure-room)
+                 (gs/unset-thing-flag :thief :invisible)
+                 (gs/set-thing-flag :thief :fight)
+                 ;; Make thief weaker than player (losing badly)
+                 (assoc-in [:objects :thief :strength] 1)
+                 (assoc-in [:objects :adventurer :strength] 10))
+          ;; Run multiple iterations - thief should never retreat
+          results (repeatedly 10
+                    #(thief/thief-vs-adventurer gs true))]
+      ;; In treasure room, thief should never become invisible (retreat)
+      ;; and should remain in treasure room
+      (doseq [[result _] results]
+        (is (= :treasure-room (gs/get-thing-loc-id result :thief))
+            "Thief must stay in treasure room even when losing")
+        (is (not (gs/set-thing-flag? result :thief :invisible))
+            "Thief should not go invisible (retreat) in treasure room")))))
+
+(deftest thief-does-not-rob-during-combat-test
+  (testing "Thief doesn't use robbery logic when actively fighting"
+    ;; This tests the bug fix: robbery logic was running even during combat
+    (random/init! 42)
+    (let [gs (-> (core/init-game)
+                 (assoc :here :cellar)
+                 (assoc-in [:objects :thief :in] :cellar)
+                 (gs/unset-thing-flag :thief :invisible)
+                 (gs/set-thing-flag :thief :fight)
+                 ;; Player has valuable item
+                 (assoc-in [:objects :egg :in] :adventurer)
+                 (gs/unset-thing-flag :egg :invisible))
+          ;; Run the daemon - should not steal during combat
+          [result _] (thief/thief-vs-adventurer gs true)]
+      ;; The egg should still be with the player, not stolen
+      (is (= :adventurer (gs/get-thing-loc-id result :egg))
+          "Thief should not steal from player during active combat"))))
