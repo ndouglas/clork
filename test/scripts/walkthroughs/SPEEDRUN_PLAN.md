@@ -137,7 +137,7 @@ drop wrench
 ### Trip 6: Temple & Hades (Moves 111-150)
 ```
 s                   # Deep Canyon
-d                   # Loud Room (skip bar for now)
+d                   # Loud Room (skip bar for now) THIS WON'T WORK RELIABLY
 w                   # Round Room (can't go through here right now because it's too loud)
 se                  # Engravings Cave
 e                   # Dome Room

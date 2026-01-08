@@ -267,6 +267,84 @@
   [& body]
   `(do ~@body nil))
 
+(defn save-playthrough!
+  "Save playthrough data to JSON file."
+  [data]
+  (with-open [w (io/writer "test/scripts/clork-playthrough.json")]
+    (json/write data w :escape-slash false :indent true)))
+
+(defn run-to-end
+  "Run all commands in playthrough, return final game state."
+  []
+  (let [data (load-playthrough)
+        seed (get data :seed 42)
+        commands (:commands data)]
+    (random/init! seed)
+    (loop [gs (create-initial-state seed)
+           remaining commands]
+      (if (empty? remaining)
+        gs
+        (let [[new-gs _] (execute-command gs (:command (first remaining)))]
+          (recur new-gs (rest remaining)))))))
+
+(defn append-command!
+  "Execute a command and automatically append it to the JSON file.
+   Returns {:ok true :output <response>} on success, or {:ok false :error <msg>} on failure."
+  [command]
+  (let [data (load-playthrough)
+        gs (run-to-end)
+        [new-gs output] (execute-command gs command)
+        normalized (normalize-output output)
+        new-entry {:command command :response normalized}
+        new-data (update data :commands conj new-entry)]
+    (save-playthrough! new-data)
+    (println normalized)
+    {:ok true :output normalized :game-state new-gs}))
+
+(defn append-commands!
+  "Execute multiple commands in sequence, appending each to JSON.
+   Stops on first command that produces an error-like response.
+   Returns vector of results."
+  [& commands]
+  (loop [cmds commands
+         results []]
+    (if (empty? cmds)
+      (do
+        (println "\n=== All" (count results) "commands appended ===")
+        results)
+      (let [cmd (first cmds)
+            _ (print (str "> " cmd ": "))
+            result (append-command! cmd)]
+        (recur (rest cmds) (conj results result))))))
+
+(defn undo-command!
+  "Remove the last N commands from the JSON file. Default 1."
+  ([] (undo-command! 1))
+  ([n]
+   (let [data (load-playthrough)
+         commands (:commands data)
+         removed (take-last n commands)
+         new-commands (vec (drop-last n commands))
+         new-data (assoc data :commands new-commands)]
+     (save-playthrough! new-data)
+     (println "Removed" n "command(s):")
+     (doseq [cmd removed]
+       (println "  -" (:command cmd)))
+     (println "Now at" (count new-commands) "commands")
+     {:removed (mapv :command removed)})))
+
+(defn status
+  "Quick status summary: location, inventory, score, moves."
+  []
+  (let [gs (run-to-end)
+        data (load-playthrough)]
+    (println "Commands:" (count (:commands data)))
+    (println "Location:" (:here gs))
+    (println "Score:" (:score gs 0) "/ 350")
+    (println "Moves:" (:moves gs 0))
+    (println "Inventory:" (gs/get-contents gs :adventurer))
+    gs))
+
 (defn show-state
   "Show current game state after running all commands in the playthrough."
   []

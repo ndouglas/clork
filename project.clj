@@ -7,6 +7,7 @@
   :main clork.core
   :dependencies [[org.clojure/clojure "1.11.1"]
                  [org.clojure/data.json "2.4.0"]
+                 [org.clojure/data.priority-map "1.2.0"]
                  [org.jline/jline "3.25.1"]
                  [net.java.dev.jna/jna "5.14.0"]]
   :jvm-opts ["--enable-native-access=ALL-UNNAMED"]
