@@ -36,14 +36,14 @@ jobs:
         id: alpha
         continue-on-error: true
         run: |
-          lein run -- --strict --seed 12345 -i test/scripts/alpha-milestone.txt
+          lein run -- --strict --seed 12345 -i scripts/alpha-milestone.txt
           echo "status=pass" >> $GITHUB_OUTPUT
 
       - name: Check Beta Milestone
         id: beta
         continue-on-error: true
         run: |
-          lein run -- --strict --seed 12345 -i test/scripts/beta-milestone.txt
+          lein run -- --strict --seed 12345 -i scripts/beta-milestone.txt
           echo "status=pass" >> $GITHUB_OUTPUT
 
       - name: Generate Progress Report

@@ -29,7 +29,7 @@
 (defn load-transcript-data
   "Load the parsed transcript JSON file."
   []
-  (with-open [r (io/reader "test/scripts/mit-transcript.json")]
+  (with-open [r (io/reader "scripts/mit-transcript.json")]
     (json/read r :key-fn keyword)))
 
 ;;; ---------------------------------------------------------------------------

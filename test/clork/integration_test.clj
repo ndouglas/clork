@@ -86,7 +86,7 @@
 (deftest ^:pending alpha-milestone-test
   ;; This test is pending until we implement movement and object interaction
   (testing "early game walkthrough completes"
-    (let [script (slurp "test/scripts/alpha-milestone.txt")
+    (let [script (slurp "scripts/alpha-milestone.txt")
           result (run-script script :strict true)]
       (is (= 0 (:exit-code result))
           "Alpha milestone walkthrough should pass when basic verbs are implemented"))))
@@ -94,7 +94,7 @@
 (deftest ^:pending beta-milestone-test
   ;; This test is pending until the full game is winnable
   (testing "complete game walkthrough to victory"
-    (let [script (slurp "test/scripts/beta-milestone.txt")
+    (let [script (slurp "scripts/beta-milestone.txt")
           result (run-script script :strict true)]
       (is (= 0 (:exit-code result))
           "Beta milestone should pass when game is fully winnable")

@@ -1,6 +1,6 @@
 #!/usr/bin/env lein exec
 ;; Script to help build the playthrough JSON
-;; Run with: lein exec test/scripts/build-playthrough.clj
+;; Run with: lein exec scripts/build-playthrough.clj
 
 (ns build-playthrough
   (:require [clojure.data.json :as json]
@@ -116,14 +116,20 @@
    "open trap door" ; Ready to descend
    ])
 
-;; Run phase 1
-(def result (run-commands 42 phase1-commands))
-(show-status result)
+(defn -main
+  "Run phase 1 of the playthrough builder."
+  [& _args]
+  (def result (run-commands 42 phase1-commands))
+  (show-status result)
 
-;; Generate JSON for these commands
-(println "\n=== JSON Output ===")
-(println (json/write-str {:description "A complete playthrough of Clork with seed 42"
-                          :seed 42
-                          :header ""  ; Will be filled
-                          :commands (:outputs result)}
-                         :escape-slash false))
+  ;; Generate JSON for these commands
+  (println "\n=== JSON Output ===")
+  (println (json/write-str {:description "A complete playthrough of Clork with seed 42"
+                            :seed 42
+                            :header ""  ; Will be filled
+                            :commands (:outputs result)}
+                           :escape-slash false)))
+
+;; Run when executed as script
+(when (= *file* (System/getProperty "babashka.file"))
+  (-main))

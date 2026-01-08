@@ -51,7 +51,7 @@
 (defn load-playthrough
   "Load the playthrough transcript JSON file."
   []
-  (with-open [r (io/reader "test/scripts/clork-playthrough.json")]
+  (with-open [r (io/reader "scripts/clork-playthrough.json")]
     (json/read r :key-fn keyword)))
 
 ;;; ---------------------------------------------------------------------------
@@ -270,7 +270,7 @@
 (defn save-playthrough!
   "Save playthrough data to JSON file."
   [data]
-  (with-open [w (io/writer "test/scripts/clork-playthrough.json")]
+  (with-open [w (io/writer "scripts/clork-playthrough.json")]
     (json/write data w :escape-slash false :indent true)))
 
 (defn run-to-end
@@ -384,7 +384,7 @@
                                :seed seed
                                :header (normalize-output header)
                                :commands results}]
-              (with-open [w (io/writer "test/scripts/clork-playthrough.json")]
+              (with-open [w (io/writer "scripts/clork-playthrough.json")]
                 (json/write playthrough w :escape-slash false :indent true))
               (println "\n=== Playthrough saved ===")
               (println "Commands:" (count results))

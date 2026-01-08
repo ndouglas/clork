@@ -36,7 +36,7 @@ jobs:
         run: lein test
 
       - name: Run smoke test
-        run: lein run -- --strict --seed 12345 -i test/scripts/smoke-test.txt
+        run: lein run -- --strict --seed 12345 -i scripts/smoke-test.txt
 
       - name: Build uberjar
         run: lein uberjar
