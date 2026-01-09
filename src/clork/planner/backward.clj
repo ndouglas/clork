@@ -172,16 +172,26 @@
 ;; =============================================================================
 
 (defn select-best-achiever
-  "Select the best achiever for a goal based on cost and complexity.
-   Prefers lower cost and fewer preconditions."
+  "Select the best achiever for a goal based on cost and satisfiability.
+   Strongly prefers actions where inventory/flag preconditions are already met.
+   Among equally satisfiable actions, prefers lower cost."
   [achievers current-state]
   (when (seq achievers)
     (->> achievers
          (sort-by (fn [action]
                     (let [cost (:cost action 1)
-                          precond-count (+ (count (get-in action [:preconditions :inventory] #{}))
-                                           (count (get-in action [:preconditions :flags] #{})))]
-                      (+ cost (* 10 precond-count)))))
+                          required-inventory (get-in action [:preconditions :inventory] #{})
+                          required-flags (get-in action [:preconditions :flags] #{})
+                          current-inventory (:inventory current-state #{})
+                          current-flags (:flags current-state #{})
+                          ;; Count missing requirements (heavily penalize missing items)
+                          missing-inventory (count (set/difference required-inventory current-inventory))
+                          missing-flags (count (set/difference required-flags current-flags))]
+                      ;; Primary sort: missing requirements (100 weight each)
+                      ;; Secondary sort: base cost
+                      (+ (* 100 missing-inventory)
+                         (* 100 missing-flags)
+                         cost))))
          first)))
 
 (defn select-best-goal
@@ -593,7 +603,7 @@
 (def hard-treasures
   "Treasures requiring killing the thief or complex navigation."
   [:jade-figurine       ; treasure-room - needs thief-dead
-   :chalice             ; treasure-room - needs thief-dead
+   :silver-chalice      ; treasure-room - needs thief-dead
    :clockwork-canary    ; in egg, opened by thief
    :huge-diamond        ; coal mine shaft - complex multi-step puzzle
    :sapphire-bracelet   ; gas-room - needs mirror teleport

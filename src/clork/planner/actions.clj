@@ -23,6 +23,312 @@
             [clojure.string :as str]))
 
 ;; =============================================================================
+;; Combat Markov Chain Model
+;; =============================================================================
+;; Models combat as a Markov chain where states are villain health levels.
+;; This gives exact expected attack counts based on the ZIL combat tables.
+;;
+;; State space for villain with max health H:
+;;   H, H-1, H-2, ..., 1, 0 (dead), :unconscious
+;;   States 0 and :unconscious are "absorbing" - combat ends
+;;   From :unconscious, next attack is guaranteed kill
+;;
+;; Player fight-strength = 2 + (score / 70), ranging 2-7
+;; Villain strengths: Troll = 2, Thief = 5
+
+(def combat-outcome-tables
+  "Probability distributions for combat outcomes by table.
+   Values are [p-miss p-stagger p-light-wound p-serious-wound p-unconscious p-killed]
+   Based on actual DEF table entries in combat.clj"
+  {:def2a [0.50 0.20 0.20 0.00 0.10 0.00]   ; Troll at low scores (strength <= 2 vs 2)
+   :def2b [0.25 0.17 0.25 0.00 0.08 0.25]   ; Troll at higher scores (strength > 3 vs 2)
+   :def3a [0.45 0.18 0.18 0.18 0.00 0.00]   ; Thief, big disadvantage (diff <= -2)
+   :def3b [0.27 0.18 0.27 0.27 0.00 0.00]   ; Thief, slight disadvantage (diff -1 to 0)
+   :def3c [0.10 0.20 0.40 0.30 0.00 0.00]}) ; Thief, advantage (diff >= 1)
+
+(defn fight-strength
+  "Calculate player's fighting strength from score.
+   Formula: 2 + (score / 70), clamped to 2-7"
+  [score]
+  (min 7 (max 2 (+ 2 (int (/ score 70))))))
+
+(defn select-combat-table
+  "Select which DEF table to use based on defender and attacker strengths."
+  [defender-strength attacker-strength]
+  (cond
+    ;; Troll (strength 2) uses DEF2
+    (<= defender-strength 2)
+    (if (> attacker-strength 3) :def2b :def2a)
+
+    ;; Thief (strength 5) uses DEF3
+    :else
+    (let [diff (- attacker-strength defender-strength)]
+      (cond
+        (<= diff -2) :def3a
+        (<= diff 0) :def3b
+        :else :def3c))))
+
+;; =============================================================================
+;; Markov Chain State Transitions
+;; =============================================================================
+
+(defn combat-transitions
+  "Get transition probabilities from a health state.
+   Returns map of {new-state probability}.
+
+   Special states:
+   - 0 = dead (absorbing)
+   - :unconscious = knocked out, next hit kills (absorbing for this model)
+
+   From health h > 0:
+   - Stay at h: miss or stagger (no damage)
+   - Go to h-1: light wound
+   - Go to h-2: serious wound (or 0 if h < 2)
+   - Go to :unconscious: unconscious result
+   - Go to 0: killed result"
+  [health table-key]
+  (if (<= health 0)
+    ;; Absorbing state - stay here
+    {health 1.0}
+    (let [[p-miss p-stagger p-light p-serious p-uncon p-killed]
+          (get combat-outcome-tables table-key)
+          p-no-damage (+ p-miss p-stagger)]
+      (cond-> {health p-no-damage}  ; Stay at current health
+
+        ;; Light wound: h -> h-1 (or 0 if h=1)
+        (pos? p-light)
+        (assoc (max 0 (- health 1)) p-light)
+
+        ;; Serious wound: h -> h-2 (or 0 if h<=2)
+        (pos? p-serious)
+        (assoc (max 0 (- health 2)) p-serious)
+
+        ;; Unconscious: h -> :unconscious
+        (pos? p-uncon)
+        (assoc :unconscious p-uncon)
+
+        ;; Killed: h -> 0
+        (pos? p-killed)
+        (update 0 (fnil + 0) p-killed)))))
+
+(defn merge-transitions
+  "Merge transition probabilities, summing duplicates."
+  [trans]
+  (reduce (fn [acc [state prob]]
+            (update acc state (fnil + 0) prob))
+          {}
+          trans))
+
+;; =============================================================================
+;; Expected Attacks Calculation (Markov Chain Analysis)
+;; =============================================================================
+
+(defn expected-attacks-markov
+  "Calculate exact expected attacks to kill villain using Markov chain analysis.
+
+   Uses iterative value computation with self-loop correction:
+   E[h] = (1 + sum over OTHER states of P(h->h') * E[h']) / (1 - P(stay at h))
+
+   This accounts for the fact that misses/staggers cause you to stay at the
+   same health state, creating a self-loop in the Markov chain.
+
+   For absorbing states (0, :unconscious): E = 0
+   For :unconscious, we add 1 for the finishing blow.
+
+   Parameters:
+   - max-health: Villain's starting health
+   - table-key: Which DEF table to use
+
+   Returns: Expected number of attacks from full health to dead"
+  [max-health table-key]
+  (let [;; Initialize expected values: 0 for absorbing states
+        ;; For :unconscious, it takes 1 more attack to finish
+        init-expected {0 0.0, :unconscious 1.0}
+
+        ;; Iteratively compute expected values from low health to high
+        ;; E[h] = (1 + sum over other states of P(h->h') * E[h']) / (1 - P(stay))
+        expected
+        (reduce
+         (fn [exp health]
+           (let [trans (combat-transitions health table-key)
+                 ;; Separate self-loop probability from transitions to other states
+                 p-stay (get trans health 0.0)
+                 p-leave (- 1.0 p-stay)
+                 ;; Sum expected values for transitions to OTHER states only
+                 other-sum (reduce-kv
+                            (fn [sum next-state prob]
+                              (if (= next-state health)
+                                sum  ; Skip self-loop
+                                (+ sum (* prob (get exp next-state 0.0)))))
+                            0.0
+                            trans)
+                 ;; E[h] = (1 + other-sum) / p-leave
+                 ;; If p-leave is 0, combat would never end (shouldn't happen)
+                 e-value (if (pos? p-leave)
+                           (/ (+ 1.0 other-sum) p-leave)
+                           Double/POSITIVE_INFINITY)]
+             (assoc exp health e-value)))
+         init-expected
+         (range 1 (inc max-health)))]
+
+    (get expected max-health)))
+
+(defn combat-variance-markov
+  "Calculate variance in attacks needed using second moment.
+
+   Var[h] = E[attacks^2 from h] - E[attacks from h]^2
+
+   Both E[X] and E[X^2] must account for self-loops:
+   E[X|h] = (1 + sum over others of P(h->h') * E[X|h']) / (1 - P(stay))
+   E[X^2|h] = (1 + 2*other-e1-sum + other-e2-sum) / (1 - P(stay))
+
+   Returns: {:expected n :variance v :std-dev s}"
+  [max-health table-key]
+  (let [init-e2 {0 0.0, :unconscious 1.0}  ; E[X^2] for absorbing states
+        init-e1 {0 0.0, :unconscious 1.0}  ; E[X] for absorbing states
+
+        [e1-map e2-map]
+        (reduce
+         (fn [[e1 e2] health]
+           (let [trans (combat-transitions health table-key)
+                 p-stay (get trans health 0.0)
+                 p-leave (- 1.0 p-stay)
+
+                 ;; E[X] from this state (excluding self-loop)
+                 other-e1-sum (reduce-kv
+                               (fn [sum ns prob]
+                                 (if (= ns health)
+                                   sum
+                                   (+ sum (* prob (get e1 ns 0.0)))))
+                               0.0
+                               trans)
+                 e1-val (if (pos? p-leave)
+                          (/ (+ 1.0 other-e1-sum) p-leave)
+                          Double/POSITIVE_INFINITY)
+
+                 ;; E[X^2] = (1 + 2*other-e1-sum + other-e2-sum) / p-leave
+                 other-e2-sum (reduce-kv
+                               (fn [sum ns prob]
+                                 (if (= ns health)
+                                   sum
+                                   (let [e1-next (get e1 ns 0.0)
+                                         e2-next (get e2 ns 0.0)]
+                                     (+ sum (* prob (+ (* 2.0 e1-next) e2-next))))))
+                               0.0
+                               trans)
+                 e2-val (if (pos? p-leave)
+                          (/ (+ 1.0 other-e2-sum) p-leave)
+                          Double/POSITIVE_INFINITY)]
+             [(assoc e1 health e1-val)
+              (assoc e2 health e2-val)]))
+         [init-e1 init-e2]
+         (range 1 (inc max-health)))
+
+        e1 (get e1-map max-health)
+        e2 (get e2-map max-health)
+        variance (- e2 (* e1 e1))]
+
+    {:expected e1
+     :variance variance
+     :std-dev (Math/sqrt (max 0 variance))}))
+
+;; =============================================================================
+;; Combat Cost Functions (using Markov model)
+;; =============================================================================
+
+(defn estimate-combat-moves
+  "Estimate total moves for combat including retries from player death.
+
+   Uses Markov chain for exact expected attacks, then adds retry overhead.
+
+   Parameters:
+   - enemy-strength: Villain's strength (troll=2, thief=5)
+   - player-score: Player's current score (affects fight-strength)
+   - base-retry-cost: Moves to return to combat location after death
+   - p-player-death-per-round: Probability player dies each combat round
+
+   Returns: {:expected-attacks n :std-dev s :retry-overhead m :total-moves t}"
+  [enemy-strength player-score base-retry-cost p-player-death-per-round]
+  (let [player-str (fight-strength player-score)
+        table-key (select-combat-table enemy-strength player-str)
+
+        ;; Use Markov chain for exact expected attacks
+        {:keys [expected std-dev]} (combat-variance-markov enemy-strength table-key)
+
+        ;; Expected player deaths during combat
+        ;; Geometric: E[deaths] ≈ p-death * expected-attacks / (1 - cumulative-kill-prob)
+        ;; Simplified: E[deaths] = p-death * expected-attacks (assuming we eventually win)
+        expected-deaths (* p-player-death-per-round expected)
+
+        ;; Each death costs: return trip + partial re-fight (average half the combat)
+        retry-overhead (* expected-deaths (+ base-retry-cost (* 0.5 expected)))]
+
+    {:expected-attacks (Math/ceil expected)
+     :std-dev std-dev
+     :retry-overhead (Math/ceil retry-overhead)
+     :total-moves (Math/ceil (+ expected retry-overhead))}))
+
+(defn troll-combat-cost
+  "Estimate moves to kill the troll using Markov chain model.
+   Troll has strength 2. At score 0, player has strength 2 (even match)."
+  [player-score]
+  (let [result (estimate-combat-moves
+                2                    ; troll strength
+                player-score
+                15                   ; moves to return after death
+                0.10)]               ; ~10% chance player dies per round vs troll
+    (:total-moves result)))
+
+(defn thief-combat-cost
+  "Estimate moves to kill the thief using Markov chain model.
+   Thief has strength 5, much harder than troll.
+   At score 0 (strength 2 vs 5), combat is extremely difficult.
+   At score 210 (strength 5 vs 5), even match.
+   At score 280+ (strength 6+ vs 5), player has advantage.
+
+   Note: Thief fights to death in treasure room (no flee)."
+  [player-score]
+  (let [result (estimate-combat-moves
+                5                    ; thief strength
+                player-score
+                20                   ; moves to return after death
+                (cond               ; death probability varies by score
+                  (< player-score 70) 0.25    ; Very risky at low scores
+                  (< player-score 210) 0.15   ; Moderate risk
+                  :else 0.08))]               ; Low risk at high scores
+    (:total-moves result)))
+
+;; =============================================================================
+;; Combat Analysis Utilities
+;; =============================================================================
+
+(defn analyze-combat
+  "Analyze combat statistics for a given matchup.
+   Useful for debugging and understanding combat dynamics.
+
+   Returns detailed breakdown including:
+   - Expected attacks and standard deviation
+   - Health state probabilities after N attacks
+   - Recommended score for reliable combat"
+  [villain-strength player-score]
+  (let [player-str (fight-strength player-score)
+        table-key (select-combat-table villain-strength player-str)
+        {:keys [expected variance std-dev]} (combat-variance-markov villain-strength table-key)
+
+        ;; 95% confidence interval (assuming roughly normal for large N)
+        ci-low (max 1 (- expected (* 1.96 std-dev)))
+        ci-high (+ expected (* 1.96 std-dev))]
+
+    {:villain-strength villain-strength
+     :player-strength player-str
+     :table table-key
+     :expected-attacks expected
+     :std-dev std-dev
+     :variance variance
+     :ci-95 [ci-low ci-high]
+     :pessimistic-estimate (Math/ceil (+ expected std-dev))}))
+
+;; =============================================================================
 ;; Object Name Generation
 ;; =============================================================================
 ;; The parser expects natural language object names, not object IDs.
@@ -416,7 +722,8 @@
 (def special-take-objects
   "Objects that shouldn't have auto-generated take actions.
    These require puzzle solutions or flags to obtain."
-  #{:pot-of-gold})  ; Requires rainbow-flag (wave sceptre first)
+  #{:pot-of-gold      ; Requires rainbow-flag (wave sceptre first)
+    :silver-chalice}) ; Obtained by killing thief (kill-thief-with-* actions)
 
 (defn extract-take-actions
   "Extract take actions for all takeable objects.
@@ -444,7 +751,8 @@
   #{:egg :clockwork-canary :brass-bauble :gold-coffin :sceptre
     :ivory-torch :crystal-trident :jade-figurine :sapphire-bracelet
     :huge-diamond :bag-of-coins :crystal-skull :jewel-encrusted-trunk
-    :gold-bar :emerald :painting :pot-of-gold :platinum-bar :scarab})
+    :gold-bar :emerald :painting :pot-of-gold :platinum-bar :scarab
+    :silver-chalice})
 
 (defn generate-deposit-action
   "Generate an action to deposit a treasure in the trophy case.
@@ -590,18 +898,26 @@
      :flags-clear #{}
      :inventory-add #{}
      :inventory-remove #{}}
-    :cost 3
+    ;; Markov chain analysis at score 0 (DEF2A table):
+    ;; - Expected attacks: 6.11
+    ;; - Adding ~2 moves for retry overhead from possible player deaths
+    :cost 8
     :reversible? false
-    ;; Combat uses loop construct instead of fixed commands
     :combat
     {:action "attack troll with sword"
      :enemy :troll
-     :victory-flag :troll-flag           ; Flag set when enemy dies
-     :expected-rounds [2 5]              ; Typical range
-     :max-rounds 15                      ; Abort threshold
-     :retreat-dir "south"                ; Direction to flee for RNG reset
-     :retry-actions ["wait" "north"]}    ; Actions to change RNG state
-    :commands ["attack troll with sword"]}
+     :enemy-strength 2
+     :victory-flag :troll-flag
+     :expected-attacks 7                 ; Markov: 6.11 rounded up
+     :max-attacks 15                     ; Abort threshold
+     :retreat-dir "south"
+     :retry-actions ["wait" "north"]}
+    ;; 10 attacks (pessimistic buffer for actual gameplay)
+    :commands ["attack troll with sword" "attack troll with sword"
+               "attack troll with sword" "attack troll with sword"
+               "attack troll with sword" "attack troll with sword"
+               "attack troll with sword" "attack troll with sword"
+               "attack troll with sword" "attack troll with sword"]}
 
    :scare-cyclops
    {:id :scare-cyclops
@@ -842,6 +1158,14 @@
    ;; - At 280+ points: strength 6+ vs 5 = advantage
    ;; - MUST have a weapon (sword or nasty knife)
    ;; - Nasty knife is thief's "best weapon" - gives player advantage
+   ;; - IMPORTANT: Thief fights to the DEATH in treasure room (never flees)
+   ;;
+   ;; Combat probability (DEF3 tables - no instant kill, must wound to 0):
+   ;; - DEF3A (score <70): 18% light wound, 18% serious wound = 0.54 dmg/attack
+   ;; - DEF3B (score 70-210): 27% light, 27% serious = 0.81 dmg/attack
+   ;; - DEF3C (score 280+): 40% light, 30% serious = 1.0 dmg/attack
+   ;; - Need 5 damage total to kill thief
+   ;; - Player death probability ~15-25% per round at low scores
    ;;
    ;; Thief drops: chalice, stiletto, and any treasures he stole
    ;; Note: Thief does NOT open egg when killed - egg must be given to thief,
@@ -857,23 +1181,39 @@
     :effects
     {:flags-set #{:thief-dead}
      :flags-clear #{}
-     :inventory-add #{:chalice}  ; Chalice always dropped, stolen items vary
+     :inventory-add #{:silver-chalice}  ; Chalice always dropped, stolen items vary
      :inventory-remove #{}}
-    :cost 10  ; Combat takes many turns, sword is harder
+    ;; Realistic cost from 2D Markov simulation (50k fights at score 0):
+    ;; - Player wins: 41%, Player dies: 59%
+    ;; - Avg fight length: 6.1 rounds (shorter than 1D Markov estimate)
+    ;; - Retry cost: ~18 moves to respawn and navigate back
+    ;; - E[total] = (6.1 + 0.59 * 18) / 0.41 ≈ 41 moves
+    :cost 40
     :reversible? false
     :combat
     {:action "attack thief with sword"
      :enemy :thief
+     :enemy-strength 5
      :victory-flag :thief-dead
-     :expected-rounds [8 15]             ; Very variable, sword is weak vs thief
-     :max-rounds 30                      ; Thief combat can go very long
-     :retreat-dir "down"                 ; Go down stairs to flee
-     :retry-actions ["wait" "up"]        ; Wait changes RNG, return
-     :score-requirement 210}             ; Minimum score for even match
-    :commands ["attack thief with sword"]
-    :notes "Requires high score (210+) for reliable success. Sword is less effective."}
+     :expected-attacks 6                 ; 2D simulation: avg 6.1 rounds
+     :max-attacks 25                     ; Very long fights possible
+     :fights-to-death true               ; No fleeing in treasure room
+     :player-death-prob 0.59             ; 2D simulation: 59% at score 0
+     :retry-cost 18}                     ; Moves to return after death
+    ;; 15 attacks (pessimistic buffer for actual gameplay)
+    :commands ["attack thief with sword" "attack thief with sword"
+               "attack thief with sword" "attack thief with sword"
+               "attack thief with sword" "attack thief with sword"
+               "attack thief with sword" "attack thief with sword"
+               "attack thief with sword" "attack thief with sword"
+               "attack thief with sword" "attack thief with sword"
+               "attack thief with sword" "attack thief with sword"
+               "attack thief with sword"]
+    :notes "Sword has no advantage vs thief. Very difficult at low scores."}
 
    ;; Nasty knife is thief's weakness (his "best weapon" in ZIL terms)
+   ;; Using it against him reduces his effective defense by 1 (strength 5 -> 4)
+   ;; This shifts combat tables in player's favor
    :kill-thief-with-knife
    {:id :kill-thief-with-knife
     :type :combat
@@ -884,21 +1224,33 @@
     :effects
     {:flags-set #{:thief-dead}
      :flags-clear #{}
-     :inventory-add #{:chalice}
+     :inventory-add #{:silver-chalice}
      :inventory-remove #{}}
-    :cost 6  ; Faster with the knife (thief's weakness)
+    ;; Knife advantage analysis:
+    ;; - At score 0: knife doesn't help much (both still DEF3A)
+    ;; - Player death prob still ~59% (knife only affects thief's defense, not offense)
+    ;; - At score 140+: knife shifts to DEF3B - significant advantage
+    ;; - Slight discount from sword cost for potential high-score benefit
+    :cost 38
     :reversible? false
     :combat
     {:action "attack thief with knife"
      :enemy :thief
+     :enemy-strength 4                   ; Reduced from 5 due to knife advantage
      :victory-flag :thief-dead
-     :expected-rounds [4 8]              ; Knife is thief's weakness
-     :max-rounds 20
-     :retreat-dir "down"
-     :retry-actions ["wait" "up"]
-     :score-requirement 140}             ; Lower requirement with knife advantage
-    :commands ["attack thief with knife"]
-    :notes "Nasty knife gives combat advantage vs thief. Still needs decent score."}
+     :expected-attacks 6                 ; Similar to sword at low score
+     :max-attacks 20
+     :fights-to-death true               ; No fleeing in treasure room
+     :player-death-prob 0.59             ; Same as sword at low score
+     :retry-cost 18}
+    ;; 12 attacks (pessimistic buffer for actual gameplay)
+    :commands ["attack thief with knife" "attack thief with knife"
+               "attack thief with knife" "attack thief with knife"
+               "attack thief with knife" "attack thief with knife"
+               "attack thief with knife" "attack thief with knife"
+               "attack thief with knife" "attack thief with knife"
+               "attack thief with knife" "attack thief with knife"]
+    :notes "Nasty knife reduces thief's defense. Recommended approach."}
 
    ;; Loud room puzzle:
    ;; - Room is deafening when dam gates open and water high

@@ -25,7 +25,7 @@
    :dam-area #{:emerald :platinum-bar :jewel-encrusted-trunk}
    :temple #{:ivory-torch :sceptre}
    :hades #{:crystal-skull}
-   :thief-lair #{:jade-figurine :chalice :gold-coffin :clockwork-canary}
+   :thief-lair #{:jade-figurine :silver-chalice :gold-coffin :clockwork-canary}
    :coal-mine #{:huge-diamond :scarab :sapphire-bracelet}  ; bracelet is in gas-room
    :rainbow #{:pot-of-gold}
    :loud-room #{:gold-bar}
@@ -442,8 +442,10 @@
    - :action           - The attack command
    - :enemy            - Enemy keyword for state checking
    - :victory-flag     - Flag set when enemy dies
-   - :expected-rounds  - [min max] typical range
-   - :max-rounds       - Abort threshold for timeout
+   - :expected-attacks - Expected number of attacks (new format)
+   - :expected-rounds  - [min max] typical range (old format)
+   - :max-attacks      - Abort threshold (new format)
+   - :max-rounds       - Abort threshold for timeout (old format)
    - :retreat-dir      - Direction to flee for RNG reset
    - :retry-actions    - Commands to change RNG state before retry
 
@@ -460,8 +462,11 @@
      :action (:action combat)
      :enemy (:enemy combat)
      :victory-flag (:victory-flag combat)
-     :max-rounds (:max-rounds combat 15)
-     :expected-rounds (:expected-rounds combat [2 5])
+     ;; Support both old and new field names
+     :max-rounds (or (:max-attacks combat) (:max-rounds combat) 15)
+     :max-attacks (or (:max-attacks combat) (:max-rounds combat) 15)
+     :expected-rounds (:expected-rounds combat)
+     :expected-attacks (:expected-attacks combat)
      :on-timeout {:retreat (:retreat-dir combat)
                   :reset (:retry-actions combat [])
                   :retry true}
@@ -476,17 +481,24 @@
    For simple output (non-interactive), generates expected number of attacks
    plus a few extra for variance. Real execution would use the loop construct.
 
+   Supports both old format (expected-rounds [min max]) and new format (expected-attacks n).
+
    Options:
-   - :mode :optimistic  - Use lower bound of expected rounds
-   - :mode :pessimistic - Use upper bound + buffer
+   - :mode :optimistic  - Use lower bound of expected attacks
+   - :mode :pessimistic - Use upper bound + buffer (default)
    - :mode :with-retry  - Include retreat/retry sequence"
   [combat-spec & {:keys [mode] :or {mode :pessimistic}}]
-  (let [{:keys [action expected-rounds max-rounds on-timeout]} combat-spec
-        [min-rounds max-expected] expected-rounds
+  (let [{:keys [action expected-rounds expected-attacks max-rounds max-attacks on-timeout]} combat-spec
+        ;; Support both old format [min max] and new format (single number)
+        [min-attacks max-expected] (cond
+                                     expected-attacks [expected-attacks expected-attacks]
+                                     expected-rounds expected-rounds
+                                     :else [5 10])  ; fallback
+        max-total (or max-attacks max-rounds 30)
         attack-count (case mode
-                       :optimistic min-rounds
+                       :optimistic min-attacks
                        :pessimistic (+ max-expected 3)
-                       :with-retry max-rounds)
+                       :with-retry max-total)
         attacks (vec (repeat attack-count action))]
     (if (= mode :with-retry)
       ;; Include retry sequence after attacks
