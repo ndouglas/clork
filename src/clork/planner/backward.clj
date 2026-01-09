@@ -603,28 +603,38 @@
 ;; Treasure Planning
 ;; =============================================================================
 
+(def created-treasure-locations
+  "Map of treasures that are created (start in :limbo) to their effective pickup location.
+   These treasures require special actions to create/obtain rather than simple pickup."
+  {:huge-diamond :shaft-room})  ; Retrieved from basket at shaft-room after creation
+
 (defn get-treasure-location
   "Find the room where a treasure is located.
-   Traverses container hierarchy (e.g., egg in nest in up-a-tree -> up-a-tree)."
+   Traverses container hierarchy (e.g., egg in nest in up-a-tree -> up-a-tree).
+   For 'created' treasures (like diamond), returns the effective pickup location."
   [game-state treasure-id]
-  (loop [loc (get-in game-state [:objects treasure-id :in])
-         depth 0]
-    (cond
-      ;; Safety limit to avoid infinite loops
-      (> depth 10) nil
+  ;; Check if this is a created treasure first
+  (if-let [special-loc (get created-treasure-locations treasure-id)]
+    special-loc
+    ;; Otherwise traverse normal container hierarchy
+    (loop [loc (get-in game-state [:objects treasure-id :in])
+           depth 0]
+      (cond
+        ;; Safety limit to avoid infinite loops
+        (> depth 10) nil
 
-      ;; No location
-      (nil? loc) nil
+        ;; No location (in :limbo or nil)
+        (or (nil? loc) (= loc :limbo)) nil
 
-      ;; It's a room - found it!
-      (contains? (:rooms game-state) loc) loc
+        ;; It's a room - found it!
+        (contains? (:rooms game-state) loc) loc
 
-      ;; It's in another object (container) - recurse
-      (contains? (:objects game-state) loc)
-      (recur (get-in game-state [:objects loc :in]) (inc depth))
+        ;; It's in another object (container) - recurse
+        (contains? (:objects game-state) loc)
+        (recur (get-in game-state [:objects loc :in]) (inc depth))
 
-      ;; Unknown location type
-      :else nil)))
+        ;; Unknown location type
+        :else nil))))
 
 (defn optimize-treasure-order
   "Use TSP to find optimal order for collecting treasures.
