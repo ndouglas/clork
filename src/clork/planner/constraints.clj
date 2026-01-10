@@ -253,6 +253,48 @@
 ;; Planning State
 ;; =============================================================================
 
+;; Trophy case values for each treasure (points awarded on deposit)
+;; Used for score-aware planning (deposit easy treasures before hard combat)
+(def treasure-tvalues
+  "Trophy case values for treasures. From objects.clj :tvalue fields.
+   Score affects combat: fight-strength = 2 + (score / 70), max 7
+   At score 140, strength 4 vs thief's 5 shifts from DEF3A to DEF3B tables."
+  {:jeweled-scarab 5
+   :painting 6
+   :gold-coffin 15
+   :sceptre 6
+   :ivory-torch 6
+   :crystal-skull 10
+   :jewel-encrusted-trunk 5
+   :huge-diamond 10
+   :large-emerald 10
+   :pot-of-gold 10
+   :clockwork-canary 4
+   :brass-bauble 1
+   :jade-figurine 5
+   :crystal-trident 11
+   :sapphire-bracelet 5
+   :silver-chalice 5
+   :egg 5
+   :bag-of-coins 5
+   :platinum-bar 5})
+
+(defn treasure-value
+  "Get the trophy case value for a treasure."
+  [treasure-id]
+  (get treasure-tvalues treasure-id 0))
+
+(defn score-for-deposits
+  "Calculate total score from deposited treasures."
+  [deposited]
+  (reduce + 0 (map treasure-value deposited)))
+
+(defn fight-strength
+  "Calculate player's fighting strength from score.
+   Formula: 2 + (score / 70), clamped to 2-7"
+  [score]
+  (min 7 (max 2 (+ 2 (int (/ score 70))))))
+
 (defn initial-planning-state
   "Create initial state for planning."
   [game-state]
@@ -260,12 +302,14 @@
    :inventory #{}
    :flags #{}
    :collected #{}  ; All items ever collected (for one-way validation)
-   :deposited #{}}) ; Items in trophy case
+   :deposited #{} ; Items in trophy case
+   :score 0})      ; Current score (from deposits)
 
 (defn planning-state-after-action
   "Update planning state after executing an action."
   [state action]
-  (let [effects (:effects action)]
+  (let [effects (:effects action)
+        deposited-item (:deposits effects)]
     (-> state
         ;; Update location
         (cond-> (:new-location effects)
@@ -278,9 +322,10 @@
         (update :flags set/difference (:flags-clear effects #{}))
         ;; Track collected items (for one-way validation)
         (update :collected set/union (:inventory-add effects #{}))
-        ;; Track deposited items
-        (cond-> (:deposits effects)
-          (update :deposited conj (:deposits effects))))))
+        ;; Track deposited items and update score
+        (cond-> deposited-item
+          (-> (update :deposited conj deposited-item)
+              (update :score + (treasure-value deposited-item)))))))
 
 ;; =============================================================================
 ;; Hazard Constraints
@@ -295,6 +340,24 @@
    :bat-room {:hazard :bat-attack
               :safe-with #{:garlic}
               :message "Bat will steal items unless you have garlic"}})
+
+(def rooms-behind-bat
+  "Rooms that can ONLY be reached by passing through bat-room.
+   Any route to these rooms requires garlic to avoid bat interference.
+
+   Topology:
+   squeeky-room -> bat-room -> shaft-room -> smelly-room -> gas-room -> coal-mine..."
+  #{:shaft-room :smelly-room :gas-room
+    :coal-mine :coal-mine-1 :coal-mine-2 :coal-mine-3 :coal-mine-4
+    :mine-1 :mine-2 :mine-3 :mine-4
+    :ladder-top :ladder-bottom :timber-room :lower-shaft})
+
+(defn requires-bat-passage?
+  "Check if reaching a room requires passing through bat-room.
+   Returns true if garlic is needed to safely navigate to this room."
+  [room-id]
+  (or (= room-id :bat-room)
+      (contains? rooms-behind-bat room-id)))
 
 (defn room-hazard
   "Get hazard info for a room, or nil if no hazard."

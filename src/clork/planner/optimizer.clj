@@ -1035,3 +1035,226 @@
   (let [start-room :west-of-house  ; Game always starts here
         result (find-flags-for-path game-state start-room dest-room #{})]
     (:required-flags result #{})))
+
+;; =============================================================================
+;; Validated Execution
+;; =============================================================================
+
+(defn annotate-command-sequence
+  "Add expected state annotations to a command sequence.
+
+   Takes the output of plan-to-command-sequence and annotates each command
+   with expected outcomes (room, inventory requirements, etc).
+
+   Returns vector of {:command \"cmd\" :expected {...}}."
+  [game-state commands by-action start-room]
+  (let [;; Build a map of command index -> action info from by-action
+        action-bounds
+        (loop [actions by-action
+               cmd-idx 0
+               bounds []]
+          (if (empty? actions)
+            bounds
+            (let [action (first actions)
+                  nav-count (count (:nav-commands action))
+                  action-count (count (:action-commands action))
+                  total (+ nav-count action-count)
+                  end-idx (+ cmd-idx total)]
+              (recur (rest actions)
+                     end-idx
+                     (conj bounds {:action action
+                                   :start-idx cmd-idx
+                                   :nav-end-idx (+ cmd-idx nav-count)
+                                   :end-idx end-idx})))))]
+
+    ;; Annotate each command
+    (loop [idx 0
+           current-room start-room
+           annotated []]
+      (if (>= idx (count commands))
+        annotated
+        (let [cmd (nth commands idx)
+              ;; Find which action this command belongs to
+              action-info (first (filter #(and (>= idx (:start-idx %))
+                                               (< idx (:end-idx %)))
+                                         action-bounds))
+              ;; Determine expected room after this command
+              is-nav? (and action-info (< idx (:nav-end-idx action-info)))
+              dest-room (when action-info (:to (:action action-info)))
+              expected-room (if (and is-nav? dest-room
+                                     (= idx (dec (:nav-end-idx action-info))))
+                              ;; Last nav command - expect to be at destination
+                              dest-room
+                              ;; Mid-navigation or action - less strict
+                              nil)
+              ;; Build annotation
+              annotation {:command cmd
+                          :index idx
+                          :expected {:room expected-room
+                                     :action-id (when action-info
+                                                  (get-in action-info [:action :action]))}}
+              ;; Update current room if this completes navigation
+              new-room (or expected-room current-room)]
+          (recur (inc idx) new-room (conj annotated annotation)))))))
+
+(defn validate-state
+  "Check if actual game state matches expected state.
+
+   Returns {:valid? bool :errors [...]} where errors describe mismatches.
+
+   Checks:
+   - Room matches expected (if specified)
+   - Player is alive
+   - Required items still in inventory
+   - No unexpected location (e.g., bat grabbed us)"
+  [actual-state expected & {:keys [required-inventory]}]
+  (let [errors (atom [])
+        player-id (:player actual-state)]
+
+    ;; Check player death
+    (when (:player-dead actual-state)
+      (swap! errors conj {:type :player-dead
+                          :message "Player has died"}))
+
+    ;; Check expected room
+    (when-let [expected-room (:room expected)]
+      (when (and expected-room (not= (:here actual-state) expected-room))
+        (swap! errors conj {:type :wrong-room
+                            :expected expected-room
+                            :actual (:here actual-state)
+                            :message (str "Expected room " expected-room
+                                          " but at " (:here actual-state))})))
+
+    ;; Check required inventory items
+    (when required-inventory
+      (doseq [item required-inventory]
+        (let [item-loc (get-in actual-state [:objects item :in])]
+          (when (not= item-loc player-id)
+            (swap! errors conj {:type :missing-item
+                                :item item
+                                :actual-location item-loc
+                                :message (str "Expected " item " in inventory but it's at " item-loc)})))))
+
+    {:valid? (empty? @errors)
+     :errors @errors}))
+
+(defn run-with-validation
+  "Execute a command sequence with state validation.
+
+   Parameters:
+   - execute-fn: (fn [state command] [new-state output]) - command executor
+   - initial-state: Starting game state
+   - annotated-commands: Output of annotate-command-sequence
+   - opts: {:critical-items #{items that must stay in inventory once acquired}
+            :on-error :continue|:stop (default :stop)
+            :verbose? bool}
+
+   Tracks which items have been acquired and only validates them after pickup.
+
+   Returns:
+   {:success? bool
+    :final-state state
+    :commands-run n
+    :errors [{:index n :error {...}}]
+    :events [{:index n :type :kill|:deposit|:pickup :details ...}]}"
+  [execute-fn initial-state annotated-commands & {:keys [critical-items on-error verbose?]
+                                                   :or {critical-items #{:sword :brass-lantern}
+                                                        on-error :stop
+                                                        verbose? false}}]
+  (loop [state initial-state
+         remaining annotated-commands
+         idx 0
+         errors []
+         events []
+         ;; Track items we've acquired and should keep
+         acquired-items #{}]
+    (if (empty? remaining)
+      ;; Success - ran all commands
+      {:success? (empty? errors)
+       :final-state state
+       :commands-run idx
+       :errors errors
+       :events events}
+
+      (let [{:keys [command expected]} (first remaining)
+            [new-state output] (execute-fn state command)
+            player-id (:player new-state)
+
+            ;; Track item pickups - add to acquired-items when we take critical items
+            picked-up (when (re-find #"^take " command)
+                        (let [item-name (second (re-find #"take (\S+)" command))
+                              item-kw (keyword item-name)]
+                          (when (and (critical-items item-kw)
+                                     (= player-id (get-in new-state [:objects item-kw :in])))
+                            item-kw)))
+            new-acquired (if picked-up (conj acquired-items picked-up) acquired-items)
+
+            ;; Only validate items we've already acquired
+            ;; This prevents false positives before we pick up sword/lamp
+            validation (validate-state new-state expected
+                                       :required-inventory new-acquired)
+
+            ;; Detect events (kills, deposits, pickups)
+            event (cond
+                    (re-find #"(?i)breathes his last" output)
+                    {:index idx :type :kill
+                     :target (cond (re-find #"troll" output) :troll
+                                   (re-find #"thief" output) :thief
+                                   :else :unknown)}
+
+                    (and (re-find #"put .* in case" command)
+                         (re-find #"Done" output))
+                    {:index idx :type :deposit :command command}
+
+                    picked-up
+                    {:index idx :type :pickup :item picked-up}
+
+                    :else nil)]
+
+        (when (and verbose? event)
+          (println (format "%3d. %s: %s" idx command (:type event))))
+
+        (if (and (not (:valid? validation))
+                 (= on-error :stop))
+          ;; Validation failed and we're stopping on errors
+          {:success? false
+           :final-state new-state
+           :commands-run idx
+           :errors (conj errors {:index idx
+                                 :command command
+                                 :validation-errors (:errors validation)})
+           :events events
+           :stopped-at {:index idx :command command :reason (:errors validation)}}
+
+          ;; Continue (either valid or on-error is :continue)
+          (recur new-state
+                 (rest remaining)
+                 (inc idx)
+                 (if (:valid? validation)
+                   errors
+                   (conj errors {:index idx
+                                 :command command
+                                 :validation-errors (:errors validation)}))
+                 (if event (conj events event) events)
+                 new-acquired))))))
+
+(defn run-speedrun-validated
+  "High-level function to run a speedrun with full validation.
+
+   Parameters:
+   - execute-fn: Command executor (fn [state cmd] [new-state output])
+   - initial-state: Starting game state
+   - cmd-seq: Output of plan-to-command-sequence
+   - start-room: Starting room
+
+   Returns detailed result with success/failure info and diagnostics."
+  [execute-fn initial-state cmd-seq start-room]
+  (let [annotated (annotate-command-sequence
+                   initial-state
+                   (:commands cmd-seq)
+                   (:by-action cmd-seq)
+                   start-room)]
+    (run-with-validation execute-fn initial-state annotated
+                         :critical-items #{:sword :brass-lantern}
+                         :on-error :stop
+                         :verbose? true)))

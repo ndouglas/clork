@@ -723,7 +723,8 @@
   "Objects that shouldn't have auto-generated take actions.
    These require puzzle solutions or flags to obtain."
   #{:pot-of-gold      ; Requires rainbow-flag (wave sceptre first)
-    :silver-chalice}) ; Obtained by killing thief (kill-thief-with-* actions)
+    :silver-chalice   ; Obtained by killing thief (kill-thief-with-* actions)
+    :garlic})         ; In brown-sack, needs "open sack" first (use :get-garlic)
 
 (defn extract-take-actions
   "Extract take actions for all takeable objects.
@@ -876,6 +877,31 @@
     :cost 1
     :reversible? true
     :commands ["open trap door"]}
+
+   ;; =========================================================================
+   ;; GARLIC (bat protection)
+   ;; =========================================================================
+   ;; Garlic is in the brown sack in the kitchen.
+   ;; Having garlic in inventory protects from the bat in bat-room.
+   ;; Without garlic, the bat will grab the player and drop them at a random
+   ;; location, disrupting all navigation.
+
+   :get-garlic
+   {:id :get-garlic
+    :type :take
+    :preconditions
+    {:here :kitchen
+     :inventory #{}
+     :flags #{}}
+    :effects
+    {:flags-set #{}
+     :flags-clear #{}
+     :inventory-add #{:garlic}
+     :inventory-remove #{}}
+    :cost 2  ; open sack + take garlic
+    :reversible? true
+    :commands ["open sack" "take garlic"]
+    :notes "Garlic protects from bat in bat-room (squeaky-room area)"}
 
    ;; Note: Going DOWN through trap door causes it to close and bar!
    ;; This is a ONE-WAY transition. You cannot return via trap door.
@@ -1178,7 +1204,8 @@
     :preconditions
     {:here :treasure-room
      :inventory #{:sword}
-     :flags #{:cyclops-flag}}  ; Must reach treasure room
+     :flags #{:cyclops-flag}  ; Must reach treasure room
+     :minimum-score 30}       ; Deposit some treasures first for better combat odds
     :effects
     {:flags-set #{:thief-dead}
      :flags-clear #{}
@@ -1229,7 +1256,8 @@
     :preconditions
     {:here :treasure-room
      :inventory #{:nasty-knife}
-     :flags #{:cyclops-flag}}
+     :flags #{:cyclops-flag}
+     :minimum-score 30}       ; Deposit some treasures first for better combat odds
     :effects
     {:flags-set #{:thief-dead}
      :flags-clear #{}
@@ -1546,13 +1574,26 @@
 
    Note: Arguments ordered for use with reduce: (reduce apply-action-effects state actions)"
   [state action]
-  (let [effects (:effects action)]
+  (let [effects (:effects action)
+        deposited-item (:deposits effects)]
     (-> state
         (update :flags set/union (:flags-set effects #{}))
         (update :flags set/difference (:flags-clear effects #{}))
         (update :inventory set/union (:inventory-add effects #{}))
         (update :inventory set/difference (:inventory-remove effects #{}))
-        (cond-> (:new-location effects) (assoc :here (:new-location effects))))))
+        (cond-> (:new-location effects) (assoc :here (:new-location effects)))
+        ;; Track deposited items and update score for score-aware planning
+        (cond-> deposited-item
+          (-> (update :deposited (fnil conj #{}) deposited-item)
+              ;; Score = trophy case value of deposited treasure
+              (update :score (fnil + 0)
+                      (get {:painting 6 :egg 5 :bag-of-coins 5 :crystal-trident 11
+                            :pot-of-gold 10 :silver-chalice 5 :sapphire-bracelet 5
+                            :jade-figurine 5 :platinum-bar 5 :clockwork-canary 4
+                            :huge-diamond 10 :large-emerald 10 :ivory-torch 6
+                            :gold-coffin 15 :sceptre 6 :crystal-skull 10
+                            :jeweled-scarab 5 :brass-bauble 1 :jewel-encrusted-trunk 5}
+                           deposited-item 0)))))))
 
 ;; =============================================================================
 ;; Debug Utilities

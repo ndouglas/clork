@@ -60,6 +60,7 @@
     (and (vector? goal) (= :deposit (first goal))) :deposit
     (and (vector? goal) (= :have (first goal))) :have-item
     (and (vector? goal) (= :at (first goal))) :location
+    (and (vector? goal) (= :score-min (first goal))) :score-min
     (keyword? goal) :flag
     :else :unknown))
 
@@ -75,6 +76,9 @@
 
     (and (vector? goal) (= :at (first goal)))
     (str "Be at " (name (second goal)))
+
+    (and (vector? goal) (= :score-min (first goal)))
+    (str "Score >= " (second goal))
 
     (keyword? goal)
     (str "Flag: " (name goal))
@@ -131,9 +135,33 @@
   (filter #(= room-id (get-in % [:effects :new-location]))
           (vals registry)))
 
+;; Treasures that DON'T require killing the thief (can be deposited before combat)
+(def pre-thief-treasures
+  "Treasures that can be collected without killing the thief.
+   Used for score-aware planning: deposit these before thief combat."
+  #{:painting       ; gallery - no thief required (tvalue 6)
+    :egg            ; up-a-tree - surface (tvalue 5)
+    :bag-of-coins   ; maze-5 - just navigation (tvalue 5)
+    :crystal-trident ; atlantis-room - navigation (tvalue 11)
+    :pot-of-gold})  ; end-of-rainbow - needs sceptre + wave (tvalue 10)
+;; Total if all deposited: 6+5+5+11+10 = 37 points
+
+(defn find-achievers-for-score
+  "Find deposit actions that can contribute to meeting a minimum score.
+   Returns deposit actions for pre-thief treasures (easy treasures that
+   don't require killing the thief first)."
+  [registry _min-score current-deposited]
+  ;; Find deposit actions for treasures we haven't deposited yet
+  (filter (fn [action]
+            (and (= (:type action) :deposit)
+                 (let [treasure (:treasure action)]
+                   (and (contains? pre-thief-treasures treasure)
+                        (not (contains? current-deposited treasure))))))
+          (vals registry)))
+
 (defn find-achievers
   "Find all actions that can achieve a goal."
-  [registry goal]
+  [registry goal & {:keys [current-state]}]
   (cond
     (and (vector? goal) (= :deposit (first goal)))
     (find-achievers-for-deposit registry (second goal))
@@ -143,6 +171,10 @@
 
     (and (vector? goal) (= :at (first goal)))
     (find-achievers-for-location registry (second goal))
+
+    (and (vector? goal) (= :score-min (first goal)))
+    (find-achievers-for-score registry (second goal)
+                               (:deposited current-state #{}))
 
     (keyword? goal)
     (find-achievers-for-flag registry goal)
@@ -165,7 +197,11 @@
      ;; Required items as goals
      (set (map #(vector :have %) (:inventory preconds #{})))
      ;; Required flags as goals
-     (:flags preconds #{}))))
+     (:flags preconds #{})
+     ;; Minimum score as goal (for score-aware combat)
+     (if (:minimum-score preconds)
+       #{[:score-min (:minimum-score preconds)]}
+       #{}))))
 
 ;; =============================================================================
 ;; Backward Planning Algorithm
@@ -198,16 +234,19 @@
   "Select the best goal to work on next.
    Prioritizes:
    1. Flags (unlock areas first)
-   2. Items (collect treasures)
-   3. Deposits (put in trophy case)"
+   2. Score-min (build score before hard combat)
+   3. Items (collect treasures)
+   4. Deposits (put in trophy case)
+   5. Locations (navigation)"
   [goals]
   (let [sorted (sort-by (fn [g]
                           (case (goal-type g)
                             :flag 0
-                            :have-item 1
-                            :deposit 2
-                            :location 3
-                            4))
+                            :score-min 1  ; Process score requirements early
+                            :have-item 2
+                            :deposit 3
+                            :location 4
+                            5))
                         goals)]
     (first sorted)))
 
@@ -264,6 +303,17 @@
                   required-flags (optimizer/flags-required-for-room target-room)
                   missing-location-flags (set/difference required-flags (:flags achieved-state))
 
+                  ;; Check: Room hazards (bat-room needs garlic, gas-room needs lantern not flame)
+                  ;; For bat-room, we need garlic to prevent the bat from grabbing us
+                  ;; Also check if this room is BEHIND bat-room (requires passing through it)
+                  hazard-info (constraints/room-hazard target-room)
+                  safe-items (when hazard-info (:safe-with hazard-info #{}))
+                  ;; If the target is behind bat-room, we need garlic regardless of direct hazard
+                  needs-garlic-for-path? (constraints/requires-bat-passage? target-room)
+                  has-garlic? (contains? (:inventory achieved-state) :garlic)
+                  has-safe-item? (when safe-items
+                                   (some #(contains? (:inventory achieved-state) %) safe-items))
+
                   ;; NOTE: We no longer add magic-flag requirement for underground return.
                   ;; The chimney (studio -> kitchen) provides an alternate exit from underground
                   ;; that doesn't require any flags. The optimizer's navigation will find
@@ -280,8 +330,19 @@
                   with-light (if (and needs-light? (not lantern-on?))
                                (conj with-lantern :lantern-on)
                                with-lantern)
+                  ;; Add hazard protection items if needed
+                  ;; For bat-room or any room behind it, this adds [:have :garlic] goal
+                  with-hazard (cond
+                                ;; Path goes through bat-room - need garlic
+                                (and needs-garlic-for-path? (not has-garlic?))
+                                (conj with-light [:have :garlic])
+                                ;; Direct hazard with safe-with items
+                                (and safe-items (not has-safe-item?))
+                                (conj with-light [:have (first safe-items)])
+                                ;; No hazard requirements
+                                :else with-light)
                   ;; Add location dependency flags as goals
-                  final-goals (set/union with-light missing-location-flags)]
+                  final-goals (set/union with-hazard missing-location-flags)]
               (recur final-goals
                      plan
                      achieved-state
@@ -294,6 +355,7 @@
                                        :flag (contains? (:flags achieved-state) goal)
                                        :have-item (contains? (:inventory achieved-state) (second goal))
                                        :deposit (contains? (:deposited achieved-state) (second goal))
+                                       :score-min (>= (:score achieved-state 0) (second goal))
                                        false)]
               (if already-satisfied?
                 ;; Goal already satisfied, just remove it
@@ -304,7 +366,7 @@
                        (inc iterations))
 
                 ;; Goal not satisfied, find achievers
-                (let [achievers (find-achievers registry goal)]
+                (let [achievers (find-achievers registry goal :current-state achieved-state)]
                   (if (empty? achievers)
                     ;; No achiever found
                     {:success? false
@@ -328,8 +390,13 @@
                         ;; Add achiever to plan
                         (let [new-precond-goals (action-preconditions-as-goals achiever)
                               new-achieved (actions/apply-action-effects achieved-state achiever)
+                              ;; For score-min goals, only remove if now satisfied
+                              ;; (a single deposit may not be enough)
+                              goal-now-satisfied? (if (= :score-min (goal-type goal))
+                                                    (>= (:score new-achieved 0) (second goal))
+                                                    true)
                               remaining-goals (-> goals
-                                                  (disj goal)
+                                                  (cond-> goal-now-satisfied? (disj goal))
                                                   (set/union new-precond-goals))]
                           (recur remaining-goals
                                  (conj plan achiever)
@@ -413,6 +480,13 @@
           has-underground? (some action-is-underground? plan)
           magic-provider (get flag-providers :magic-flag)
 
+          ;; Find deposit actions for PRE-THIEF treasures (can build score before thief fight)
+          ;; These are treasures that can be collected without killing the thief
+          pre-thief-deposit-ids (set (for [a plan
+                                           :when (and (= :deposit (:type a))
+                                                      (contains? pre-thief-treasures (:treasure a)))]
+                                       (:id a)))
+
           ;; Calculate dependencies for each action
           action-deps
           (into {}
@@ -446,7 +520,14 @@
                     (when (and has-underground?
                                magic-provider
                                (= :deposit (:type a)))
-                      #{magic-provider}))]))
+                      #{magic-provider})
+                    ;; Score dependencies:
+                    ;; Combat actions with minimum-score requirements depend on
+                    ;; PRE-THIEF deposit actions (which build score safely)
+                    (when-let [min-score (get-in a [:preconditions :minimum-score])]
+                      (when (pos? min-score)
+                        ;; This combat action depends on pre-thief deposit actions
+                        pre-thief-deposit-ids)))]))
 
           ;; Kahn's algorithm with strategic ordering
           id->action (into {} (map (juxt :id identity) plan))
