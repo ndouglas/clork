@@ -725,7 +725,8 @@
   #{:pot-of-gold      ; Requires rainbow-flag (wave sceptre first)
     :silver-chalice   ; Obtained by killing thief (kill-thief-with-* actions)
     :garlic           ; In brown-sack, needs "open sack" first (use :get-garlic)
-    :large-emerald})  ; In buoy, needs "take buoy" then "open buoy" (use :open-buoy)
+    :large-emerald    ; In buoy, needs "take buoy" then "open buoy" (use :open-buoy)
+    :brass-bauble})   ; Created when canary sings in forest (use :wind-canary)
 
 (defn extract-take-actions
   "Extract take actions for all takeable objects.
@@ -903,6 +904,29 @@
     :reversible? true
     :commands ["open sack" "take garlic"]
     :notes "Garlic protects from bat in bat-room (squeaky-room area)"}
+
+   ;; =========================================================================
+   ;; BRASS BAUBLE (wind canary in forest)
+   ;; =========================================================================
+   ;; The clockwork canary must be wound in a forest room to attract a songbird.
+   ;; The songbird drops the brass bauble. Canary is obtained from the jeweled egg
+   ;; (which the thief opens for you if you drop it near him).
+
+   :wind-canary
+   {:id :wind-canary
+    :type :take
+    :preconditions
+    {:here :forest-path  ; Any forest room works, but forest-path is central
+     :inventory #{:clockwork-canary}
+     :flags #{}}
+    :effects
+    {:flags-set #{}
+     :flags-clear #{}
+     :inventory-add #{:brass-bauble}
+     :inventory-remove #{}}
+    :cost 2  ; wind canary + take bauble
+    :reversible? false
+    :commands ["wind canary" "take bauble"]}
 
    ;; Note: Going DOWN through trap door causes it to close and bar!
    ;; This is a ONE-WAY transition. You cannot return via trap door.
@@ -1493,21 +1517,7 @@
     :reversible? false
     :commands ["take diamond from basket"]}
 
-   :retrieve-torch-from-basket
-   {:id :retrieve-torch-from-basket
-    :type :puzzle
-    :preconditions
-    {:here :shaft-room
-     :inventory #{}
-     :flags #{:basket-has-light}}
-    :effects
-    {:flags-set #{}
-     :flags-clear #{:basket-has-light :lower-shaft-lit}
-     :inventory-add #{:ivory-torch}
-     :inventory-remove #{}}
-    :cost 1
-    :reversible? false
-    :commands ["take torch from basket"]}})
+})
 
 ;; =============================================================================
 ;; Action Registry
