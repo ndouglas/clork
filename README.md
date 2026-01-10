@@ -10,7 +10,7 @@
  ░▒▓██████▓▒░░▒▓████████▓▒░▒▓██████▓▒░░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░
 ```
 
-An attempt to remake _Zork_ in Clojure.
+A faithful Clojure port of _Zork I: The Great Underground Empire_.
 
 ## Background
 
@@ -34,14 +34,29 @@ So, I thought, perhaps I might port it to a modern functional language with a si
 
 Another way to think about this, the one I prefer, is that I'm still exploring _Zork_, but in a new level. I'm once again an adventurer/archaeologist/"cretin", muddling around through an incredibly cryptic, deeply esoteric, unfair and unforgiving world. I'm taking each treasure, puzzle, room, trap, joke, and adversary, carefully extracting it from the webs and rust and impacted dirt, blowing the dust off, and installing it into a new trophy case.
 
-Fortunately, at this point in my life, I have an excellent array of tools in my inventory 🙂
+Fortunately, at this point in my life, I have an excellent array of tools in my inventory.
 
-## But Does It Work?
+## Current Status
 
-We're getting there.
+**The game is fully playable from start to finish.** All 19 treasures can be collected and deposited, and the game can be won by entering the Stone Barrow.
+
+### What Works
+
+- **All 110 rooms** - Complete map including the maze, coal mine, and all special areas
+- **All 19 treasures** - Egg, chalice, painting, coffin, diamond, etc.
+- **Combat system** - Troll and thief fights with ZIL-accurate mechanics
+- **Major puzzles** - Loud room, dam, rainbow, cyclops, canary, coal mine machine
+- **Thief AI** - The wandering thief who steals treasures and opens the egg
+- **Light/dark mechanics** - Lantern, candles, and the dreaded grue
+- **Full parser** - Multi-object commands, pronouns, disambiguation
+
+### Running the Game
+
+```bash
+lein run
+```
 
 ```
-$ lein run
 ZORK I: The Great Underground Empire
 Infocom interactive fiction - a fantasy story
 Copyright (c) 1981, 1982, 1983, 1984, 1985, 1986 Infocom, Inc. All rights reserved.
@@ -53,77 +68,85 @@ West of House
 You are standing in an open field west of a white house, with a boarded front door.
 There is a small mailbox here.
 
->go around house
-North of House
-You are facing the north side of a white house. There is no door here, and all the windows are boarded up. To the north a narrow path winds through the trees.
-
-
->g
-Behind House
-You are behind the white house. A path leads into the forest to the east. In one corner of the house there is a small window which is slightly ajar.
-
-
->open window
-With great effort, you open the window far enough to allow entry.
-
->w
-Kitchen
-You are in the kitchen of the white house. A table seems to have been used recently for the preparation of food. A passage leads to the west and a dark staircase can be seen leading upward. A dark chimney leads down and to the east is a small window which is open.
-On the table is an elongated brown sack, smelling of hot peppers.
-A bottle is sitting on the table.
-The glass bottle contains:
-  A quantity of water
-
-
->w
-Living Room
-You are in the living room. There is a doorway to the east, a wooden door with strange gothic lettering to the west, which appears to be nailed shut, a trophy case, and a large oriental rug in the center of the room.
-A battery-powered brass lantern is on the trophy case.
-Above the trophy case hangs an elvish sword of great antiquity.
-
-
->take lamp and sword
-brass lantern: Taken.
-sword: Taken.
-
-
->move rug
-With a great effort, the rug is moved to one side of the room, revealing the dusty cover of a closed trap door.
-
->open trap
-The door reluctantly opens to reveal a rickety staircase descending into darkness.
-
->d
-It is pitch black. You are likely to be eaten by a grue.
-
-Your sword is glowing with a faint blue glow.
-
->turn on lamp
-The brass lantern is now on.
-Cellar
-You are in a dark and damp cellar with a narrow passageway leading north, and a crawlway to the south. On the west is the bottom of a steep metal ramp which is unclimbable.
-
-
->n
-The Troll Room
-This is a small room with passages to the east and south and a forbidding hole leading west. Bloodstains and deep scratches (perhaps made by an axe) mar the walls.
-A nasty-looking troll, brandishing a bloody axe, blocks all passages out of the room.
-
-Your sword has begun to glow very brightly.
-
->kill troll with sword
-Clang! Crash! The troll parries.
-The troll's axe barely misses your ear.
-
->g
-You charge, but the troll jumps nimbly aside.
-The troll swings his axe, and it nicks your arm as you dodge.
-
->g
-The fatal blow strikes the troll square in the heart: He dies.
-Almost as soon as the troll breathes his last breath, a cloud of sinister black fog envelops him, and when the fog lifts, the carcass has disappeared.
-Your sword is no longer glowing.
+>
 ```
+
+## Debug Commands
+
+Clork includes a comprehensive debug system for development and testing. All commands start with `$`:
+
+### State Inspection
+- `$debug state` - High-level game state overview
+- `$debug here` - Current room details
+- `$inspect <object>` - Deep inspection with flag analysis
+- `$where <object>` - Find where an object is located
+
+### State Manipulation
+- `$goto <room>` - Teleport to any room
+- `$purloin <object>` - Take any object (bypass checks)
+- `$flag <id> <flag>` - Set a flag
+- `$scenario <name>` - Load test scenarios (e.g., `$scenario equipped`)
+
+### Navigation
+- `$path <from> <to>` - Find shortest path between rooms
+- `$reachable <room>` - Show all rooms reachable from a location
+- `$route <room1> <room2> ...` - Plan optimal route through multiple rooms
+
+### Undo/Redo
+- `$undo [n]` - Undo last command(s)
+- `$redo [n]` - Redo undone command(s)
+- `$history` - Show command history
+
+## Speedrun Planner
+
+The planner can generate complete command sequences for collecting treasures:
+
+```
+>$plan treasure egg
+Planning for egg...
+
+Plan for egg (12 total commands):
+  take-egg (4 commands):
+    - "ne"
+    - "north"
+    - "up"
+    - "take egg"
+  deposit-egg (8 commands):
+    - "down"
+    - "south"
+    - "east"
+    - "open window"
+    - "in"
+    - "west"
+    - "open case"
+    - "put egg in case"
+```
+
+### Planner Commands
+
+- `$plan treasure <name>` - Plan to collect and deposit a specific treasure
+- `$plan flag <flag>` - Plan to achieve a specific flag (e.g., `troll-flag`)
+- `$plan kill-thief` - Plan the earliest possible thief kill
+- `$plan win` - Generate complete speedrun (all 19 treasures + victory)
+
+The planner uses:
+- **Backward chaining** to find action sequences
+- **TSP optimization** (Held-Karp algorithm) for efficient treasure ordering
+- **Floyd-Warshall** for all-pairs shortest paths
+
+Note: The current `$plan win` generates a working but unoptimized route (~720 commands). A well-optimized speedrun should be ~230-250 commands - optimization for batched treasure collection is planned.
+
+## Testing
+
+```bash
+# Run all tests
+lein test
+
+# Run with pending tests (unimplemented features)
+lein test :pending
+```
+
+The test suite includes 466 tests covering rooms, objects, verbs, combat, and game mechanics.
 
 ## ML Training API
 
@@ -193,3 +216,31 @@ PYTHONPATH=. python example_random_agent.py --episodes 5 --steps 100
 ```
 
 See `python/clork_env.py` for the full API documentation.
+
+## Project Structure
+
+```
+src/clork/
+├── core.clj           # Main game loop and initialization
+├── parser.clj         # Natural language parser
+├── rooms.clj          # All 110 room definitions
+├── objects.clj        # All object definitions
+├── verbs.clj          # Verb handlers
+├── combat.clj         # Combat mechanics
+├── debug/             # Debug command system
+│   ├── plan.clj       # Speedrun planner commands
+│   ├── pathfind.clj   # Pathfinding commands
+│   └── ...
+├── planner/           # AI planning system
+│   ├── actions.clj    # Action definitions and effects
+│   ├── backward.clj   # Backward chaining planner
+│   ├── optimizer.clj  # Route optimization
+│   └── graph.clj      # Graph algorithms (Floyd-Warshall, TSP)
+└── ml/                # Machine learning API
+
+zork-i/                # Original ZIL source for reference
+```
+
+## License
+
+This is a fan project for educational purposes. Zork is a trademark of Activision.
