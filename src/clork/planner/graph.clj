@@ -371,26 +371,29 @@
     :total-distance n
     :distances-between [[from to dist] ...]}
 
-   Uses Held-Karp for optimal solution."
+   Uses Held-Karp for optimal solution.
+   Note: Multiple treasures at the same location are handled correctly."
   [apsp treasures home]
-  (let [;; Build list of locations to visit
-        locations (cons home (map :location treasures))
-        treasure-by-location (zipmap (map :location treasures) treasures)
+  (let [;; Build list of unique locations to visit
+        locations (cons home (distinct (map :location treasures)))
+        ;; Group treasures by location (handles co-located treasures like
+        ;; silver-chalice and clockwork-canary both at treasure-room)
+        treasures-by-location (group-by :location treasures)
         dist-fn (make-distance-fn apsp)
 
-        ;; Solve TSP
+        ;; Solve TSP over unique locations
         result (held-karp (set locations) home dist-fn)]
 
     (if-not (:reachable? result)
       {:reachable? false}
 
-      ;; Convert tour to treasure order
+      ;; Convert tour to treasure order, expanding co-located treasures
       (let [tour (:tour result)
-            ;; Remove home from start and end, map to treasures
+            ;; Remove home from start and end, expand to all treasures at each location
             treasure-order (->> tour
                                 (drop 1)        ; Remove starting home
                                 (butlast)       ; Remove ending home
-                                (map treasure-by-location)
+                                (mapcat #(get treasures-by-location %))
                                 (filter some?)
                                 vec)]
         {:reachable? true

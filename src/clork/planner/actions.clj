@@ -722,11 +722,12 @@
 (def special-take-objects
   "Objects that shouldn't have auto-generated take actions.
    These require puzzle solutions or flags to obtain."
-  #{:pot-of-gold      ; Requires rainbow-flag (wave sceptre first)
-    :silver-chalice   ; Obtained by killing thief (kill-thief-with-* actions)
-    :garlic           ; In brown-sack, needs "open sack" first (use :get-garlic)
-    :large-emerald    ; In buoy, needs "take buoy" then "open buoy" (use :open-buoy)
-    :brass-bauble})   ; Created when canary sings in forest (use :wind-canary)
+  #{:pot-of-gold        ; Requires rainbow-flag (wave sceptre first)
+    :silver-chalice     ; Obtained by killing thief (kill-thief-with-* actions)
+    :garlic             ; In brown-sack, needs "open sack" first (use :get-garlic)
+    :large-emerald      ; In buoy, needs "take buoy" then "open buoy" (use :open-buoy)
+    :brass-bauble       ; Created when canary sings in forest (use :wind-canary)
+    :clockwork-canary}) ; In treasure-room after thief opens egg (use :take-clockwork-canary)
 
 (defn extract-take-actions
   "Extract take actions for all takeable objects.
@@ -1183,6 +1184,23 @@
     :reversible? false
     :commands ["take canary from egg"]}
 
+   ;; Simpler action: take canary directly from treasure room after thief is dead
+   ;; The thief will have taken the egg, opened it, and the canary will be there
+   :take-clockwork-canary
+   {:id :take-clockwork-canary
+    :type :take
+    :preconditions
+    {:here :treasure-room
+     :flags #{:thief-dead}}  ; Thief dead = egg opened, canary accessible
+    :effects
+    {:flags-set #{}
+     :flags-clear #{}
+     :inventory-add #{:clockwork-canary}
+     :inventory-remove #{}}
+    :cost 1
+    :reversible? false
+    :commands ["take canary"]}
+
    :dig-for-scarab
    {:id :dig-for-scarab
     :type :puzzle
@@ -1517,6 +1535,30 @@
     :reversible? false
     :commands ["take diamond from basket"]}
 
+   ;; =========================================================================
+   ;; WIN CONDITION (enter stone barrow)
+   ;; =========================================================================
+   ;; Once all treasures are deposited (score = 350), the :won flag is set.
+   ;; This unlocks the southwest path from west-of-house to stone-barrow.
+   ;; Entering the barrow completes the game.
+
+   :enter-stone-barrow
+   {:id :enter-stone-barrow
+    :type :puzzle
+    :preconditions
+    {:here :west-of-house
+     :inventory #{}
+     :flags #{:won}}  ; Set when score = 350 (all treasures deposited)
+    :effects
+    {:flags-set #{:finished}
+     :flags-clear #{}
+     :inventory-add #{}
+     :inventory-remove #{}
+     :new-location :stone-barrow}
+    :cost 1
+    :reversible? false
+    :commands ["sw"]}
+
 })
 
 ;; =============================================================================
@@ -1586,25 +1628,31 @@
    Note: Arguments ordered for use with reduce: (reduce apply-action-effects state actions)"
   [state action]
   (let [effects (:effects action)
-        deposited-item (:deposits effects)]
-    (-> state
-        (update :flags set/union (:flags-set effects #{}))
-        (update :flags set/difference (:flags-clear effects #{}))
-        (update :inventory set/union (:inventory-add effects #{}))
-        (update :inventory set/difference (:inventory-remove effects #{}))
-        (cond-> (:new-location effects) (assoc :here (:new-location effects)))
+        deposited-item (:deposits effects)
+        base-state (-> state
+                       (update :flags set/union (:flags-set effects #{}))
+                       (update :flags set/difference (:flags-clear effects #{}))
+                       (update :inventory set/union (:inventory-add effects #{}))
+                       (update :inventory set/difference (:inventory-remove effects #{}))
+                       (cond-> (:new-location effects) (assoc :here (:new-location effects))))
         ;; Track deposited items and update score for score-aware planning
-        (cond-> deposited-item
-          (-> (update :deposited (fnil conj #{}) deposited-item)
-              ;; Score = trophy case value of deposited treasure
-              (update :score (fnil + 0)
-                      (get {:painting 6 :egg 5 :bag-of-coins 5 :crystal-trident 11
-                            :pot-of-gold 10 :silver-chalice 5 :sapphire-bracelet 5
-                            :jade-figurine 5 :platinum-bar 5 :clockwork-canary 4
-                            :huge-diamond 10 :large-emerald 10 :ivory-torch 6
-                            :gold-coffin 15 :sceptre 6 :crystal-skull 10
-                            :jeweled-scarab 5 :brass-bauble 1 :jewel-encrusted-trunk 5}
-                           deposited-item 0)))))))
+        with-deposit (if deposited-item
+                       (-> base-state
+                           (update :deposited (fnil conj #{}) deposited-item)
+                           ;; Score = trophy case value of deposited treasure
+                           (update :score (fnil + 0)
+                                   (get {:painting 6 :egg 5 :bag-of-coins 5 :crystal-trident 11
+                                         :pot-of-gold 10 :silver-chalice 5 :sapphire-bracelet 5
+                                         :jade-figurine 5 :platinum-bar 5 :clockwork-canary 4
+                                         :huge-diamond 10 :large-emerald 10 :ivory-torch 6
+                                         :gold-coffin 15 :sceptre 6 :crystal-skull 10
+                                         :scarab 5 :brass-bauble 1 :trunk-of-jewels 5}
+                                        deposited-item 0)))
+                       base-state)
+        ;; Set :won flag when all treasures are deposited (enables stone-barrow entry)
+        all-deposited? (= (:deposited with-deposit #{}) treasures)]
+    (cond-> with-deposit
+      all-deposited? (update :flags conj :won))))
 
 ;; =============================================================================
 ;; Debug Utilities

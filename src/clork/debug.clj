@@ -24,6 +24,7 @@
             [clork.debug.scenarios :as debug-scenarios]
             [clork.debug.inspect :as debug-inspect]
             [clork.debug.pathfind :as debug-pathfind]
+            [clork.debug.plan :as debug-plan]
             [clork.undo :as undo]))
 
 ;;; ---------------------------------------------------------------------------
@@ -228,7 +229,11 @@
   (register-command! :reachable debug-pathfind/cmd-reachable
                      "Show all rooms reachable from a location")
   (register-command! :route debug-pathfind/cmd-route
-                     "Plan optimal route through multiple rooms"))
+                     "Plan optimal route through multiple rooms")
+  ;; Speedrun planning commands
+  (register-command! :plan debug-plan/cmd-plan
+                     "Speedrun planning (treasure, flag, kill-thief, win)"
+                     :subcommands debug-plan/subcommands))
 
 ;; Auto-initialize on namespace load
 (init-commands!)

@@ -698,7 +698,11 @@
 (def created-treasure-locations
   "Map of treasures that are created (start in :limbo) to their effective pickup location.
    These treasures require special actions to create/obtain rather than simple pickup."
-  {:huge-diamond :shaft-room})  ; Retrieved from basket at shaft-room after creation
+  {:huge-diamond :shaft-room          ; Retrieved from basket at shaft-room after creation
+   :clockwork-canary :treasure-room   ; Appears after thief opens egg and is killed
+   :silver-chalice :treasure-room     ; Obtained by killing thief in treasure-room
+   :scarab :sandy-cave                ; Dug up at sandy-cave (dig-for-scarab action)
+   :brass-bauble :forest-path})       ; Created when canary sings (wind-canary action)
 
 (defn get-treasure-location
   "Find the room where a treasure is located.
