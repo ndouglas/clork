@@ -752,8 +752,8 @@
    Note: IDs must match actual object :id values in objects.clj"
   #{:egg :clockwork-canary :brass-bauble :gold-coffin :sceptre
     :ivory-torch :crystal-trident :jade-figurine :sapphire-bracelet
-    :huge-diamond :bag-of-coins :crystal-skull :jewel-encrusted-trunk
-    :gold-bar :large-emerald :painting :pot-of-gold :platinum-bar :scarab
+    :huge-diamond :bag-of-coins :crystal-skull :trunk-of-jewels
+    :large-emerald :painting :pot-of-gold :platinum-bar :scarab
     :silver-chalice})
 
 (defn generate-deposit-action
