@@ -61,6 +61,7 @@
     (and (vector? goal) (= :have (first goal))) :have-item
     (and (vector? goal) (= :at (first goal))) :location
     (and (vector? goal) (= :score-min (first goal))) :score-min
+    (and (vector? goal) (= :open-container (first goal))) :open-container
     (keyword? goal) :flag
     :else :unknown))
 
@@ -79,6 +80,9 @@
 
     (and (vector? goal) (= :score-min (first goal)))
     (str "Score >= " (second goal))
+
+    (and (vector? goal) (= :open-container (first goal)))
+    (str "Open " (name (second goal)))
 
     (keyword? goal)
     (str "Flag: " (name goal))
@@ -135,6 +139,13 @@
   (filter #(= room-id (get-in % [:effects :new-location]))
           (vals registry)))
 
+(defn find-achievers-for-open-container
+  "Find actions that open a specific container.
+   These are actions with :effects :opens-container matching target."
+  [registry container-id]
+  (filter #(= container-id (get-in % [:effects :opens-container]))
+          (vals registry)))
+
 ;; Treasures that DON'T require killing the thief (can be deposited before combat)
 (def pre-thief-treasures
   "Treasures that can be collected without killing the thief.
@@ -176,6 +187,9 @@
     (find-achievers-for-score registry (second goal)
                                (:deposited current-state #{}))
 
+    (and (vector? goal) (= :open-container (first goal)))
+    (find-achievers-for-open-container registry (second goal))
+
     (keyword? goal)
     (find-achievers-for-flag registry goal)
 
@@ -201,7 +215,9 @@
      ;; Minimum score as goal (for score-aware combat)
      (if (:minimum-score preconds)
        #{[:score-min (:minimum-score preconds)]}
-       #{}))))
+       #{})
+     ;; Required open containers as goals (new primitive support)
+     (set (map #(vector :open-container %) (:open-containers preconds #{}))))))
 
 ;; =============================================================================
 ;; Backward Planning Algorithm
@@ -236,17 +252,19 @@
    1. Flags (unlock areas first)
    2. Score-min (build score before hard combat)
    3. Items (collect treasures)
-   4. Deposits (put in trophy case)
-   5. Locations (navigation)"
+   4. Open-container (open trophy case before depositing)
+   5. Deposits (put in trophy case)
+   6. Locations (navigation)"
   [goals]
   (let [sorted (sort-by (fn [g]
                           (case (goal-type g)
                             :flag 0
                             :score-min 1  ; Process score requirements early
                             :have-item 2
-                            :deposit 3
-                            :location 4
-                            5))
+                            :open-container 3  ; Open containers before using them
+                            :deposit 4
+                            :location 5
+                            6))
                         goals)]
     (first sorted)))
 
@@ -356,6 +374,7 @@
                                        :have-item (contains? (:inventory achieved-state) (second goal))
                                        :deposit (contains? (:deposited achieved-state) (second goal))
                                        :score-min (>= (:score achieved-state 0) (second goal))
+                                       :open-container (contains? (:open-containers achieved-state #{}) (second goal))
                                        false)]
               (if already-satisfied?
                 ;; Goal already satisfied, just remove it

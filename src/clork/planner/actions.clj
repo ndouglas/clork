@@ -759,7 +759,10 @@
     :silver-chalice})
 
 (defn generate-deposit-action
-  "Generate an action to deposit a treasure in the trophy case.
+  "Generate a PRIMITIVE action to put a treasure in the trophy case.
+
+   IMPORTANT: This is now a single-step primitive that requires the
+   trophy case to already be open. Use :open-trophy-case first.
 
    If game-state is provided, uses parser-friendly object names.
    Otherwise falls back to deriving name from object ID."
@@ -777,16 +780,17 @@
       :preconditions
       {:here :living-room
        :inventory #{treasure-id}
-       :flags #{}}
+       :flags #{}
+       :open-containers #{:trophy-case}}  ; Requires case to be open!
       :effects
       {:flags-set #{deposit-flag}
        :flags-clear #{}
        :inventory-add #{}
        :inventory-remove #{treasure-id}
        :deposits treasure-id}
-      :cost 2 ; open case + put item
+      :cost 1 ; Just the put command (case already open)
       :reversible? true
-      :commands ["open case" (str "put " parser-name " in case")]
+      :commands [(str "put " parser-name " in case")]
       :treasure treasure-id})))
 
 (defn generate-deposit-actions
@@ -844,10 +848,30 @@
     {:flags-set #{:window-open}
      :flags-clear #{}
      :inventory-add #{}
-     :inventory-remove #{}}
+     :inventory-remove #{}
+     :opens-container :window}
     :cost 1
     :reversible? true
     :commands ["open window"]}
+
+   ;; Trophy case - PRIMITIVE action to open
+   ;; Separate from deposit so we can batch multiple deposits
+   :open-trophy-case
+   {:id :open-trophy-case
+    :type :setup
+    :preconditions
+    {:here :living-room
+     :inventory #{}
+     :flags #{}}
+    :effects
+    {:flags-set #{}
+     :flags-clear #{}
+     :inventory-add #{}
+     :inventory-remove #{}
+     :opens-container :trophy-case}
+    :cost 1
+    :reversible? true
+    :commands ["open case"]}
 
    :move-rug
    {:id :move-rug
@@ -1607,7 +1631,7 @@
 
 (defn can-execute?
   "Check if an action can be executed given current state.
-   State should have :here, :inventory, :flags keys."
+   State should have :here, :inventory, :flags, :open-containers keys."
   [action state]
   (let [preconditions (:preconditions action)]
     (and
@@ -1619,7 +1643,10 @@
                   (:inventory state #{}))
      ;; Flags check
      (set/subset? (:flags preconditions #{})
-                  (:flags state #{})))))
+                  (:flags state #{}))
+     ;; Open containers check (for primitives that require containers to be open)
+     (set/subset? (:open-containers preconditions #{})
+                  (:open-containers state #{})))))
 
 (defn apply-action-effects
   "Apply action effects to state.
@@ -1629,12 +1656,16 @@
   [state action]
   (let [effects (:effects action)
         deposited-item (:deposits effects)
+        opened-container (:opens-container effects)
         base-state (-> state
                        (update :flags set/union (:flags-set effects #{}))
                        (update :flags set/difference (:flags-clear effects #{}))
                        (update :inventory set/union (:inventory-add effects #{}))
                        (update :inventory set/difference (:inventory-remove effects #{}))
-                       (cond-> (:new-location effects) (assoc :here (:new-location effects))))
+                       (cond-> (:new-location effects) (assoc :here (:new-location effects)))
+                       ;; Track opened containers
+                       (cond-> opened-container
+                         (update :open-containers (fnil conj #{}) opened-container)))
         ;; Track deposited items and update score for score-aware planning
         with-deposit (if deposited-item
                        (-> base-state

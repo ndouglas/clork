@@ -296,20 +296,32 @@
   (min 7 (max 2 (+ 2 (int (/ score 70))))))
 
 (defn initial-planning-state
-  "Create initial state for planning."
+  "Create initial state for planning.
+
+   State tracks:
+   - :here - Current room
+   - :inventory - Items currently held
+   - :flags - Game flags that have been set
+   - :collected - All items ever collected (for one-way validation)
+   - :deposited - Items in trophy case
+   - :score - Current score (from deposits)
+   - :open-containers - Containers/doors that have been opened
+                        (avoids redundant 'open X' commands)"
   [game-state]
   {:here :west-of-house
    :inventory #{}
    :flags #{}
    :collected #{}  ; All items ever collected (for one-way validation)
    :deposited #{} ; Items in trophy case
-   :score 0})      ; Current score (from deposits)
+   :score 0       ; Current score (from deposits)
+   :open-containers #{}})
 
 (defn planning-state-after-action
   "Update planning state after executing an action."
   [state action]
   (let [effects (:effects action)
-        deposited-item (:deposits effects)]
+        deposited-item (:deposits effects)
+        opened-container (:opens-container effects)]
     (-> state
         ;; Update location
         (cond-> (:new-location effects)
@@ -325,7 +337,10 @@
         ;; Track deposited items and update score
         (cond-> deposited-item
           (-> (update :deposited conj deposited-item)
-              (update :score + (treasure-value deposited-item)))))))
+              (update :score + (treasure-value deposited-item))))
+        ;; Track opened containers
+        (cond-> opened-container
+          (update :open-containers conj opened-container)))))
 
 ;; =============================================================================
 ;; Hazard Constraints

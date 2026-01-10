@@ -557,7 +557,8 @@
    - start-room: Starting location
    - opts: {:combat-mode :optimistic|:pessimistic|:with-retry
             :initial-flags #{flags already achieved before this plan}
-            :initial-inventory #{items already in inventory}}
+            :initial-inventory #{items already in inventory}
+            :initial-open-containers #{containers already open}}
 
    Tracks underground state to properly route around the barred trap door:
    - After going down through trap door, cellar->living-room is blocked
@@ -566,15 +567,20 @@
    Also tracks inventory to avoid routes with inventory constraints (e.g., chimney
    requires <= 2 items).
 
+   Tracks open containers to avoid redundant 'open X' commands:
+   - Trophy case only needs to be opened once per deposit session
+   - Other containers (sack, egg, etc.) tracked similarly
+
    Returns:
    {:commands [\"cmd\" ...]
     :total-moves n
     :by-action [{:action :id :commands [...]}]
     :combat-actions [{:action :id :spec {...}}]}"
-  [game-state plan start-room & {:keys [combat-mode initial-flags initial-inventory]
+  [game-state plan start-room & {:keys [combat-mode initial-flags initial-inventory initial-open-containers]
                                   :or {combat-mode :pessimistic
                                        initial-flags #{}
-                                       initial-inventory #{}}}]
+                                       initial-inventory #{}
+                                       initial-open-containers #{}}}]
   ;; Determine initial underground state based on initial-flags
   ;; If we have rug-moved + trap-door-open, we've been underground
   (let [been-underground? (and (contains? initial-flags :rug-moved)
@@ -591,7 +597,9 @@
            ;; Track available flags (starts with initial-flags, accumulates as actions set flags)
            available-flags initial-flags
            ;; Track current inventory (starts with initial-inventory)
-           current-inventory initial-inventory]
+           current-inventory initial-inventory
+           ;; Track open containers (avoids redundant open commands)
+           open-containers initial-open-containers]
     (if (empty? remaining)
       {:commands all-commands
        :total-moves (count all-commands)
@@ -650,7 +658,13 @@
             items-removed (get-in action [:effects :inventory-remove] #{})
             new-inventory (-> current-inventory
                               (set/union items-added)
-                              (set/difference items-removed))]
+                              (set/difference items-removed))
+
+            ;; Update open containers tracking
+            container-opened (get-in action [:effects :opens-container])
+            new-open-containers (if container-opened
+                                  (conj open-containers container-opened)
+                                  open-containers)]
 
         (recur (rest remaining)
                (or dest-room current-room)
@@ -667,7 +681,8 @@
                new-underground?
                new-has-unlock?
                new-available-flags
-               new-inventory))))))  ;; Extra paren for outer let
+               new-inventory
+               new-open-containers))))))  ;; Extra paren for outer let
 
 ;; =============================================================================
 ;; Deposit Trip Insertion
