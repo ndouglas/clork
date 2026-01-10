@@ -465,7 +465,7 @@
    :rope #{:tie-rope}     ; One-time use at dome
    :wrench #{:open-dam}   ; Only needed at maintenance room
    :shovel #{:dig-for-scarab}  ; Only needed at sandy cave
-   :hand-pump #{:inflate-boat}  ; Only needed once
+   :pump #{:inflate-boat}  ; Only needed once
    :matchbook #{:exorcism}      ; Needed for candles
    :skeleton-key #{:open-grate} ; Needed for grate
    :bell #{:exorcism}

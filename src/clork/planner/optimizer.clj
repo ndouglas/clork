@@ -956,7 +956,12 @@
    ;; This flag is effectively always set when not carrying the coffin.
    ;; Rooms accessible only via this passage require it.
    :coffin-cure
-   #{:tiny-cave}})
+   #{:tiny-cave}
+
+   ;; River navigation: requires being in the boat
+   ;; Boat must be inflated at dam-base, then entered
+   :in-boat
+   #{:river-1 :river-2 :river-3 :river-4 :river-5}})
 
 (def flag-gated-rooms
   "Inverse map: room -> set of flags required to reach it.

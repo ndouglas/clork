@@ -633,7 +633,8 @@
    :thief-dead #{:cyclops-flag}  ; Need to reach treasure room
    :low-tide #{:dam-opened}
    :rainbow-flag #{}  ; Just need sceptre at end-of-rainbow
-   :loud-room-solved #{:troll-flag}})
+   :loud-room-solved #{:troll-flag}
+   :in-boat #{:boat-inflated}})  ; Must inflate boat before entering
 
 (defn required-flags-for
   "Get all flags required to achieve a target flag (transitive)."

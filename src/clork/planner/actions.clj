@@ -724,7 +724,8 @@
    These require puzzle solutions or flags to obtain."
   #{:pot-of-gold      ; Requires rainbow-flag (wave sceptre first)
     :silver-chalice   ; Obtained by killing thief (kill-thief-with-* actions)
-    :garlic})         ; In brown-sack, needs "open sack" first (use :get-garlic)
+    :garlic           ; In brown-sack, needs "open sack" first (use :get-garlic)
+    :large-emerald})  ; In buoy, needs "take buoy" then "open buoy" (use :open-buoy)
 
 (defn extract-take-actions
   "Extract take actions for all takeable objects.
@@ -752,7 +753,7 @@
   #{:egg :clockwork-canary :brass-bauble :gold-coffin :sceptre
     :ivory-torch :crystal-trident :jade-figurine :sapphire-bracelet
     :huge-diamond :bag-of-coins :crystal-skull :jewel-encrusted-trunk
-    :gold-bar :emerald :painting :pot-of-gold :platinum-bar :scarab
+    :gold-bar :large-emerald :painting :pot-of-gold :platinum-bar :scarab
     :silver-chalice})
 
 (defn generate-deposit-action
@@ -1033,7 +1034,7 @@
     :preconditions
     {:here :dam-base
      :inventory #{}
-     :flags #{}}
+     :flags #{:boat-inflated}}  ; Must inflate boat first!
     :effects
     {:flags-set #{:in-boat}
      :flags-clear #{}
@@ -1063,7 +1064,7 @@
     :type :puzzle
     :preconditions
     {:here :dam-base
-     :inventory #{:hand-pump}
+     :inventory #{:pump}
      :flags #{}}
     :effects
     {:flags-set #{:boat-inflated}
@@ -1083,7 +1084,7 @@
     :effects
     {:flags-set #{}
      :flags-clear #{}
-     :inventory-add #{:emerald}
+     :inventory-add #{:large-emerald}
      :inventory-remove #{}}
     :cost 1
     :reversible? false
