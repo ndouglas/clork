@@ -467,10 +467,14 @@
      :max-attacks (or (:max-attacks combat) (:max-rounds combat) 15)
      :expected-rounds (:expected-rounds combat)
      :expected-attacks (:expected-attacks combat)
+     :std-dev (:std-dev combat)           ; Standard deviation for attack count calculation
      :on-timeout {:retreat (:retreat-dir combat)
                   :reset (:retry-actions combat [])
                   :retry true}
-     :score-requirement (:score-requirement combat 0)}
+     :score-requirement (:score-requirement combat 0)
+     :recovery-command (:recovery-command combat)  ; Command to recover from disarming (e.g., "take sword")
+     :recovery-interval (:recovery-interval combat)  ; Insert recovery every N attacks
+     :post-combat (:post-combat combat)}  ; Commands to run after victory (e.g., take chalice)
     ;; Fallback to simple commands
     {:type :simple
      :commands (expand-action-to-commands action)}))
@@ -488,25 +492,41 @@
    - :mode :pessimistic - Use upper bound + buffer (default)
    - :mode :with-retry  - Include retreat/retry sequence"
   [combat-spec & {:keys [mode] :or {mode :pessimistic}}]
-  (let [{:keys [action expected-rounds expected-attacks max-rounds max-attacks on-timeout]} combat-spec
-        ;; Support both old format [min max] and new format (single number)
-        [min-attacks max-expected] (cond
-                                     expected-attacks [expected-attacks expected-attacks]
-                                     expected-rounds expected-rounds
-                                     :else [5 10])  ; fallback
+  (let [{:keys [action expected-rounds expected-attacks std-dev max-rounds max-attacks
+                on-timeout post-combat recovery-command recovery-interval]} combat-spec
+        ;; Support both old format [min max] and new format (single number + std-dev)
+        [min-attacks base-expected] (cond
+                                      expected-attacks [expected-attacks expected-attacks]
+                                      expected-rounds expected-rounds
+                                      :else [5 10])  ; fallback
+        ;; Use std-dev for pessimistic calculation (mean + 2σ for 95% coverage)
+        sigma (or std-dev 2)  ; default σ=2 if not specified
         max-total (or max-attacks max-rounds 30)
         attack-count (case mode
                        :optimistic min-attacks
-                       :pessimistic (+ max-expected 3)
+                       :pessimistic (int (Math/ceil (+ base-expected (* 2 sigma))))  ; mean + 2σ
                        :with-retry max-total)
-        attacks (vec (repeat attack-count action))]
+        ;; Generate attack commands, interleaving recovery commands if specified
+        ;; Recovery commands handle being disarmed (e.g., "take sword" after thief knocks it away)
+        attacks (if (and recovery-command recovery-interval)
+                  ;; Interleave recovery command every N attacks
+                  (vec (mapcat (fn [i]
+                                 (if (and (pos? i) (zero? (mod i recovery-interval)))
+                                   [recovery-command action]
+                                   [action]))
+                               (range attack-count)))
+                  ;; Simple attack list
+                  (vec (repeat attack-count action)))
+        ;; Add post-combat commands (e.g., "take chalice" after killing thief)
+        post-cmds (or post-combat [])]
     (if (= mode :with-retry)
       ;; Include retry sequence after attacks
       (-> attacks
           (conj (:retreat on-timeout))
           (into (:reset on-timeout))
-          (into (repeat 5 action)))  ; More attacks after RNG reset
-      attacks)))
+          (into (repeat 5 action))
+          (into post-cmds))
+      (into attacks post-cmds))))
 
 (defn action-is-combat?
   "Check if an action is a combat action with loop spec."

@@ -908,8 +908,9 @@
      :enemy :troll
      :enemy-strength 2
      :victory-flag :troll-flag
-     :expected-attacks 7                 ; Markov: 6.11 rounded up
-     :max-attacks 15                     ; Abort threshold
+     :expected-attacks 5                 ; 2D simulation mean: 4.5
+     :std-dev 3                          ; 2D simulation: 2.8
+     :max-attacks 20                     ; Abort threshold
      :retreat-dir "south"
      :retry-actions ["wait" "north"]}
     ;; 10 attacks (pessimistic buffer for actual gameplay)
@@ -1195,20 +1196,28 @@
      :enemy :thief
      :enemy-strength 5
      :victory-flag :thief-dead
-     :expected-attacks 6                 ; 2D simulation: avg 6.1 rounds
-     :max-attacks 25                     ; Very long fights possible
+     :expected-attacks 8                 ; Use 8 for conservative estimate (actual mean 6.2)
+     :std-dev 4                          ; Bump up for 3σ coverage (actual 2.6)
+     :max-attacks 25                     ; Abort threshold
      :fights-to-death true               ; No fleeing in treasure room
      :player-death-prob 0.59             ; 2D simulation: 59% at score 0
-     :retry-cost 18}                     ; Moves to return after death
-    ;; 15 attacks (pessimistic buffer for actual gameplay)
+     :retry-cost 18                      ; Moves to return after death
+     :recovery-command "take sword"      ; Thief can disarm us - pick up sword
+     :recovery-interval 4                ; Insert recovery every N attacks
+     :post-combat ["take chalice"]}      ; Chalice drops when thief dies
+    ;; ~16 attacks + recovery commands for 99%+ success rate
     :commands ["attack thief with sword" "attack thief with sword"
                "attack thief with sword" "attack thief with sword"
+               "take sword"
                "attack thief with sword" "attack thief with sword"
                "attack thief with sword" "attack thief with sword"
+               "take sword"
                "attack thief with sword" "attack thief with sword"
                "attack thief with sword" "attack thief with sword"
+               "take sword"
                "attack thief with sword" "attack thief with sword"
-               "attack thief with sword"]
+               "attack thief with sword" "attack thief with sword"
+               "take chalice"]
     :notes "Sword has no advantage vs thief. Very difficult at low scores."}
 
    ;; Nasty knife is thief's weakness (his "best weapon" in ZIL terms)
@@ -1239,17 +1248,20 @@
      :enemy-strength 4                   ; Reduced from 5 due to knife advantage
      :victory-flag :thief-dead
      :expected-attacks 6                 ; Similar to sword at low score
+     :std-dev 3                          ; Similar variance
      :max-attacks 20
      :fights-to-death true               ; No fleeing in treasure room
      :player-death-prob 0.59             ; Same as sword at low score
-     :retry-cost 18}
-    ;; 12 attacks (pessimistic buffer for actual gameplay)
+     :retry-cost 18
+     :post-combat ["take chalice"]}      ; Chalice drops when thief dies
+    ;; 12 attacks (pessimistic buffer for actual gameplay) + take chalice
     :commands ["attack thief with knife" "attack thief with knife"
                "attack thief with knife" "attack thief with knife"
                "attack thief with knife" "attack thief with knife"
                "attack thief with knife" "attack thief with knife"
                "attack thief with knife" "attack thief with knife"
-               "attack thief with knife" "attack thief with knife"]
+               "attack thief with knife" "attack thief with knife"
+               "take chalice"]
     :notes "Nasty knife reduces thief's defense. Recommended approach."}
 
    ;; Loud room puzzle:
