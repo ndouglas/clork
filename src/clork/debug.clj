@@ -233,7 +233,10 @@
   ;; Speedrun planning commands
   (register-command! :plan debug-plan/cmd-plan
                      "Speedrun planning (treasure, flag, kill-thief, win)"
-                     :subcommands debug-plan/subcommands))
+                     :subcommands debug-plan/subcommands)
+  (register-command! :run debug-plan/cmd-run
+                     "Execute speedrun (with adaptive combat)"
+                     :subcommands debug-plan/run-subcommands))
 
 ;; Auto-initialize on namespace load
 (init-commands!)

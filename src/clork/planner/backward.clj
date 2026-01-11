@@ -318,7 +318,7 @@
 
                   ;; Check: Location dependencies (flags required to reach this room)
                   ;; This ensures actions at flag-gated destinations get properly ordered
-                  required-flags (optimizer/flags-required-for-room target-room)
+                  required-flags (actions/flags-required-for-room target-room)
                   missing-location-flags (set/difference required-flags (:flags achieved-state))
 
                   ;; Check: Room hazards (bat-room needs garlic, gas-room needs lantern not flame)
@@ -524,7 +524,7 @@
                     ;; Actions at flag-gated locations depend on flag providers
                     (let [location (action-location a)
                           required-flags (when location
-                                           (optimizer/flags-required-for-room location))]
+                                           (actions/flags-required-for-room location))]
                       (set (for [flag required-flags
                                  :when (contains? flag-providers flag)]
                              (get flag-providers flag))))
@@ -605,6 +605,223 @@
 ;; =============================================================================
 ;; High-Level Planning
 ;; =============================================================================
+
+(defn- achiever-creates-cycle?
+  "Check if an achiever's flag preconditions would require already having the target item.
+   This detects cycles like: get-diamond -> basket-has-diamond -> put-diamond-in-basket -> need diamond"
+  [registry achiever target-item]
+  (let [required-flags (get-in achiever [:preconditions :flags] #{})]
+    (some (fn [flag]
+            ;; Find achievers for this flag
+            (let [flag-achievers (find-achievers-for-flag registry flag)]
+              ;; Check if any of them require the target item in inventory
+              (some (fn [fa]
+                      (contains? (get-in fa [:preconditions :inventory] #{}) target-item))
+                    flag-achievers)))
+          required-flags)))
+
+(defn plan-treasure-acquisition
+  "Plan to acquire a treasure (take it, but don't deposit).
+   Returns plan to have treasure in inventory.
+
+   Uses the backward planner with a [:have treasure] goal directly.
+   Detects and avoids cyclic dependencies (e.g., diamond puzzle)."
+  [registry treasure-id initial-state]
+  ;; Check if already in inventory
+  (if (contains? (:inventory initial-state) treasure-id)
+    {:success? true :plan [] :already-have? true}
+    ;; Find achievers for having this treasure
+    (let [achievers (find-achievers registry [:have treasure-id] :current-state initial-state)]
+      (if (empty? achievers)
+        {:success? false :error {:type :no-achiever :goal [:have treasure-id]}}
+        ;; Filter out achievers that would create cycles
+        (let [non-cyclic-achievers (remove #(achiever-creates-cycle? registry % treasure-id) achievers)
+              ;; If all achievers create cycles, use the full backward planner
+              use-full-planner? (empty? non-cyclic-achievers)]
+          (if use-full-planner?
+            ;; Fall back to full backward planner for complex cases
+            (let [result (plan-backward {:flags #{} :deposited #{} :here nil}
+                                        (assoc initial-state :target-inventory #{treasure-id})
+                                        registry
+                                        ;; Custom goal extraction for inventory goal
+                                        )]
+              ;; Actually, let's try a different approach - use the achievers but try them in order
+              ;; Try each achiever, skip ones that fail
+              (loop [remaining achievers]
+                (if (empty? remaining)
+                  {:success? false :error {:type :all-achievers-failed :goal [:have treasure-id]}}
+                  (let [achiever (first remaining)
+                        precond-goals (action-preconditions-as-goals achiever)
+                        precond-result (if (empty? precond-goals)
+                                         {:success? true :plan [] :state initial-state}
+                                         (reduce
+                                          (fn [acc goal]
+                                            (if-not (:success? acc)
+                                              acc
+                                              (let [sub-plan (plan-backward
+                                                              {:flags (if (keyword? goal) #{goal} #{})
+                                                               :deposited #{}
+                                                               :here (when (and (vector? goal) (= :at (first goal)))
+                                                                       (second goal))}
+                                                              (:state acc)
+                                                              registry)]
+                                                (if (:success? sub-plan)
+                                                  {:success? true
+                                                   :plan (into (:plan acc) (:plan sub-plan))
+                                                   :state (reduce actions/apply-action-effects
+                                                                  (:state acc)
+                                                                  (:plan sub-plan))}
+                                                  {:success? false :error (:error sub-plan)}))))
+                                          {:success? true :plan [] :state initial-state}
+                                          precond-goals))]
+                    (if (:success? precond-result)
+                      {:success? true
+                       :plan (conj (vec (:plan precond-result)) achiever)
+                       :final-state (actions/apply-action-effects
+                                     (or (:state precond-result) initial-state)
+                                     achiever)}
+                      ;; Try next achiever
+                      (recur (rest remaining)))))))
+            ;; Use best non-cyclic achiever
+            (let [achiever (select-best-achiever non-cyclic-achievers initial-state)
+                  precond-goals (action-preconditions-as-goals achiever)
+                  precond-result (if (empty? precond-goals)
+                                   {:success? true :plan [] :state initial-state}
+                                   (reduce
+                                    (fn [acc goal]
+                                      (if-not (:success? acc)
+                                        acc
+                                        (let [sub-plan (plan-backward
+                                                        {:flags (if (keyword? goal) #{goal} #{})
+                                                         :deposited #{}
+                                                         :here (when (and (vector? goal) (= :at (first goal)))
+                                                                 (second goal))}
+                                                        (:state acc)
+                                                        registry)]
+                                          (if (:success? sub-plan)
+                                            {:success? true
+                                             :plan (into (:plan acc) (:plan sub-plan))
+                                             :state (reduce actions/apply-action-effects
+                                                            (:state acc)
+                                                            (:plan sub-plan))}
+                                            {:success? false :error (:error sub-plan)}))))
+                                    {:success? true :plan [] :state initial-state}
+                                    precond-goals))]
+              (if (:success? precond-result)
+                {:success? true
+                 :plan (conj (vec (:plan precond-result)) achiever)
+                 :final-state (actions/apply-action-effects
+                               (or (:state precond-result) initial-state)
+                               achiever)}
+                precond-result))))))))
+
+(defn plan-batch-deposit
+  "Plan to deposit multiple treasures currently in inventory.
+   Generates: navigate to living room, open case (if needed), put each treasure.
+
+   Returns {:success? bool :plan [...] :final-state state}"
+  [registry treasures-to-deposit initial-state]
+  (if (empty? treasures-to-deposit)
+    {:success? true :plan [] :final-state initial-state}
+    (let [;; Need to be at living room
+          at-living-room? (= :living-room (:here initial-state))
+          ;; Need trophy case open
+          case-open? (contains? (:open-containers initial-state #{}) :trophy-case)
+          ;; Build plan
+          open-case-action (when-not case-open?
+                             (get registry :open-trophy-case))
+          deposit-actions (map #(get registry (keyword (str "deposit-" (name %))))
+                               treasures-to-deposit)
+          ;; Filter out nil actions
+          valid-deposits (filter some? deposit-actions)
+          all-actions (if open-case-action
+                        (cons open-case-action valid-deposits)
+                        valid-deposits)
+          ;; Apply effects
+          final-state (reduce actions/apply-action-effects initial-state all-actions)]
+      {:success? true
+       :plan (vec all-actions)
+       :final-state final-state
+       :treasures-deposited (set treasures-to-deposit)})))
+
+(defn plan-batch-acquisition
+  "Plan to acquire multiple treasures without depositing.
+   Collects treasures until inventory limit reached or list exhausted.
+
+   Parameters:
+   - registry: Action registry
+   - treasures: List of treasures to acquire
+   - initial-state: Current planning state
+   - max-items: Maximum inventory capacity (default 5, leaving room for lamp+sword)
+
+   Returns {:success? bool :plan [...] :acquired [...] :remaining [...] :final-state state}"
+  [registry treasures initial-state & {:keys [max-items] :or {max-items 5}}]
+  (loop [remaining treasures
+         current-state initial-state
+         plan []
+         acquired []]
+    (let [current-inventory-count (count (:inventory current-state))
+          inventory-full? (>= current-inventory-count max-items)]
+      (if (or (empty? remaining) inventory-full?)
+        {:success? true
+         :plan plan
+         :acquired acquired
+         :remaining (vec remaining)
+         :final-state current-state
+         :inventory-full? inventory-full?}
+        ;; Try to acquire next treasure
+        (let [treasure (first remaining)
+              acq-result (plan-treasure-acquisition registry treasure current-state)]
+          (if (:success? acq-result)
+            (recur (rest remaining)
+                   (:final-state acq-result)
+                   (into plan (:plan acq-result))
+                   (conj acquired treasure))
+            ;; Skip this treasure, try next
+            (do
+              (println "  ! Could not acquire" treasure "- skipping")
+              (recur (rest remaining)
+                     current-state
+                     plan
+                     acquired))))))))
+
+(defn plan-treasures-batched
+  "Plan collection of treasures using batch strategy.
+   Collects multiple treasures, deposits them together, repeats.
+
+   Returns {:success? bool :plan [...] :batches [...] :final-state state}"
+  [registry treasures initial-state & {:keys [max-items] :or {max-items 5}}]
+  (loop [remaining treasures
+         current-state initial-state
+         all-plans []
+         batches []]
+    (if (empty? remaining)
+      {:success? true
+       :plan (vec (mapcat :plan all-plans))
+       :batches batches
+       :final-state current-state}
+      ;; Acquire a batch of treasures
+      (let [acq-result (plan-batch-acquisition registry remaining current-state
+                                                :max-items max-items)]
+        (if (empty? (:acquired acq-result))
+          ;; Couldn't acquire any - we're stuck
+          {:success? false
+           :plan (vec (mapcat :plan all-plans))
+           :error {:type :no-progress :remaining remaining}
+           :batches batches
+           :final-state current-state}
+          ;; Deposit the acquired batch
+          (let [deposit-result (plan-batch-deposit registry
+                                                    (:acquired acq-result)
+                                                    (:final-state acq-result))
+                new-state (:final-state deposit-result)
+                batch-info {:acquired (:acquired acq-result)
+                            :acquisition-plan (:plan acq-result)
+                            :deposit-plan (:plan deposit-result)}]
+            (recur (:remaining acq-result)
+                   new-state
+                   (conj all-plans {:plan (into (:plan acq-result) (:plan deposit-result))})
+                   (conj batches batch-info))))))))
 
 (defn plan-treasure-collection
   "Plan collection and deposit of a single treasure."

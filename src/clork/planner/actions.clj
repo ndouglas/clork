@@ -560,6 +560,84 @@
           [[room per-fn] (:to spec)])))
 
 ;; =============================================================================
+;; Flag-Gated Regions (Location Dependency Detection)
+;; =============================================================================
+;; Some rooms can only be reached after certain flags are achieved.
+;; This is used by both navigation and action generation.
+
+(def flag-gated-regions
+  "Map of flags to the rooms they unlock access to.
+   Format: {flag #{rooms...}}
+
+   When a room is in a flag-gated region, reaching that room requires
+   the corresponding flag to be achieved first."
+  {:troll-flag
+   ;; Troll blocks west exit from troll-room to maze-1
+   ;; All maze rooms require troll-flag
+   #{:maze-1 :maze-2 :maze-3 :maze-4 :maze-5 :maze-6 :maze-7 :maze-8
+     :maze-9 :maze-10 :maze-11 :maze-12 :maze-13 :maze-14 :maze-15
+     :dead-end :grating-room
+     ;; Also deep canyon direction from troll-room
+     :deep-canyon :loud-room :round-room
+     ;; And chasm area (needs :troll-flag for safe passage)
+     :east-of-chasm :west-of-chasm}
+
+   :cyclops-flag
+   ;; Cyclops blocks up from cyclops-room to treasure-room
+   #{:treasure-room :strange-passage}
+
+   :dome-flag
+   ;; Rope must be tied at dome-room to access torch-room
+   ;; Egypt-room and temple rooms are only accessible through torch-room
+   #{:torch-room :north-temple :south-temple :egypt-room}
+
+   :lld-flag
+   ;; Exorcism required to enter land of living dead
+   #{:land-of-living-dead :entrance-to-hades}
+
+   ;; Trap door access - these rooms are reached via trap door from living room
+   ;; Requires moving rug and opening trap door first
+   :rug-moved
+   #{:cellar :troll-room}
+
+   :trap-door-open
+   #{:cellar :troll-room}
+
+   ;; Coffin passage: south-temple -> tiny-cave requires not carrying gold-coffin
+   ;; This flag is effectively always set when not carrying the coffin.
+   ;; Rooms accessible only via this passage require it.
+   :coffin-cure
+   #{:tiny-cave}
+
+   ;; River navigation: requires being in the boat
+   ;; Boat must be inflated at dam-base, then entered
+   :in-boat
+   #{:river-1 :river-2 :river-3 :river-4 :river-5}
+
+   ;; Low tide: dam must be drained to cross reservoir
+   ;; Required to reach atlantis-room where the trident is
+   :low-tide
+   #{:atlantis-room :reservoir :reservoir-north}})
+
+(def flag-gated-rooms
+  "Inverse map: room -> set of flags required to reach it.
+   Built from flag-gated-regions."
+  (reduce-kv
+   (fn [m flag rooms]
+     (reduce (fn [m room]
+               (update m room (fnil conj #{}) flag))
+             m
+             rooms))
+   {}
+   flag-gated-regions))
+
+(defn flags-required-for-room
+  "Get the set of flags required to reach a specific room.
+   Returns empty set if room is always accessible."
+  [room-id]
+  (get flag-gated-rooms room-id #{}))
+
+;; =============================================================================
 ;; Movement Action Extraction
 ;; =============================================================================
 
@@ -692,19 +770,22 @@
       :else nil)))
 
 (defn generate-take-action
-  "Generate a take action for an object."
+  "Generate a take action for an object.
+   Includes flag requirements for reaching the object's room."
   [game-state obj-id obj-def]
   (let [room (find-object-room game-state obj-id)
         size (get obj-def :size 0)
         ;; Use parser-friendly object name instead of raw ID
-        parser-name (object-id->parser-name game-state obj-id)]
+        parser-name (object-id->parser-name game-state obj-id)
+        ;; Get flags required to reach this room (e.g., :low-tide for atlantis-room)
+        room-flags (flags-required-for-room room)]
     (when room
       {:id (keyword (str "take-" (name obj-id)))
        :type :take
        :preconditions
        {:here room
         :inventory #{}
-        :flags #{}}
+        :flags room-flags}
        :effects
        {:flags-set #{}
         :flags-clear #{}
@@ -727,7 +808,9 @@
     :garlic             ; In brown-sack, needs "open sack" first (use :get-garlic)
     :large-emerald      ; In buoy, needs "take buoy" then "open buoy" (use :open-buoy)
     :brass-bauble       ; Created when canary sings in forest (use :wind-canary)
-    :clockwork-canary}) ; In treasure-room after thief opens egg (use :take-clockwork-canary)
+    :clockwork-canary   ; In treasure-room after thief opens egg (use :take-clockwork-canary)
+    :platinum-bar       ; Only visible after saying "echo" in loud-room (use :take-platinum-bar)
+    :crystal-trident})  ; In atlantis-room, requires :low-tide to reach
 
 (defn extract-take-actions
   "Extract take actions for all takeable objects.
@@ -1012,13 +1095,31 @@
     :reversible? false
     :commands ["ulysses"]}
 
+   ;; Press yellow button in maintenance room to enable bolt turning
+   ;; ZIL: Yellow button sets GATE-FLAG which allows bolt to turn
+   :press-yellow-button
+   {:id :press-yellow-button
+    :type :puzzle
+    :preconditions
+    {:here :maintenance-room
+     :inventory #{}
+     :flags #{}}
+    :effects
+    {:flags-set #{:gate-flag}
+     :flags-clear #{}
+     :inventory-add #{}
+     :inventory-remove #{}}
+    :cost 1
+    :reversible? false
+    :commands ["push yellow button"]}
+
    :open-dam
    {:id :open-dam
     :type :puzzle
     :preconditions
-    {:here :maintenance-room
+    {:here :dam-room  ; Bolt is on dam's control panel (room ID is :dam-room)
      :inventory #{:wrench}
-     :flags #{}}
+     :flags #{:gate-flag}}  ; Yellow button must be pressed first!
     :effects
     {:flags-set #{:dam-opened}
      :flags-clear #{}
@@ -1162,7 +1263,7 @@
     :preconditions
     {:here :treasure-room
      :inventory #{:egg}
-     :flags #{:cyclops-flag}}  ; Must reach treasure room
+     :flags #{:cyclops-flag :thief-alive}}  ; Must reach treasure room AND thief must be alive
     :effects
     {:flags-set #{:thief-has-egg}
      :flags-clear #{}
@@ -1215,7 +1316,7 @@
     :type :take
     :preconditions
     {:here :treasure-room
-     :flags #{:thief-dead}}  ; Thief dead = egg opened, canary accessible
+     :flags #{:thief-dead :egg-solve}}  ; Thief must deposit egg (opens it) AND be dead
     :effects
     {:flags-set #{}
      :flags-clear #{}
@@ -1275,7 +1376,7 @@
      :minimum-score 30}       ; Deposit some treasures first for better combat odds
     :effects
     {:flags-set #{:thief-dead}
-     :flags-clear #{}
+     :flags-clear #{:thief-alive}  ; Thief is no longer alive after being killed
      :inventory-add #{:silver-chalice}  ; Chalice always dropped, stolen items vary
      :inventory-remove #{}}
     ;; Realistic cost from 2D Markov simulation (50k fights at score 0):
@@ -1327,7 +1428,7 @@
      :minimum-score 30}       ; Deposit some treasures first for better combat odds
     :effects
     {:flags-set #{:thief-dead}
-     :flags-clear #{}
+     :flags-clear #{:thief-alive}  ; Thief is no longer alive after being killed
      :inventory-add #{:silver-chalice}
      :inventory-remove #{}}
     ;; Knife advantage analysis:
@@ -1396,6 +1497,27 @@
     :cost 1
     :reversible? true
     :commands ["take bar"]}
+
+   ;; ==========================================================================
+   ;; ATLANTIS ROOM - TRIDENT
+   ;; ==========================================================================
+   ;; The trident is in atlantis-room, which can only be reached when the
+   ;; reservoir is drained (low-tide flag). The dam must be opened first.
+   :take-crystal-trident
+   {:id :take-crystal-trident
+    :type :take
+    :preconditions
+    {:here :atlantis-room
+     :inventory #{}
+     :flags #{:low-tide}}  ; Must drain reservoir first
+    :effects
+    {:flags-set #{}
+     :flags-clear #{}
+     :inventory-add #{:crystal-trident}
+     :inventory-remove #{}}
+    :cost 1
+    :reversible? true
+    :commands ["take trident"]}
 
    ;; ==========================================================================
    ;; COAL MINE PUZZLE (very complex multi-step puzzle!)

@@ -4,12 +4,15 @@
    $plan treasure <id>  - Plan to get and deposit a specific treasure
    $plan flag <flag>    - Plan to achieve a specific flag
    $plan win            - Plan complete game victory
-   $plan kill-thief     - Plan to kill the thief"
+   $plan kill-thief     - Plan to kill the thief
+
+   $run win             - Execute complete speedrun (validates the plan)"
   (:require [clork.utils :as utils]
             [clork.planner.actions :as actions]
             [clork.planner.backward :as backward]
             [clork.planner.constraints :as constraints]
             [clork.planner.optimizer :as optimizer]
+            [clork.planner.validator :as validator]
             [clojure.string :as str]
             [clojure.set :as set]))
 
@@ -227,9 +230,12 @@
                    (conj failed treasure))))))))
 
 (defn- cmd-plan-win
-  "Plan complete game victory - generates full executable command sequence."
+  "Plan complete game victory - generates full executable command sequence.
+
+   Uses BATCHED treasure collection: collects multiple treasures before depositing
+   to minimize round trips to the living room."
   [game-state _args]
-  (let [gs1 (utils/tell game-state "Planning complete speedrun...\n")
+  (let [gs1 (utils/tell game-state "Planning complete speedrun (batched)...\n")
 
         ;; Build planning context
         registry (actions/build-action-registry game-state)
@@ -254,16 +260,37 @@
                                    #{:troll-flag :magic-flag :cyclops-flag
                                      :rug-moved :trap-door-open :coffin-cure})
 
-        ;; Phase 3: All treasures in optimized order
-        _ (println "  Phase 3: Planning all 19 treasures...")
-        treasure-result (plan-all-treasures-in-order
-                         registry state-after-cyclops available-flags game-state)
+        ;; Phase 3: All treasures using BATCHED collection
+        ;; First, get the TSP-optimized treasure order
+        _ (println "  Phase 3: Planning all 19 treasures (batched)...")
+        tsp-result (backward/optimize-treasure-order
+                    game-state
+                    (vec actions/treasures)
+                    available-flags
+                    :living-room)
+        ordered-treasures (concat (:optimized-order tsp-result)
+                                  (:unreachable tsp-result))
+        _ (println "    TSP order:" (take 5 ordered-treasures) "...")
 
-        ;; Phase 4: Kill thief (after score is built up)
+        ;; Use batched planning - collect multiple treasures, deposit together
+        ;; max-items 7 allows: lamp + sword + 5 treasures (or + garlic + 4 treasures)
+        treasure-result (backward/plan-treasures-batched
+                         registry
+                         ordered-treasures
+                         state-after-cyclops
+                         :max-items 7)
+        _ (println "    Batches:" (count (:batches treasure-result)))
+        _ (doseq [{:keys [acquired]} (:batches treasure-result)]
+            (println "      -" (count acquired) "treasures:" (take 3 acquired) "..."))
+
+        ;; Phase 4: Kill thief (if not already done during treasure collection)
         _ (println "  Phase 4: Planning thief kill...")
         state-after-treasures (:final-state treasure-result)
-        thief-plan (backward/plan-flag-achievement
-                    registry :thief-dead state-after-treasures)
+        thief-already-dead? (contains? (:flags state-after-treasures) :thief-dead)
+        thief-plan (if thief-already-dead?
+                     {:plan []}
+                     (backward/plan-flag-achievement
+                      registry :thief-dead state-after-treasures))
 
         ;; Phase 5: Enter stone barrow (requires :won flag, sets :finished)
         _ (println "  Phase 5: Planning stone barrow entry...")
@@ -276,7 +303,7 @@
         ;; Combine all action plans
         all-actions (concat (:plan troll-plan)
                             (:plan cyclops-plan)
-                            (mapcat :plan (:plans treasure-result))
+                            (:plan treasure-result)
                             (:plan thief-plan)
                             (:plan barrow-plan))
 
@@ -300,7 +327,7 @@
             phase-boundaries
             [{:name "Kill Troll" :actions (count (:plan troll-plan))}
              {:name "Defeat Cyclops" :actions (count (:plan cyclops-plan))}
-             {:name "Collect Treasures" :actions (count (mapcat :plan (:plans treasure-result)))}
+             {:name "Collect Treasures" :actions (count (:plan treasure-result))}
              {:name "Kill Thief" :actions (count (:plan thief-plan))}
              {:name "Enter Barrow" :actions (count (:plan barrow-plan))}]
 
@@ -318,16 +345,169 @@
               (reduce (fn [gs {:keys [name actions]}]
                         (utils/tell gs (str "  - " name " (" actions " actions)\n")))
                       g phase-boundaries))
-            (utils/tell (str "\nTreasures planned: " (count (:plans treasure-result)) "/19\n"))
+            (utils/tell (str "\nTreasures planned: "
+                             (reduce + (map #(count (:acquired %)) (:batches treasure-result)))
+                             "/19\n"))
+            (utils/tell (str "Batches: " (count (:batches treasure-result)) "\n"))
             (as-> g
-              (if (seq (:failed treasure-result))
-                (utils/tell g (str "Failed to plan: " (str/join ", " (map name (:failed treasure-result))) "\n"))
-                g))
+              (reduce (fn [gs batch]
+                        (utils/tell gs (str "  - " (count (:acquired batch)) " treasures: "
+                                            (str/join ", " (map name (take 3 (:acquired batch))))
+                                            (when (> (count (:acquired batch)) 3) "...") "\n")))
+                      g (:batches treasure-result)))
             (utils/tell "\n--- Commands ---\n")
             (utils/tell numbered-commands)
             (utils/tell "\n\n--- End of Speedrun ---\n")
             (utils/tell "\nNote: Combat outcomes depend on RNG. Save before troll/thief fights.\n")
             (utils/tell "Estimated completion: ~250-300 turns depending on combat luck.\n"))))))
+
+
+;; =============================================================================
+;; $run win - Execute Speedrun
+;; =============================================================================
+
+(defn- generate-speedrun-commands
+  "Generate the command list for a complete speedrun.
+   Returns {:success? bool :commands [...] :error ...}"
+  [game-state]
+  (try
+    (let [;; Build planning context
+          registry (actions/build-action-registry game-state)
+          initial-state (constraints/initial-planning-state game-state)
+
+          ;; Phase 1: Kill troll
+          troll-plan (backward/plan-flag-achievement registry :troll-flag initial-state)
+          state-after-troll (reduce actions/apply-action-effects
+                                    initial-state
+                                    (:plan troll-plan))
+
+          ;; Phase 2: Defeat cyclops
+          cyclops-plan (backward/plan-flag-achievement registry :cyclops-flag state-after-troll)
+          state-after-cyclops (reduce actions/apply-action-effects
+                                      state-after-troll
+                                      (:plan cyclops-plan))
+
+          ;; Available flags after setup
+          available-flags (set/union (:flags state-after-cyclops)
+                                     #{:troll-flag :magic-flag :cyclops-flag
+                                       :rug-moved :trap-door-open :coffin-cure})
+
+          ;; Phase 3: All treasures (batched)
+          tsp-result (backward/optimize-treasure-order
+                      game-state
+                      (vec actions/treasures)
+                      available-flags
+                      :living-room)
+          ordered-treasures (concat (:optimized-order tsp-result)
+                                    (:unreachable tsp-result))
+          treasure-result (backward/plan-treasures-batched
+                           registry
+                           ordered-treasures
+                           state-after-cyclops
+                           :max-items 7)
+
+          ;; Phase 4: Kill thief (if needed)
+          state-after-treasures (:final-state treasure-result)
+          thief-already-dead? (contains? (:flags state-after-treasures) :thief-dead)
+          thief-plan (if thief-already-dead?
+                       {:plan []}
+                       (backward/plan-flag-achievement
+                        registry :thief-dead state-after-treasures))
+
+          ;; Phase 5: Enter barrow
+          state-after-thief (reduce actions/apply-action-effects
+                                    state-after-treasures
+                                    (:plan thief-plan))
+          barrow-plan (backward/plan-flag-achievement
+                       registry :finished state-after-thief)
+
+          ;; Combine all actions
+          all-actions (concat (:plan troll-plan)
+                              (:plan cyclops-plan)
+                              (:plan treasure-result)
+                              (:plan thief-plan)
+                              (:plan barrow-plan))
+
+          ;; Generate command sequence
+          cmd-seq (optimizer/plan-to-command-sequence
+                   game-state
+                   all-actions
+                   :west-of-house
+                   :initial-flags #{}
+                   :initial-inventory #{})]
+      {:success? true
+       :commands (:commands cmd-seq)
+       :treasures-planned (reduce + (map #(count (:acquired %)) (:batches treasure-result)))})
+    (catch Exception e
+      {:success? false
+       :error (.getMessage e)})))
+
+(defn- format-combat-results
+  "Format combat results for display."
+  [gs combat-results]
+  (if (seq combat-results)
+    (reduce (fn [g {:keys [enemy attacks-used]}]
+              (utils/tell g (str "  - " enemy ": " attacks-used " attacks\n")))
+            (utils/tell gs "\nCombat results:\n")
+            combat-results)
+    gs))
+
+(defn- cmd-run-win
+  "Execute a complete speedrun with adaptive combat.
+   Generates the plan and executes it, handling RNG dynamically."
+  [game-state _args]
+  (let [gs1 (-> game-state
+                (utils/tell "=== SPEEDRUN EXECUTION ===\n\n")
+                (utils/tell "Generating plan...\n"))
+        plan-result (generate-speedrun-commands game-state)]
+
+    (if-not (:success? plan-result)
+      (utils/tell gs1 (str "Failed to generate plan: " (:error plan-result) "\n"))
+
+      ;; Execute the plan
+      (let [commands (:commands plan-result)
+            _ (println (str "Plan generated: " (count commands) " commands"))
+            _ (println (str "Treasures to collect: " (:treasures-planned plan-result) "/19"))
+            _ (println "Executing speedrun...")
+
+            ;; Progress tracking
+            step-count (atom 0)
+            last-progress (atom 0)
+
+            ;; Execute with adaptive combat
+            result (validator/execute-speedrun-adaptive
+                    game-state
+                    commands
+                    :on-progress
+                    (fn [_step _cmd _output]
+                      (swap! step-count inc)
+                      (when (>= (- @step-count @last-progress) 50)
+                        (println (str "  Progress: " @step-count " commands..."))
+                        (reset! last-progress @step-count))))]
+
+        (if (:success? result)
+          ;; Success!
+          (let [final-gs (:final-state result)
+                score (get final-gs :score 0)]
+            (-> gs1
+                (utils/tell "\n=== SPEEDRUN COMPLETE! ===\n\n")
+                (utils/tell (str "Final room: " (name (:final-room result)) "\n"))
+                (utils/tell (str "Commands executed: " (:commands-executed result) "\n"))
+                (utils/tell (str "Actual moves (with combat): " (:actual-commands result) "\n"))
+                (utils/tell (str "Score: " score " / 350\n"))
+                (format-combat-results (:combat-results result))
+                (merge final-gs)))
+
+          ;; Failed
+          (let [error (:error result)
+                output-str (when-let [o (:output error)] (str/trim o))]
+            (-> gs1
+                (utils/tell "\n=== SPEEDRUN FAILED ===\n\n")
+                (utils/tell (str "Failed at step " (:step error) "\n"))
+                (utils/tell (str "Command: " (:command error) "\n"))
+                (utils/tell (str "Room: " (name (or (:from error) (:final-room result))) "\n"))
+                (utils/tell (str "Error: " (:message error) "\n"))
+                (cond-> output-str (utils/tell (str "Output: " output-str "\n"))))))))))
 
 
 ;; =============================================================================
@@ -371,3 +551,28 @@
                 :help "Plan earliest thief kill"}
    :win {:handler cmd-plan-win
          :help "Plan complete game victory"}})
+
+;; =============================================================================
+;; $run (execute plans)
+;; =============================================================================
+
+(defn cmd-run
+  "Main $run command dispatcher - executes plans instead of just displaying them."
+  [game-state args]
+  (if (empty? args)
+    (-> game-state
+        (utils/tell "Usage: $run <subcommand>\n\n")
+        (utils/tell "Subcommands:\n")
+        (utils/tell "  win  - Execute complete speedrun (with adaptive combat)\n\n")
+        (utils/tell "Unlike $plan, $run actually executes the commands.\n")
+        (utils/tell "Combat is handled adaptively - attacks continue until victory.\n"))
+    (let [subcmd (first args)
+          sub-args (rest args)]
+      (case subcmd
+        "win" (cmd-run-win game-state sub-args)
+        (utils/tell game-state (str "Unknown subcommand: " subcmd "\n"))))))
+
+(def run-subcommands
+  "Subcommand definitions for $run."
+  {:win {:handler cmd-run-win
+         :help "Execute complete speedrun"}})

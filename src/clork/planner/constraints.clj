@@ -310,7 +310,7 @@
   [game-state]
   {:here :west-of-house
    :inventory #{}
-   :flags #{}
+   :flags #{:thief-alive}  ; Thief starts alive - cleared by kill-thief actions
    :collected #{}  ; All items ever collected (for one-way validation)
    :deposited #{} ; Items in trophy case
    :score 0       ; Current score (from deposits)
@@ -478,7 +478,7 @@
    After all uses exhausted, item can be dropped."
   {:sword #{:kill-troll}  ; Only needed for troll (thief can use knife)
    :rope #{:tie-rope}     ; One-time use at dome
-   :wrench #{:open-dam}   ; Only needed at maintenance room
+   :wrench #{:open-dam}   ; Only needed at dam (wrench found in maintenance room)
    :shovel #{:dig-for-scarab}  ; Only needed at sandy cave
    :pump #{:inflate-boat}  ; Only needed once
    :matchbook #{:exorcism}      ; Needed for candles

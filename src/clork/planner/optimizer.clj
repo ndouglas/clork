@@ -928,73 +928,8 @@
 ;; =============================================================================
 ;; Location Dependency Detection
 ;; =============================================================================
-
-(def flag-gated-regions
-  "Map of flags to the rooms they unlock access to.
-   Format: {flag #{rooms...}}
-
-   When a room is in a flag-gated region, reaching that room requires
-   the corresponding flag to be achieved first."
-  {:troll-flag
-   ;; Troll blocks west exit from troll-room to maze-1
-   ;; All maze rooms require troll-flag
-   #{:maze-1 :maze-2 :maze-3 :maze-4 :maze-5 :maze-6 :maze-7 :maze-8
-     :maze-9 :maze-10 :maze-11 :maze-12 :maze-13 :maze-14 :maze-15
-     :dead-end :grating-room
-     ;; Also deep canyon direction from troll-room
-     :deep-canyon :loud-room :round-room
-     ;; And chasm area (needs :troll-flag for safe passage)
-     :east-of-chasm :west-of-chasm}
-
-   :cyclops-flag
-   ;; Cyclops blocks up from cyclops-room to treasure-room
-   #{:treasure-room :strange-passage}
-
-   :dome-flag
-   ;; Rope must be tied at dome-room to access torch-room
-   ;; Egypt-room and temple rooms are only accessible through torch-room
-   #{:torch-room :north-temple :south-temple :egypt-room}
-
-   :lld-flag
-   ;; Exorcism required to enter land of living dead
-   #{:land-of-living-dead :entrance-to-hades}
-
-   ;; Trap door access - these rooms are reached via trap door from living room
-   ;; Requires moving rug and opening trap door first
-   :rug-moved
-   #{:cellar :troll-room}
-
-   :trap-door-open
-   #{:cellar :troll-room}
-
-   ;; Coffin passage: south-temple -> tiny-cave requires not carrying gold-coffin
-   ;; This flag is effectively always set when not carrying the coffin.
-   ;; Rooms accessible only via this passage require it.
-   :coffin-cure
-   #{:tiny-cave}
-
-   ;; River navigation: requires being in the boat
-   ;; Boat must be inflated at dam-base, then entered
-   :in-boat
-   #{:river-1 :river-2 :river-3 :river-4 :river-5}})
-
-(def flag-gated-rooms
-  "Inverse map: room -> set of flags required to reach it.
-   Built from flag-gated-regions."
-  (reduce-kv
-   (fn [m flag rooms]
-     (reduce (fn [m room]
-               (update m room (fnil conj #{}) flag))
-             m
-             rooms))
-   {}
-   flag-gated-regions))
-
-(defn flags-required-for-room
-  "Get the set of flags required to reach a specific room.
-   Returns empty set if room is always accessible."
-  [room-id]
-  (get flag-gated-rooms room-id #{}))
+;; Note: flag-gated-regions, flag-gated-rooms, and flags-required-for-room are
+;; defined in actions.clj and referenced here as actions/flag-gated-regions etc.
 
 (defn find-flags-for-path
   "Find what additional flags are needed to reach dest-room from start-room.
@@ -1019,7 +954,7 @@
        :path path}
       ;; No path found - check what flags would help
       ;; Try adding flags progressively to see which ones enable the path
-      (let [all-flags (set (keys flag-gated-regions))
+      (let [all-flags (set (keys actions/flag-gated-regions))
             missing-flags (set/difference all-flags available-flags)
             ;; Try with each additional flag to see which enables path
             helpful-flags
@@ -1040,7 +975,7 @@
             (if full-path
               ;; Path exists with all flags - return required region flags
               {:reachable? false
-               :required-flags (flags-required-for-room dest-room)
+               :required-flags (actions/flags-required-for-room dest-room)
                :path nil}
               ;; Path doesn't exist even with all flags - truly unreachable
               {:reachable? false

@@ -250,6 +250,160 @@
                :combat-victories combat-victories})))))))
 
 ;; =============================================================================
+;; Adaptive Combat Execution
+;; =============================================================================
+
+(defn fight-until-victory
+  "Continue attacking an enemy until they die.
+   Returns [new-game-state {:victory? bool :attacks-used n :output [strings]}]"
+  [game-state enemy weapon & {:keys [max-attacks] :or {max-attacks 30}}]
+  (ensure-vocabulary-registered! game-state)
+  (let [attack-cmd (str "attack " enemy " with " weapon)]
+    (loop [gs game-state
+           attacks 0
+           outputs []]
+      (if (>= attacks max-attacks)
+        ;; Safety limit reached
+        [gs {:victory? false
+             :attacks-used attacks
+             :output outputs
+             :error "Max attacks reached without victory"}]
+        ;; Execute attack
+        (let [[new-gs output] (execute-command gs attack-cmd)
+              parser-error (parser/get-parser-error new-gs)]
+          (cond
+            ;; "Can't see" = enemy dead = victory!
+            (combat-victory-error? parser-error output)
+            [gs {:victory? true
+                 :attacks-used attacks
+                 :output outputs}]
+
+            ;; Player died
+            (or (:dead new-gs)
+                (str/includes? (str/lower-case output) "you have died"))
+            [new-gs {:victory? false
+                     :attacks-used (inc attacks)
+                     :output (conj outputs output)
+                     :error "Player died"}]
+
+            ;; Other parser error = real failure
+            parser-error
+            [new-gs {:victory? false
+                     :attacks-used (inc attacks)
+                     :output (conj outputs output)
+                     :error (str "Attack failed: " (:type parser-error))}]
+
+            ;; Attack succeeded, enemy still alive - continue
+            :else
+            (recur new-gs
+                   (inc attacks)
+                   (conj outputs output))))))))
+
+(defn execute-speedrun-adaptive
+  "Execute a speedrun command list with adaptive combat.
+
+   Unlike execute-commands-combat-aware which skips excess attacks,
+   this function:
+   - For combat commands: continues attacking until victory
+   - For non-combat commands: executes exactly once
+
+   Parameters:
+   - game-state: Starting game state
+   - commands: List of commands (may include duplicate attacks)
+   - on-progress: Optional callback fn [step-num cmd output] for progress
+
+   Returns:
+   {:success? boolean
+    :final-state game-state
+    :final-room room-id
+    :commands-executed n
+    :actual-commands n (including adaptive combat)
+    :combat-results [{:enemy str :attacks-used n}...]
+    :error (if failed) {...}}"
+  [game-state commands & {:keys [on-progress]}]
+  (ensure-vocabulary-registered! game-state)
+  (loop [gs game-state
+         remaining commands
+         step-num 0
+         actual-cmds 0
+         combat-results []
+         current-combat nil]  ; Track which enemy we're fighting
+    (if (empty? remaining)
+      ;; Done!
+      {:success? true
+       :final-state gs
+       :final-room (:here gs)
+       :commands-executed step-num
+       :actual-commands actual-cmds
+       :combat-results combat-results}
+
+      (let [cmd (first remaining)
+            target (extract-attack-target cmd)]
+        (cond
+          ;; Attack command for a new target - fight until victory
+          (and target (not= target current-combat))
+          (let [;; Extract weapon from command
+                weapon (when-let [m (re-find #"with\s+(.+)$" cmd)]
+                         (second m))
+                [new-gs result] (fight-until-victory gs target (or weapon "sword"))]
+            (when on-progress
+              (on-progress step-num (str "Fight " target)
+                          (str "Victory in " (:attacks-used result) " attacks")))
+            (if (:victory? result)
+              ;; Skip remaining attacks on this target
+              (let [remaining-cmds (drop-while #(= target (extract-attack-target %))
+                                               (rest remaining))]
+                (recur new-gs
+                       remaining-cmds
+                       (inc step-num)
+                       (+ actual-cmds (:attacks-used result))
+                       (conj combat-results {:enemy target
+                                            :attacks-used (:attacks-used result)})
+                       target))
+              ;; Combat failed
+              {:success? false
+               :final-state new-gs
+               :final-room (:here new-gs)
+               :commands-executed step-num
+               :actual-commands actual-cmds
+               :combat-results combat-results
+               :error {:step step-num
+                       :command cmd
+                       :message (:error result)}}))
+
+          ;; Attack command for same target - skip (already dead)
+          (and target (= target current-combat))
+          (recur gs (rest remaining) step-num actual-cmds combat-results current-combat)
+
+          ;; Non-combat command
+          :else
+          (let [from-room (:here gs)
+                [new-gs output] (execute-command gs cmd)
+                parser-error (parser/get-parser-error new-gs)]
+            (when on-progress
+              (on-progress step-num cmd (str/trim (or output ""))))
+            (if parser-error
+              ;; Command failed
+              {:success? false
+               :final-state new-gs
+               :final-room (:here new-gs)
+               :commands-executed step-num
+               :actual-commands actual-cmds
+               :combat-results combat-results
+               :error {:step step-num
+                       :command cmd
+                       :from from-room
+                       :output output
+                       :message (str "Command failed: " (:type parser-error))}}
+              ;; Command succeeded
+              (recur new-gs
+                     (rest remaining)
+                     (inc step-num)
+                     (inc actual-cmds)
+                     combat-results
+                     nil))))))))  ; Clear combat target after non-combat command
+
+;; =============================================================================
 ;; Navigation Validation
 ;; =============================================================================
 
