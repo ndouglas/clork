@@ -91,10 +91,45 @@
 ;;; ---------------------------------------------------------------------------
 
 (deftest detect-death-test
-  (testing "No death in fresh game"
+  (testing "No death in fresh game - returns :alive"
     (let [gs (core/init-game)
           state (executor/make-execution-state gs [:egg])]
-      (is (not (executor/detect-death state))))))
+      (is (= :alive (executor/detect-death state)))))
+
+  (testing "Death detected when game deaths > executor deaths"
+    (let [gs (-> (core/init-game)
+                 (assoc :deaths 1))  ; Game has 1 death
+          state (executor/make-execution-state gs [:egg])]
+      ;; Executor starts with 0 deaths, game has 1 - detected as dead
+      (is (= :dead (executor/detect-death state)))))
+
+  (testing "Ghost mode detected as dead"
+    (let [gs (-> (core/init-game)
+                 (assoc :dead true))
+          state (executor/make-execution-state gs [:egg])]
+      (is (= :dead (executor/detect-death state)))))
+
+  (testing "Multiple deaths detected as dead"
+    (let [gs (-> (core/init-game)
+                 (assoc :deaths 3))
+          state (executor/make-execution-state gs [:egg])]
+      (is (= :dead (executor/detect-death state)))))
+
+  (testing "Quit detected as dead"
+    (let [gs (-> (core/init-game)
+                 (assoc :quit true))
+          state (executor/make-execution-state gs [:egg])]
+      (is (= :dead (executor/detect-death state))))))
+
+(deftest handle-death-test
+  (testing "Handle death sets status to failed"
+    (let [gs (-> (core/init-game)
+                 (assoc :deaths 1))
+          state (executor/make-execution-state gs [:egg])
+          result (executor/handle-death state)]
+      (is (= :failed (:status result)))
+      (is (= 1 (:deaths result)))
+      (is (= :death (get-in result [:failure-info :reason]))))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; REPLAN TESTS

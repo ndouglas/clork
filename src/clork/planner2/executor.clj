@@ -16,6 +16,8 @@
             [clork.planner2.deps :as deps]
             [clork.planner2.route :as route]
             [clork.planner2.schedule :as schedule]
+            [clork.planner2.combat :as combat]
+            [clork.death :as death]
             [clork.random :as rng]
             [clork.ml :as ml]
             [clojure.string :as str]))
@@ -142,17 +144,30 @@
 
 (defn execute-goal
   "Execute a single goal using the reactive planner.
-   Returns updated execution state."
+   Returns updated execution state.
+
+   The planner may return with various statuses:
+   - :complete - Goal was achieved
+   - :stuck - Goal couldn't be achieved
+   - :dead - Player died during execution
+   - :game-over - Game ended for other reasons
+   - :timeout - Exceeded max turns
+
+   We propagate these statuses via :last-result for the caller to handle."
   [exec-state goal max-turns]
   (let [state-with-trace (if (:debug exec-state)
                            (trace-goal-start exec-state goal)
                            exec-state)
-        result (planner/run-goal (:game-state state-with-trace) goal
-                                 :max-turns max-turns)
+        ;; Wrap in death binding in case we're called outside run-speedrun
+        result (binding [death/*read-input-fn* (constantly "quit")]
+                 (planner/run-goal (:game-state state-with-trace) goal
+                                   :max-turns max-turns))
+        ;; Calculate turns used - use the planner's turn count
+        turns-used (or (:turn result) 0)
         updated (-> state-with-trace
                     (assoc :game-state (:game-state result))
-                    (update :turn-count + (:turns-used result 0))
-                    (assoc :last-result result))]
+                    (update :turn-count + turns-used)
+                    (assoc :last-result (assoc result :turns-used turns-used)))]
     (if (:debug updated)
       (trace-goal-complete updated goal result)
       updated)))
@@ -210,15 +225,30 @@
                     ;; Get action from entry or prep registry
                     action (or (:action entry) (prep/prep-action prep-id))]
                 (cond
-                  ;; Combat preps use kill-enemy goal
+                  ;; Combat preps use kill-enemy goal with RNG manipulation
                   (= :combat action)
-                  (let [goal (goals/kill-enemy (get-in prep/prep-actions [prep-id :target]))
-                        result (execute-goal base-state goal 100)]
-                    (if (= :complete (:status (:last-result result)))
-                      (-> result
-                          (update :completed-preps conj prep-id)
-                          advance-schedule)
-                      (assoc result :status :stuck)))
+                  (let [villain-id (get-in prep/prep-actions [prep-id :target])
+                        ;; Prepare RNG for guaranteed win before combat
+                        combat-prep (combat/ensure-combat-success!
+                                     (:game-state base-state) villain-id)]
+                    (if (:success? combat-prep)
+                      ;; RNG is set for victory - execute combat
+                      (let [goal (goals/kill-enemy villain-id)
+                            result (execute-goal base-state goal 100)]
+                        (if (= :complete (:status (:last-result result)))
+                          (-> result
+                              (update :completed-preps conj prep-id)
+                              advance-schedule)
+                          ;; Combat failed despite RNG manipulation - serious error
+                          (-> result
+                              (assoc :status :stuck)
+                              (assoc-in [:failure-info :combat-prep] combat-prep))))
+                      ;; Couldn't find winning RNG offset
+                      (-> base-state
+                          (assoc :status :stuck)
+                          (assoc :failure-info {:reason :combat-rng-failed
+                                                :villain villain-id
+                                                :combat-prep combat-prep}))))
 
                   ;; Direct action from entry - execute it immediately
                   (map? action)
@@ -334,9 +364,29 @@
 ;;; ---------------------------------------------------------------------------
 
 (defn detect-death
-  "Check if player has died."
+  "Check if player has died.
+   Returns :alive or :dead.
+
+   For speedruns, any death is a failure - we don't try to recover
+   from resurrection because items get scattered and runs become
+   non-deterministic."
   [exec-state]
-  (not (obs/player-alive? (:game-state exec-state))))
+  (let [gs (:game-state exec-state)
+        game-deaths (get gs :deaths 0)
+        exec-deaths (:deaths exec-state 0)]
+    (cond
+      ;; Game is completely over
+      (:quit gs) :dead
+      (:finished gs) :dead  ; This is actually winning, but handled elsewhere
+
+      ;; Player is in ghost mode (Hades)
+      (:dead gs) :dead
+
+      ;; Player just died (game deaths increased from what we tracked)
+      (> game-deaths exec-deaths) :dead
+
+      ;; Player is alive and well
+      :else :alive)))
 
 (defn detect-thief
   "Check if thief has stolen something important."
@@ -345,21 +395,38 @@
   false)
 
 (defn handle-death
-  "Handle player death by restarting from checkpoint.
-   In Zork, death teleports you to forest after a few turns."
+  "Handle player death - immediately fail the run.
+
+   For speedruns, death is not recoverable because:
+   1. Items get scattered to random locations
+   2. Player is teleported to forest
+   3. Recovery would require complex replanning
+
+   Instead, the caller should retry with different RNG or strategy."
   [exec-state]
-  (-> exec-state
-      (update :deaths inc)
-      (assoc :status :recovering)))
+  (let [gs (:game-state exec-state)
+        game-deaths (get gs :deaths 0)]
+    (-> exec-state
+        (assoc :deaths game-deaths)
+        (assoc :status :failed)
+        (assoc :failure-info {:reason :death
+                              :deaths game-deaths
+                              :at-entry (:schedule-index exec-state)
+                              :turn (:turn-count exec-state)
+                              :room (obs/current-room gs)}))))
 
 (defn replan-from-current
   "Generate a new plan from current game state."
   [exec-state]
-  (let [remaining-treasures (remove (:deposited-treasures exec-state)
-                                    (:treasures exec-state))
-        new-schedule (schedule/generate-schedule
-                      (:game-state exec-state)
-                      remaining-treasures)]
+  (let [gs (:game-state exec-state)
+        ;; Filter out treasures that are deposited or lost (in limbo)
+        remaining-treasures (remove
+                             (fn [t]
+                               (or ((:deposited-treasures exec-state) t)
+                                   ;; Could add check for lost treasures here
+                                   ))
+                             (:treasures exec-state))
+        new-schedule (schedule/generate-schedule gs remaining-treasures)]
     (-> exec-state
         (assoc :schedule new-schedule)
         (assoc :schedule-index 0)
@@ -398,103 +465,98 @@
 
    Options:
    - :max-turns - Maximum turns before timeout (default 500)
-   - :max-deaths - Maximum deaths before giving up (default 3)
    - :verbose - Print progress (default false)
    - :debug - Enable full execution tracing (default false)
 
    Returns execution state with:
-   - :status - :complete, :timeout, :failed, :stuck
+   - :status - :complete, :timeout, :failed
    - :deposited-treasures - Set of successfully deposited treasures
    - :turn-count - Total turns used
-   - :deaths - Number of deaths
+   - :deaths - Number of deaths (0 on success, 1 on death failure)
    - :trace - Event log (if :debug true)
    - :checkpoints - State snapshots (if :debug true)
-   - :failure-info - Details about why execution failed (if failed)"
-  [game-state treasures & {:keys [max-turns max-deaths verbose debug]
-                           :or {max-turns 500 max-deaths 3 verbose false debug false}}]
+   - :failure-info - Details about why execution failed (if failed)
+
+   Note: Any death immediately fails the run. For speedruns, death is not
+   recoverable because items get scattered. Use RNG manipulation or better
+   combat strategy to avoid deaths."
+  [game-state treasures & {:keys [max-turns verbose debug]
+                           :or {max-turns 500 verbose false debug false}}]
   (when verbose
     (println "=== SPEEDRUN START ===")
     (println "Treasures:" (mapv name treasures))
     (println ""))
 
-  (loop [exec-state (make-execution-state game-state treasures :debug debug)
-         last-entry nil]
-    (let [entry (current-schedule-entry exec-state)]
-      ;; Verbose output for new entries
-      (when (and verbose entry (not= entry last-entry))
-        (verbose-print exec-state entry))
+  ;; Bind *read-input-fn* to prevent infinite prompts on death
+  ;; When finish is called, it will get "quit" immediately
+  (binding [death/*read-input-fn* (constantly "quit")]
+    (loop [exec-state (make-execution-state game-state treasures :debug debug)
+           last-entry nil]
+      (let [entry (current-schedule-entry exec-state)
+            death-status (detect-death exec-state)]
+        ;; Verbose output for new entries
+        (when (and verbose entry (not= entry last-entry))
+          (verbose-print exec-state entry))
 
-      (cond
-        ;; Schedule complete
-        (schedule-complete? exec-state)
-        (do
-          (when verbose
-            (println "\n=== SPEEDRUN COMPLETE ===")
-            (println "Turns:" (:turn-count exec-state))
-            (println "Deposited:" (count (:deposited-treasures exec-state)) "/" (count treasures)))
-          (assoc exec-state :status :complete))
+        (cond
+          ;; Schedule complete
+          (schedule-complete? exec-state)
+          (do
+            (when verbose
+              (println "\n=== SPEEDRUN COMPLETE ===")
+              (println "Turns:" (:turn-count exec-state))
+              (println "Deposited:" (count (:deposited-treasures exec-state)) "/" (count treasures)))
+            (assoc exec-state :status :complete))
 
-        ;; Timeout
-        (> (:turn-count exec-state) max-turns)
-        (do
-          (when verbose
-            (println "\n=== TIMEOUT ===")
-            (println "Max turns exceeded:" max-turns))
-          (-> exec-state
-              (assoc :status :timeout)
-              (assoc :failure-info {:reason :timeout
-                                    :at-entry (:schedule-index exec-state)
-                                    :entry entry
-                                    :turn (:turn-count exec-state)})))
+          ;; Timeout
+          (> (:turn-count exec-state) max-turns)
+          (do
+            (when verbose
+              (println "\n=== TIMEOUT ===")
+              (println "Max turns exceeded:" max-turns))
+            (-> exec-state
+                (assoc :status :timeout)
+                (assoc :failure-info {:reason :timeout
+                                      :at-entry (:schedule-index exec-state)
+                                      :entry entry
+                                      :turn (:turn-count exec-state)})))
 
-        ;; Too many deaths
-        (> (:deaths exec-state) max-deaths)
-        (do
-          (when verbose
-            (println "\n=== TOO MANY DEATHS ===")
-            (println "Deaths:" (:deaths exec-state)))
-          (-> exec-state
-              (assoc :status :failed)
-              (assoc :failure-info {:reason :too-many-deaths
-                                    :deaths (:deaths exec-state)
-                                    :at-entry (:schedule-index exec-state)})))
+          ;; Death detected - immediate failure
+          ;; For speedruns, any death ends the run (items scatter, can't recover)
+          (= death-status :dead)
+          (do
+            (when verbose
+              (println "\n=== DEATH ===")
+              (println "Player died - run failed"))
+            (handle-death exec-state))
 
-        ;; Death detected
-        (detect-death exec-state)
-        (do
-          (when verbose
-            (println "  *** DEATH DETECTED - Replanning ***"))
-          (let [recovered (handle-death exec-state)
-                replanned (replan-from-current recovered)]
-            (recur replanned entry)))
+          ;; Stuck - try replanning
+          (= :stuck (:status exec-state))
+          (do
+            (when verbose
+              (println "  *** STUCK - Replanning (attempt" (inc (:replans exec-state)) ") ***"))
+            (let [replanned (replan-from-current exec-state)]
+              (if (> (:replans replanned) 5)
+                (do
+                  (when verbose
+                    (println "\n=== FAILED - Too many replans ==="))
+                  (-> exec-state
+                      (assoc :status :failed)
+                      (assoc :failure-info {:reason :too-many-replans
+                                            :replans (:replans exec-state)
+                                            :stuck-at entry
+                                            :last-result (:last-result exec-state)})))
+                (recur replanned entry))))
 
-        ;; Stuck - try replanning
-        (= :stuck (:status exec-state))
-        (do
-          (when verbose
-            (println "  *** STUCK - Replanning (attempt" (inc (:replans exec-state)) ") ***"))
-          (let [replanned (replan-from-current exec-state)]
-            (if (> (:replans replanned) 5)
-              (do
-                (when verbose
-                  (println "\n=== FAILED - Too many replans ==="))
-                (-> exec-state
-                    (assoc :status :failed)
-                    (assoc :failure-info {:reason :too-many-replans
-                                          :replans (:replans exec-state)
-                                          :stuck-at entry
-                                          :last-result (:last-result exec-state)})))
-              (recur replanned entry))))
-
-        ;; Normal execution
-        :else
-        (let [result (execute-schedule-entry exec-state)]
-          (when (and verbose (:last-result result))
-            (verbose-result "Goal"
-                            (:status (:last-result result))
-                            :turns (:turns-used (:last-result result) 0)
-                            :error (:error (:last-result result))))
-          (recur result entry))))))
+          ;; Normal execution
+          :else
+          (let [result (execute-schedule-entry exec-state)]
+            (when (and verbose (:last-result result))
+              (verbose-result "Goal"
+                              (:status (:last-result result))
+                              :turns (:turns-used (:last-result result) 0)
+                              :error (:error (:last-result result))))
+            (recur result entry)))))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; CONVENIENCE FUNCTIONS

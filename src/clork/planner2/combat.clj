@@ -446,3 +446,161 @@
   "Print a combat result to stdout."
   [result villain-id]
   (println (format-combat-result result villain-id)))
+
+;;; ---------------------------------------------------------------------------
+;;; RNG MANIPULATION FOR GUARANTEED WINS
+;;; ---------------------------------------------------------------------------
+;;; For speedruns, we need deterministic combat success.
+;;; This section provides functions to find RNG offsets that produce wins.
+
+(defn find-winning-rng-offset
+  "Find an RNG offset that produces a combat win.
+
+   Searches through RNG advances (0 to max-offset) to find one that
+   results in the player winning combat without dying.
+
+   Parameters:
+   - game-state: Current game state
+   - villain-id: :troll or :thief
+   - max-offset: Maximum RNG advance to try (default 100)
+   - max-turns: Maximum turns per simulated fight (default 20)
+
+   Returns {:offset n :turns t :weapon-drops w} on success, nil if no win found."
+  [game-state villain-id & {:keys [max-offset max-turns]
+                             :or {max-offset 100 max-turns 20}}]
+  (let [saved-state (random/save-state)
+        winner (:winner game-state)
+        weapon-id (combat-engine/find-weapon game-state winner)
+        ;; Setup clean fight state
+        villain-room (case villain-id
+                       :troll :troll-room
+                       :thief nil
+                       :cyclops :cyclops-room
+                       nil)
+        setup-state (-> game-state
+                        (assoc-in [:objects villain-id :strength] 2)
+                        (assoc-in [:objects winner :strength] 0))]
+    (try
+      (loop [offset 0]
+        (when (< offset max-offset)
+          ;; Restore to base state and advance by offset
+          (random/restore-state! saved-state)
+          (random/advance-rng! offset)
+
+          ;; Simulate the fight
+          (let [result (simulate-fight setup-state villain-id weapon-id max-turns)]
+            (if (= :win (:outcome result))
+              {:offset offset
+               :turns (:turns result)
+               :weapon-drops (:weapon-drops result)}
+              (recur (inc offset))))))
+      (finally
+        ;; Always restore original RNG state
+        (random/restore-state! saved-state)))))
+
+(defn prepare-winning-combat!
+  "Advance RNG to a position where combat will succeed.
+
+   Call this IMMEDIATELY before starting combat.
+   Returns the winning offset info, or nil if no win found.
+
+   IMPORTANT: After calling this, you must execute combat immediately
+   without any other RNG-consuming operations in between."
+  [game-state villain-id & {:keys [max-offset] :or {max-offset 100}}]
+  (if-let [result (find-winning-rng-offset game-state villain-id
+                                            :max-offset max-offset)]
+    (do
+      (random/advance-rng! (:offset result))
+      result)
+    nil))
+
+(defn combat-success-probability
+  "Estimate the probability of winning combat with current setup.
+
+   Runs multiple simulations and returns win rate.
+   Higher is better; 1.0 means certain victory.
+
+   Parameters:
+   - game-state: Current game state
+   - villain-id: :troll or :thief
+   - n: Number of simulations (default 20)"
+  [game-state villain-id & {:keys [n] :or {n 20}}]
+  (let [saved-state (random/save-state)
+        stats (run-combat-simulation game-state villain-id n :max-turns 20)]
+    (random/restore-state! saved-state)
+    (if (pos? (:total-fights stats))
+      (double (/ (:wins stats) (:total-fights stats)))
+      0.0)))
+
+(defn find-all-winning-offsets
+  "Find all RNG offsets (up to max-offset) that produce wins.
+
+   Useful for understanding RNG distribution and picking optimal offsets.
+   Returns vector of {:offset n :turns t :weapon-drops w}."
+  [game-state villain-id & {:keys [max-offset max-turns]
+                             :or {max-offset 50 max-turns 20}}]
+  (let [saved-state (random/save-state)
+        winner (:winner game-state)
+        weapon-id (combat-engine/find-weapon game-state winner)
+        setup-state (-> game-state
+                        (assoc-in [:objects villain-id :strength] 2)
+                        (assoc-in [:objects winner :strength] 0))]
+    (try
+      (vec
+       (for [offset (range max-offset)
+             :let [_ (random/restore-state! saved-state)
+                   _ (random/advance-rng! offset)
+                   result (simulate-fight setup-state villain-id weapon-id max-turns)]
+             :when (= :win (:outcome result))]
+         {:offset offset
+          :turns (:turns result)
+          :weapon-drops (:weapon-drops result)}))
+      (finally
+        (random/restore-state! saved-state)))))
+
+(defn best-winning-offset
+  "Find the winning offset with fewest turns.
+
+   Returns the offset that wins in minimum turns."
+  [game-state villain-id & {:keys [max-offset] :or {max-offset 50}}]
+  (let [wins (find-all-winning-offsets game-state villain-id :max-offset max-offset)]
+    (when (seq wins)
+      (apply min-key :turns wins))))
+
+;;; ---------------------------------------------------------------------------
+;;; INTEGRATION WITH EXECUTOR
+;;; ---------------------------------------------------------------------------
+
+(defn ensure-combat-success!
+  "Prepare RNG for successful combat and return info.
+
+   This is the main entry point for the executor to guarantee combat wins.
+   Call immediately before executing combat goals.
+
+   Returns:
+   - {:success? true :offset N :turns T} - Ready to win
+   - {:success? false :reason :xxx} - Cannot guarantee win
+
+   IMPORTANT: After a successful call, execute combat immediately!"
+  [game-state villain-id]
+  (let [ready-check (check-combat-ready game-state villain-id)]
+    (cond
+      ;; Cyclops doesn't need RNG - just say ulysses
+      (= villain-id :cyclops)
+      {:success? true :method :say-ulysses}
+
+      ;; Not ready for combat
+      (not (:ready? ready-check))
+      {:success? false
+       :reason :not-ready
+       :issues (:issues ready-check)}
+
+      ;; Find winning offset
+      :else
+      (if-let [result (prepare-winning-combat! game-state villain-id)]
+        {:success? true
+         :offset (:offset result)
+         :turns (:turns result)}
+        {:success? false
+         :reason :no-winning-offset
+         :villain villain-id}))))
