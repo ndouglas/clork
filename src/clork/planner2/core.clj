@@ -65,6 +65,8 @@
             path (:path nav-plan)
             next-room (when (> (count path) 1) (second path))
             direction (first (:directions nav-plan))
+            ;; Check if this is a teleport edge
+            teleport-action (when next-room (nav/teleport-action current next-room))
             ;; Only check if the NEXT room is dark, not the whole path
             ;; We'll handle later dark rooms when we get there
             next-room-dark? (and next-room (nav/dark-room? next-room))
@@ -73,20 +75,81 @@
             ;; (the lantern is the light source we need!)
             lantern-room (obs/find-object-room game-state :brass-lantern)
             going-for-lantern? (= room lantern-room)]
+        (let [pre-entry (nav/pre-entry-actions game-state current next-room)]
+          (cond
+            ;; Need light for next room but don't have it
+            ;; Exception: if we're going to get the lantern itself
+            (and next-room-dark? (not have-light?) (not going-for-lantern?))
+            {:decompose [(goals/lantern-on)]}
+
+            ;; Need an item first (like skeleton-key for grate)
+            (:needs-item pre-entry)
+            {:decompose [(goals/have-item (:needs-item pre-entry))]}
+
+            ;; Need pre-entry action (open door, unlock, move rug)
+            (:action pre-entry)
+            {:action (:action pre-entry)}
+
+            ;; This is a teleport edge - use teleport action
+            teleport-action
+            {:action teleport-action}
+
+            ;; Can move directly
+            direction
+            {:action {:verb :go :direction direction}}
+
+            ;; No direction available (shouldn't happen with valid path)
+            :else
+            {:stuck (str "No direction to move from " current " to " next-room)})))
+      ;; No path found - check if room requires a flag we don't have
+      (if-let [required-flag (nav/required-flag-for-room room)]
         (cond
-          ;; Need light for next room but don't have it
-          ;; Exception: if we're going to get the lantern itself
-          (and next-room-dark? (not have-light?) (not going-for-lantern?))
-          {:decompose [(goals/lantern-on)]}
+          ;; Flag already set - this shouldn't happen, but graph might be stale
+          (obs/flag-set? game-state required-flag)
+          {:stuck (str "No path to " room " (flag " required-flag " is set but still unreachable)")}
 
-          ;; Need pre-entry actions (open door, move rug)
-          (nav/pre-entry-actions game-state current next-room)
-          {:action (first (nav/pre-entry-actions game-state current next-room))}
+          ;; Need to achieve the flag first
+          ;; Map flags to goals
+          (= required-flag :troll-flag)
+          {:decompose [(goals/kill-enemy :troll)]}
 
-          ;; Can move directly
+          (= required-flag :cyclops-flag)
+          {:decompose [(goals/kill-enemy :cyclops)]}
+
           :else
-          {:action {:verb :go :direction direction}}))
-      {:stuck "No path to destination"})))
+          {:stuck (str "No path to " room " - need flag " required-flag)})
+        {:stuck (str "No path to " room)}))))
+
+;;; ---------------------------------------------------------------------------
+;;; SPECIAL ITEM ACQUISITION PUZZLES
+;;; ---------------------------------------------------------------------------
+
+(def item-puzzles
+  "Items that need special actions before they can be taken.
+   Map of item-id -> {:check fn, :action action-map, :description string}
+   :check is a fn [game-state] -> boolean, returns true if action still needed
+   :action is the action to execute
+   :description explains the puzzle"
+  {:platinum-bar
+   {:check (fn [gs] (not (:loud-flag gs)))  ; Need to say echo
+    :action {:verb :echo}  ; Note: :echo verb, not :say :echo
+    :description "Loud room puzzle - say echo to quiet the room"}
+
+   ;; Add more item puzzles as needed
+   ;; :crystal-skull - needs exorcism
+   ;; :huge-diamond - needs coal + machine
+   })
+
+(defn item-needs-puzzle?
+  "Check if an item needs a puzzle to be solved before taking."
+  [game-state item]
+  (when-let [puzzle (get item-puzzles item)]
+    ((:check puzzle) game-state)))
+
+(defn item-puzzle-action
+  "Get the action needed to solve an item's puzzle."
+  [item]
+  (:action (get item-puzzles item)))
 
 ;; have-item: Take if visible, otherwise decompose
 (defmethod select-action-for-goal :have-item
@@ -105,6 +168,11 @@
       ;; Already have it
       (obs/has-item? game-state item)
       {:satisfied true}
+
+      ;; Item needs a puzzle solved first
+      (and (obs/object-visible? game-state item)
+           (item-needs-puzzle? game-state item))
+      {:action (item-puzzle-action item)}
 
       ;; Item is visible - take it
       (obs/object-visible? game-state item)

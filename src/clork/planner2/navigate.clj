@@ -24,7 +24,13 @@
                            :pre-action {:verb :move :direct-object :rug}}
    ;; Trap door can't be opened from below - it's barred from above!
    [:cellar :living-room] {:door :trap-door
-                           :one-way? true}})
+                           :one-way? true}
+   ;; Grating from maze to clearing (requires skeleton-key to unlock)
+   [:grating-room :grating-clearing] {:door :grate
+                                       :requires-unlock? true
+                                       :key :skeleton-key
+                                       :unlock-action {:verb :unlock :direct-object :grate :prep :with :indirect-object :skeleton-key}
+                                       :open-action {:verb :open :direct-object :grate}}})
 
 (def one-way-blocked-exits
   "Exits that are completely blocked and cannot be traversed.
@@ -78,6 +84,163 @@
   (get door-blocked-exits [from-room to-room]))
 
 ;;; ---------------------------------------------------------------------------
+;;; TELEPORT EDGES
+;;; ---------------------------------------------------------------------------
+
+(def teleport-edges
+  "Virtual navigation edges via special actions.
+   Map of [from-room to-room] -> {:action action-map :description string}
+   These are added to the navigation graph as one-way edges."
+  {[:south-temple :forest-1]
+   {:action {:verb :pray}
+    :description "Prayer teleport from temple"}
+
+   ;; Add more teleports as needed:
+   ;; Mirror rooms could have teleport edges
+   ;; [:mirror-room-south :mirror-room-north] - need to implement
+   })
+
+(defn add-teleport-edges
+  "Add teleport edges to a room graph."
+  [graph]
+  (reduce
+   (fn [g [[from-room to-room] _]]
+     (update g from-room (fnil conj #{}) to-room))
+   graph
+   teleport-edges))
+
+(defn teleport-action
+  "Get the teleport action for a room transition, or nil if not a teleport."
+  [from-room to-room]
+  (get-in teleport-edges [[from-room to-room] :action]))
+
+;;; ---------------------------------------------------------------------------
+;;; FLAG-GATED REGIONS
+;;; ---------------------------------------------------------------------------
+
+(def flag-requirements
+  "Map of rooms to flags required to reach them.
+   If a room is unreachable, check if setting one of these flags would help.
+
+   IMPORTANT: All underground rooms (accessible only through troll-room area)
+   require troll-flag because you must kill the troll to pass."
+  {;; Trap door accessible area (one-way in via trap door, exit via maze after troll dead)
+   :east-of-chasm :troll-flag
+   :gallery :troll-flag
+   :studio :troll-flag
+   :dark-area :troll-flag
+
+   ;; Beyond troll - main underground complex
+   ;; NOTE: troll-room itself is NOT here - we need to reach it to kill troll
+   :east-west-passage :troll-flag
+   :round-room :troll-flag
+   :narrow-passage :troll-flag
+   :mirror-room-1 :troll-flag
+   :mirror-room-2 :troll-flag
+   :winding-passage :troll-flag
+   :small-cave :troll-flag
+   :engravings-cave :troll-flag
+   :dome-room :troll-flag
+   :torch-room :troll-flag
+   :cold-passage :troll-flag
+   :slide-room :troll-flag
+   :ns-passage :troll-flag
+   :chasm-room :troll-flag
+   :deep-canyon :troll-flag
+   :canyon-view :troll-flag
+   :canyon-bottom :troll-flag
+   :cliff-middle :troll-flag
+
+   ;; Temple area
+   :north-temple :troll-flag
+   :south-temple :troll-flag
+   :egypt-room :troll-flag
+   :shaft-room :troll-flag
+   :tiny-cave :troll-flag
+
+   ;; Hades area
+   :entrance-to-hades :troll-flag
+   :land-of-living-dead :troll-flag
+
+   ;; Loud room / dam area
+   :loud-room :troll-flag
+   :dam-room :troll-flag
+   :dam-base :troll-flag
+   :dam-lobby :troll-flag
+   :maintenance-room :troll-flag
+   :reservoir :troll-flag
+   :reservoir-north :troll-flag
+   :reservoir-south :troll-flag
+   :stream-view :troll-flag
+   :in-stream :troll-flag
+
+   ;; Atlantis / bat cave area
+   :atlantis-room :troll-flag
+   :bat-room :troll-flag
+   :squeeky-room :troll-flag
+   :twisting-passage :troll-flag
+
+   ;; Mine entrance and mine
+   :mine-entrance :troll-flag
+   :mine-1 :troll-flag
+   :mine-2 :troll-flag
+   :mine-3 :troll-flag
+   :mine-4 :troll-flag
+   :ladder-top :troll-flag
+   :ladder-bottom :troll-flag
+   :timber-room :troll-flag
+   :lower-shaft :troll-flag
+   :machine-room :troll-flag
+   :gas-room :troll-flag
+   :smelly-room :troll-flag
+
+   ;; Maze
+   :maze-1 :troll-flag
+   :maze-2 :troll-flag
+   :maze-3 :troll-flag
+   :maze-4 :troll-flag
+   :maze-5 :troll-flag
+   :maze-6 :troll-flag
+   :maze-7 :troll-flag
+   :maze-8 :troll-flag
+   :maze-9 :troll-flag
+   :maze-10 :troll-flag
+   :maze-11 :troll-flag
+   :maze-12 :troll-flag
+   :maze-13 :troll-flag
+   :maze-14 :troll-flag
+   :maze-15 :troll-flag
+   :dead-end-1 :troll-flag
+   :dead-end-2 :troll-flag
+   :dead-end-3 :troll-flag
+   :dead-end-4 :troll-flag
+   :dead-end-5 :troll-flag
+   :grating-room :troll-flag
+   :grating-clearing :troll-flag
+
+   ;; River / beaches
+   :shore :troll-flag
+   :sandy-beach :troll-flag
+   :sandy-cave :troll-flag
+   :white-cliffs-north :troll-flag
+   :white-cliffs-south :troll-flag
+
+   ;; Rainbow area
+   :end-of-rainbow :troll-flag
+   :on-rainbow :troll-flag
+   :aragain-falls :troll-flag
+
+   ;; Beyond cyclops (requires killing cyclops after troll)
+   :cyclops-room :troll-flag
+   :strange-passage :cyclops-flag
+   :treasure-room :cyclops-flag})
+
+(defn required-flag-for-room
+  "Get the flag required to reach a room, or nil if no special flag needed."
+  [room]
+  (get flag-requirements room))
+
+;;; ---------------------------------------------------------------------------
 ;;; ROOM GRAPH CONSTRUCTION
 ;;; ---------------------------------------------------------------------------
 
@@ -97,47 +260,61 @@
 
    This builds a PERMISSIVE graph that includes door-blocked exits,
    assuming doors can be opened. Flag-gated exits are only included
-   if the flag is already set. One-way blocked exits are excluded."
+   if the flag is already set. One-way blocked exits are excluded.
+   Teleport edges are always included.
+
+   NOTE: Destinations in flag-requirements are excluded unless the
+   required flag is set. This prevents navigation into trap areas
+   (like the gallery via trap door) without a viable return path."
   [game-state]
-  (reduce-kv
-   (fn [graph room-id room-def]
-     (let [exits (:exits room-def {})
-           destinations
-           (reduce-kv
-            (fn [s dir exit-def]
-              (let [dest (parse-exit-destination exit-def)]
-                (cond
-                  ;; No destination
-                  (nil? dest) s
+  (-> (reduce-kv
+       (fn [graph room-id room-def]
+         (let [exits (:exits room-def {})
+               destinations
+               (reduce-kv
+                (fn [s dir exit-def]
+                  (let [dest (parse-exit-destination exit-def)]
+                    (cond
+                      ;; No destination
+                      (nil? dest) s
 
-                  ;; One-way blocked exit - never include
-                  (contains? one-way-blocked-exits [room-id dest])
-                  s
+                      ;; One-way blocked exit - never include
+                      (contains? one-way-blocked-exits [room-id dest])
+                      s
 
-                  ;; Flag-gated exit - only include if flag is set
-                  (and (map? exit-def) (:if exit-def))
-                  (if (get game-state (:if exit-def))
-                    (conj s dest)
-                    s)
+                      ;; Destination requires a flag we don't have
+                      ;; (from flag-requirements map - prevents trap areas)
+                      (and (contains? flag-requirements dest)
+                           (not (get game-state (get flag-requirements dest))))
+                      s
 
-                  ;; Door-gated exit - include (we can open doors)
-                  (and (map? exit-def) (:door exit-def))
-                  (conj s dest)
+                      ;; Flag-gated exit - only include if flag is set
+                      (and (map? exit-def) (:if exit-def))
+                      (if (get game-state (:if exit-def))
+                        (conj s dest)
+                        s)
 
-                  ;; Regular exit
-                  :else
-                  (conj s dest))))
-            #{}
-            exits)]
-       (assoc graph room-id destinations)))
-   {}
-   (:rooms game-state)))
+                      ;; Door-gated exit - include (we can open doors)
+                      (and (map? exit-def) (:door exit-def))
+                      (conj s dest)
+
+                      ;; Regular exit
+                      :else
+                      (conj s dest))))
+                #{}
+                exits)]
+           (assoc graph room-id destinations)))
+       {}
+       (:rooms game-state))
+      ;; Add teleport edges
+      add-teleport-edges))
 
 (defn build-room-graph-with-directions
   "Build a navigation graph that tracks direction for each connection.
    Returns map of room-id -> {dest-room-id -> direction}.
 
-   Like build-room-graph, includes door-blocked exits but excludes one-way blocked."
+   Like build-room-graph, includes door-blocked exits but excludes one-way blocked
+   and destinations requiring flags we don't have."
   [game-state]
   (reduce-kv
    (fn [graph room-id room-def]
@@ -151,6 +328,11 @@
 
                   ;; One-way blocked exit - never include
                   (contains? one-way-blocked-exits [room-id dest])
+                  m
+
+                  ;; Destination requires a flag we don't have
+                  (and (contains? flag-requirements dest)
+                       (not (get game-state (get flag-requirements dest))))
                   m
 
                   ;; Flag-gated - only include if flag set
@@ -278,18 +460,30 @@
 
 ;; Some rooms require special actions before entering
 
+(defn door-unlocked?
+  "Check if a door has been unlocked.
+   Some doors set flags when unlocked (like :grunlock for grate)."
+  [game-state door]
+  (case door
+    :grate (get game-state :grunlock)
+    true))  ; Most doors don't have separate lock state
+
 (defn pre-entry-actions
   "Get any actions required before navigating from one room to another.
-   Returns vector of actions or nil."
+   Returns map with :action (next action) and :needs-item (item needed first) or nil."
   [game-state from-room to-room]
   (when-let [info (door-info from-room to-room)]
-    (let [{:keys [door open-action pre-action]} info
+    (let [{:keys [door open-action pre-action requires-unlock? key unlock-action]} info
           door-open? (obs/object-open? game-state door)
+          door-unlocked? (door-unlocked? game-state door)
           ;; Check if pre-action is needed (e.g., move rug before trap door)
           pre-needed? (and pre-action
                            (case (:verb pre-action)
                              :move (not (obs/flag-set? game-state :rug-moved))
-                             true))]
+                             true))
+          ;; Check if we need to unlock and have the key
+          need-unlock? (and requires-unlock? (not door-unlocked?))
+          have-key? (when key (obs/has-item? game-state key))]
       (cond
         ;; Door already open, nothing needed
         door-open?
@@ -297,11 +491,19 @@
 
         ;; Need pre-action first (rug)
         pre-needed?
-        [pre-action]
+        {:action pre-action}
+
+        ;; Need to unlock but don't have key
+        (and need-unlock? (not have-key?))
+        {:needs-item key}
+
+        ;; Need to unlock and have key
+        (and need-unlock? have-key?)
+        {:action unlock-action}
 
         ;; Just need to open door
         :else
-        [open-action]))))
+        {:action open-action}))))
 
 (defn full-navigation-sequence
   "Get the full sequence of actions to navigate to a destination.

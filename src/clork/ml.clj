@@ -541,8 +541,12 @@
             parser-state)
 
           ;; Set up game state with parser info
+          ;; Important: We replace :prsa/:prso/:prsi rather than merge to avoid
+          ;; stale values from previous actions affecting current action
           gs-with-parser (assoc game-state :parser
-                                (merge (:parser game-state) final-parser-state))
+                                (-> (:parser game-state)
+                                    (dissoc :prsa :prso :prsi)
+                                    (merge final-parser-state)))
 
           ;; Capture output via atom
           output-buffer (atom [])
