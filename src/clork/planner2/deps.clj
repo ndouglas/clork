@@ -87,25 +87,34 @@
   "Get all prep actions needed for a given prep, including transitive deps.
    Returns preps in dependency order (dependencies first)."
   [prep-id]
-  (loop [to-process #{prep-id}
-         processed #{}
+  (loop [stack [prep-id]      ; Stack of nodes to visit
+         visited #{}          ; Nodes we've fully visited
+         visiting #{}         ; Nodes currently being visited (on stack)
          result []]
-    (if (empty? to-process)
+    (if (empty? stack)
       result
-      (let [current (first to-process)
-            deps (prep-depends-on-prep current)
-            unprocessed-deps (set/difference deps processed)]
-        (if (empty? unprocessed-deps)
-          ;; All deps processed, we can add this one
-          (recur (disj to-process current)
-                 (conj processed current)
-                 (if (processed current)
-                   result
-                   (conj result current)))
-          ;; Need to process deps first
-          (recur (set/union to-process unprocessed-deps)
-                 processed
-                 result))))))
+      (let [current (peek stack)]
+        (cond
+          ;; Already fully processed
+          (visited current)
+          (recur (pop stack) visited visiting result)
+
+          ;; First time seeing this node
+          (not (visiting current))
+          (let [deps (prep-depends-on-prep current)
+                unvisited-deps (remove visited deps)]
+            ;; Push deps onto stack, mark current as visiting
+            (recur (into (pop stack) (cons current unvisited-deps))
+                   visited
+                   (conj visiting current)
+                   result))
+
+          ;; All deps are done, finalize this node
+          :else
+          (recur (pop stack)
+                 (conj visited current)
+                 (disj visiting current)
+                 (conj result current)))))))
 
 (defn transitive-treasure-deps
   "Get all prep actions needed for a treasure, including transitive deps.
@@ -130,37 +139,32 @@
    Returns nil if there's a cycle."
   [prep-ids]
   (let [;; Build adjacency list for just the specified preps
+        ;; edges[p] = set of preps that p depends on
         preps (set prep-ids)
-        edges (into {}
-                    (for [p preps]
-                      [p (set/intersection (prep-depends-on-prep p) preps)]))
-        ;; Count incoming edges
-        in-degree (reduce (fn [degrees [_ deps]]
-                            (reduce (fn [d dep]
-                                      (update d dep (fnil inc 0)))
-                                    degrees
-                                    deps))
-                          (zipmap preps (repeat 0))
-                          edges)]
+        deps-of (into {}
+                      (for [p preps]
+                        [p (set/intersection (prep-depends-on-prep p) preps)]))
+        ;; Count dependencies (number of preps each prep depends on)
+        dep-count (into {} (for [[p deps] deps-of] [p (count deps)]))]
     (loop [result []
            remaining preps
-           degrees in-degree]
+           counts dep-count]
       (if (empty? remaining)
         result
-        ;; Find nodes with no incoming edges
-        (let [ready (filter #(zero? (get degrees % 0)) remaining)]
+        ;; Find nodes with no unprocessed dependencies
+        (let [ready (filter #(zero? (get counts % 0)) remaining)]
           (if (empty? ready)
             nil  ; Cycle detected!
             (let [node (first ready)
                   new-remaining (disj remaining node)
-                  ;; Decrease in-degree for nodes that depended on this
+                  ;; Decrease count for nodes that depend on this node
                   dependents (for [p new-remaining
-                                   :when (contains? (get edges p) node)]
+                                   :when (contains? (get deps-of p) node)]
                                p)
-                  new-degrees (reduce #(update %1 %2 dec) degrees dependents)]
+                  new-counts (reduce #(update %1 %2 dec) counts dependents)]
               (recur (conj result node)
                      new-remaining
-                     new-degrees))))))))
+                     new-counts))))))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; CYCLE DETECTION

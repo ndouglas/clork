@@ -284,7 +284,10 @@
    {:treasures [ordered treasures]
     :preps [required prep actions in order]
     :route [room visits in order]
-    :total-distance estimated-moves}"
+    :total-distance estimated-moves}
+
+   NOTE: Includes ALL requested treasures, even if currently unreachable.
+   The executor will enable access through prep actions."
   [game-state treasures]
   (let [;; Get required preps
         preps (required-preps-for-treasures treasures)
@@ -297,26 +300,34 @@
         graph (nav/build-room-graph game-state)
         distances (:dist (floyd-warshall graph))
 
-        ;; Get reachable treasures
+        ;; Get reachable treasures (for optimization)
         treasure-locs (map treasure-location treasures)
         reachable (filter #(< (distance distances :living-room %) Integer/MAX_VALUE)
                           treasure-locs)
+        unreachable-locs (remove (set reachable) treasure-locs)
 
-        ;; Optimize treasure order
+        ;; Optimize reachable treasure order
         optimized-locs (if (empty? reachable)
                          []
                          (optimize-route distances :living-room reachable))
 
-        ;; Map back to treasures
-        loc->treasure (zipmap (map treasure-location treasures) treasures)
-        optimized-treasures (keep loc->treasure optimized-locs)
+        ;; Map back to treasures - include ALL treasures
+        ;; Reachable ones in optimized order, unreachable ones at the end
+        ;; NOTE: Multiple treasures can be at the same location, so use a multimap
+        loc->treasures (reduce (fn [m t]
+                                 (update m (treasure-location t) (fnil conj []) t))
+                               {}
+                               treasures)
+        reachable-treasures (mapcat #(get loc->treasures % []) optimized-locs)
+        unreachable-treasures (mapcat #(get loc->treasures % []) unreachable-locs)
+        all-treasures (concat reachable-treasures unreachable-treasures)
 
-        ;; Calculate distance
+        ;; Calculate distance (only for reachable part)
         total-dist (route-length distances :living-room optimized-locs)]
 
-    {:treasures (vec optimized-treasures)
+    {:treasures (vec all-treasures)
      :preps (vec preps)
-     :route (vec optimized-locs)
+     :route (vec (concat optimized-locs unreachable-locs))
      :total-distance total-dist}))
 
 (defn plan-full-route

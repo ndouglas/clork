@@ -109,6 +109,16 @@
    graph
    teleport-edges))
 
+(defn add-teleport-edges-with-directions
+  "Add teleport edges to a direction graph.
+   Uses :teleport as the 'direction' marker."
+  [graph]
+  (reduce
+   (fn [g [[from-room to-room] _]]
+     (update g from-room (fnil assoc {}) to-room :teleport))
+   graph
+   teleport-edges))
+
 (defn teleport-action
   "Get the teleport action for a room transition, or nil if not a teleport."
   [from-room to-room]
@@ -314,41 +324,44 @@
    Returns map of room-id -> {dest-room-id -> direction}.
 
    Like build-room-graph, includes door-blocked exits but excludes one-way blocked
-   and destinations requiring flags we don't have."
+   and destinations requiring flags we don't have. Also includes teleport edges
+   with :teleport as the direction marker."
   [game-state]
-  (reduce-kv
-   (fn [graph room-id room-def]
-     (let [exits (:exits room-def {})
-           dest-to-dir
-           (reduce-kv
-            (fn [m dir exit-def]
-              (let [dest (parse-exit-destination exit-def)]
-                (cond
-                  (nil? dest) m
+  (-> (reduce-kv
+       (fn [graph room-id room-def]
+         (let [exits (:exits room-def {})
+               dest-to-dir
+               (reduce-kv
+                (fn [m dir exit-def]
+                  (let [dest (parse-exit-destination exit-def)]
+                    (cond
+                      (nil? dest) m
 
-                  ;; One-way blocked exit - never include
-                  (contains? one-way-blocked-exits [room-id dest])
-                  m
+                      ;; One-way blocked exit - never include
+                      (contains? one-way-blocked-exits [room-id dest])
+                      m
 
-                  ;; Destination requires a flag we don't have
-                  (and (contains? flag-requirements dest)
-                       (not (get game-state (get flag-requirements dest))))
-                  m
+                      ;; Destination requires a flag we don't have
+                      (and (contains? flag-requirements dest)
+                           (not (get game-state (get flag-requirements dest))))
+                      m
 
-                  ;; Flag-gated - only include if flag set
-                  (and (map? exit-def) (:if exit-def))
-                  (if (get game-state (:if exit-def))
-                    (assoc m dest dir)
-                    m)
+                      ;; Flag-gated - only include if flag set
+                      (and (map? exit-def) (:if exit-def))
+                      (if (get game-state (:if exit-def))
+                        (assoc m dest dir)
+                        m)
 
-                  ;; Door-gated or regular - include
-                  :else
-                  (assoc m dest dir))))
-            {}
-            exits)]
-       (assoc graph room-id dest-to-dir)))
-   {}
-   (:rooms game-state)))
+                      ;; Door-gated or regular - include
+                      :else
+                      (assoc m dest dir))))
+                {}
+                exits)]
+           (assoc graph room-id dest-to-dir)))
+       {}
+       (:rooms game-state))
+      ;; Add teleport edges with :teleport as direction marker
+      add-teleport-edges-with-directions))
 
 ;;; ---------------------------------------------------------------------------
 ;;; A* PATHFINDING
@@ -446,13 +459,19 @@
 (defn select-movement-action
   "Select a movement action to make progress toward a room goal.
 
-   Returns an action map {:verb :go :direction <dir>} or nil if stuck."
+   Returns an action map {:verb :go :direction <dir>} or teleport action, or nil if stuck."
   [game-state dest-room]
   (let [current (obs/current-room game-state)]
     (if (= current dest-room)
       nil  ; Already there
       (when-let [direction (next-move-toward game-state dest-room)]
-        {:verb :go :direction direction}))))
+        (if (= direction :teleport)
+          ;; For teleport, look up the actual teleport action
+          (let [graph (build-room-graph game-state)
+                path (find-path graph current dest-room)]
+            (when (and path (>= (count path) 2))
+              (teleport-action current (second path))))
+          {:verb :go :direction direction})))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; SPECIAL NAVIGATION HANDLING
@@ -507,7 +526,7 @@
 
 (defn full-navigation-sequence
   "Get the full sequence of actions to navigate to a destination.
-   Includes any pre-entry requirements.
+   Includes any pre-entry requirements and teleport actions.
 
    Returns vector of actions or nil if not reachable."
   [game-state dest-room]
@@ -523,8 +542,12 @@
                 to (second path-remaining)
                 dir (first dirs-remaining)
                 pre-actions (pre-entry-actions game-state from to)
-                move-action {:verb :go :direction dir}]
-            (recur (into actions (concat (or pre-actions []) [move-action]))
+                ;; Use teleport action for teleport edges, regular move otherwise
+                move-action (if (= dir :teleport)
+                              (teleport-action from to)
+                              {:verb :go :direction dir})]
+            (recur (into actions (concat (when pre-actions [(:action pre-actions)])
+                                         [move-action]))
                    (rest path-remaining)
                    (rest dirs-remaining))))))))
 

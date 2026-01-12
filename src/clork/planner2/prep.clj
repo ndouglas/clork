@@ -95,7 +95,7 @@
 
    :kitchen-window-open
    {:description "Open kitchen window for entry"
-    :location :east-of-house
+    :location :behind-house
     :requires #{}
     :action {:verb :open :direct-object :kitchen-window}
     :enables #{:kitchen}}
@@ -168,7 +168,8 @@
     :requires #{:gate-flag :wrench}
     :action {:verb :turn :direct-object :bolt :indirect-object :wrench}
     :triggers :low-tide  ; will set low-tide after delay
-    :delay 8}            ; 8 turns until reservoir drains
+    :delay 8             ; 8 turns until reservoir drains
+    :enables #{}}        ; no immediate enables, low-tide triggers later
 
    :low-tide
    {:description "Reservoir drained (triggered by gates-open after delay)"
@@ -230,6 +231,7 @@
     :requires #{:coffin-cure}
     :action {:verb :pray}
     :destination :forest-1
+    :enables #{}  ; teleport action, doesn't enable regions
     :note "One-way escape from temple area"}
 
    ;;; =========================================================================
@@ -285,6 +287,7 @@
     :requires #{:troll-flag}
     :action {:verb :touch :direct-object :mirror}
     :destination :mirror-room-opposite  ; teleports to other mirror room
+    :enables #{}  ; teleport action, doesn't enable regions
     :note "Reusable teleport between north and south mirror rooms"}})
 
 ;;; ---------------------------------------------------------------------------
@@ -440,6 +443,7 @@
    :pot-of-gold {:required #{:rainbow-flag}}  ; need sceptre first
    :crystal-skull {:required #{:troll-flag :dome-flag :lld-flag}}  ; exorcism
    :trunk {:required #{:troll-flag :low-tide :thief-flag}}  ; thief's lair
+   :jewel-encrusted-trunk {:required #{:troll-flag :low-tide :thief-flag}}  ; alias for trunk
    :clockwork-canary {:required #{:thief-flag}}  ; thief opens egg
    :gold-coffin {:required #{:troll-flag :dome-flag :coffin-cure}}
    :huge-diamond {:required #{:troll-flag :machine-activated}}
@@ -447,7 +451,10 @@
    :brass-bauble {:required #{:troll-flag}}  ; maze area
    :zorkmid-coins {:required #{:troll-flag}}  ; dead end in maze
    :china-figurine {:required #{:troll-flag}}  ; maze area
-   :sapphire {:required #{:troll-flag :low-tide}}})  ; atlantis
+   ;; Additional treasures from goals.clj
+   :jeweled-scarab {:required #{:troll-flag}}  ; sandy-cave, need shovel
+   :large-emerald {:required #{:troll-flag}}  ; buoy in reservoir area
+   :crystal-trident {:required #{:troll-flag :low-tide}}})  ; atlantis-room
 
 ;;; ---------------------------------------------------------------------------
 ;;; PREP ACTION ORDERING
