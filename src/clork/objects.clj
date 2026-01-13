@@ -709,29 +709,29 @@
       ;; THROW bottle - shatters it
       (and (= prsa :throw) (= prso :bottle))
       (let [gs (-> game-state
-                   (assoc-in [:objects :bottle :in] :limbo)
+                   (gs/move-object :bottle :limbo :bottle-shatter)
                    (utils/tell "The bottle hits the far wall and shatters."))]
         (if has-water?
           (-> gs
-              (assoc-in [:objects :water :in] :limbo)
+              (gs/move-object :water :limbo :water-spill)
               (utils/tell " The water spills to the floor and evaporates."))
           gs))
 
       ;; MUNG/DESTROY bottle
       (and (= prsa :mung) (= prso :bottle))
       (let [gs (-> game-state
-                   (assoc-in [:objects :bottle :in] :limbo)
+                   (gs/move-object :bottle :limbo :bottle-destroy)
                    (utils/tell "A brilliant maneuver destroys the bottle."))]
         (if has-water?
           (-> gs
-              (assoc-in [:objects :water :in] :limbo)
+              (gs/move-object :water :limbo :water-spill)
               (utils/tell " The water spills to the floor and evaporates."))
           gs))
 
       ;; SHAKE open bottle with water - spills water
       (and (= prsa :shake) is-open? has-water?)
       (-> game-state
-          (assoc-in [:objects :water :in] :limbo)
+          (gs/move-object :water :limbo :water-spill)
           (utils/tell "The water spills to the floor and evaporates."))
 
       ;; Not handled
@@ -897,7 +897,7 @@
                  (if rug-moved?
                    (utils/tell game-state "Having moved the carpet previously, you find it impossible to move it again.")
                    (-> game-state
-                       (assoc :rug-moved true)
+                       (gs/set-game-flag :rug-moved)
                        (gs/unset-thing-flag :trap-door :invisible)
                        (utils/this-is-it :trap-door)
                        (utils/tell "With a great effort, the rug is moved to one side of the room, revealing the dusty cover of a closed trap door.")))
@@ -967,7 +967,7 @@
       (cond
         (= prsa :tie)
         (-> game-state
-            (assoc :dome-flag false)
+            (gs/unset-game-flag :dome-flag)
             (utils/tell "You can't tie the rope to that."))
         :else nil)
 
@@ -976,10 +976,10 @@
       (if dome-flag
         (utils/tell game-state "The rope is already tied to it.")
         (-> game-state
-            (assoc :dome-flag true)
+            (gs/set-game-flag :dome-flag)
             (gs/set-thing-flag :rope :ndesc)
             ;; Move rope to dome room if not already there
-            (assoc-in [:objects :rope :in] :dome-room)
+            (gs/move-object :rope :dome-room :rope-tie)
             (utils/tell "The rope drops over the side and comes within ten feet of the floor.")))
 
       ;; CLIMB-DOWN the rope when tied
@@ -1005,7 +1005,7 @@
       (= prsa :untie)
       (if dome-flag
         (-> game-state
-            (assoc :dome-flag false)
+            (gs/unset-game-flag :dome-flag)
             (gs/unset-thing-flag :rope :ndesc)
             (utils/tell "The rope is now untied."))
         (utils/tell game-state "It is not tied to anything."))
@@ -1013,7 +1013,7 @@
       ;; DROP rope in Dome Room when not tied
       (and (= prsa :drop) (= here :dome-room) (not dome-flag))
       (-> game-state
-          (assoc-in [:objects :rope :in] :torch-room)
+          (gs/move-object :rope :torch-room :rope-drop)
           (utils/tell "The rope drops gently to the floor below."))
 
       ;; TAKE rope when tied
@@ -1316,13 +1316,13 @@ You are the privileged owner of ZORK I: The Great Underground Empire, a self-con
                    ;; Rainbow already solid - toggle it off
                    ;; ZIL: <ROB ,ON-RAINBOW ,WALL> and set RAINBOW-FLAG <>
                    (-> game-state
-                       (assoc :rainbow-flag false)
+                       (gs/unset-game-flag :rainbow-flag)
                        (utils/tell "The rainbow seems to have become somewhat run-of-the-mill."))
                    ;; Make the rainbow solid and reveal pot of gold
                    ;; ZIL: "Suddenly, the rainbow appears to become solid and, I venture,
                    ;;       walkable (I think the giveaway was the stairs and bannister)."
                    (let [gs (-> game-state
-                                (assoc :rainbow-flag true)
+                                (gs/set-game-flag :rainbow-flag)
                                 (gs/unset-thing-flag :pot-of-gold :invisible)
                                 (utils/tell "Suddenly, the rainbow appears to become solid and, I venture, walkable (I think the giveaway was the stairs and bannister)."))]
                      ;; If at end-of-rainbow and pot is there, show extra message
@@ -1472,14 +1472,15 @@ You are the privileged owner of ZORK I: The Great Underground Empire, a self-con
 
       ;; POUR-ON (water cools it)
       (= prsa :pour-on)
-      (let [prso (parser-state/get-prso game-state)]
+      (let [prso (parser-state/get-prso game-state)
+            here (:here game-state)]
         (-> game-state
-            (assoc-in [:objects prso :in] :limbo)  ; Remove water
+            (gs/move-object prso :limbo :water-evaporate)  ; Remove water
             (utils/tell "The water cools the bell and is evaporated.")
             ;; Trigger I-XBH to swap hot bell back to normal bell
             ;; For now, just do the swap directly
-            (assoc-in [:objects :hot-bell :in] :limbo)
-            (assoc-in [:objects :brass-bell :in] (:here game-state))))
+            (gs/move-object :hot-bell :limbo :bell-cool)
+            (gs/move-object :brass-bell here :bell-cool)))
 
       ;; RING (without instrument)
       (= prsa :ring)
@@ -1701,7 +1702,7 @@ Surely thou shalt repent of thy cunning."})
                  (let [bauble-loc (if (= here :up-a-tree) :forest-path here)]
                    (-> game-state
                        (assoc :canary-sung true)
-                       (assoc-in [:objects :brass-bauble :in] bauble-loc)
+                       (gs/move-object :brass-bauble bauble-loc :canary-sing)
                        (gs/unset-thing-flag :brass-bauble :invisible)
                        (utils/tell "The canary chirps, slightly off-key, an aria from a forgotten opera. From out of the greenery flies a lovely songbird. It perches on a limb just over your head and opens its beak to sing. As it does so a beautiful brass bauble drops from its mouth, bounces off the top of your head, and lands glimmering in the grass. As the canary winds down, the songbird flies away.")))
 
@@ -2089,15 +2090,15 @@ Surely thou shalt repent of thy cunning."})
         (cond-> canary-in-egg?
           (utils/tell (str " " broken-canary-fdesc)))
         ;; Move broken-egg to where egg was
-        (assoc-in [:objects :broken-egg :in] egg-loc)
+        (gs/move-object :broken-egg egg-loc :egg-break)
         ;; If canary was in egg, move broken-canary into broken-egg
         (cond-> canary-in-egg?
-          (assoc-in [:objects :broken-canary :in] :broken-egg))
+          (gs/move-object :broken-canary :broken-egg :egg-break))
         ;; Remove the original egg from the game
-        (assoc-in [:objects :egg :in] :limbo)
+        (gs/move-object :egg :limbo :egg-break)
         ;; Remove the original canary if it was in the egg
         (cond-> canary-in-egg?
-          (assoc-in [:objects :clockwork-canary :in] :limbo)))))
+          (gs/move-object :clockwork-canary :limbo :egg-break)))))
 
 (def egg
   {:id :egg
@@ -2214,7 +2215,7 @@ Surely thou shalt repent of thy cunning."})
         (-> game-state
             (gs/set-thing-flag :axe :ndesc)
             (gs/unset-thing-flag :axe :weapon)
-            (assoc-in [:objects :axe :in] :troll)
+            (gs/move-object :axe :troll :troll-recover)
             (assoc-in [:objects :troll :ldesc]
                       "A nasty-looking troll, brandishing a bloody axe, blocks all passages out of the room.")
             (cond-> troll-here?
@@ -2235,11 +2236,11 @@ Surely thou shalt repent of thy cunning."})
       (-> game-state
           ;; Drop axe if holding it
           (cond-> axe-in-troll?
-            (-> (assoc-in [:objects :axe :in] here)
+            (-> (gs/move-object :axe here :troll-drop)
                 (gs/unset-thing-flag :axe :ndesc)
                 (gs/set-thing-flag :axe :weapon)))
           ;; Set troll-flag to open passages
-          (assoc :troll-flag true))
+          (gs/set-game-flag :troll-flag))
 
       ;; F-UNCONSCIOUS - Troll knocked out
       :f-unconscious
@@ -2247,14 +2248,14 @@ Surely thou shalt repent of thy cunning."})
           (gs/unset-thing-flag :troll :fight)
           ;; Drop axe if holding it
           (cond-> axe-in-troll?
-            (-> (assoc-in [:objects :axe :in] here)
+            (-> (gs/move-object :axe here :troll-drop)
                 (gs/unset-thing-flag :axe :ndesc)
                 (gs/set-thing-flag :axe :weapon)))
           ;; Update description
           (assoc-in [:objects :troll :ldesc]
                     "An unconscious troll is sprawled on the floor. All passages out of the room are open.")
           ;; Open passages
-          (assoc :troll-flag true))
+          (gs/set-game-flag :troll-flag))
 
       ;; F-CONSCIOUS - Troll wakes up
       :f-conscious
@@ -2269,23 +2270,23 @@ Surely thou shalt repent of thy cunning."})
           (-> gs
               (assoc-in [:objects :troll :ldesc]
                         "A nasty-looking troll, brandishing a bloody axe, blocks all passages out of the room.")
-              (assoc :troll-flag false))
+              (gs/unset-game-flag :troll-flag))
 
           ;; Axe is in troll room - pick it up
           (= (gs/get-thing-loc-id gs :axe) :troll-room)
           (-> gs
               (gs/set-thing-flag :axe :ndesc)
               (gs/unset-thing-flag :axe :weapon)
-              (assoc-in [:objects :axe :in] :troll)
+              (gs/move-object :axe :troll :troll-pickup)
               (assoc-in [:objects :troll :ldesc]
                         "A nasty-looking troll, brandishing a bloody axe, blocks all passages out of the room.")
-              (assoc :troll-flag false))
+              (gs/unset-game-flag :troll-flag))
 
           ;; No axe available
           :else
           (-> gs
               (assoc-in [:objects :troll :ldesc] "A troll is here.")
-              (assoc :troll-flag false))))
+              (gs/unset-game-flag :troll-flag))))
 
       ;; F-FIRST? - Should troll strike first? (33% chance)
       :f-first?
@@ -2637,7 +2638,7 @@ Surely thou shalt repent of thy cunning."})
                  (let [held? (= (gs/get-thing-loc-id game-state :leaves) :adventurer)
                        gs (-> game-state
                               (leaves-appear :burn)
-                              (assoc-in [:objects :leaves :in] :limbo))]
+                              (gs/move-object :leaves :limbo :leaves-burn))]
                    (if held?
                      ;; Holding burning leaves = death
                      (death/jigs-up gs "The leaves burn, and so do you.")
@@ -2742,7 +2743,7 @@ Surely thou shalt repent of thy cunning."})
                              (utils/tell gs "The grating opens to reveal trees above you.")
                              (-> gs
                                  (assoc :grate-revealed true)
-                                 (assoc-in [:objects :leaves :in] here)
+                                 (gs/move-object :leaves here :leaves-fall)
                                  (utils/tell "The grating opens to reveal trees above you.")
                                  (utils/crlf)
                                  (utils/tell "A pile of leaves falls onto your head and to the ground."))))))
@@ -3157,7 +3158,7 @@ Surely thou shalt repent of thy cunning."})
                      (utils/crlf)
                      (utils/crlf)
                      ;; Move boat and update :here
-                     (assoc-in [:objects :inflated-boat :in] next-room)
+                     (gs/move-object :inflated-boat next-room :river-flow)
                      (assoc :here next-room)
                      ;; Describe the new location
                      (describe-river-room)
@@ -3206,8 +3207,8 @@ Surely thou shalt repent of thy cunning."})
               (cond-> (not label-touched?)
                 (-> (utils/crlf) (utils/crlf) (utils/tell "A tan label is lying inside the boat.")))
               ;; Swap inflatable for inflated boat
-              (assoc-in [:objects :inflatable-boat :in] :limbo)
-              (assoc-in [:objects :inflated-boat :in] (:here game-state))
+              (gs/move-object :inflatable-boat :limbo :inflate)
+              (gs/move-object :inflated-boat (:here game-state) :inflate)
               (assoc :it :inflated-boat)))
 
         ;; With lungs (from BREATHE/BLOW)
@@ -3260,12 +3261,12 @@ Surely thou shalt repent of thy cunning."})
                    boat-contents)
         ;; Move player out of boat if inside
         gs (if (= (gs/get-thing-loc-id gs :adventurer) :inflated-boat)
-             (assoc-in gs [:objects :adventurer :in] here)
+             (gs/move-object gs :adventurer here :boat-puncture)
              gs)]
     (-> gs
         ;; Swap boats
-        (assoc-in [:objects :inflated-boat :in] :limbo)
-        (assoc-in [:objects :punctured-boat :in] here)
+        (gs/move-object :inflated-boat :limbo :puncture)
+        (gs/move-object :punctured-boat here :puncture)
         (assoc :it :punctured-boat)
         (utils/tell (str "It seems that the " obj-desc " didn't agree with the boat, as evidenced by the loud hissing noise issuing therefrom. With a pathetic sputter, the boat deflates, leaving you without.")))))
 
@@ -3306,7 +3307,7 @@ Surely thou shalt repent of thy cunning."})
                 room-ldesc (:ldesc dest-room)
                 ;; Move boat (with player inside) to river
                 gs (-> game-state
-                       (assoc-in [:objects :inflated-boat :in] dest)
+                       (gs/move-object :inflated-boat dest :launch)
                        (assoc :here dest))
                 ;; Get boat contents for display
                 boat-contents (filter #(= (gs/get-thing-loc-id gs %) :inflated-boat)
@@ -3352,8 +3353,8 @@ Surely thou shalt repent of thy cunning."})
         (when held-sharp
           (-> game-state
               (utils/tell "Oops! Something sharp seems to have slipped and punctured the boat.\nThe boat deflates to the sounds of hissing, sputtering, and cursing.")
-              (assoc-in [:objects :inflated-boat :in] :limbo)
-              (assoc-in [:objects :punctured-boat :in] here)
+              (gs/move-object :inflated-boat :limbo :puncture)
+              (gs/move-object :punctured-boat here :puncture)
               (assoc :it :punctured-boat))))
 
       ;; INFLATE or FILL - already inflated
@@ -3372,8 +3373,8 @@ Surely thou shalt repent of thy cunning."})
         :else
         (-> game-state
             (utils/tell "The boat deflates.")
-            (assoc-in [:objects :inflated-boat :in] :limbo)
-            (assoc-in [:objects :inflatable-boat :in] here)
+            (gs/move-object :inflated-boat :limbo :deflate)
+            (gs/move-object :inflatable-boat here :deflate)
             (assoc :it :inflatable-boat)))
 
       ;; DROP/PUT weapon - punctures boat
@@ -3422,14 +3423,14 @@ Surely thou shalt repent of thy cunning."})
       (and (#{:put :put-on} prsa) (= prso :putty))
       (-> game-state
           (utils/tell "Well done. The boat is repaired.")
-          (assoc-in [:objects :inflatable-boat :in] here)
-          (assoc-in [:objects :punctured-boat :in] :limbo))
+          (gs/move-object :inflatable-boat here :repair)
+          (gs/move-object :punctured-boat :limbo :repair))
 
       (and (= prsa :plug) (= prsi :putty))
       (-> game-state
           (utils/tell "Well done. The boat is repaired.")
-          (assoc-in [:objects :inflatable-boat :in] here)
-          (assoc-in [:objects :punctured-boat :in] :limbo))
+          (gs/move-object :inflatable-boat here :repair)
+          (gs/move-object :punctured-boat :limbo :repair))
 
       ;; INFLATE or FILL - can't, it's punctured
       (#{:inflate :fill} prsa)
@@ -3609,8 +3610,8 @@ Warning:
           (if coal-in-machine?
             ;; Coal -> Diamond
             (-> gs
-                (assoc-in [:objects :coal :in] :limbo)
-                (assoc-in [:objects :huge-diamond :in] :machine))
+                (gs/move-object :coal :limbo :machine-transform)
+                (gs/move-object :huge-diamond :machine :machine-transform))
             ;; Everything else -> Gunk
             (let [;; Remove all contents
                   contents (filter (fn [[id obj]] (= (:in obj) :machine)) (:objects gs))
@@ -3703,7 +3704,7 @@ Warning:
   (let [prsa (parser-state/get-prsa game-state)]
     (when (= prsa :take)
       (-> game-state
-          (assoc-in [:objects :gunk :in] :limbo)
+          (gs/move-object :gunk :limbo :gunk-crumble)
           (utils/tell "The slag was rather insubstantial, and crumbles into dust at your touch.")))))
 
 (def gunk
@@ -3761,8 +3762,8 @@ Warning:
         (utils/tell game-state (random/rand-nth* dummy-responses))
         ;; Swap positions - "raise" brings basket to top
         (-> game-state
-            (assoc-in [:objects :raised-basket :in] :shaft-room)
-            (assoc-in [:objects :lowered-basket :in] :lower-shaft)
+            (gs/move-object :raised-basket :shaft-room :basket-raise)
+            (gs/move-object :lowered-basket :lower-shaft :basket-raise)
             (assoc :cage-top true)
             (utils/tell "The basket is raised to the top of the shaft.")))
 
@@ -3772,8 +3773,8 @@ Warning:
         (utils/tell game-state (random/rand-nth* dummy-responses))
         ;; Swap positions - "lower" sends basket to bottom
         (let [gs (-> game-state
-                     (assoc-in [:objects :raised-basket :in] :lower-shaft)
-                     (assoc-in [:objects :lowered-basket :in] :shaft-room)
+                     (gs/move-object :raised-basket :lower-shaft :basket-lower)
+                     (gs/move-object :lowered-basket :shaft-room :basket-lower)
                      (assoc :cage-top false)
                      (utils/tell "The basket is lowered to the bottom of the shaft."))]
           ;; Check if we just lowered light away - might go dark

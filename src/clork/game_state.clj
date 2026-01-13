@@ -85,7 +85,87 @@
    :daemons {}
    :daemon-history []
     ;; Script mode tracking
-   :parser-error-count 0})
+   :parser-error-count 0
+    ;; Change tracking for planner infrastructure
+    ;; Accumulates changes during action execution
+   :changes []})
+
+;;; ---------------------------------------------------------------------------
+;;; CHANGE TRACKING
+;;; ---------------------------------------------------------------------------
+;;; Event sourcing for state mutations. Instead of diffing states after actions,
+;;; we record changes as they happen. This provides:
+;;; - Reliability (can't miss changes)
+;;; - Causality (know what caused each change)
+;;; - Efficiency (no O(n) state comparison)
+
+(defn record-change
+  "Record a change event. Called by state-mutating functions.
+
+   Change types:
+   - {:type :flag-set :entity entity-id :flag flag-key}
+   - {:type :flag-cleared :entity entity-id :flag flag-key}
+   - {:type :location-changed :from room-id :to room-id}
+   - {:type :score-changed :from n :to n :reason string}
+   - {:type :daemon-started :daemon daemon-id}
+   - {:type :daemon-stopped :daemon daemon-id}
+   - {:type :object-moved :object obj-id :from loc :to loc}"
+  [game-state change]
+  (update game-state :changes (fnil conj []) change))
+
+(defn clear-changes
+  "Clear accumulated changes. Called at start of action execution."
+  [game-state]
+  (assoc game-state :changes []))
+
+(defn get-changes
+  "Get accumulated changes."
+  [game-state]
+  (:changes game-state []))
+
+;;; ---------------------------------------------------------------------------
+;;; GAME-LEVEL FLAG OPERATIONS
+;;; ---------------------------------------------------------------------------
+;;; Game flags are top-level keys like :troll-flag, :cyclops-flag, :magic-flag.
+;;; These are NOT object/room flags - they're global game state.
+
+(def game-flags
+  "Top-level game state keys that represent intentional game flags.
+   NOTE: Excludes derived state like :lit which is recalculated constantly."
+  #{:troll-flag :cyclops-flag :magic-flag :low-tide :gates-open :gate-flag
+    :loud-flag :won :finished :xb :xc :lld-flag :deflate :inflate
+    :rug-moved :trap-door-open :dome-flag :rainbow-flag :endgame
+    :coffin-cure :match-lit :candle-lit :buoy-flag :echo-flag
+    :dead :lucky :water-level})
+
+(defn set-game-flag
+  "Set a game-level flag. Records the change for planner infrastructure.
+
+   Use this instead of (assoc game-state :flag-name true) to ensure
+   the change is tracked."
+  [game-state flag]
+  (let [was-set? (get game-state flag false)
+        new-state (assoc game-state flag true)]
+    (if was-set?
+      new-state  ; No change, don't record
+      (record-change new-state {:type :game-flag-set :flag flag}))))
+
+(defn unset-game-flag
+  "Unset a game-level flag. Records the change for planner infrastructure.
+
+   Use this instead of (assoc game-state :flag-name false) to ensure
+   the change is tracked."
+  [game-state flag]
+  (let [was-set? (get game-state flag false)
+        new-state (assoc game-state flag false)]
+    (if was-set?
+      (record-change new-state {:type :game-flag-cleared :flag flag})
+      new-state)))  ; No change, don't record
+
+(defn game-flag?
+  "Check if a game-level flag is set."
+  [game-state flag]
+  (get game-state flag false))
 
 ;;; ---------------------------------------------------------------------------
 ;;; FLAG OPERATIONS
@@ -124,16 +204,6 @@
     (= (:player game-state) thing-id) :objects
     :else nil))
 
-(defn set-flag
-  "Sets a flag on an entity. entity-type is :objects or :rooms."
-  [game-state entity-type entity-id flag]
-  (assoc-in game-state [entity-type entity-id flag] true))
-
-(defn unset-flag
-  "Unsets a flag on an entity. entity-type is :objects or :rooms."
-  [game-state entity-type entity-id flag]
-  (assoc-in game-state [entity-type entity-id flag] false))
-
 (defn flag?
   "Returns true if a flag is set on an entity. entity-type is :objects or :rooms.
    Checks both direct flag keys (e.g., [:rooms :id :lit]) and :flags sets.
@@ -146,6 +216,26 @@
       direct-flag
       ;; Not explicitly set - check the :flags set
       (contains? (get-in game-state [entity-type entity-id :flags] #{}) flag))))
+
+(defn set-flag
+  "Sets a flag on an entity. entity-type is :objects or :rooms.
+   Records the change for planner infrastructure."
+  [game-state entity-type entity-id flag]
+  (let [was-set? (flag? game-state entity-type entity-id flag)
+        new-state (assoc-in game-state [entity-type entity-id flag] true)]
+    (if was-set?
+      new-state  ; No change, don't record
+      (record-change new-state {:type :flag-set :entity entity-id :flag flag}))))
+
+(defn unset-flag
+  "Unsets a flag on an entity. entity-type is :objects or :rooms.
+   Records the change for planner infrastructure."
+  [game-state entity-type entity-id flag]
+  (let [was-set? (flag? game-state entity-type entity-id flag)
+        new-state (assoc-in game-state [entity-type entity-id flag] false)]
+    (if was-set?
+      (record-change new-state {:type :flag-cleared :entity entity-id :flag flag})
+      new-state)))  ; No change, don't record
 
 ;; Polymorphic functions that auto-detect entity type
 
@@ -214,6 +304,43 @@
 
 ;; Alias for compatibility with parser code
 (def get-thing-location get-thing-loc-id)
+
+;;; ---------------------------------------------------------------------------
+;;; OBJECT MOVEMENT
+;;; ---------------------------------------------------------------------------
+;;; Centralized object movement with change tracking.
+;;; Use move-object instead of direct (assoc-in [:objects obj-id :in] loc) to
+;;; ensure all object movements are tracked for the planner infrastructure.
+
+(defn move-object
+  "Move an object to a new location. Records the change for planner infrastructure.
+
+   Parameters:
+   - game-state: The current game state
+   - obj-id: The object to move
+   - to: The destination (room-id, container-id, or actor-id like :adventurer)
+   - reason: Optional keyword describing why (e.g., :take, :drop, :put, :thief-steal)
+
+   Use this instead of (assoc-in game-state [:objects obj-id :in] loc) to ensure
+   the change is tracked.
+
+   Examples:
+   (move-object gs :lamp :adventurer :take)
+   (move-object gs :lamp :living-room :drop)
+   (move-object gs :egg :nest :put)"
+  ([game-state obj-id to]
+   (move-object game-state obj-id to nil))
+  ([game-state obj-id to reason]
+   (let [from (get-in game-state [:objects obj-id :in])
+         new-state (assoc-in game-state [:objects obj-id :in] to)]
+     (if (= from to)
+       new-state  ; No change, don't record
+       (record-change new-state
+                      (cond-> {:type :object-moved
+                               :object obj-id
+                               :from from
+                               :to to}
+                        reason (assoc :reason reason)))))))
 
 (defn get-contents
   "Return the IDs of all objects inside the given container.

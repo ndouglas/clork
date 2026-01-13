@@ -205,7 +205,7 @@
           (if gates-open?
             ;; Close the gates
             (-> game-state
-                (assoc :gates-open false)
+                (gs/unset-game-flag :gates-open)
                 (gs/unset-thing-flag :reservoir-south :touch)
                 ;; Queue I-RFILL daemon to fill reservoir after 8 turns
                 (daemon/register-daemon :i-rfill i-rfill :tick 8)
@@ -213,7 +213,7 @@
                 (utils/tell "The sluice gates close and water starts to collect behind the dam."))
             ;; Open the gates
             (-> game-state
-                (assoc :gates-open true)
+                (gs/set-game-flag :gates-open)
                 ;; Queue I-REMPTY daemon to empty reservoir after 8 turns
                 (daemon/register-daemon :i-rempty i-rempty :tick 8)
                 (daemon/unregister-daemon :i-rfill)
@@ -293,14 +293,14 @@
         ;; Brown button - clears gate flag
         (= prso :brown-button)
         (-> game-state
-            (assoc :gate-flag false)
+            (gs/unset-game-flag :gate-flag)
             (gs/unset-thing-flag :dam-room :touch)
             (utils/tell "Click."))
 
         ;; Yellow button - sets gate flag
         (= prso :yellow-button)
         (-> game-state
-            (assoc :gate-flag true)
+            (gs/set-game-flag :gate-flag)
             (gs/unset-thing-flag :dam-room :touch)
             (utils/tell "Click."))
 
@@ -377,7 +377,7 @@
       (cond
         (and tube-open? putty-in-tube?)
         (-> game-state
-            (assoc-in [:objects :putty :in] :adventurer)
+            (gs/move-object :putty :adventurer :squeeze-tube)
             (utils/tell "The viscous material oozes into your hand."))
 
         tube-open?
@@ -425,7 +425,7 @@
         (gs/unset-thing-flag :reservoir-south :touch)
         (gs/unset-thing-flag :reservoir-north :touch)
         ;; Set low-tide to false (water is high)
-        (assoc :low-tide false)
+        (gs/unset-game-flag :low-tide)
         ;; Disable the daemon (runs once)
         (daemon/unregister-daemon :i-rfill)
         ;; Location-specific messages
@@ -456,7 +456,7 @@
         ;; Make trunk visible now that water is low (ZIL: FCLEAR TRUNK INVISIBLE)
         (gs/unset-thing-flag :trunk-of-jewels :invisible)
         ;; Set low-tide to true (water is low)
-        (assoc :low-tide true)
+        (gs/set-game-flag :low-tide)
         ;; Disable the daemon (runs once)
         (daemon/unregister-daemon :i-rempty)
         ;; Location-specific messages

@@ -235,12 +235,12 @@
               ;; Hades resurrection (not fully implemented yet)
               (-> gs
                   (utils/tell "As you take your last breath, you feel relieved of your burdens. The\nfeeling passes as you find yourself before the gates of Hell, where\nthe spirits jeer at you and deny you entry. Your senses are\ndisturbed. The objects in the dungeon appear indistinct, bleached of\ncolor, even unreal.\n\n")
-                  (assoc :dead true)
-                  (assoc :troll-flag true)
+                  (gs/set-game-flag :dead)
+                  (gs/set-game-flag :troll-flag)
                   (assoc :always-lit true)
                   ;; Would go to :entrance-to-hades, but use :forest-1 for now
                   (assoc :here :forest-1)
-                  (assoc-in [:objects (:adventurer gs) :in] :forest-1)
+                  (gs/move-object (:adventurer gs) :forest-1 :hades-resurrection)
                   (assoc :lit true)
                   ;; Clear trap door touch bit (if exists)
                   (safe-unset-flag :trap-door :touch)

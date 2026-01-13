@@ -105,7 +105,7 @@
         (#{:alarm :kick :attack :burn :mung} prsa)
         (-> game-state
             (utils/tell "The cyclops yawns and stares at the thing that woke him up.\n")
-            (assoc :cyclops-flag false)
+            (gs/unset-game-flag :cyclops-flag)
             (gs/set-thing-flag :cyclops :fight)
             ;; ZIL: Reset wrath based on previous state
             (set-cyclowrath (if (neg? wrath) (- wrath) wrath))
@@ -148,12 +148,12 @@
           (-> game-state
               (remove-object :water)
               ;; Drop the bottle in the room
-              (assoc-in [:objects :bottle :in] :cyclops-room)
+              (gs/move-object :bottle :cyclops-room :cyclops-drink)
               (gs/set-thing-flag :bottle :open)
               (gs/unset-thing-flag :cyclops :fight)
               (utils/tell
                "The cyclops takes the bottle, checks that it's open, and drinks the water. A moment later, he lets out a yawn that nearly blows you over, and then falls fast asleep (what did you put in that drink, anyway?).\n")
-              (assoc :cyclops-flag true)
+              (gs/set-game-flag :cyclops-flag)
               (daemon/disable :i-cyclops))
           ;; Not thirsty
           (utils/tell game-state
@@ -226,7 +226,7 @@
       (> (Math/abs (int wrath)) 5)
       (-> game-state
           (daemon/disable :i-cyclops)
-          (assoc :dead true)
+          (gs/set-game-flag :dead)
           (utils/tell
            "The cyclops, tired of all of your games and trickery, grabs you firmly. As he licks his chops, he says \"Mmm. Just like Mom used to make 'em.\" It's nice to be appreciated.\n"))
 
@@ -265,10 +265,10 @@
            (not asleep?))
       (-> game-state
           (daemon/disable :i-cyclops)
-          (assoc :cyclops-flag true)
+          (gs/set-game-flag :cyclops-flag)
           (utils/tell
            "The cyclops, hearing the name of his father's deadly nemesis, flees the room by knocking down the wall on the east of the room.\n")
-          (assoc :magic-flag true)
+          (gs/set-game-flag :magic-flag)
           (gs/unset-thing-flag :cyclops :fight)
           (remove-object :cyclops))
 

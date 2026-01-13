@@ -19,7 +19,8 @@
                           :data {}}}
     :daemon-queue []       ;; Ordered list of daemon-ids to process
     :daemon-history []}    ;; Execution log for debugging"
-  (:require [clork.debug.trace :as trace]))
+  (:require [clork.debug.trace :as trace]
+            [clork.game-state :as gs]))
 
 ;;; ---------------------------------------------------------------------------
 ;;; DAEMON STATE ACCESS
@@ -87,25 +88,43 @@
 
    tick = -1: Run every turn (continuous)
    tick = 0:  Run this turn, then disable
-   tick > 0:  Countdown to run"
+   tick > 0:  Countdown to run
+
+   Records daemon-started change if daemon was not enabled."
   [game-state daemon-id tick]
-  (-> game-state
-      (assoc-in [:daemons daemon-id :tick] tick)
-      (assoc-in [:daemons daemon-id :enabled] true)))
+  (let [was-enabled? (daemon-enabled? game-state daemon-id)
+        new-state (-> game-state
+                      (assoc-in [:daemons daemon-id :tick] tick)
+                      (assoc-in [:daemons daemon-id :enabled] true))]
+    (if was-enabled?
+      new-state
+      (gs/record-change new-state {:type :daemon-started :daemon daemon-id}))))
 
 (defn enable
   "Enable a daemon.
 
-   ZIL: <ENABLE <INT daemon>>"
+   ZIL: <ENABLE <INT daemon>>
+
+   Records daemon-started change if daemon was not already enabled."
   [game-state daemon-id]
-  (assoc-in game-state [:daemons daemon-id :enabled] true))
+  (let [was-enabled? (daemon-enabled? game-state daemon-id)
+        new-state (assoc-in game-state [:daemons daemon-id :enabled] true)]
+    (if was-enabled?
+      new-state
+      (gs/record-change new-state {:type :daemon-started :daemon daemon-id}))))
 
 (defn disable
   "Disable a daemon.
 
-   ZIL: <DISABLE <INT daemon>>"
+   ZIL: <DISABLE <INT daemon>>
+
+   Records daemon-stopped change if daemon was enabled."
   [game-state daemon-id]
-  (assoc-in game-state [:daemons daemon-id :enabled] false))
+  (let [was-enabled? (daemon-enabled? game-state daemon-id)
+        new-state (assoc-in game-state [:daemons daemon-id :enabled] false)]
+    (if was-enabled?
+      (gs/record-change new-state {:type :daemon-stopped :daemon daemon-id})
+      new-state)))
 
 (defn int-routine
   "Get or create interrupt entry for daemon.

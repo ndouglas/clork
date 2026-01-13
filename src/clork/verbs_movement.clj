@@ -177,13 +177,17 @@
                    (assoc-in [:objects vehicle-id :in] room-id)))
              gs)
         ;; Move the winner to the new room (or keep in vehicle if boat landing)
+        ;; Record location change for planner infrastructure
         gs (if boat-landing?
              ;; Player stays in boat, boat moves to room
-             (assoc gs :here room-id)
+             (-> gs
+                 (assoc :here room-id)
+                 (gs/record-change {:type :location-changed :from here :to room-id}))
              ;; Normal movement
              (-> gs
                  (assoc-in [:objects winner :in] room-id)
-                 (assoc :here room-id)))
+                 (assoc :here room-id)
+                 (gs/record-change {:type :location-changed :from here :to room-id})))
         ;; Update LIT flag
         gs (assoc gs :lit (room-lit? gs room-id))
         ;; Score the room (ZIL: SCORE-OBJ .RM in gverbs.zil line 2138)
@@ -414,7 +418,7 @@
             result
             ;; Default board behavior - move player into vehicle
             (-> game-state
-                (assoc-in [:objects :adventurer :in] prso)
+                (gs/move-object :adventurer prso :board)
                 (utils/tell (str "You are now in the " desc ".")))))
 
         ;; Object has door flag - find the other side and walk there

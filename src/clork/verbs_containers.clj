@@ -24,16 +24,14 @@
   (contains? (or (:flags obj) #{}) :open))
 
 (defn add-flag
-  "Add a flag to an object's flag set in game-state."
+  "Add a flag to an object. Uses gs/set-thing-flag for proper change tracking."
   [game-state obj-id flag]
-  (let [current-flags (get-in game-state [:objects obj-id :flags] #{})]
-    (assoc-in game-state [:objects obj-id :flags] (conj current-flags flag))))
+  (gs/set-thing-flag game-state obj-id flag))
 
 (defn remove-flag
-  "Remove a flag from an object's flag set in game-state."
+  "Remove a flag from an object. Uses gs/unset-thing-flag for proper change tracking."
   [game-state obj-id flag]
-  (let [current-flags (get-in game-state [:objects obj-id :flags] #{})]
-    (assoc-in game-state [:objects obj-id :flags] (disj current-flags flag))))
+  (gs/unset-thing-flag game-state obj-id flag))
 
 (defn container?
   "Returns true if the object is a container."
@@ -61,9 +59,7 @@
   [game-state obj-id]
   (let [contents (gs/get-contents game-state obj-id)
         visible (remove (fn [id]
-                          (let [obj (gs/get-thing game-state id)
-                                flags (or (:flags obj) #{})]
-                            (contains? flags :invisible)))
+                          (gs/set-thing-flag? game-state id :invisible))
                         contents)]
     (if (empty? visible)
       ""
@@ -114,7 +110,7 @@
     (cond
       ;; Door
       (contains? flags :door)
-      (if (contains? flags :open)
+      (if (gs/set-thing-flag? game-state prso :open)
         (utils/tell game-state (str "The " desc " is open, but I can't tell what's beyond it."))
         (utils/tell game-state (str "The " desc " is closed.")))
 
@@ -126,20 +122,18 @@
         (utils/tell game-state "There is nothing special to be seen.")
 
         ;; Can see inside (open or transparent)
-        (or (contains? flags :open) (contains? flags :trans))
+        (or (gs/set-thing-flag? game-state prso :open)
+            (gs/set-thing-flag? game-state prso :trans))
         (let [contents (gs/get-contents game-state prso)
               visible (remove (fn [id]
-                                (let [o (gs/get-thing game-state id)
-                                      oflags (or (:flags o) #{})]
-                                  (contains? oflags :invisible)))
+                                (gs/set-thing-flag? game-state id :invisible))
                               contents)]
           (if (empty? visible)
             (utils/tell game-state (str "The " desc " is empty."))
             ;; Print contents - each item on its own paragraph
             (let [content-strs (map (fn [id]
                                       (let [o (gs/get-thing game-state id)
-                                            oflags (or (:flags o) #{})
-                                            suffix (if (contains? oflags :on)
+                                            suffix (if (gs/set-thing-flag? game-state id :on)
                                                      " (providing light)"
                                                      "")]
                                         (str "A " (:desc o) suffix)))
@@ -246,9 +240,7 @@
                         (add-flag prso :touch))
               contents (gs/get-contents state prso)
               visible (remove (fn [id]
-                                (let [o (gs/get-thing state id)
-                                      flags (or (:flags o) #{})]
-                                  (contains? flags :invisible)))
+                                (gs/set-thing-flag? state id :invisible))
                               contents)]
           (cond
             ;; Empty or transparent: just "Opened."
@@ -257,9 +249,9 @@
 
             ;; ZIL: Single untouched item with FDESC: "The X opens." + FDESC
             (and (= 1 (count visible))
-                 (let [item (gs/get-thing state (first visible))
-                       touched? (contains? (or (:flags item) #{}) :touch)]
-                   (and (not touched?) (:fdesc item))))
+                 (let [item-id (first visible)
+                       touched? (gs/set-thing-flag? state item-id :touch)]
+                   (and (not touched?) (:fdesc (gs/get-thing state item-id)))))
             (let [item (gs/get-thing state (first visible))]
               (-> state
                   (utils/tell (str "The " desc " opens."))

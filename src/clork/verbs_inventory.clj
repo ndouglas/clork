@@ -63,10 +63,9 @@
   (contains? (or (:flags obj) #{}) :trytake))
 
 (defn- add-flag
-  "Add a flag to an object's flag set in game-state."
+  "Add a flag to an object. Uses gs/set-thing-flag for proper change tracking."
   [game-state obj-id flag]
-  (let [current-flags (get-in game-state [:objects obj-id :flags] #{})]
-    (assoc-in game-state [:objects obj-id :flags] (conj current-flags flag))))
+  (gs/set-thing-flag game-state obj-id flag))
 
 (defn v-take
   "Take an object and add it to inventory.

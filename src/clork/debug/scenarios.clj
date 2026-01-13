@@ -58,8 +58,8 @@
    Sets TROLL-FLAG to allow passage through troll room."
   [game-state]
   (-> game-state
-      (assoc :troll-flag true)           ; Troll defeated - allows passage
-      (assoc-in [:objects :troll :in] nil)))  ; Remove from game entirely
+      (gs/set-game-flag :troll-flag)           ; Troll defeated - allows passage
+      (gs/move-object :troll nil :test-kill)))  ; Remove from game entirely
 
 (defn open-grating
   "Open the grating in the clearing."
@@ -71,7 +71,7 @@
   "Mark the echo puzzle as solved."
   [game-state]
   (-> game-state
-      (assoc :loud-flag true)
+      (gs/set-game-flag :loud-flag)
       (gs/unset-thing-flag :platinum-bar :sacred)))
 
 (defn defeat-cyclops
@@ -79,30 +79,30 @@
    Sets flags to allow passage through cyclops room and into strange passage."
   [game-state]
   (-> game-state
-      (assoc :cyclops-flag true)   ; Cyclops defeated - allows up exit
-      (assoc :magic-flag true)     ; East wall opened - allows east exit
-      (assoc-in [:objects :cyclops :in] nil)))  ; Remove from game entirely
+      (gs/set-game-flag :cyclops-flag)   ; Cyclops defeated - allows up exit
+      (gs/set-game-flag :magic-flag)     ; East wall opened - allows east exit
+      (gs/move-object :cyclops nil :test-kill)))  ; Remove from game entirely
 
 (defn open-dam-gates
   "Open the dam sluice gates (water draining)."
   [game-state]
   (-> game-state
-      (assoc :gates-open true)
-      (assoc :gate-flag true)))
+      (gs/set-game-flag :gates-open)
+      (gs/set-game-flag :gate-flag)))
 
 (defn drain-reservoir
   "Drain the reservoir (low tide)."
   [game-state]
   (-> game-state
-      (assoc :low-tide true)
-      (assoc :gates-open true)))
+      (gs/set-game-flag :low-tide)
+      (gs/set-game-flag :gates-open)))
 
 (defn fill-reservoir
   "Fill the reservoir (high water)."
   [game-state]
   (-> game-state
-      (assoc :low-tide false)
-      (assoc :gates-open false)))
+      (gs/unset-game-flag :low-tide)
+      (gs/unset-game-flag :gates-open)))
 
 ;;; ---------------------------------------------------------------------------
 ;;; COMPOSITE SCENARIOS
@@ -148,7 +148,7 @@
   ([room-id water-state]
    (let [base (-> (underground-ready room-id)
                   (give-item :wrench)
-                  (assoc :gate-flag true))]  ; Yellow button pressed
+                  (gs/set-game-flag :gate-flag))]  ; Yellow button pressed
      (case water-state
        :drained (drain-reservoir base)
        :filled (fill-reservoir base)
@@ -171,11 +171,11 @@
    (let [base (underground-ready room-id)]
      (case state
        :quiet (-> base
-                  (assoc :gates-open false)
-                  (assoc :low-tide true))
+                  (gs/unset-game-flag :gates-open)
+                  (gs/set-game-flag :low-tide))
        :loud (-> base
-                 (assoc :gates-open true)
-                 (assoc :low-tide false))
+                 (gs/set-game-flag :gates-open)
+                 (gs/unset-game-flag :low-tide))
        :solved (-> base
                    (solve-echo-puzzle))
        base))))

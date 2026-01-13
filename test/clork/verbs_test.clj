@@ -635,8 +635,8 @@
                  (assoc-in [:parser :prso] :chest))
           [output result] (with-captured-output (verbs-containers/v-open gs))]
       (is (= "Opened." output))
-      (is (contains? (get-in result [:objects :chest :flags]) :open))
-      (is (contains? (get-in result [:objects :chest :flags]) :touch)))))
+      (is (gs/set-thing-flag? result :chest :open))
+      (is (gs/set-thing-flag? result :chest :touch)))))
 
 (deftest v-open-container-with-items-test
   (testing "v-open on container with items reveals contents"
@@ -652,7 +652,7 @@
           [output result] (with-captured-output (verbs-containers/v-open gs))]
       (is (clojure.string/includes? output "Opening the wooden chest reveals"))
       (is (clojure.string/includes? output "gold coin"))
-      (is (contains? (get-in result [:objects :chest :flags]) :open)))))
+      (is (gs/set-thing-flag? result :chest :open)))))
 
 (deftest v-open-door-test
   (testing "v-open on door sets :open flag and shows 'The [door] opens.'"
@@ -664,7 +664,7 @@
                  (assoc-in [:parser :prso] :front-door))
           [output result] (with-captured-output (verbs-containers/v-open gs))]
       (is (= "The front door opens." output))
-      (is (contains? (get-in result [:objects :front-door :flags]) :open)))))
+      (is (gs/set-thing-flag? result :front-door :open)))))
 
 (deftest v-open-already-open-container-test
   (testing "v-open on already-open container shows 'It is already open.'"
@@ -709,7 +709,7 @@
                  (assoc-in [:parser :prso] :glass-box))
           [output result] (with-captured-output (verbs-containers/v-open gs))]
       (is (= "Opened." output))
-      (is (contains? (get-in result [:objects :glass-box :flags]) :open)))))
+      (is (gs/set-thing-flag? result :glass-box :open)))))
 
 (deftest open-vocabulary-test
   (testing "open is registered in vocabulary as a verb"
@@ -1149,7 +1149,7 @@
                  (assoc-in [:parser :prso] :chest))
           [output result] (with-captured-output (verbs-containers/v-close gs))]
       (is (= "Closed." output))
-      (is (not (contains? (get-in result [:objects :chest :flags]) :open))))))
+      (is (not (gs/set-thing-flag? result :chest :open))))))
 
 (deftest v-close-container-already-closed-test
   (testing "v-close on already-closed container shows 'It is already closed.'"
@@ -1172,7 +1172,7 @@
                  (assoc-in [:parser :prso] :front-door))
           [output result] (with-captured-output (verbs-containers/v-close gs))]
       (is (= "The front door is now closed." output))
-      (is (not (contains? (get-in result [:objects :front-door :flags]) :open))))))
+      (is (not (gs/set-thing-flag? result :front-door :open))))))
 
 (deftest v-close-door-already-closed-test
   (testing "v-close on already-closed door shows 'It is already closed.'"

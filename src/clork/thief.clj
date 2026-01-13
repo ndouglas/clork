@@ -42,7 +42,7 @@
       ;; Stiletto is in same room as thief - pick it up
       (-> game-state
           (gs/set-thing-flag :stiletto :ndesc)
-          (assoc-in [:objects :stiletto :in] :thief))
+          (gs/move-object :stiletto :thief :thief-pickup))
       game-state)))
 
 (defn drop-stiletto
@@ -52,7 +52,7 @@
         stiletto-in-thief? (= (gs/get-thing-loc-id game-state :stiletto) :thief)]
     (if stiletto-in-thief?
       (-> game-state
-          (assoc-in [:objects :stiletto :in] here)
+          (gs/move-object :stiletto here :thief-drop)
           (gs/unset-thing-flag :stiletto :ndesc))
       game-state)))
 
@@ -70,7 +70,7 @@
                           thief-contents)]
     (reduce (fn [gs obj-id]
               (-> gs
-                  (assoc-in [:objects obj-id :in] room-id)
+                  (gs/move-object obj-id room-id :thief-deposit)
                   ;; NOTE: Do NOT remove :invisible flag here!
                   ;; Treasures stay invisible until thief dies (:f-dead handler)
                   ;; ZIL lines 1919-1921: When depositing egg, thief opens it
@@ -116,7 +116,7 @@
         stiletto-in-room?
         (-> game-state
             (gs/set-thing-flag :stiletto :ndesc)
-            (assoc-in [:objects :stiletto :in] :thief)
+            (gs/move-object :stiletto :thief :thief-pickup)
             (cond-> thief-here?
               (utils/tell "The robber, somewhat surprised at this turn of events, nimbly retrieves his stiletto.")))
 
@@ -432,7 +432,7 @@
             contents)]
     (-> gs
         ;; Move thief to treasure room
-        (assoc-in [:objects :thief :in] :treasure-room)
+        (gs/move-object :thief :treasure-room :thief-teleport)
         ;; Make visible
         (gs/unset-thing-flag :thief :invisible)
         ;; Set thief-here
@@ -727,7 +727,7 @@
                                ;; Recover stiletto before moving
                                  (recover-stiletto)
                                ;; Move thief
-                                 (assoc-in [:objects :thief :in] next-room)
+                                 (gs/move-object :thief next-room :thief-wander)
                                ;; Clear fight flag
                                  (gs/unset-thing-flag :thief :fight)
                                ;; Become invisible

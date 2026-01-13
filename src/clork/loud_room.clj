@@ -186,7 +186,7 @@
     ;; In Loud Room - solve the puzzle!
     ;; ZIL: Returns from special input mode, then game loop shows room
     (-> game-state
-        (assoc :loud-flag true)
+        (gs/set-game-flag :loud-flag)
         ;; Remove SACREDBIT from the platinum bar (can now be taken)
         (gs/unset-thing-flag :platinum-bar :sacred)
         (utils/tell "The acoustics of the room change subtly.\n\n")
@@ -236,7 +236,7 @@
   "Solve the echo puzzle and exit special mode."
   [game-state]
   (-> game-state
-      (assoc :loud-flag true)
+      (gs/set-game-flag :loud-flag)
       (gs/unset-thing-flag :platinum-bar :sacred)
       (utils/tell "The acoustics of the room change subtly.")
       (utils/crlf)

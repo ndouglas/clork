@@ -2349,7 +2349,8 @@
     (let [winner (:winner game-state)
           has-coffin? (= winner (gs/get-thing-loc-id game-state :gold-coffin))]
       (-> game-state
-          (assoc :coffin-cure (not has-coffin?))
+          (cond-> has-coffin? (gs/unset-game-flag :coffin-cure)
+                  (not has-coffin?) (gs/set-game-flag :coffin-cure))
           (gs/use-default)))
     (gs/use-default game-state)))
 
@@ -2424,17 +2425,17 @@ The gate is open; through it you can see a desolation, with a pile of mangled bo
           has-candles? (= winner (gs/get-thing-loc-id game-state :candles))]
       (-> game-state
           ;; XB flag indicates exorcism started
-          (assoc :xb true)
+          (gs/set-game-flag :xb)
           ;; Remove bell from player, put hot-bell in room
-          (assoc-in [:objects :brass-bell :in] :limbo)
-          (assoc-in [:objects :hot-bell :in] here)
+          (gs/move-object :brass-bell :limbo :bell-hot)
+          (gs/move-object :hot-bell here :bell-appears)
           (utils/tell "The bell suddenly becomes red hot and falls to the ground. The wraiths, as if paralyzed, stop their jeering and slowly turn to face you. On their ashen faces, the expression of a long-forgotten terror takes shape.")
           ;; Paragraph break before candle message
           (utils/tell "\n\n")
           ;; If player has candles, drop them
           (cond-> has-candles?
             (-> (utils/tell "In your confusion, the candles drop to the ground (and they are out).")
-                (assoc-in [:objects :candles :in] here)
+                (gs/move-object :candles here :bell-confusion)
                 (gs/unset-thing-flag :candles :on)))))
 
     ;; M-BEG: Check for reading the book during exorcism (prayer completion)
@@ -2454,8 +2455,8 @@ The gate is open; through it you can see a desolation, with a pile of mangled bo
             (utils/tell "Each word of the prayer reverberates through the hall in a deafening confusion. As the last word fades, a voice, loud and commanding, speaks: \"Begone, fiends!\" A heart-stopping scream fills the cavern, and the spirits, sensing a greater power, flee through the walls.")
             (utils/crlf)
             ;; Remove ghosts and open the gate
-            (assoc-in [:objects :ghosts :in] :limbo)
-            (assoc :lld-flag true)
+            (gs/move-object :ghosts :limbo :exorcism)
+            (gs/set-game-flag :lld-flag)
             (assoc :command-handled true))
         ;; Not the exorcism prayer - use default
         (gs/use-default game-state)))
@@ -2470,7 +2471,7 @@ The gate is open; through it you can see a desolation, with a pile of mangled bo
           candles-on? (gs/set-thing-flag? game-state :candles :on)]
       (if (and xb has-candles? candles-on? (not xc))
         (-> game-state
-            (assoc :xc true)
+            (gs/set-game-flag :xc)
             ;; Paragraph break before flames message
             (utils/tell "\n\n")
             (utils/tell "The flames flicker wildly and appear to dance. The earth beneath your feet trembles, and your legs nearly buckle beneath you. The spirits cower at your unearthly power."))

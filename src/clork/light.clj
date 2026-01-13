@@ -438,7 +438,7 @@
         ;; ZIL: Only triggers when PRSI is the torch, not just when holding it
         (= prsi :ivory-torch)
         (-> game-state
-            (assoc-in [:objects :candles :in] :limbo)  ; Remove candles
+            (gs/move-object :candles :limbo :torch-vaporize)  ; Remove candles
             (utils/tell "The heat from the torch is so intense that the candles are vaporized."))
 
         ;; Light with match

@@ -993,7 +993,7 @@
             (utils/tell (str "A terrific throw! The " (gs/thing-name game-state prso)
                              " hits you squarely in the head. Normally, this wouldn't do much damage, but by incredible mischance, you fall over backwards trying to duck, and break your neck, justice being swift and merciful in the Great Underground Empire."))
             (utils/crlf)
-            (assoc :dead true))
+            (gs/set-game-flag :dead))
 
         ;; Throw at actor
         (and prsi
@@ -1304,7 +1304,7 @@
           (utils/tell (str "You become so engrossed in the role of the " (gs/thing-name game-state prso)
                            " that you kill yourself, just as he might have done!"))
           (utils/crlf)
-          (assoc :dead true))
+          (gs/set-game-flag :dead))
       (-> game-state
           (utils/tell "That's silly!")
           (utils/crlf)))))

@@ -135,7 +135,7 @@
           room (gs/get-thing game-state room-id)]
       (if room
         (-> game-state
-            (assoc-in [:objects :thief :in] room-id)
+            (gs/move-object :thief room-id :debug-move)
             (utils/tell (str "Thief moved to " room-id " (" (:desc room "?") ")\n")))
         (utils/tell game-state (str "Unknown room: " room-id "\n"))))))
 
