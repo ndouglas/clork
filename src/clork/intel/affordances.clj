@@ -144,8 +144,18 @@
          (nil? (:object effect))  ; Game flag, not object flag
          (= (:flag effect) (:flag goal)))
 
+    :game-not-flag
+    (and (= (:type effect) :clear-flag)
+         (nil? (:object effect))  ; Game flag, not object flag
+         (= (:flag effect) (:flag goal)))
+
     :object-flag
     (and (= (:type effect) :set-flag)
+         (= (:object effect) (:object goal))
+         (= (:flag effect) (:flag goal)))
+
+    :object-not-flag
+    (and (= (:type effect) :clear-flag)
          (= (:object effect) (:object goal))
          (= (:flag effect) (:flag goal)))
 
@@ -153,6 +163,11 @@
     (and (= (:type effect) :move-object)
          (= (:object effect) (:object goal))
          (= (:to effect) (:to goal)))
+
+    :object-held
+    (and (= (:type effect) :move-object)
+         (= (:object effect) (:object goal))
+         (= (:to effect) :adventurer))
 
     :player-at
     (and (= (:type effect) :move-player)

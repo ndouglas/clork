@@ -107,6 +107,39 @@
   ;; Alias for :at-location
   (check-goal game-state (assoc goal :type :at-location)))
 
+(defmethod check-goal :at-any-location
+  [game-state {:keys [rooms] :as goal}]
+  (let [here (:here game-state)
+        satisfied (contains? (set rooms) here)]
+    {:satisfied satisfied
+     :goal goal
+     :details (if satisfied
+                (str "At " (name here) " (one of valid rooms)")
+                (str "At " (name here) " (need one of: " (clojure.string/join ", " (map name rooms)) ")"))}))
+
+(defmethod check-goal :player-in-vehicle
+  [game-state {:keys [vehicle] :as goal}]
+  (let [winner (:winner game-state)
+        winner-loc (gs/get-thing-location game-state winner)
+        satisfied (= winner-loc vehicle)]
+    {:satisfied satisfied
+     :goal goal
+     :details (if satisfied
+                (str "In vehicle " (name vehicle))
+                (str "Not in vehicle " (name vehicle) " (at " (name (or winner-loc :unknown)) ")"))}))
+
+(defmethod check-goal :player-not-in-vehicle
+  [game-state goal]
+  (let [winner (:winner game-state)
+        winner-loc (gs/get-thing-location game-state winner)
+        here (:here game-state)
+        satisfied (= winner-loc here)]
+    {:satisfied satisfied
+     :goal goal
+     :details (if satisfied
+                "Not in any vehicle"
+                (str "Currently in vehicle: " (name (or winner-loc :unknown))))}))
+
 (defmethod check-goal :default
   [_game-state goal]
   {:satisfied false
@@ -249,8 +282,9 @@
         (mapcat (fn [achiever]
                   (if (empty? (:blocking achiever))
                     ;; This achiever has blocked preconditions but we didn't recurse
+                    ;; Include both :blocked and :unknown status (can't determine = blocked)
                     (for [{:keys [precond status]} (:preconditions achiever)
-                          :when (= :blocked status)
+                          :when (#{:blocked :unknown} status)
                           :let [goal (precond->goal precond)]
                           :when goal]
                       goal)
