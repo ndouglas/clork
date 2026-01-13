@@ -119,6 +119,13 @@
         here (:here game-state)]
     (= winner-loc here)))
 
+(defmethod check-precondition :player-in-vehicle
+  [game-state {:keys [vehicle]} _bindings]
+  ;; Alias for :in-vehicle - checks if player is in the specified vehicle
+  (let [winner (:winner game-state)
+        winner-loc (gs/get-thing-location game-state winner)]
+    (= winner-loc vehicle)))
+
 (defmethod check-precondition :default
   [_game-state precond _bindings]
   (throw (ex-info (str "Unknown precondition type: " (:type precond))
@@ -421,53 +428,74 @@
 
 (def boat-affordances
   [;; Inflate boat with pump
+   ;; Transforms :inflatable-boat into :inflated-boat
    {:id :inflate-boat
     :verb :inflate
-    :pattern {:object :magic-boat :with :hand-pump}
-    :preconds [{:type :object-visible :object :magic-boat}
-               {:type :object-held :object :hand-pump}
-               {:type :object-not-flag :object :magic-boat :flag :open}]  ; :open = inflated
-    :effects [{:type :set-flag :object :magic-boat :flag :open}]
-    :desc "Inflate the boat with the hand pump"}
+    :pattern {:object :inflatable-boat :with :pump}
+    :preconds [{:type :object-visible :object :inflatable-boat}
+               {:type :object-held :object :pump}]
+    :effects [{:type :move-object :object :inflatable-boat :to :limbo}
+              {:type :move-object :object :inflated-boat :to :here}]
+    :desc "Inflate the boat with the pump"}
 
    ;; Deflate boat
+   ;; Transforms :inflated-boat back into :inflatable-boat
    {:id :deflate-boat
     :verb :deflate
-    :pattern {:object :magic-boat}
-    :preconds [{:type :object-visible :object :magic-boat}
-               {:type :object-flag :object :magic-boat :flag :open}
+    :pattern {:object :inflated-boat}
+    :preconds [{:type :object-visible :object :inflated-boat}
                {:type :not-in-vehicle}]  ; Can't deflate while in boat
-    :effects [{:type :clear-flag :object :magic-boat :flag :open}]
+    :effects [{:type :move-object :object :inflated-boat :to :limbo}
+              {:type :move-object :object :inflatable-boat :to :here}]
     :desc "Deflate the inflated boat"}
 
    ;; Board boat
    {:id :board-boat
     :verb :board
-    :pattern {:object :magic-boat}
-    :preconds [{:type :object-in-room :object :magic-boat}
-               {:type :object-flag :object :magic-boat :flag :open}
+    :pattern {:object :inflated-boat}
+    :preconds [{:type :object-in-room :object :inflated-boat}
                {:type :not-in-vehicle}]
-    :effects [{:type :move-player :to :magic-boat}]  ; Player moves into boat
+    :effects [{:type :move-player :to :inflated-boat}]
     :desc "Get into the inflated boat"}
 
    ;; Disembark boat
    {:id :disembark-boat
     :verb :disembark
     :pattern {}
-    :preconds [{:type :in-vehicle :vehicle :magic-boat}]
-    :effects [{:type :move-player :to :here}]  ; Player moves to room
+    :preconds [{:type :in-vehicle :vehicle :inflated-boat}]
+    :effects [{:type :move-player :to :here}]
     :desc "Get out of the boat"}
 
-   ;; Launch boat
-   {:id :launch-boat
+   ;; Launch boat (Frigid River launch points)
+   {:id :launch-boat-frigid
     :verb :launch
-    :pattern {:object :magic-boat}
-    :preconds [{:type :at-any-location :rooms [:dam-base :white-cliffs-beach-north
-                                               :white-cliffs-beach-south :sandy-beach
-                                               :shore :stream-view]}
-               {:type :object-flag :object :magic-boat :flag :open}]
-    :effects []  ; Movement is handled by room actions
-    :desc "Launch the boat into the water"}])
+    :pattern {:object :inflated-boat}
+    :preconds [{:type :at-any-location :rooms [:dam-base :white-cliffs-north
+                                               :white-cliffs-south :sandy-beach
+                                               :shore]}
+               {:type :player-in-vehicle :vehicle :inflated-boat}]
+    :effects [{:type :set-flag :flag :boat-in-water}]
+    :desc "Launch the boat into the Frigid River"}
+
+   ;; Launch boat (Reservoir launch points)
+   {:id :launch-boat-reservoir
+    :verb :launch
+    :pattern {:object :inflated-boat}
+    :preconds [{:type :at-any-location :rooms [:reservoir-north :reservoir-south]}
+               {:type :player-in-vehicle :vehicle :inflated-boat}]
+    :effects [{:type :set-flag :flag :boat-in-water}]
+    :desc "Launch the boat into the Reservoir"}
+
+   ;; Land boat (Frigid River landing points)
+   ;; Landing exits boat to shore room
+   {:id :land-boat
+    :verb :land
+    :pattern {}
+    :preconds [{:type :player-in-vehicle :vehicle :inflated-boat}
+               {:type :at-any-location :rooms [:river-3 :river-4 :river-5]}]
+    :effects [{:type :move-player :to :here}
+              {:type :clear-flag :flag :boat-in-water}]
+    :desc "Land the boat at shore"}])
 
 ;;; ---------------------------------------------------------------------------
 ;;; ENVIRONMENT PUZZLE AFFORDANCES

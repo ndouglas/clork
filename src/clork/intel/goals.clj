@@ -140,6 +140,23 @@
                 "Not in any vehicle"
                 (str "Currently in vehicle: " (name (or winner-loc :unknown))))}))
 
+(defmethod check-goal :boat-ready
+  [game-state goal]
+  ;; :boat-ready is a virtual flag that's true when:
+  ;; 1. Player is in the inflated boat (:inflated-boat or its synonym :magic-boat)
+  ;; 2. The boat can be launched
+  (let [winner (:winner game-state)
+        winner-loc (gs/get-thing-location game-state winner)
+        in-boat (#{:inflated-boat :magic-boat} winner-loc)
+        satisfied in-boat]
+    {:satisfied satisfied
+     :goal goal
+     :details (if satisfied
+                "In inflated boat, ready to launch"
+                (if winner-loc
+                  (str "Currently at " (name winner-loc) ", not in boat")
+                  "Not in boat - need to inflate and board"))}))
+
 (defmethod check-goal :default
   [_game-state goal]
   {:satisfied false
@@ -169,6 +186,7 @@
     :object-in-container {:type :object-at :object (:object precond) :location (:container precond)}
     :in-vehicle {:type :player-in-vehicle :vehicle (:vehicle precond)}
     :not-in-vehicle {:type :player-not-in-vehicle}
+    :boat-ready {:type :boat-ready}
     nil))
 
 ;;; ---------------------------------------------------------------------------
