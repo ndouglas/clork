@@ -57,7 +57,7 @@
 ;;; FORWARD DECLARATIONS
 ;;; ---------------------------------------------------------------------------
 
-(declare global-check do-sl)
+(declare global-check do-sl but-merge)
 
 ;;; ---------------------------------------------------------------------------
 ;;; MATCH TABLE OPERATIONS
@@ -521,16 +521,29 @@
 
       (if (>= current-ptr end-ptr)
         ;; End of clause - do final get-object
-        (let [result (get-object gs (if but-mode?
-                                      (get-in gs [:parser :buts] [])
-                                      match-table))]
-          (if (:success result)
-            {:success true
-             :game-state (assoc-in (:game-state result)
-                                   [:parser match-table-key]
-                                   (:matches result))
-             :matches (:matches result)}
-            result))
+        (if but-mode?
+          ;; In but-mode: resolve the excluded objects and remove them from match-table
+          ;; ZIL: After "all but X", resolve X and use BUT-MERGE to remove from matches
+          (let [buts-list (get-in gs [:parser :buts] [])
+                but-result (get-object gs buts-list)]
+            (if (:success but-result)
+              (let [excluded-objects (:matches but-result)
+                    final-matches (but-merge match-table excluded-objects)]
+                {:success true
+                 :game-state (assoc-in (:game-state but-result)
+                                       [:parser match-table-key]
+                                       final-matches)
+                 :matches final-matches})
+              but-result))
+          ;; Normal mode: just resolve the objects
+          (let [result (get-object gs match-table)]
+            (if (:success result)
+              {:success true
+               :game-state (assoc-in (:game-state result)
+                                     [:parser match-table-key]
+                                     (:matches result))
+               :matches (:matches result)}
+              result)))
 
         ;; Process current word
         (let [word (lexer/lexv-word gs current-ptr)

@@ -1136,15 +1136,28 @@
 
 (defn v-pump
   "Handle PUMP verb.
-   ZIL: V-PUMP in gverbs.zil lines 1072-1084"
+   ZIL: V-PUMP in gverbs.zil lines 1072-1084
+
+   If player has the pump, automatically use it to inflate the object.
+   Otherwise ask for clarification or say it's not clear how."
   [game-state]
-  (let [prsi (:prsi game-state)]
+  (let [prsi (parser-state/get-prsi game-state)
+        prso (parser-state/get-prso game-state)
+        pump-held? (= (gs/get-thing-loc-id game-state :pump) :adventurer)]
     (cond
       ;; Pumping with something other than pump
       (and prsi (not= prsi :pump))
       (-> game-state
           (utils/tell (str "Pump it up with a " (gs/thing-name game-state prsi) "?"))
           (utils/crlf))
+
+      ;; Player has pump - perform INFLATE with pump as instrument
+      ;; ZIL: <PERFORM ,V?INFLATE ,PRSO ,PUMP>
+      pump-held?
+      (-> game-state
+          (parser-state/set-prsa :inflate)
+          (parser-state/set-prsi :pump)
+          (v-inflate))
 
       :else
       (-> game-state

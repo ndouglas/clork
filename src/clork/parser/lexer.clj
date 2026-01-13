@@ -244,6 +244,17 @@
   ([word part-of-speech return-value?]
    (word-type? word part-of-speech return-value?)))
 
+(defn verb-particle
+  "Get the required particle for a verb word, if any.
+
+   Some verbs require a particle after them, like 'PUMP UP' or 'BLOW UP'.
+   Returns the particle string (e.g., 'up') or nil if no particle required.
+
+   ZIL: <SYNTAX PUMP UP OBJECT = V-PUMP>"
+  [word]
+  (when-let [vocab-entry (get (vocabulary) (str/lower-case (str word)))]
+    (:verb-particle vocab-entry)))
+
 ;;; ---------------------------------------------------------------------------
 ;;; NUMBER PARSING
 ;;; ---------------------------------------------------------------------------

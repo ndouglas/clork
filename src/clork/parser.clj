@@ -562,6 +562,17 @@
             (and (lexer/wt? word :verb true)
                  (nil? verb))
             (let [verb-val (lexer/wt? word :verb true)
+                  ;; Check for verb particle (e.g., "pump UP", "blow UP")
+                  ;; ZIL: <SYNTAX PUMP UP OBJECT = V-PUMP>
+                  verb-particle (lexer/verb-particle word)
+                  particle-matches? (and verb-particle
+                                         next-word
+                                         (= (clojure.string/lower-case next-word)
+                                            verb-particle))
+                  ;; Consume particle if it matches
+                  [gs ptr] (if particle-matches?
+                             [(dec-len gs) (inc ptr)]
+                             [gs ptr])
                   gs (-> gs
                          (set-itbl :verb verb-val)
                          (set-itbl :verbn word)

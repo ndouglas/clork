@@ -501,7 +501,9 @@
    ;;      <SYNTAX TURN OBJECT (FIND TURNBIT) (HELD CARRIED ON-GROUND IN-ROOM) WITH OBJECT = V-TURN>
    ;; The "turn" verb routes to different handlers based on preposition (on/off/with)
    ;; Note: :gwim1 :light allows finding light sources even in darkness (FIND LIGHTBIT)
-   :turn       {:words   ["turn" "switch"]
+   ;; ZIL: <SYNONYM TURN SET FLIP SHUT>
+   ;; Note: "shut" stays with :close (shut the door), not :turn (turn the dial)
+   :turn       {:words   ["turn" "switch" "flip" "set"]
                 :syntax  [;; TURN ON OBJECT (FIND LIGHTBIT) - turn on lamp
                           {:num-objects 1
                            :prep1 :on
@@ -1098,7 +1100,9 @@
                 :handler verbs-misc/v-plug}
 
    ;; ZIL: <SYNTAX PUMP UP OBJECT = V-PUMP>
+   ;;      <SYNTAX PUMP UP OBJECT WITH OBJECT = V-PUMP>
    :pump       {:words   ["pump"]
+                :particle "up"  ; Required particle after verb
                 :syntax  [{:num-objects 1 :loc1 #{:in-room :on-ground}}
                           {:num-objects 2 :prep1 :with :loc1 #{:in-room :on-ground} :loc2 #{:held}}]
                 :handler verbs-misc/v-pump}
@@ -1284,13 +1288,15 @@
 (defn build-vocabulary
   "Build the vocabulary map from verb-definitions.
 
-   Returns a map of word-string -> {:parts-of-speech #{:verb} :verb-value action-kw}"
+   Returns a map of word-string -> {:parts-of-speech #{:verb} :verb-value action-kw}
+   If the verb has a :particle, includes :verb-particle in the entry."
   [definitions]
   (reduce-kv
-   (fn [vocab action-kw {:keys [words]}]
+   (fn [vocab action-kw {:keys [words particle]}]
      (reduce (fn [v word]
-               (assoc v word {:parts-of-speech #{:verb}
-                              :verb-value action-kw}))
+               (assoc v word (cond-> {:parts-of-speech #{:verb}
+                                      :verb-value action-kw}
+                               particle (assoc :verb-particle particle))))
              vocab
              words))
    {}

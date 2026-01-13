@@ -149,6 +149,12 @@
                         {:action :skip-next}
                         {:action :continue})
 
+                      ;; BUT/EXCEPT - exclusion marker in "all but X" patterns
+                      ;; These are handled by snarfem, so we just continue here
+                      (or (lexer/special-word? current-word :but)
+                          (lexer/special-word? current-word :except))
+                      {:action :continue}
+
                       ;; THEN or PERIOD - end of clause
                       (or (lexer/special-word? current-word :then)
                           (lexer/special-word? current-word :period))
