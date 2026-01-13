@@ -2235,7 +2235,7 @@
     (-> game-state
         (utils/tell "As you enter the dome you feel a strong pull as if from a wind drawing you over the railing and down.")
         (utils/crlf)
-        (assoc :here :torch-room))
+        (gs/set-location :torch-room :ghost-pull))
 
     ;; If player tries to leap, they die
     (and (= rarg :m-enter)
@@ -2549,7 +2549,7 @@ The gate is open; through it you can see a desolation, with a pile of mangled bo
         (utils/tell "The bat grabs you by the scruff of your neck and lifts you away....")
         (utils/crlf)
         (utils/crlf)
-        (assoc :here destination))))
+        (gs/set-location destination :bat-transport))))
 
 (defn bats-room-action
   "Handle Bat Room description and bat transport.

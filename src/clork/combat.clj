@@ -507,7 +507,7 @@
    weapon-id - Weapon to drop"
   [game-state owner-id weapon-id]
   (if weapon-id
-    (assoc-in game-state [:objects weapon-id :in] (:here game-state))
+    (gs/move-object game-state weapon-id (:here game-state) :weapon-drop)
     game-state))
 
 (defn get-thing-name

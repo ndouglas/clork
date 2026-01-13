@@ -127,7 +127,7 @@
   "Scatter an object to a random room."
   [game-state obj-id rooms]
   (let [room-id (random/rand-nth* rooms)]
-    (assoc-in game-state [:objects obj-id :in] room-id)))
+    (gs/move-object game-state obj-id room-id :death-scatter)))
 
 (defn randomize-objects
   "Scatter player's possessions when they die.
@@ -150,11 +150,11 @@
        (cond
          ;; Lamp always goes to living room
          (= obj-id :lamp)
-         (assoc-in gs [:objects :lamp :in] :living-room)
+         (gs/move-object gs :lamp :living-room :death-scatter)
 
          ;; Coffin always goes to Egypt room (placeholder - use living room for now)
          (= obj-id :coffin)
-         (assoc-in gs [:objects :coffin :in] :living-room)
+         (gs/move-object gs :coffin :living-room :death-scatter)
 
          ;; Check if it's a treasure (has :value > 0)
          (pos? (get-in gs [:objects obj-id :value] 0))
@@ -239,7 +239,7 @@
                   (gs/set-game-flag :troll-flag)
                   (assoc :always-lit true)
                   ;; Would go to :entrance-to-hades, but use :forest-1 for now
-                  (assoc :here :forest-1)
+                  (gs/set-location :forest-1 :hades-resurrection)
                   (gs/move-object (:adventurer gs) :forest-1 :hades-resurrection)
                   (assoc :lit true)
                   ;; Clear trap door touch bit (if exists)
@@ -253,8 +253,8 @@
               ;; Normal forest resurrection
               (-> gs
                   (utils/tell "Now, let's take a look here...\nWell, you probably deserve another chance. I can't quite fix you\nup completely, but you can't have everything.\n\n")
-                  (assoc :here :forest-1)
-                  (assoc-in [:objects (:adventurer gs) :in] :forest-1)
+                  (gs/set-location :forest-1 :forest-resurrection)
+                  (gs/move-object (:adventurer gs) :forest-1 :forest-resurrection)
                   (assoc :lit true)
                   ;; Clear trap door touch bit (if exists)
                   (safe-unset-flag :trap-door :touch)

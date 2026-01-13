@@ -51,10 +51,10 @@
           winner (:winner game-state)]
       (if room
         (let [gs (-> game-state
-                     ;; Move the player object to the new room
-                     (assoc-in [:objects winner :in] room-id)
-                     ;; Update HERE
-                     (assoc :here room-id)
+                     ;; Move the player object to the new room (tracked)
+                     (gs/move-object winner room-id :debug-goto)
+                     ;; Update HERE (tracked)
+                     (gs/set-location room-id :debug-goto)
                      ;; Update LIT flag based on room and carried light sources
                      (as-> gs
                            (let [room-lit (contains? (or (:flags room) #{}) :lit)
@@ -96,7 +96,7 @@
           winner (:winner game-state)]
       (if obj
         (-> game-state
-            (assoc-in [:objects obj-id :in] winner)
+            (gs/move-object obj-id winner :debug-purloin)
             (tell-action (str "Purloined " obj-id " (" (:desc obj) ")")))
         (utils/tell game-state (str "Unknown object: " obj-id "\n"))))))
 
@@ -125,7 +125,7 @@
 
         :else
         (-> game-state
-            (assoc-in [:objects obj-id :in] dest-id)
+            (gs/move-object obj-id dest-id :debug-move)
             (tell-action (str "Moved " obj-id " to " dest-id)))))))
 
 ;;; ---------------------------------------------------------------------------

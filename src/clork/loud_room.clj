@@ -112,7 +112,7 @@
             (utils/tell "It is unbearably loud here, with an ear-splitting roar seeming to come from all around you. There is a pounding in your head which won't stop. With a tremendous effort, you scramble out of the room.")
             (utils/crlf)
             (utils/crlf)
-            (assoc :here escape-room)
+            (gs/set-location escape-room :loud-room-ejection)
             (v-first-look)
             ;; Mark that we handled the action (don't process further)
             (assoc ::ejected true)))
@@ -228,7 +228,7 @@
   [game-state room-id]
   (let [v-first-look (requiring-resolve 'clork.verbs-look/v-first-look)]
     (-> game-state
-        (assoc :here room-id)
+        (gs/set-location room-id :loud-room-exit)
         (dissoc :loud-room-mode)
         (v-first-look))))
 

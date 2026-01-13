@@ -127,29 +127,31 @@
 
 (defn- score-room
   "Score a room's value (if any) and set its value to 0.
-   Rooms with a :value property award points on first entry."
+   Rooms with a :value property award points on first entry.
+   Uses score-upd to ensure score change is tracked."
   [game-state room-id]
   (let [room (gs/get-thing game-state room-id)
         room-value (get room :value 0)]
     (if (pos? room-value)
-      (-> game-state
-          (update :base-score + room-value)
-          (update :score + room-value)
-          (assoc-in [:rooms room-id :value] 0))
+      (let [score-upd (requiring-resolve 'clork.verbs-health/score-upd)]
+        (-> game-state
+            (score-upd room-value)
+            (assoc-in [:rooms room-id :value] 0)))
       game-state)))
 
 (defn- move-to-room
   "Move the player to a new room and describe it.
-   Similar to GOTO in verbs.clj but callable from objects."
+   Similar to GOTO in verbs.clj but callable from objects.
+   Uses tracked functions for state mutations."
   [game-state room-id]
   (let [winner (:winner game-state)
-        ;; Move the winner to the new room
-        gs (assoc-in game-state [:objects winner :in] room-id)
-        ;; Update HERE
-        gs (assoc gs :here room-id)
-        ;; Update LIT flag
+        ;; Move the winner to the new room (tracked)
+        gs (gs/move-object game-state winner room-id :special-movement)
+        ;; Update HERE (tracked)
+        gs (gs/set-location gs room-id :special-movement)
+        ;; Update LIT flag (derived state, not tracked)
         gs (assoc gs :lit (room-lit? gs room-id))
-        ;; Score the room (ZIL: SCORE-OBJ .RM)
+        ;; Score the room (tracked via score-upd)
         gs (score-room gs room-id)]
     ;; Describe the room (V-FIRST-LOOK)
     ;; ZIL: V-FIRST-LOOK only calls DESCRIBE-OBJECTS if room is lit
@@ -310,11 +312,11 @@
       (if (= here :cellar)
         ;; From cellar - can go west (back up)
         (-> game-state
-            (assoc :here :kitchen)
+            (gs/set-location :kitchen :slide-climb)
             (utils/tell "You climb up the slide."))
         ;; From kitchen - tumble down
         (-> game-state
-            (assoc :here :cellar)
+            (gs/set-location :cellar :slide-fall)
             (utils/tell "You tumble down the slide....")))
 
       ;; PUT object IN slide
@@ -326,11 +328,11 @@
           (if (= prso :water)
             ;; Water disappears
             (-> game-state
-                (assoc-in [:objects prso :in] :limbo)
+                (gs/move-object prso :limbo :slide-water)
                 (utils/tell (str "The " (:desc obj) " falls into the slide and is gone.")))
             ;; Other items end up in cellar
             (-> game-state
-                (assoc-in [:objects prso :in] :cellar)
+                (gs/move-object prso :cellar :slide-fall)
                 (utils/tell (str "The " (:desc obj) " falls into the slide and is gone."))))
           ;; Not takeable - humor response
           (utils/tell game-state (random/rand-nth* yuks))))
@@ -985,7 +987,7 @@
       ;; CLIMB-DOWN the rope when tied
       (and (= prsa :climb-down) (or (= prso :rope) (nil? prso)) dome-flag)
       (-> game-state
-          (assoc :here :torch-room)
+          (gs/set-location :torch-room :rope-climb)
           (utils/tell "Hand over hand you climb down the rope."))
 
       ;; TIE-UP an actor with rope
@@ -1140,13 +1142,13 @@
               other-contents (filter #(and (not= % (:winner game-state))
                                            (not (#{:mirror-1 :mirror-2} %)))
                                      (gs/get-contents game-state other-room))
-              ;; Move contents
-              gs (reduce (fn [s id] (assoc-in s [:objects id :in] other-room)) game-state here-contents)
-              gs (reduce (fn [s id] (assoc-in s [:objects id :in] here)) gs other-contents)]
+              ;; Move contents (tracked)
+              gs (reduce (fn [s id] (gs/move-object s id other-room :mirror-swap)) game-state here-contents)
+              gs (reduce (fn [s id] (gs/move-object s id here :mirror-swap)) gs other-contents)]
           ;; Teleport player silently (ZIL: GOTO .RM2 <> - don't describe room)
           (-> gs
-              (assoc :here other-room)
-              (assoc-in [:objects (:winner gs) :in] other-room)
+              (gs/move-object (:winner gs) other-room :mirror-teleport)
+              (gs/set-location other-room :mirror-teleport)
               (utils/tell "There is a rumble from deep within the earth and the room shakes."))))
 
       ;; EXAMINE or LOOK-INSIDE
@@ -1459,7 +1461,7 @@ You are the privileged owner of ZORK I: The Great Underground Empire, a self-con
         ;; If prsi has burn flag, it burns up
         (and prsi-obj (contains? (:flags prsi-obj) :burn))
         (-> game-state
-            (assoc-in [:objects prsi :in] :limbo)
+            (gs/move-object prsi :limbo :hot-bell-burn)
             (utils/tell (str "The " (:desc prsi-obj) " burns and is consumed.")))
 
         ;; Using hands
@@ -2764,7 +2766,7 @@ Surely thou shalt repent of thy cunning."})
                    (if (> size 20)
                      (utils/tell game-state "It won't fit through the grating.")
                      (-> game-state
-                         (assoc-in [:objects prso :in] :grating-room)
+                         (gs/move-object prso :grating-room :grating-drop)
                          (utils/tell (str "The " (:desc obj) " goes through the grating into the darkness below.")))))
 
                  ;; Default - no special handling
@@ -3157,9 +3159,9 @@ Surely thou shalt repent of thy cunning."})
                      (utils/tell "The flow of the river carries you downstream.")
                      (utils/crlf)
                      (utils/crlf)
-                     ;; Move boat and update :here
+                     ;; Move boat and update :here (tracked)
                      (gs/move-object :inflated-boat next-room :river-flow)
-                     (assoc :here next-room)
+                     (gs/set-location next-room :river-flow)
                      ;; Describe the new location
                      (describe-river-room)
                      ;; Re-queue daemon with new speed
@@ -3256,7 +3258,7 @@ Surely thou shalt repent of thy cunning."})
         boat-contents (filter #(= (gs/get-thing-loc-id game-state %) :inflated-boat)
                               (keys (:objects game-state)))
         gs (reduce (fn [gs obj-id]
-                     (assoc-in gs [:objects obj-id :in] here))
+                     (gs/move-object gs obj-id here :boat-puncture))
                    game-state
                    boat-contents)
         ;; Move player out of boat if inside
@@ -3305,10 +3307,10 @@ Surely thou shalt repent of thy cunning."})
                 dest-room (get-in game-state [:rooms dest])
                 room-name (:desc dest-room)
                 room-ldesc (:ldesc dest-room)
-                ;; Move boat (with player inside) to river
+                ;; Move boat (with player inside) to river (tracked)
                 gs (-> game-state
                        (gs/move-object :inflated-boat dest :launch)
-                       (assoc :here dest))
+                       (gs/set-location dest :launch))
                 ;; Get boat contents for display
                 boat-contents (filter #(= (gs/get-thing-loc-id gs %) :inflated-boat)
                                       (keys (:objects gs)))
@@ -3616,9 +3618,9 @@ Warning:
             (let [;; Remove all contents
                   contents (filter (fn [[id obj]] (= (:in obj) :machine)) (:objects gs))
                   gs-cleared (reduce (fn [state [id _]]
-                                       (assoc-in state [:objects id :in] :limbo))
+                                       (gs/move-object state id :limbo :machine-consume))
                                      gs contents)]
-              (assoc-in gs-cleared [:objects :gunk :in] :machine)))))
+              (gs/move-object gs-cleared :gunk :machine :machine-transform)))))
 
       ;; TURN with other tool
       (= prsa :turn)

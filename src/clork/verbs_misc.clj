@@ -92,7 +92,7 @@
           (utils/tell "In a feat of unaccustomed daring, you manage to land on your feet without killing yourself.")
           (utils/crlf)
           (utils/crlf)
-          (assoc :here :forest-path))
+          (gs/set-location :forest-path :tree-jump))
 
       ;; Default: skip message
       :else
@@ -531,14 +531,14 @@
     (cond
       (= here :north-temple)
       (-> game-state
-          (assoc-in [:objects winner :in] :treasure-room)
-          (assoc :here :treasure-room)
+          (gs/move-object winner :treasure-room :prayer-teleport)
+          (gs/set-location :treasure-room :prayer-teleport)
           (v-first-look))
 
       (= here :treasure-room)
       (-> game-state
-          (assoc-in [:objects winner :in] :north-temple)
-          (assoc :here :north-temple)
+          (gs/move-object winner :north-temple :prayer-teleport)
+          (gs/set-location :north-temple :prayer-teleport)
           (v-first-look))
 
       :else
@@ -760,7 +760,7 @@
           (utils/tell (str "You are now in the " (gs/thing-name game-state prso) "."))
           (utils/crlf)
           ;; Move player into the vehicle
-          (assoc-in [:objects winner :in] prso)))))
+          (gs/move-object winner prso :board)))))
 
 (defn v-disembark
   "Handle DISEMBARK/EXIT verb - exit a vehicle.
@@ -808,7 +808,7 @@
           (utils/tell "You are on your own feet again.")
           (utils/crlf)
           ;; Move player to current room
-          (assoc-in [:objects winner :in] here)))))
+          (gs/move-object winner here :disembark)))))
 
 (defn v-wear
   "Handle WEAR verb.

@@ -427,7 +427,7 @@
     ;; Object is takeable - move it to player's inventory
     (let [winner (:winner game-state)]
       (-> game-state
-          (assoc-in [:objects obj-id :in] winner)
+          (game-state/move-object obj-id winner :auto-take)
           (game-state/set-thing-flag obj-id :touch)))
     ;; Not takeable
     true))

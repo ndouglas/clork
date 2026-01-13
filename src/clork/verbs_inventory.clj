@@ -47,7 +47,7 @@
         seq-num (inc (or (:inv-seq game-state) 0))]
     (-> game-state
         (assoc :inv-seq seq-num)
-        (assoc-in [:objects obj-id :in] winner)
+        (gs/move-object obj-id winner :take)
         (assoc-in [:objects obj-id :inv-seq] seq-num))))
 
 (defn already-holding?
@@ -204,7 +204,7 @@
         seq-num (inc (or (:inv-seq game-state) 0))]
     (-> game-state
         (assoc :inv-seq seq-num)
-        (assoc-in [:objects obj-id :in] here)
+        (gs/move-object obj-id here :drop)
         (assoc-in [:objects obj-id :inv-seq] seq-num))))
 
 (defn v-drop
@@ -242,7 +242,7 @@
           ;; Room has RLAND - can safely disembark
           has-rland?
           (-> game-state
-              (assoc-in [:objects winner :in] here)
+              (gs/move-object winner here :disembark)
               (utils/tell "You are on your own feet again."))
           ;; Can't disembark here (would be fatal - in water, etc.)
           :else

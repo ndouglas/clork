@@ -127,7 +127,7 @@
           (let [seq-num (inc (or (:inv-seq take-result) 0))]
             (-> take-result
                 (assoc :inv-seq seq-num)
-                (assoc-in [:objects prso :in] prsi)
+                (gs/move-object prso prsi :put)
                 (assoc-in [:objects prso :inv-seq] seq-num)
                 (gs/set-thing-flag prso :touch)
                 (score-put prso prsi)
@@ -141,7 +141,7 @@
       (let [seq-num (inc (or (:inv-seq game-state) 0))]
         (-> game-state
             (assoc :inv-seq seq-num)
-            (assoc-in [:objects prso :in] prsi)
+            (gs/move-object prso prsi :put)
             (assoc-in [:objects prso :inv-seq] seq-num)
             (gs/set-thing-flag prso :touch)
             (score-put prso prsi)

@@ -457,7 +457,7 @@
           (let [output-buffer (atom [])
                 gs-with-output (assoc game-state :output-buffer output-buffer)
                 result-gs (-> gs-with-output
-                              (assoc :here dest)
+                              (gs/set-location dest :loud-room-exit)
                               (dissoc :loud-room-mode)
                               (v-first-look))
                 result-gs (dissoc result-gs :output-buffer)

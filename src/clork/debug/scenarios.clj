@@ -34,12 +34,12 @@
 (defn set-location
   "Move player to a specific room."
   [game-state room-id]
-  (assoc game-state :here room-id))
+  (gs/set-location game-state room-id :scenario-setup))
 
 (defn give-item
   "Give an item to the player (move to :adventurer)."
   [game-state item-id]
-  (assoc-in game-state [:objects item-id :in] :adventurer))
+  (gs/move-object game-state item-id :adventurer :scenario-setup))
 
 (defn give-items
   "Give multiple items to the player."

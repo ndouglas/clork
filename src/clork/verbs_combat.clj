@@ -145,7 +145,7 @@
                            " breathes his last breath, a cloud of sinister black fog "
                            "envelops him, and when the fog lifts, the carcass has disappeared.\n"))
           ;; Move villain to limbo
-          (assoc-in [:objects villain-id :in] :limbo)
+          (gs/move-object villain-id :limbo :villain-death)
           ;; Call villain's F-DEAD action (will be handled by troll action handler)
           (call-villain-action villain-id :f-dead))
 

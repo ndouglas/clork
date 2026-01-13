@@ -219,7 +219,7 @@
                     (assoc-in [:objects :thief :ldesc] robber-c-desc)
                     (utils/tell "Your proposed victim suddenly recovers consciousness.")))
               ;; Move object to thief
-              (assoc-in [:objects prso :in] :thief)
+              (gs/move-object prso :thief :give-to-thief)
               ;; Announce based on value
               (cond->
                (pos? tvalue)
@@ -270,7 +270,7 @@
                   (or (nil? prob) (< (random/rand-int* 100) prob)))
            ;; Steal this item
            [(-> gs
-                (assoc-in [:objects obj-id :in] where)
+                (gs/move-object obj-id where :thief-steal)
                 (gs/set-thing-flag obj-id :touch)
                 (gs/set-thing-flag obj-id :invisible))
             true]
@@ -303,7 +303,7 @@
                   (or is-stiletto? (< (random/rand-int* 100) 10)))
            ;; Steal this item
            (let [new-gs (-> gs
-                            (assoc-in [:objects obj-id :in] :thief)
+                            (gs/move-object obj-id :thief :thief-steal-junk)
                             (gs/set-thing-flag obj-id :touch)
                             (gs/set-thing-flag obj-id :invisible))]
              (if (= room-id here)
@@ -335,7 +335,7 @@
                   (< (random/rand-int* 100) 30))
            ;; Drop this item
            (let [new-gs (-> gs
-                            (assoc-in [:objects obj-id :in] room-id)
+                            (gs/move-object obj-id room-id :thief-drop-junk)
                             (gs/unset-thing-flag obj-id :invisible))]
              (if (and (= room-id here) (not announced?))
                ;; Announce once if dropping in player's room

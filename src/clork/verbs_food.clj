@@ -24,7 +24,7 @@
   "Remove an object from the game world.
    ZIL: REMOVE-CAREFULLY - sets object's location to nil."
   [game-state obj-id]
-  (assoc-in game-state [:objects obj-id :in] nil))
+  (gs/move-object game-state obj-id nil :consume))
 
 (defn- hit-spot
   "The water drinking success message.

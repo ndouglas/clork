@@ -206,11 +206,12 @@
         should-reset? (and (not in-quotes?)
                            (not= winner player))]
     (if should-reset?
-      (-> game-state
-          (assoc :winner player)
-          ;; META-LOC finds the room containing an object
-          (assoc :here (validation/meta-loc game-state player))
-          ((fn [gs] (assoc gs :lit (validation/lit? gs (:here gs))))))
+      (let [player-room (validation/meta-loc game-state player)]
+        (-> game-state
+            (assoc :winner player)
+            ;; META-LOC finds the room containing an object
+            (game-state/set-location player-room :winner-reset)
+            ((fn [gs] (assoc gs :lit (validation/lit? gs (:here gs)))))))
       game-state)))
 
 ;;; ---------------------------------------------------------------------------

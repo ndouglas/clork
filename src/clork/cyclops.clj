@@ -39,7 +39,7 @@
   "Remove an object from the game world.
    ZIL: REMOVE-CAREFULLY - sets object's location to nil."
   [game-state obj-id]
-  (assoc-in game-state [:objects obj-id :in] nil))
+  (gs/move-object game-state obj-id nil :consume))
 
 (defn cyclops-here?
   "Check if cyclops is in the same room as the player."
@@ -180,7 +180,7 @@
                                "The cyclops shrugs but otherwise ignores your pitiful attempt.\n")]
             ;; If throwing, drop the object
             (if (= prsa :throw)
-              (assoc-in gs [:objects prso :in] (:here game-state))
+              (gs/move-object gs prso (:here game-state) :throw)
               gs))))
 
       ;; ZIL: <VERB? TAKE>

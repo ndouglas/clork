@@ -174,20 +174,16 @@
                    (utils/crlf)
                    (utils/crlf)
                    ;; Move the boat to the new room
-                   (assoc-in [:objects vehicle-id :in] room-id)))
+                   (gs/move-object vehicle-id room-id :boat-landing)))
              gs)
         ;; Move the winner to the new room (or keep in vehicle if boat landing)
-        ;; Record location change for planner infrastructure
         gs (if boat-landing?
-             ;; Player stays in boat, boat moves to room
+             ;; Player stays in boat, boat moves to room - just update location
+             (gs/set-location gs room-id :walk)
+             ;; Normal movement - move winner object and update location
              (-> gs
-                 (assoc :here room-id)
-                 (gs/record-change {:type :location-changed :from here :to room-id}))
-             ;; Normal movement
-             (-> gs
-                 (assoc-in [:objects winner :in] room-id)
-                 (assoc :here room-id)
-                 (gs/record-change {:type :location-changed :from here :to room-id})))
+                 (gs/move-object winner room-id :walk)
+                 (gs/set-location room-id :walk)))
         ;; Update LIT flag
         gs (assoc gs :lit (room-lit? gs room-id))
         ;; Score the room (ZIL: SCORE-OBJ .RM in gverbs.zil line 2138)

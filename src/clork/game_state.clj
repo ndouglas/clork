@@ -342,6 +342,48 @@
                                :to to}
                         reason (assoc :reason reason)))))))
 
+;;; ---------------------------------------------------------------------------
+;;; LOCATION (PLAYER POSITION)
+;;; ---------------------------------------------------------------------------
+;;; Centralized player location changes with change tracking.
+;;; Use set-location instead of direct (assoc game-state :here room-id) to
+;;; ensure all location changes are tracked for the planner infrastructure.
+
+(defn set-location
+  "Set the player's current location. Records the change for planner infrastructure.
+
+   Parameters:
+   - game-state: The current game state
+   - room-id: The destination room
+   - reason: Optional keyword describing why (e.g., :walk, :teleport, :death, :bat-transport)
+
+   Use this instead of (assoc game-state :here room-id) to ensure
+   the change is tracked.
+
+   NOTE: This only updates :here. For normal movement, use goto which also:
+   - Moves the winner object's :in field
+   - Updates :lit flag
+   - Scores the room
+   - Calls room actions
+   - Describes the room
+
+   Examples:
+   (set-location gs :living-room :walk)
+   (set-location gs :forest-1 :death)
+   (set-location gs :coal-mine-4 :bat-transport)"
+  ([game-state room-id]
+   (set-location game-state room-id nil))
+  ([game-state room-id reason]
+   (let [from (:here game-state)
+         new-state (assoc game-state :here room-id)]
+     (if (= from room-id)
+       new-state  ; No change, don't record
+       (record-change new-state
+                      (cond-> {:type :location-changed
+                               :from from
+                               :to room-id}
+                        reason (assoc :reason reason)))))))
+
 (defn get-contents
   "Return the IDs of all objects inside the given container.
    For player/actor inventory, sorts by acquisition sequence (LIFO - newest first).
