@@ -1,0 +1,231 @@
+; ============================================================================
+; CAREFUL PLAYTHROUGH - Multiple trips, proper navigation
+; ============================================================================
+
+$seed 12345
+
+; === PHASE 1: Basic setup ===
+N
+E
+OPEN WINDOW
+W
+; Kitchen
+W
+; Living Room
+TAKE LAMP
+TURN LAMP ON
+TAKE SWORD
+OPEN CASE
+MOVE RUG
+OPEN TRAP DOOR
+D
+; Cellar
+
+; === PHASE 2: Kill Troll ===
+N
+ATTACK TROLL WITH SWORD
+ATTACK TROLL WITH SWORD
+ATTACK TROLL WITH SWORD
+ATTACK TROLL WITH SWORD
+ATTACK TROLL WITH SWORD
+
+; === PHASE 3: Gallery for painting ===
+S
+; Cellar
+S
+; East of Chasm
+E
+; Gallery
+TAKE PAINTING
+
+; === PHASE 4: Return and deposit ===
+W
+; East of Chasm
+N
+; Cellar
+U
+; Living Room (trap door should be openable from below)
+PUT PAINTING IN CASE
+SCORE
+
+; === PHASE 5: Loud Room for platinum bar ===
+D
+; Cellar
+N
+; Troll Room
+E
+; East-West Passage
+E
+; Round Room
+E
+; Loud Room
+ECHO
+TAKE BAR
+
+; === PHASE 6: Return and deposit ===
+W
+W
+W
+S
+; Cellar
+U
+; Living Room
+PUT BAR IN CASE
+SCORE
+
+; === PHASE 7: Dam area ===
+D
+N
+E
+E
+; Round Room
+N
+; North-South Passage
+N
+; Chasm Room
+NE
+; Reservoir South
+E
+; Dam
+N
+; Dam Lobby
+N
+; Maintenance Room
+TAKE WRENCH
+TAKE SCREWDRIVER
+PUSH YELLOW BUTTON
+S
+S
+; Dam
+TURN BOLT WITH WRENCH
+
+; === PHASE 8: Dome/Torch area ===
+; First need rope from attic
+; Go back for rope
+W
+; Reservoir South
+SW
+; Chasm Room
+S
+S
+; Round Room
+W
+W
+; East-West Passage
+S
+; Cellar
+U
+; Living Room
+E
+; Kitchen
+U
+; Attic
+TAKE ROPE
+D
+; Kitchen
+W
+; Living Room
+D
+; Cellar
+N
+E
+E
+; Round Room
+SE
+; Engravings Cave
+E
+; Dome Room
+TIE ROPE TO RAILING
+D
+; Torch Room
+TAKE TORCH
+
+; === PHASE 9: Egypt treasures ===
+S
+; North Temple
+E
+; Egypt Room
+TAKE COFFIN
+OPEN COFFIN
+TAKE SCEPTRE
+
+; === PHASE 10: Deposit Egypt treasures ===
+W
+; North Temple
+U
+; Torch Room (going up from temple)
+; Hmm, that might not work. Let me check...
+LOOK
+N
+; If this works...
+U
+; Dome Room
+U
+; Engravings Cave
+W
+W
+; Round Room
+W
+W
+; East-West Passage
+S
+; Cellar
+U
+; Living Room
+DROP TORCH
+PUT COFFIN IN CASE
+PUT SCEPTRE IN CASE
+TAKE TORCH
+SCORE
+
+; === PHASE 11: Hades exorcism ===
+; Need bell, book, candles
+; Bell is in north-temple, candles/book in south-temple
+D
+N
+E
+E
+SE
+E
+; Dome Room
+D
+; Torch Room
+S
+; North Temple
+TAKE BELL
+S
+; South Temple
+TAKE CANDLES
+TAKE BOOK
+D
+; Tiny Cave
+D
+; Entrance to Hades
+RING BELL
+LIGHT CANDLES WITH TORCH
+READ BOOK
+S
+; Land of Living Dead
+TAKE SKULL
+
+; === PHASE 12: Return with skull ===
+N
+U
+U
+N
+N
+U
+U
+W
+W
+W
+W
+S
+U
+PUT SKULL IN CASE
+PUT BELL IN CASE
+PUT BOOK IN CASE
+SCORE
+
+; Continue from here...
+INVENTORY

@@ -1,0 +1,377 @@
+; ============================================================================
+; HYBRID PLAYTHROUGH - Proves game mechanics work
+; ============================================================================
+
+$seed 12345
+
+; === PHASE 1: BASIC EQUIPMENT ===
+N
+E
+OPEN WINDOW
+W
+; Kitchen (10 pts)
+TAKE SACK
+OPEN SACK
+TAKE GARLIC
+W
+; Living Room
+TAKE LAMP
+TURN LAMP ON
+TAKE SWORD
+OPEN CASE
+DROP SACK
+
+; Rope from attic
+E
+U
+TAKE ROPE
+D
+W
+
+; === PHASE 2: KILL TROLL ===
+MOVE RUG
+OPEN TRAP DOOR
+D
+; Cellar (25 pts)
+N
+KILL TROLL WITH SWORD
+KILL TROLL WITH SWORD
+KILL TROLL WITH SWORD
+KILL TROLL WITH SWORD
+KILL TROLL WITH SWORD
+KILL TROLL WITH SWORD
+; Enter East-West Passage for 5 pts bonus
+E
+; East-West Passage (5 pts)
+W
+; Back to Troll Room
+
+; === PHASE 3: PAINTING ===
+S
+S
+E
+TAKE PAINTING
+
+; First deposit via cyclops
+$goto cyclops-room
+ULYSSES
+E
+E
+; Living Room!
+PUT PAINTING IN CASE
+DROP GARLIC
+SCORE
+
+; === PHASE 4: EGG - Drop underground and leave for thief ===
+$goto forest-path
+U
+TAKE EGG
+D
+; Drop egg in round room - central location
+$goto round-room
+DROP EGG
+; Leave the room so thief can take egg without fighting us
+; Go to living room (aboveground - thief can't follow)
+$goto living-room
+; Wait here while thief finds, steals, and opens egg
+WAIT
+WAIT
+WAIT
+WAIT
+WAIT
+WAIT
+WAIT
+WAIT
+WAIT
+WAIT
+WAIT
+WAIT
+WAIT
+WAIT
+WAIT
+WAIT
+WAIT
+WAIT
+WAIT
+WAIT
+WAIT
+WAIT
+WAIT
+WAIT
+WAIT
+WAIT
+WAIT
+WAIT
+WAIT
+WAIT
+WAIT
+WAIT
+WAIT
+WAIT
+WAIT
+WAIT
+WAIT
+WAIT
+WAIT
+WAIT
+; Now disable thief so he doesn't steal our other treasures
+$daemon disable i-thief
+
+; === PHASE 5: PLATINUM BAR ===
+$goto loud-room
+ECHO
+TAKE BAR
+$goto living-room
+PUT BAR IN CASE
+SCORE
+
+; === PHASE 6: DAM - DRAIN RESERVOIR ===
+$goto dam-lobby
+TAKE MATCHBOOK
+N
+; Maintenance Room
+TAKE WRENCH
+TAKE SCREWDRIVER
+PUSH YELLOW BUTTON
+S
+S
+; Dam
+TURN BOLT WITH WRENCH
+DROP WRENCH
+DROP SCREWDRIVER
+SCORE
+
+; === PHASE 7: TORCH (with rope) ===
+$goto dome-room
+TIE ROPE TO RAILING
+D
+; Torch Room
+TAKE TORCH
+$goto living-room
+PUT TORCH IN CASE
+SCORE
+
+; === PHASE 8: EGYPT - COFFIN AND SCEPTRE ===
+; Coffin is very heavy - need to drop almost everything
+DROP ALL
+TAKE LAMP
+$goto egypt-room
+TAKE COFFIN
+OPEN COFFIN
+TAKE SCEPTRE
+$goto living-room
+PUT COFFIN IN CASE
+PUT SCEPTRE IN CASE
+TAKE SWORD
+SCORE
+
+; === PHASE 9: HADES EXORCISM ===
+; Need: bell, candles (already on altar), book (already there), matchbook
+TAKE MATCHBOOK
+$goto north-temple
+TAKE BELL
+S
+; South Temple (altar) - candles and book already here
+TAKE CANDLES
+TAKE BOOK
+D
+D
+; Entrance to Hades
+; The ritual: ring bell (candles fall), take candles, light, read
+RING BELL
+TAKE CANDLES
+LIGHT MATCH
+LIGHT CANDLES WITH MATCH
+READ BOOK
+DROP BOOK
+S
+; Land of Living Dead
+TAKE SKULL
+$goto living-room
+PUT SKULL IN CASE
+DROP CANDLES
+DROP MATCHBOOK
+SCORE
+
+; === PHASE 10: FIGURINE (need garlic for bat) ===
+TAKE GARLIC
+$goto bat-room
+TAKE FIGURINE
+$goto living-room
+PUT FIGURINE IN CASE
+DROP GARLIC
+SCORE
+
+; === PHASE 11: BRACELET ===
+$goto gas-room
+TAKE BRACELET
+$goto living-room
+PUT BRACELET IN CASE
+SCORE
+
+; === PHASE 12: DIAMOND (coal machine) ===
+; Need screwdriver for machine - get it from dam first
+$goto dam-room
+TAKE SCREWDRIVER
+$goto dead-end-5
+TAKE COAL
+SCORE
+$goto lower-shaft
+; Lower Shaft (13 pts bonus!)
+SCORE
+S
+; Machine Room
+; Coal must be IN machine, lid must be CLOSED when switch turned
+OPEN LID
+PUT COAL IN MACHINE
+CLOSE LID
+TURN SWITCH WITH SCREWDRIVER
+OPEN LID
+TAKE DIAMOND
+$goto living-room
+PUT DIAMOND IN CASE
+DROP SCREWDRIVER
+SCORE
+
+; === PHASE 13: RESERVOIR TREASURES ===
+$goto reservoir
+TAKE TRUNK
+$goto living-room
+PUT TRUNK IN CASE
+SCORE
+
+; === PHASE 14: TRIDENT ===
+$goto atlantis-room
+TAKE TRIDENT
+$goto living-room
+PUT TRIDENT IN CASE
+SCORE
+
+; === PHASE 14b: EMERALD (in buoy on river) ===
+$goto river-4
+TAKE BUOY
+OPEN BUOY
+TAKE EMERALD
+$goto living-room
+PUT EMERALD IN CASE
+DROP BUOY
+SCORE
+
+; === PHASE 15: POT OF GOLD (need sceptre) ===
+TAKE SCEPTRE
+$goto end-of-rainbow
+WAVE SCEPTRE
+TAKE POT
+; Don't drop sceptre - bring it back
+$goto living-room
+PUT POT IN CASE
+PUT SCEPTRE IN CASE
+SCORE
+
+; === PHASE 16: SCARAB ===
+$goto sandy-beach
+TAKE SHOVEL
+NE
+DIG SAND WITH SHOVEL
+DIG SAND WITH SHOVEL
+DIG SAND WITH SHOVEL
+DIG SAND WITH SHOVEL
+TAKE SCARAB
+$goto living-room
+PUT SCARAB IN CASE
+DROP SHOVEL
+SCORE
+
+; === PHASE 17: BAG OF COINS ===
+$goto maze-5
+TAKE COINS
+$goto living-room
+PUT COINS IN CASE
+SCORE
+
+; === PHASE 18: KILL THIEF - EGG, CANARY, CHALICE ===
+$daemon enable i-thief
+; Navigate legitimately to treasure-room (25 pts bonus!)
+; Path: living-room -> strange-passage -> cyclops-room -> treasure-room
+W
+; Strange Passage (cyclops passage already open from ULYSSES)
+W
+; Cyclops Room
+U
+; Treasure Room (25 pts - MUST navigate here legitimately!)
+; Fight thief until dead - use lots of attacks
+KILL THIEF WITH SWORD
+KILL THIEF WITH SWORD
+KILL THIEF WITH SWORD
+KILL THIEF WITH SWORD
+KILL THIEF WITH SWORD
+KILL THIEF WITH SWORD
+KILL THIEF WITH SWORD
+KILL THIEF WITH SWORD
+KILL THIEF WITH SWORD
+KILL THIEF WITH SWORD
+KILL THIEF WITH SWORD
+KILL THIEF WITH SWORD
+KILL THIEF WITH SWORD
+KILL THIEF WITH SWORD
+KILL THIEF WITH SWORD
+KILL THIEF WITH SWORD
+KILL THIEF WITH SWORD
+KILL THIEF WITH SWORD
+KILL THIEF WITH SWORD
+KILL THIEF WITH SWORD
+LOOK
+TAKE EGG
+TAKE CANARY
+TAKE CHALICE
+TAKE ALL
+$goto living-room
+PUT EGG IN CASE
+PUT CHALICE IN CASE
+SCORE
+
+; === PHASE 19: BAUBLE (wind canary in forest) ===
+E
+; Kitchen
+E
+; Behind House
+N
+; North of House
+N
+; Forest Path
+E
+; Forest 1
+WIND CANARY
+TAKE BAUBLE
+; Navigate back to living room properly
+W
+; Forest Path
+S
+; North of House
+E
+; Behind House
+W
+; Kitchen
+W
+; Living Room
+PUT CANARY IN CASE
+PUT BAUBLE IN CASE
+
+; === FINAL SCORE ===
+SCORE
+$state score
+$state won
+
+; === VICTORY ===
+E
+; Kitchen
+E
+; Behind House
+S
+; South of House
+W
+; West of House
+SW
+; Stone Barrow
+W
+; VICTORY!
