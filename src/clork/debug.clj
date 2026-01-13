@@ -24,8 +24,6 @@
             [clork.debug.scenarios :as debug-scenarios]
             [clork.debug.inspect :as debug-inspect]
             [clork.debug.pathfind :as debug-pathfind]
-            [clork.debug.plan :as debug-plan]
-            [clork.debug.schedule :as debug-schedule]
             [clork.undo :as undo]))
 
 ;;; ---------------------------------------------------------------------------
@@ -233,17 +231,7 @@
                      "Show all rooms reachable from a location")
   (register-command! :route debug-pathfind/cmd-route
                      "Plan optimal route through multiple rooms")
-  ;; Speedrun planning commands
-  (register-command! :plan debug-plan/cmd-plan
-                     "Speedrun planning (treasure, flag, kill-thief, win)"
-                     :subcommands debug-plan/subcommands)
-  (register-command! :run debug-plan/cmd-run
-                     "Execute speedrun (with adaptive combat)"
-                     :subcommands debug-plan/run-subcommands)
-  ;; Schedule inspection commands
-  (register-command! :schedule debug-schedule/cmd-schedule
-                     "Inspect generated schedules (preview, validate, deps)"
-                     :subcommands debug-schedule/subcommands))
+)
 
 ;; Auto-initialize on namespace load
 (init-commands!)
