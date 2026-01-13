@@ -222,12 +222,12 @@
         ;; Parsing failed - error already displayed by parser
         gs
         ;; Parsing succeeded - perform the action, then run daemons
-        (-> gs
-            (verb-defs/perform)
-            (increment-moves-if-needed)
-            (daemon/clocker)
-            (debug-state/validate-state-middleware)
-            (utils/crlf))))))
+        (let [after-perform (verb-defs/perform gs)
+              after-incr (increment-moves-if-needed after-perform)
+              after-clocker (daemon/clocker after-incr)]
+          (-> after-clocker
+              (debug-state/validate-state-middleware)
+              (utils/crlf)))))))
 
 (defn main-loop-once
   "Execute one iteration of the main loop.

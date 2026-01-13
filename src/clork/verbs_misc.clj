@@ -521,17 +521,25 @@
 (defn v-treasure
   "Handle TREASURE/TEMPLE verb (hint).
    ZIL: V-TREASURE in gverbs.zil lines 1490-1502
-   Special: In North Temple, teleports to Treasure Room and vice versa."
+   Special: In North Temple, teleports to Treasure Room and vice versa.
+   Uses GOTO which calls V-FIRST-LOOK after moving."
   [game-state]
-  (let [here (:here game-state)]
+  (let [here (:here game-state)
+        winner (:winner game-state)
+        ;; Use requiring-resolve to avoid circular dependency with verbs-look
+        v-first-look (requiring-resolve 'clork.verbs-look/v-first-look)]
     (cond
       (= here :north-temple)
       (-> game-state
-          (assoc :here :treasure-room))
+          (assoc-in [:objects winner :in] :treasure-room)
+          (assoc :here :treasure-room)
+          (v-first-look))
 
       (= here :treasure-room)
       (-> game-state
-          (assoc :here :north-temple))
+          (assoc-in [:objects winner :in] :north-temple)
+          (assoc :here :north-temple)
+          (v-first-look))
 
       :else
       (-> game-state
