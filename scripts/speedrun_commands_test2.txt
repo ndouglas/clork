@@ -1,0 +1,58 @@
+; Test speedrun commands - fixed version
+; Turns on lamp first, uses correct object IDs
+
+$purloin brass-lantern
+TURN LAMP ON
+
+; === LOUD ROOM (lamp on first!) ===
+$goto loud-room
+LOOK
+ECHO
+LOOK
+TAKE BAR
+
+; === DAM (find correct room) ===
+$goto dam-lobby
+LOOK
+
+$goto maintenance-room
+LOOK
+$purloin wrench
+N
+LOOK
+TURN BOLT WITH WRENCH
+
+; === MAINTENANCE ROOM ===
+$goto maintenance-room
+LOOK
+PUSH YELLOW BUTTON
+LOOK
+
+; === CANARY (correct ID: clockwork-canary) ===
+$goto forest-1
+$purloin clockwork-canary
+WIND CANARY
+LOOK
+
+; === MIRROR ===
+$goto mirror-room-1
+LOOK
+TOUCH MIRROR
+LOOK
+
+; === HADES (correct IDs) ===
+$goto entrance-to-hades
+$purloin brass-bell
+$purloin ivory-torch
+LOOK
+RING BELL
+LIGHT CANDLES WITH TORCH
+LOOK
+
+; === BASKET (correct ID) ===
+$goto shaft-room
+LOOK
+RAISE BASKET
+LOWER BASKET
+
+SCORE

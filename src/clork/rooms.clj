@@ -10,6 +10,7 @@
             [clork.random :as random]
             [clork.parser.state :as parser-state]
             [clork.verbs-movement :as verbs-movement]
+            [clork.verbs-health :as verbs-health]
             [clork.forest :as forest]))
 
 ;;; ---------------------------------------------------------------------------
@@ -2895,6 +2896,27 @@ The gate is open; through it you can see a desolation, with a pile of mangled bo
 ;;       (FLAGS RLANDBIT SACREDBIT)
 ;;       (PSEUDO "CHAIN" CHAIN-PSEUDO)>
 
+;; LIGHT-SHAFT bonus: 13 points for reaching lower-shaft with light
+;; ZIL: <GLOBAL LIGHT-SHAFT 13>
+;;      <COND (<AND <EQUAL? ,HERE ,LOWER-SHAFT> ,LIT>
+;;             <SCORE-UPD ,LIGHT-SHAFT>
+;;             <SETG LIGHT-SHAFT 0>)>
+(defn lower-shaft-action
+  "Lower shaft room action - awards 13 bonus points for arriving with light."
+  [game-state rarg]
+  (cond
+    ;; When entering the room, check if we should award the light-shaft bonus
+    (= rarg :m-enter)
+    (if (and (:lit game-state)
+             (not (get game-state :light-shaft-awarded)))
+      (-> game-state
+          (verbs-health/score-upd 13)
+          (assoc :light-shaft-awarded true))
+      game-state)
+
+    :else
+    (no-objs-action game-state rarg)))
+
 (def lower-shaft
   {:id :lower-shaft
    :desc "Drafty Room"
@@ -2907,7 +2929,7 @@ The gate is open; through it you can see a desolation, with a pile of mangled bo
            :east {:to :timber-room
                   :if :empty-handed
                   :else "You cannot fit through this passage with that load."}}
-   :action no-objs-action})
+   :action lower-shaft-action})
 
 ;; <ROOM MACHINE-ROOM
 ;;       (IN ROOMS)

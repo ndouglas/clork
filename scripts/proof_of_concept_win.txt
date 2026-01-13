@@ -1,0 +1,162 @@
+; ============================================================================
+; CLORK PROOF OF CONCEPT - Verifies the game can be beaten
+; ============================================================================
+;
+; This script uses debug commands liberally to prove:
+; 1. All treasures can be collected
+; 2. 350 points is achievable
+; 3. The barrow can be entered (winning the game)
+;
+; Total points needed: 350
+; - Rooms (65): kitchen (10), cellar (25), east-of-chasm (5), treasure-room (25)
+; - Treasures (285): combined :value (pickup) + :tvalue (trophy case)
+;
+; ============================================================================
+
+; === SETUP ===
+$seed 12345
+$purloin brass-lantern
+TURN LAMP ON
+
+; === VISIT POINT-SCORING ROOMS ===
+; These rooms award points on first entry
+
+$goto kitchen
+; +10 points
+LOOK
+
+$goto cellar
+; +25 points
+LOOK
+
+$goto east-of-chasm
+; +5 points
+LOOK
+
+$goto treasure-room
+; +25 points
+LOOK
+
+; Current: 65 points (room values only)
+SCORE
+
+; === COLLECT ALL TREASURES ===
+; Need to pick up each treasure (awards :value points)
+; Then put in trophy case (awards :tvalue points)
+
+; First, open the trophy case
+$goto living-room
+OPEN CASE
+
+; === PURLOIN ALL TREASURES ===
+; This gets us :value points for picking them up
+
+$purloin painting
+; painting: value 4
+
+$purloin gold-coffin
+; coffin: value 10
+
+$purloin sceptre
+; sceptre: value 4
+
+$purloin ivory-torch
+; torch: value 14
+
+$purloin crystal-skull
+; skull: value 10
+
+$purloin trunk-of-jewels
+; trunk: value 15
+
+$purloin huge-diamond
+; diamond: value 10
+
+$purloin large-emerald
+; emerald: value 5
+
+$purloin pot-of-gold
+; pot: value 10
+
+$purloin clockwork-canary
+; canary: value 6
+
+$purloin brass-bauble
+; bauble: value 1
+
+$purloin jade-figurine
+; figurine: value 5
+
+$purloin crystal-trident
+; trident: value 4
+
+$purloin sapphire-bracelet
+; bracelet: value 5
+
+$purloin egg
+; egg: value 5
+
+$purloin silver-chalice
+; chalice: value 10
+
+$purloin bag-of-coins
+; coins: value 10
+
+$purloin platinum-bar
+; bar: value 10
+
+$purloin jeweled-scarab
+; scarab: value 5
+
+; Total :value points from treasures: 143
+; With room points: 65 + 143 = 208 points
+
+SCORE
+INVENTORY
+
+; === PUT ALL TREASURES IN TROPHY CASE ===
+; This awards :tvalue points
+
+PUT PAINTING IN CASE
+PUT COFFIN IN CASE
+PUT SCEPTRE IN CASE
+PUT TORCH IN CASE
+PUT SKULL IN CASE
+PUT TRUNK IN CASE
+PUT DIAMOND IN CASE
+PUT EMERALD IN CASE
+PUT POT IN CASE
+PUT CANARY IN CASE
+PUT BAUBLE IN CASE
+PUT FIGURINE IN CASE
+PUT TRIDENT IN CASE
+PUT BRACELET IN CASE
+PUT EGG IN CASE
+PUT CHALICE IN CASE
+PUT BAG IN CASE
+PUT BAR IN CASE
+PUT SCARAB IN CASE
+
+; Total :tvalue points: 142
+; Grand total should be: 65 + 143 + 142 = 350 points
+
+SCORE
+
+; === VERIFY WON FLAG IS SET ===
+$state won
+$inspect player
+
+; === ENTER BARROW FOR VICTORY ===
+$goto west-of-barrow
+LOOK
+
+; The SW/IN exits to stone-barrow require :won flag
+SW
+
+; Or try IN
+IN
+
+; Should see victory message!
+LOOK
+SCORE
+

@@ -1,0 +1,99 @@
+; ============================================================================
+; VICTORY TEST - Achieve 350 points and enter the stone barrow
+; ============================================================================
+
+$seed 42
+
+; === Enter scored rooms legitimately ===
+N
+E
+OPEN WINDOW
+W
+W
+TAKE LAMP
+TURN LAMP ON
+TAKE SWORD
+OPEN CASE
+MOVE RUG
+OPEN TRAP DOOR
+D
+N
+KILL TROLL WITH SWORD
+KILL TROLL WITH SWORD
+E
+; East-West Passage - 5 pts
+
+; Treasure Room via cyclops
+$goto cyclops-room
+ULYSSES
+U
+; Treasure Room - 25 pts
+
+; Lower Shaft bonus - 13 pts
+$goto lower-shaft
+
+; Get egg
+$goto forest-path
+U
+TAKE EGG
+D
+
+; Purloin and deposit all treasures
+$goto living-room
+$purloin painting
+$purloin gold-coffin
+$purloin sceptre
+$purloin ivory-torch
+$purloin crystal-skull
+$purloin huge-diamond
+$purloin large-emerald
+$purloin clockwork-canary
+$purloin jade-figurine
+$purloin crystal-trident
+$purloin sapphire-bracelet
+$purloin silver-chalice
+$purloin bag-of-coins
+$purloin platinum-bar
+$purloin trunk-of-jewels
+$unflag trunk-of-jewels invisible
+$purloin pot-of-gold
+$unflag pot-of-gold invisible
+$purloin brass-bauble
+$unflag brass-bauble invisible
+$purloin jeweled-scarab
+$unflag jeweled-scarab invisible
+
+PUT EGG IN CASE
+PUT PAINTING IN CASE
+PUT COFFIN IN CASE
+PUT SCEPTRE IN CASE
+PUT TORCH IN CASE
+PUT SKULL IN CASE
+PUT TRUNK IN CASE
+PUT DIAMOND IN CASE
+PUT EMERALD IN CASE
+PUT POT IN CASE
+PUT CANARY IN CASE
+PUT BAUBLE IN CASE
+PUT FIGURINE IN CASE
+PUT TRIDENT IN CASE
+PUT BRACELET IN CASE
+PUT CHALICE IN CASE
+PUT BAG IN CASE
+PUT BAR IN CASE
+PUT SCARAB IN CASE
+
+SCORE
+$state won
+
+; === GO TO WEST OF HOUSE AND ENTER BARROW ===
+E
+E
+S
+S
+W
+W
+; West of House
+LOOK
+SW
+LOOK

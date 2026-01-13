@@ -7,12 +7,14 @@
    - $move <obj> <dest> - Move object to location
    - $flag <id> <flag> - Set a flag on object/room
    - $unflag <id> <flag> - Clear a flag
-   - $frotz <obj>      - Make object give light"
+   - $frotz <obj>      - Make object give light
+   - $seed <n>         - Seed the RNG for reproducible gameplay"
   (:require [clork.utils :as utils]
             [clork.game-state :as gs]
             [clork.flags :as flags]
             [clojure.string :as str]
-            [clork.verbs-look :as verbs-look]))
+            [clork.verbs-look :as verbs-look]
+            [clork.random :as random]))
 
 ;;; ---------------------------------------------------------------------------
 ;;; HELPERS
@@ -247,6 +249,28 @@
         (if-let [room (get-in game-state [:rooms obj-id])]
           (utils/tell game-state (str obj-id " is a ROOM: " (:desc room) "\n"))
           (utils/tell game-state (str "Unknown object: " obj-id "\n")))))))
+
+;;; ---------------------------------------------------------------------------
+;;; $seed <n>
+;;; ---------------------------------------------------------------------------
+
+(defn cmd-seed
+  "Seed the random number generator for reproducible gameplay."
+  [game-state args]
+  (if (empty? args)
+    (let [seed-info (random/get-seed-info)]
+      (-> game-state
+          (utils/tell "Current RNG state:\n")
+          (utils/tell (str "  Seed: " (:seed seed-info) "\n"))
+          (utils/tell (str "  Calls: " (:call-count seed-info) "\n"))
+          (utils/tell "Usage: $seed <number> - Set seed for reproducible randomness\n")))
+    (let [seed (try (Long/parseLong (first args))
+                    (catch NumberFormatException _ nil))]
+      (if seed
+        (do
+          (random/init! seed)
+          (tell-action game-state (str "RNG seeded with " seed " - randomness is now reproducible")))
+        (utils/tell game-state "Invalid seed. Please provide a number.\n")))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; COMMAND REGISTRATION

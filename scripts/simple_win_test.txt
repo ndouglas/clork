@@ -1,0 +1,250 @@
+; ============================================================================
+; SIMPLE WIN TEST - Focused on proving game can be beaten
+; ============================================================================
+
+$seed 42
+
+; === Get equipment ===
+N
+; North of House
+N
+; Forest Path
+U
+; Up a Tree
+TAKE EGG
+D
+; Forest Path
+S
+; North of House
+E
+; Behind House
+OPEN WINDOW
+W
+; Kitchen
+TAKE SACK
+OPEN SACK
+TAKE GARLIC
+W
+; Living Room
+TAKE LAMP
+TURN LAMP ON
+TAKE SWORD
+OPEN CASE
+MOVE RUG
+OPEN TRAP DOOR
+D
+; Cellar
+
+; === Kill Troll ===
+N
+; Troll Room
+KILL TROLL WITH SWORD
+KILL TROLL WITH SWORD
+KILL TROLL WITH SWORD
+KILL TROLL WITH SWORD
+KILL TROLL WITH SWORD
+KILL TROLL WITH SWORD
+KILL TROLL WITH SWORD
+KILL TROLL WITH SWORD
+KILL TROLL WITH SWORD
+KILL TROLL WITH SWORD
+
+; Check troll status
+LOOK
+
+; === Gallery for painting ===
+S
+S
+; East of Chasm
+E
+; Gallery
+TAKE PAINTING
+
+; === Dam area ===
+N
+; Studio
+U
+; Kitchen
+W
+D
+N
+; Troll Room (should be passable now)
+E
+; East-West Passage
+E
+; Round Room
+E
+; Loud Room
+ECHO
+TAKE BAR
+
+; === Dam controls ===
+U
+; Deep Canyon
+E
+; Reservoir South
+N
+; Dam
+N
+; Lobby
+N
+; Maintenance Room
+TAKE WRENCH
+S
+S
+; Dam
+TURN BOLT WITH WRENCH
+S
+; Dam Base
+
+; === Wait for thief to deposit egg ===
+WAIT
+WAIT
+WAIT
+WAIT
+WAIT
+WAIT
+$daemon disable i-thief
+
+; === Dome/Torch area ===
+N
+; Dam
+N
+N
+; Maintenance
+S
+S
+S
+; Dam Base
+W
+; Loud Room
+W
+; Round Room
+SE
+; Engravings Cave
+E
+; Dome Room
+TIE ROPE TO RAILING
+D
+; Torch Room
+TAKE TORCH
+S
+; North Temple
+E
+; Egypt Room
+TAKE COFFIN
+OPEN COFFIN
+TAKE SCEPTRE
+
+; === Hades for skull ===
+W
+S
+; South Temple
+D
+; Tiny Cave
+D
+; Entrance to Hades
+RING BELL
+LIGHT CANDLES WITH TORCH
+READ BOOK
+S
+; Land of Living Dead
+TAKE SKULL
+
+; === Return via prayer ===
+N
+NE
+; Altar
+PRAY
+; Forest teleport?
+LOOK
+
+; === Score check ===
+SCORE
+INVENTORY
+
+; === Deposit treasures ===
+; Navigate to living room
+S
+S
+S
+IN
+W
+; Living Room
+PUT ALL IN CASE
+SCORE
+
+; === Kill thief and get remaining treasures ===
+$daemon enable i-thief
+D
+N
+; Troll Room
+W
+; Maze 1 - navigate to cyclops
+S
+; Maze 2
+E
+; Maze 3
+U
+; Maze 5
+TAKE BAG
+; coins
+SW
+; Maze 6
+D
+; Maze 7
+S
+; Maze 15
+SE
+; Cyclops Room
+ULYSSES
+U
+; Treasure Room
+LOOK
+KILL THIEF WITH SWORD
+KILL THIEF WITH SWORD
+KILL THIEF WITH SWORD
+KILL THIEF WITH SWORD
+KILL THIEF WITH SWORD
+KILL THIEF WITH SWORD
+KILL THIEF WITH SWORD
+KILL THIEF WITH SWORD
+KILL THIEF WITH SWORD
+KILL THIEF WITH SWORD
+TAKE ALL
+LOOK
+
+; === Wind canary for bauble ===
+D
+E
+E
+; Living Room - via strange passage
+PUT ALL IN CASE
+TAKE CANARY
+E
+E
+N
+N
+W
+; Forest 1
+WIND CANARY
+TAKE BAUBLE
+
+; === Final deposit ===
+E
+S
+S
+W
+W
+; Living Room
+PUT ALL IN CASE
+SCORE
+
+; === Win check ===
+$state won
+
+; === Enter barrow ===
+SW
+LOOK
+
+SCORE

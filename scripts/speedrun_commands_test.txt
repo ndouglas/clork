@@ -1,0 +1,92 @@
+; Test speedrun commands that might not be implemented
+; Uses debug commands to skip to relevant areas
+
+; === CYCLOPS ===
+$goto cyclops-room
+LOOK
+ULYSSES
+LOOK
+ODYSSEUS
+
+; === LOUD ROOM ===
+$goto loud-room
+$purloin brass-lantern
+TURN LAMP ON
+LOOK
+ECHO
+LOOK
+TAKE BAR
+
+; === DAM CONTROLS ===
+$goto dam
+LOOK
+$purloin wrench
+TURN BOLT WITH WRENCH
+LOOK
+
+; === MAINTENANCE ROOM ===
+$goto maintenance-room
+LOOK
+PUSH YELLOW
+LOOK
+$purloin screwdriver
+
+; === PRAYER TELEPORT ===
+$goto south-temple
+LOOK
+PRAY
+LOOK
+
+; === CANARY/BAUBLE ===
+$goto forest-1
+$purloin canary
+WIND CANARY
+LOOK
+TAKE BAUBLE
+
+; === RAINBOW/SCEPTRE ===
+$goto aragain-falls
+LOOK
+$purloin sceptre
+WAVE SCEPTRE
+LOOK
+
+; === DIG SAND ===
+$goto sandy-cave
+$purloin shovel
+LOOK
+DIG SAND WITH SHOVEL
+DIG SAND WITH SHOVEL
+DIG SAND WITH SHOVEL
+DIG SAND WITH SHOVEL
+LOOK
+TAKE SCARAB
+
+; === MIRROR TOUCH ===
+$goto mirror-room-1
+LOOK
+TOUCH MIRROR
+LOOK
+
+; === HADES RITUAL ===
+$goto entrance-to-hades
+$purloin bell
+$purloin candles
+$purloin black-book
+$purloin torch
+LOOK
+RING BELL
+LIGHT CANDLES WITH TORCH
+READ BOOK
+LOOK
+
+; === COAL MINE BASKET ===
+$goto shaft-room
+LOOK
+$purloin basket
+$purloin coal
+PUT COAL IN BASKET
+LOWER BASKET
+LOOK
+
+SCORE

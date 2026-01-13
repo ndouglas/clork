@@ -189,6 +189,8 @@
                      "Make object give light")
   (register-command! :where debug-manip/cmd-where
                      "Find where an object is located")
+  (register-command! :seed debug-manip/cmd-seed
+                     "Seed RNG for reproducible gameplay")
   ;; Undo commands
   (register-command! :undo undo/cmd-undo
                      "Undo last command(s)")

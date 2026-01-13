@@ -1,0 +1,117 @@
+; ============================================================================
+; FINAL WIN TEST - Should achieve 350 points and enter barrow
+; ============================================================================
+
+$seed 42
+
+; === Step 1: Enter scored rooms legitimately ===
+; Kitchen (10 pts)
+N
+E
+OPEN WINDOW
+W
+SCORE
+
+; Get lamp for underground
+W
+TAKE LAMP
+TURN LAMP ON
+TAKE SWORD
+OPEN CASE
+
+; Cellar (25 pts)
+MOVE RUG
+OPEN TRAP DOOR
+D
+SCORE
+
+; East-West Passage (5 pts) - need to kill troll first
+N
+KILL TROLL WITH SWORD
+KILL TROLL WITH SWORD
+KILL TROLL WITH SWORD
+E
+SCORE
+
+; Treasure Room (25 pts) - via cyclops
+$goto cyclops-room
+ULYSSES
+U
+SCORE
+
+; Lower Shaft (13 pts bonus!) - need to get there with light
+; Navigate via coal mine (need to go through gas room etc.)
+$goto lower-shaft
+SCORE
+
+; === Step 2: Get egg properly ===
+$goto forest-path
+U
+TAKE EGG
+D
+SCORE
+
+; === Step 3: Purloin all treasures ===
+$goto living-room
+$purloin painting
+$purloin gold-coffin
+$purloin sceptre
+$purloin ivory-torch
+$purloin crystal-skull
+$purloin huge-diamond
+$purloin large-emerald
+$purloin clockwork-canary
+$purloin jade-figurine
+$purloin crystal-trident
+$purloin sapphire-bracelet
+$purloin silver-chalice
+$purloin bag-of-coins
+$purloin platinum-bar
+
+; === Step 4: Make invisible treasures visible ===
+$purloin trunk-of-jewels
+$unflag trunk-of-jewels invisible
+
+$purloin pot-of-gold
+$unflag pot-of-gold invisible
+
+$purloin brass-bauble
+$unflag brass-bauble invisible
+
+$purloin jeweled-scarab
+$unflag jeweled-scarab invisible
+
+INVENTORY
+
+; === Step 5: Put ALL treasures in case ===
+PUT EGG IN CASE
+PUT PAINTING IN CASE
+PUT COFFIN IN CASE
+PUT SCEPTRE IN CASE
+PUT TORCH IN CASE
+PUT SKULL IN CASE
+PUT TRUNK IN CASE
+PUT DIAMOND IN CASE
+PUT EMERALD IN CASE
+PUT POT IN CASE
+PUT CANARY IN CASE
+PUT BAUBLE IN CASE
+PUT FIGURINE IN CASE
+PUT TRIDENT IN CASE
+PUT BRACELET IN CASE
+PUT CHALICE IN CASE
+PUT BAG IN CASE
+PUT BAR IN CASE
+PUT SCARAB IN CASE
+
+SCORE
+
+; === Check if we won ===
+$state score
+$state won
+
+; === Enter barrow ===
+SW
+
+SCORE
+LOOK
