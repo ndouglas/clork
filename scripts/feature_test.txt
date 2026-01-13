@@ -1,0 +1,55 @@
+; Feature Test for Recent Fixes
+; Uses $goto to skip to interesting parts
+
+; Test PUMP UP BOAT
+$goto reservoir-south
+LOOK
+$purloin pump
+$purloin boat
+INVENTORY
+PUMP UP BOAT
+INVENTORY
+
+; Test PUT ALL BUT X IN Y
+$goto living-room
+$purloin painting
+$purloin egg
+$purloin chalice
+$purloin coffin
+OPEN CASE
+PUT ALL BUT CHALICE IN CASE
+INVENTORY
+LOOK
+
+; Test FLIP as synonym for TURN
+$purloin lamp
+FLIP LAMP ON
+LOOK
+FLIP LAMP OFF
+LOOK
+
+; Test TEMPLE command
+$goto north-temple
+LOOK
+TEMPLE
+LOOK
+TEMPLE
+LOOK
+
+; Test navigation and room descriptions
+$goto dam
+LOOK
+N
+LOOK
+S
+LOOK
+
+; Test ECHO in loud room
+$goto loud-room
+ECHO
+TAKE BAR
+
+; Final score
+$goto living-room
+PUT ALL IN CASE
+SCORE

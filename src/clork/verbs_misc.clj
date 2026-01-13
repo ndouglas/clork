@@ -713,18 +713,102 @@
           (utils/crlf)))))
 
 (defn v-board
-  "Handle BOARD verb."
+  "Handle BOARD verb - enter a vehicle.
+   ZIL: V-BOARD in gverbs.zil lines 240-244, PRE-BOARD lines 217-238
+
+   Checks:
+   - PRSO must be a vehicle (has :vehicle flag)
+   - Vehicle must be on the ground (in current room), not held
+   - Player must not already be in a vehicle"
   [game-state]
-  (-> game-state
-      (utils/tell "You can't board that.")
-      (utils/crlf)))
+  (let [prso (parser-state/get-prso game-state)
+        here (:here game-state)
+        winner (:winner game-state)
+        player-loc (gs/get-thing-loc-id game-state winner)
+        obj (when prso (gs/get-thing game-state prso))]
+    (cond
+      ;; No object specified
+      (nil? prso)
+      (-> game-state
+          (utils/tell "Board what?")
+          (utils/crlf))
+
+      ;; Not a vehicle
+      (not (gs/set-thing-flag? game-state prso :vehicle))
+      (-> game-state
+          (utils/tell (str "You have a theory on how to board a "
+                          (gs/thing-name game-state prso) ", perhaps?"))
+          (utils/crlf))
+
+      ;; Vehicle not on ground (in current room)
+      (not= (gs/get-thing-loc-id game-state prso) here)
+      (-> game-state
+          (utils/tell (str "The " (gs/thing-name game-state prso)
+                          " must be on the ground to be boarded."))
+          (utils/crlf))
+
+      ;; Already in a vehicle
+      (gs/set-thing-flag? game-state player-loc :vehicle)
+      (-> game-state
+          (utils/tell (str "You are already in the "
+                          (gs/thing-name game-state player-loc) "!"))
+          (utils/crlf))
+
+      ;; Success - board the vehicle
+      :else
+      (-> game-state
+          (utils/tell (str "You are now in the " (gs/thing-name game-state prso) "."))
+          (utils/crlf)
+          ;; Move player into the vehicle
+          (assoc-in [:objects winner :in] prso)))))
 
 (defn v-disembark
-  "Handle DISEMBARK/EXIT verb."
+  "Handle DISEMBARK/EXIT verb - exit a vehicle.
+   ZIL: V-DISEMBARK in gverbs.zil lines 434-448
+
+   If no object specified, uses player's current container if it's a vehicle.
+   Checks:
+   - Player must be in the specified vehicle
+   - Current room must be safe to exit (has :land flag, i.e., land not water)"
   [game-state]
-  (-> game-state
-      (utils/tell "You're not in anything.")
-      (utils/crlf)))
+  (let [prso (parser-state/get-prso game-state)
+        here (:here game-state)
+        winner (:winner game-state)
+        player-loc (gs/get-thing-loc-id game-state winner)
+        ;; If no object specified and player is in a vehicle, use that
+        target (if (and (nil? prso)
+                       (keyword? player-loc)
+                       (gs/set-thing-flag? game-state player-loc :vehicle))
+                 player-loc
+                 prso)]
+    (cond
+      ;; Not in anything (and no object specified)
+      (and (nil? target)
+           (not (gs/set-thing-flag? game-state player-loc :vehicle)))
+      (-> game-state
+          (utils/tell "You're not in anything.")
+          (utils/crlf))
+
+      ;; Object specified but player not in it
+      (and target (not= player-loc target))
+      (-> game-state
+          (utils/tell "You're not in that!")
+          (utils/crlf))
+
+      ;; Check if safe to exit - room must not be water-only
+      ;; ZIL uses RLANDBIT but most rooms are land; we check for :water flag instead
+      (gs/set-thing-flag? game-state here :water)
+      (-> game-state
+          (utils/tell "You realize that getting out here would be fatal.")
+          (utils/crlf))
+
+      ;; Success - exit the vehicle
+      :else
+      (-> game-state
+          (utils/tell "You are on your own feet again.")
+          (utils/crlf)
+          ;; Move player to current room
+          (assoc-in [:objects winner :in] here)))))
 
 (defn v-wear
   "Handle WEAR verb.

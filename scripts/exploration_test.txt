@@ -1,0 +1,142 @@
+; Zork I Exploration Test
+; Tests major game features without relying on RNG combat
+
+; --- Setup ---
+N
+N
+U
+TAKE EGG
+D
+S
+E
+OPEN WINDOW
+W
+W
+TAKE LAMP AND SWORD
+MOVE RUG
+OPEN CASE
+OPEN TRAP
+
+; --- Get painting via chimney ---
+D
+TURN ON LAMP
+S
+E
+TAKE PAINTING
+N
+; Try the chimney route
+U
+; Now in kitchen
+PUT PAINTING IN CASE
+
+; --- Get rope and knife from attic ---
+U
+TAKE KNIFE
+TAKE ROPE
+D
+W
+PUT EGG IN CASE
+DROP KNIFE
+
+; --- Go to Dam via cellar ---
+OPEN TRAP
+D
+N
+; Troll room - try to get past
+KILL TROLL WITH SWORD
+KILL TROLL WITH SWORD
+KILL TROLL WITH SWORD
+KILL TROLL WITH SWORD
+KILL TROLL WITH SWORD
+DROP SWORD
+E
+E
+NE
+E
+
+; --- Dam Operations ---
+N
+TAKE MATCHES
+N
+TAKE WRENCH
+TAKE SCREWDRIVER
+PUSH YELLOW
+S
+S
+TURN BOLT WITH WRENCH
+DROP WRENCH
+
+; --- Loud Room ---
+S
+D
+ECHO
+TAKE BAR
+U
+N
+
+; --- Wait for reservoir to drain ---
+N
+N
+WAIT
+WAIT
+N
+N
+TAKE TRIDENT
+S
+TAKE PUMP
+S
+TAKE TRUNK
+
+; --- Inflate boat and prepare ---
+S
+TAKE BOAT
+PUMP UP BOAT
+PUT TRIDENT IN BOAT
+PUT TRUNK IN BOAT
+PUT BAR IN BOAT
+GET IN BOAT
+LAUNCH
+
+; --- River journey ---
+WAIT
+TAKE BUOY
+E
+GET OUT OF BOAT
+N
+TAKE SHOVEL
+NE
+DIG SAND WITH SHOVEL
+DIG SAND WITH SHOVEL
+DIG SAND WITH SHOVEL
+DIG SAND WITH SHOVEL
+TAKE SCARAB
+DROP SHOVEL
+OPEN BUOY
+TAKE EMERALD
+SW
+S
+
+; --- Rainbow crossing ---
+TAKE SCEPTRE
+S
+WAVE SCEPTRE
+W
+W
+TAKE POT
+SW
+U
+U
+NW
+W
+W
+
+; --- Back to living room ---
+TAKE SACK
+OPEN SACK
+TAKE GARLIC
+W
+INVENTORY
+SCORE
+PUT ALL BUT LAMP AND GARLIC IN CASE
+SCORE
+LOOK

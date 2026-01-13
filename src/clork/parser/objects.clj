@@ -184,21 +184,30 @@
                table)
 
              ;; Check if we should recurse into this object
+             ;; ZIL: Lines 1223-1228 of SEARCH-LIST
+             ;; Recurse if:
+             ;;   1. ((level != TOP) OR SEARCHBIT OR SURFACEBIT)
+             ;;   2. AND has contents
+             ;;   3. AND (OPEN OR TRANSPARENT) - but surfaces are inherently accessible
+             ;; Note: SEARCHBIT/SURFACEBIT bypass level check but still need OPEN/TRANS
+             has-contents? (seq (game-state/get-contents game-state obj-id))
+             is-surface? (game-state/set-thing-flag? game-state obj-id :surface)
+             is-searchable? (game-state/set-thing-flag? game-state obj-id :search)
+             is-open-or-trans? (or (game-state/set-thing-flag? game-state obj-id :open)
+                                   (game-state/set-thing-flag? game-state obj-id :transparent))
+             ;; Level check bypass: surface/search flags OR level is not :top
+             level-allows? (or (not= level :top) is-surface? is-searchable?)
              should-recurse?
-             (and
-              ;; Has contents
-              (seq (game-state/get-contents game-state obj-id))
-              ;; And is accessible (open, transparent, surface, or searchable)
-              (or (game-state/set-thing-flag? game-state obj-id :open)
-                  (game-state/set-thing-flag? game-state obj-id :transparent)
-                  (game-state/set-thing-flag? game-state obj-id :surface)
-                  (game-state/set-thing-flag? game-state obj-id :search)))
+             (and has-contents?
+                  level-allows?
+                  ;; Surfaces are inherently accessible, searchable containers need open/trans
+                  (or is-surface? is-open-or-trans?))
 
              ;; Determine recursion level
              recurse-level
              (cond
-               (game-state/set-thing-flag? game-state obj-id :surface) :all
-               (game-state/set-thing-flag? game-state obj-id :search) :all
+               is-surface? :all
+               is-searchable? :all
                :else :top)]
 
          ;; Recurse if appropriate

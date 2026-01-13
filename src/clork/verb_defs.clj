@@ -193,6 +193,8 @@
    ;;   <SYNTAX TAKE OBJECT FROM OBJECT (ON-GROUND) = V-TAKE>
    ;;   <SYNTAX TAKE OBJECT OFF OBJECT (ON-GROUND) = V-TAKE>
    ;;   <SYNTAX TAKE OBJECT OUT OF OBJECT (ON-GROUND) = V-TAKE>
+   ;;   <SYNTAX TAKE IN OBJECT (FIND VEHBIT) = V-BOARD PRE-BOARD>
+   ;;   <SYNTAX TAKE OUT = V-DISEMBARK>
    :take       {:words   ["take" "get" "hold" "carry" "remove" "grab" "catch"]
                 :syntax  [;; Basic: TAKE OBJECT
                           {:num-objects 1
@@ -208,7 +210,18 @@
                           {:num-objects 2
                            :prep2 :off
                            :loc1 #{:carried :in-room :many}
-                           :loc2 #{:on-ground}}]
+                           :loc2 #{:on-ground}}
+
+                          ;; GET IN OBJECT - board vehicle
+                          {:num-objects 1
+                           :prep1 :in
+                           :loc1 #{:in-room :on-ground}
+                           :action :board}
+
+                          ;; GET OUT - disembark from vehicle
+                          {:num-objects 0
+                           :prep1 :out
+                           :action :disembark}]
                 :handler verbs-inv/v-take}
 
    :read       {:words   ["read" "skim"]
@@ -915,7 +928,8 @@
 
    ;; ZIL: <SYNTAX DISEMBARK = V-DISEMBARK>
    ;;      <SYNTAX DISEMBARK OBJECT = V-DISEMBARK>
-   :disembark  {:words   ["disembark" "debark"]
+   ;; Note: "exit" overlaps with direction but verb takes priority with object
+   :disembark  {:words   ["disembark" "debark" "exit"]
                 :syntax  [{:num-objects 0}
                           {:num-objects 1 :loc1 #{:in-room :on-ground}}]
                 :handler verbs-misc/v-disembark}

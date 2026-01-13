@@ -1,0 +1,54 @@
+; Test script for fixed features
+; Uses debug commands to bypass RNG
+
+; Test 1: PUT ALL BUT X IN Y
+$goto living-room
+$purloin painting
+$purloin egg
+$purloin brass-lantern
+OPEN CASE
+INVENTORY
+PUT ALL BUT LAMP IN CASE
+INVENTORY
+SCORE
+
+; Test 2: FLIP synonym for TURN
+FLIP LAMP ON
+FLIP LAMP OFF
+
+; Test 3: TEMPLE teleport
+$goto north-temple
+LOOK
+TEMPLE
+LOOK
+TEMPLE
+LOOK
+
+; Test 4: PUMP UP BOAT and vehicle commands
+$goto dam-base
+$purloin inflatable-boat
+$purloin pump
+DROP BOAT
+PUMP UP BOAT
+BOARD BOAT
+LOOK
+GET OUT
+LOOK
+GET IN BOAT
+LAUNCH
+; Can't launch at dam-base (no water exit)
+
+; Test 5: Full boat sequence at beach
+$goto sandy-beach
+DROP BOAT
+PUMP UP BOAT
+GET IN BOAT
+LOOK
+LAUNCH
+LOOK
+WAIT
+E
+GET OUT
+LOOK
+
+SCORE
