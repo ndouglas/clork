@@ -73,45 +73,6 @@ Clork includes a comprehensive debug system for development and testing. All com
 - `$redo [n]` - Redo undone command(s)
 - `$history` - Show command history
 
-## Speedrun Planner
-
-The planner can generate complete command sequences for collecting treasures:
-
-```
->$plan treasure egg
-Planning for egg...
-
-Plan for egg (12 total commands):
-  take-egg (4 commands):
-    - "ne"
-    - "north"
-    - "up"
-    - "take egg"
-  deposit-egg (8 commands):
-    - "down"
-    - "south"
-    - "east"
-    - "open window"
-    - "in"
-    - "west"
-    - "open case"
-    - "put egg in case"
-```
-
-### Planner Commands
-
-- `$plan treasure <name>` - Plan to collect and deposit a specific treasure
-- `$plan flag <flag>` - Plan to achieve a specific flag (e.g., `troll-flag`)
-- `$plan kill-thief` - Plan the earliest possible thief kill
-- `$plan win` - Generate complete speedrun (all 19 treasures + victory)
-
-The planner uses:
-- **Backward chaining** to find action sequences
-- **TSP optimization** (Held-Karp algorithm) for efficient treasure ordering
-- **Floyd-Warshall** for all-pairs shortest paths
-
-Note: The current `$plan win` generates a working but unoptimized route (~720 commands). A well-optimized speedrun should be ~230-250 commands - optimization for batched treasure collection is planned.
-
 ## Testing
 
 ```bash
@@ -122,7 +83,7 @@ lein test
 lein test :pending
 ```
 
-The test suite includes 466 tests covering rooms, objects, verbs, combat, and game mechanics.
+The test suite includes 459 tests covering rooms, objects, verbs, combat, and game mechanics.
 
 ## ML Training API
 
@@ -204,14 +165,9 @@ src/clork/
 ├── verbs.clj          # Verb handlers
 ├── combat.clj         # Combat mechanics
 ├── debug/             # Debug command system
-│   ├── plan.clj       # Speedrun planner commands
 │   ├── pathfind.clj   # Pathfinding commands
+│   ├── scenarios.clj  # Test scenarios
 │   └── ...
-├── planner/           # AI planning system
-│   ├── actions.clj    # Action definitions and effects
-│   ├── backward.clj   # Backward chaining planner
-│   ├── optimizer.clj  # Route optimization
-│   └── graph.clj      # Graph algorithms (Floyd-Warshall, TSP)
 └── ml/                # Machine learning API
 
 zork-i/                # Original ZIL source for reference
