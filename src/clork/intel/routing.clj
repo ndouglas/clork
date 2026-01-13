@@ -13,7 +13,6 @@
    - route-to: Generate action sequence to reach destination
    - optimize-visit-order: TSP for visiting multiple locations"
   (:require [clork.game-state :as gs]
-            [clork.debug.pathfind :as pathfind]
             [clojure.set :as set]))
 
 ;;; ---------------------------------------------------------------------------
@@ -30,16 +29,43 @@
 ;;; These are edges that don't appear in the normal room exits.
 
 (def special-edges
-  "Special edges that represent teleports or flag-gated passages.
-   Each edge is {:from room :to room :cost moves :via action :requires #{flags}}"
-  [;; Prayer teleport: altar -> forest-1
-   {:from :altar
+  "Special edges that represent teleports NOT in normal room exits.
+
+   Note: Most flag-gated passages are now handled by parse-exit-destination
+   which checks :if and :door conditions in room exit definitions.
+
+   This list only contains:
+   1. Teleports (prayer, mirror) - actions that move you without normal exits
+   2. Boat/river navigation - requires :boat-ready virtual flag
+   3. Any edge that can't be expressed in room exit definitions
+
+   Door-gated passages (trap-door, grate, kitchen-window) use virtual flags
+   like :trap-door-open in available-flags - these are checked by parse-exit-destination.
+
+   Boat navigation uses :boat-ready virtual flag (inflated boat + player in boat)."
+  [;; === PRAYER TELEPORTS ===
+   ;; At south-temple, PRAY teleports to forest-1
+   {:from :south-temple
     :to :forest-1
     :cost 1
     :via :pray
-    :requires #{}}  ; Always available at altar
+    :requires #{}}
 
-   ;; Mirror teleport: mirror-room-1 <-> mirror-room-2
+   ;; At north-temple, PRAY teleports to treasure-room (and vice versa)
+   {:from :north-temple
+    :to :treasure-room
+    :cost 1
+    :via :pray
+    :requires #{}}
+
+   {:from :treasure-room
+    :to :north-temple
+    :cost 1
+    :via :pray
+    :requires #{}}
+
+   ;; === MIRROR TELEPORT ===
+   ;; Looking in the mirror teleports between mirror rooms
    {:from :mirror-room-1
     :to :mirror-room-2
     :cost 1
@@ -52,91 +78,125 @@
     :via {:verb :look :object :mirror}
     :requires #{}}
 
-   ;; Land of Living Dead access (requires lld-flag from exorcism)
-   {:from :entrance-to-hades
-    :to :land-of-living-dead
+   ;; === FRIGID RIVER BOAT SYSTEM ===
+   ;; All river navigation requires :boat-ready (inflated boat + player in boat)
+
+   ;; Launch points (land → water)
+   {:from :dam-base
+    :to :river-1
+    :cost 1
+    :via {:verb :launch :object :inflated-boat}
+    :requires #{:boat-ready}}
+
+   {:from :white-cliffs-north
+    :to :river-3
+    :cost 1
+    :via {:verb :launch :object :inflated-boat}
+    :requires #{:boat-ready}}
+
+   {:from :white-cliffs-south
+    :to :river-4
+    :cost 1
+    :via {:verb :launch :object :inflated-boat}
+    :requires #{:boat-ready}}
+
+   {:from :shore
+    :to :river-5
+    :cost 1
+    :via {:verb :launch :object :inflated-boat}
+    :requires #{:boat-ready}}
+
+   {:from :sandy-beach
+    :to :river-4
+    :cost 1
+    :via {:verb :launch :object :inflated-boat}
+    :requires #{:boat-ready}}
+
+   ;; River flow (downstream only - automatic via daemon, but counts as moves)
+   ;; Cost represents time (daemon ticks) to reach next room
+   {:from :river-1
+    :to :river-2
+    :cost 2  ; daemon tick delay
+    :via :downstream
+    :requires #{:boat-ready}}
+
+   {:from :river-2
+    :to :river-3
+    :cost 2
+    :via :downstream
+    :requires #{:boat-ready}}
+
+   {:from :river-3
+    :to :river-4
+    :cost 2
+    :via :downstream
+    :requires #{:boat-ready}}
+
+   {:from :river-4
+    :to :river-5
+    :cost 2
+    :via :downstream
+    :requires #{:boat-ready}}
+
+   ;; Note: river-5 → waterfall is death, not a valid route
+
+   ;; Landing points (water → land)
+   {:from :river-1
+    :to :dam-base
+    :cost 1
+    :via :west
+    :requires #{:boat-ready}}
+
+   {:from :river-3
+    :to :white-cliffs-north
+    :cost 1
+    :via :west
+    :requires #{:boat-ready}}
+
+   {:from :river-4
+    :to :white-cliffs-south
+    :cost 1
+    :via :west
+    :requires #{:boat-ready}}
+
+   {:from :river-4
+    :to :sandy-beach
+    :cost 1
+    :via :east
+    :requires #{:boat-ready}}
+
+   {:from :river-5
+    :to :shore
+    :cost 1
+    :via :east
+    :requires #{:boat-ready}}
+
+   ;; === RESERVOIR BOAT NAVIGATION ===
+   ;; Reservoir can be accessed via boat from reservoir-north or reservoir-south
+   {:from :reservoir-north
+    :to :reservoir
+    :cost 1
+    :via {:verb :launch :object :inflated-boat}
+    :requires #{:boat-ready}}
+
+   {:from :reservoir-south
+    :to :reservoir
+    :cost 1
+    :via {:verb :launch :object :inflated-boat}
+    :requires #{:boat-ready}}
+
+   ;; Landing from reservoir
+   {:from :reservoir
+    :to :reservoir-north
+    :cost 1
+    :via :north
+    :requires #{:boat-ready}}
+
+   {:from :reservoir
+    :to :reservoir-south
     :cost 1
     :via :south
-    :requires #{:lld-flag}}
-
-   ;; Troll room passages (require troll-flag)
-   {:from :troll-room
-    :to :east-west-passage
-    :cost 1
-    :via :east
-    :requires #{:troll-flag}}
-
-   {:from :east-west-passage
-    :to :troll-room
-    :cost 1
-    :via :west
-    :requires #{:troll-flag}}
-
-   ;; Cyclops room up passage (requires cyclops-flag)
-   {:from :cyclops-room
-    :to :strange-passage
-    :cost 1
-    :via :up
-    :requires #{:cyclops-flag}}
-
-   ;; Strange passage east (magic wall opened by cyclops fleeing)
-   {:from :cyclops-room
-    :to :strange-passage
-    :cost 1
-    :via :east
-    :requires #{:magic-flag}}
-
-   ;; Dome room to torch room (requires dome-flag - rope tied)
-   {:from :dome-room
-    :to :torch-room
-    :cost 1
-    :via {:verb :climb-down :object :rope}
-    :requires #{:dome-flag}}
-
-   {:from :torch-room
-    :to :dome-room
-    :cost 1
-    :via {:verb :climb-up :object :rope}
-    :requires #{:dome-flag}}
-
-   ;; Solid rainbow crossing (requires rainbow-flag)
-   {:from :on-the-rainbow
-    :to :end-of-rainbow
-    :cost 1
-    :via :west
-    :requires #{:rainbow-flag}}
-
-   {:from :end-of-rainbow
-    :to :on-the-rainbow
-    :cost 1
-    :via :east
-    :requires #{:rainbow-flag}}
-
-   ;; Cellar to living room (trap door must be open)
-   {:from :cellar
-    :to :living-room
-    :cost 1
-    :via :up
-    :requires #{:trap-door-open}}
-
-   {:from :living-room
-    :to :cellar
-    :cost 1
-    :via :down
-    :requires #{:trap-door-open}}
-
-   ;; Grating clearing to grating room
-   {:from :grating-clearing
-    :to :grating-room
-    :cost 1
-    :via :down
-    :requires #{:grate-open}}
-
-   {:from :grating-room
-    :to :grating-clearing
-    :cost 1
-    :via :up
-    :requires #{:grate-open}}])
+    :requires #{:boat-ready}}])
 
 (defn get-special-edges
   "Get special edges that are traversable with the given flags."
@@ -152,18 +212,32 @@
 (defn- parse-exit-destination
   "Parse an exit definition to get destination.
    Returns room keyword or nil if not traversable.
-   Checks :if condition against available-flags for conditional exits."
+
+   Handles several exit types:
+   - keyword: direct destination (e.g., :kitchen)
+   - string: blocked exit (returns nil)
+   - map with :if: conditional on game flag (e.g., {:to :foo :if :troll-flag})
+   - map with :door: conditional on door object being open (e.g., {:to :foo :door :trap-door})
+
+   For :door exits, we check for a virtual flag :door-name-open in available-flags."
   [exit-def available-flags]
   (cond
     (keyword? exit-def) exit-def
     (string? exit-def) nil  ; Blocked
     (and (map? exit-def) (:to exit-def))
-    ;; Conditional exit - check :if flag
-    (let [required-flag (:if exit-def)]
-      (if (or (nil? required-flag)
-              (contains? available-flags required-flag))
-        (:to exit-def)
-        nil))  ; Flag not available, exit blocked
+    (let [required-flag (:if exit-def)
+          door-obj (:door exit-def)
+          ;; For doors, we use a virtual flag: :trap-door-open, :grate-open, etc.
+          door-flag (when door-obj (keyword (str (name door-obj) "-open")))]
+      (cond
+        ;; Has :if flag requirement
+        (and required-flag (not (contains? available-flags required-flag)))
+        nil
+        ;; Has :door requirement - check for virtual door-open flag
+        (and door-obj (not (contains? available-flags door-flag)))
+        nil
+        ;; All conditions satisfied
+        :else (:to exit-def)))
     :else nil))
 
 (defn build-navigation-graph
@@ -521,3 +595,54 @@
     (assoc result
            :treasures (mapv first valid-locs)
            :locations (zipmap (map first valid-locs) (map second valid-locs)))))
+
+;;; ---------------------------------------------------------------------------
+;;; FLAG EXTRACTION FROM GAME STATE
+;;; ---------------------------------------------------------------------------
+
+(def door-objects
+  "Objects that act as doors with virtual open flags.
+   Maps door object id to the virtual flag name."
+  {:trap-door :trap-door-open
+   :grate :grate-open
+   :kitchen-window :kitchen-window-open})
+
+(defn extract-available-flags
+  "Extract all available flags from game state for routing purposes.
+
+   Returns a set containing:
+   - All game-level flags (e.g., :troll-flag, :lld-flag)
+   - Virtual door flags for open doors (e.g., :trap-door-open, :grate-open)
+   - :boat-ready if player is in an inflated boat
+   - :empty-handed if player carries no heavy objects (weight > 4)
+
+   This is useful for getting the current routing capability from game state."
+  [game-state]
+  (let [;; Game-level flags
+        game-flags (set (filter keyword?
+                                (for [[k v] game-state
+                                      :when (and (true? v)
+                                                 (or (#{:troll-flag :cyclops-flag :magic-flag
+                                                        :lld-flag :rainbow-flag :dome-flag
+                                                        :low-tide :coffin-cure :won} k)
+                                                     (clojure.string/ends-with? (name k) "-flag")))]
+                                  k)))
+        ;; Virtual door flags for open doors
+        door-flags (set (for [[door-obj flag-name] door-objects
+                              :when (gs/set-thing-flag? game-state door-obj :open)]
+                          flag-name))
+        ;; Boat readiness - player in inflated boat
+        winner (or (:winner game-state) :adventurer)
+        winner-loc (gs/get-thing-location game-state winner)
+        boat-ready? (= winner-loc :inflated-boat)
+        boat-flags (if boat-ready? #{:boat-ready} #{})
+        ;; Empty-handed check for narrow passages (coal mine area)
+        ;; Player is "empty-handed" if carrying no objects with weight > 4
+        inventory (gs/get-contents game-state :adventurer)
+        heavy-objects (filter (fn [obj-id]
+                                (let [weight (get-in game-state [:objects obj-id :weight] 0)]
+                                  (> weight 4)))
+                              inventory)
+        empty-handed? (empty? heavy-objects)
+        empty-handed-flags (if empty-handed? #{:empty-handed} #{})]
+    (set/union game-flags door-flags boat-flags empty-handed-flags)))

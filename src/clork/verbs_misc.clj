@@ -748,7 +748,8 @@
           (utils/crlf))
 
       ;; Already in a vehicle
-      (gs/set-thing-flag? game-state player-loc :vehicle)
+      ;; player-loc is nil when player is in a room, not an object
+      (and player-loc (gs/set-thing-flag? game-state player-loc :vehicle))
       (-> game-state
           (utils/tell (str "You are already in the "
                           (gs/thing-name game-state player-loc) "!"))

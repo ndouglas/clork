@@ -1473,10 +1473,15 @@
    Returns the updated game-state."
   [game-state handler]
   (let [prso (get-in game-state [:parser :prso])
-        result-gs (handler game-state)]
+        old-it (:it game-state)
+        result-gs (handler game-state)
+        new-it (:it result-gs)]
     ;; Update :it to refer to the direct object (if any) for "it" pronoun
-    (if-let [obj (first prso)]
-      (utils/this-is-it result-gs obj)
+    ;; BUT only if the handler didn't explicitly change :it
+    ;; (e.g., inflate changes :it from inflatable-boat to inflated-boat)
+    (if (and (first prso)
+             (= old-it new-it))  ;; Handler didn't change :it
+      (utils/this-is-it result-gs (first prso))
       result-gs)))
 
 (defn perform

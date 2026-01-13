@@ -349,11 +349,62 @@
   [game-state flag]
   (explain-goal game-state {:type :game-flag :flag flag}))
 
+(defn analyze-location-reachability
+  "Analyze why a location is or isn't reachable using the routing engine.
+
+   Returns a map with:
+   - :reachable? - boolean
+   - :distance - number of moves (if reachable)
+   - :path - sequence of rooms (if reachable)
+   - :missing-flags - set of flags that might help (if unreachable)
+   - :suggestion - human-readable suggestion"
+  [game-state target-room]
+  (let [;; Lazy load routing to avoid circular dependency
+        routing-ns (requiring-resolve 'clork.intel.routing/shortest-path)
+        extract-flags (requiring-resolve 'clork.intel.routing/extract-available-flags)
+        rooms-requiring (requiring-resolve 'clork.intel.routing/rooms-requiring-flag)
+        here (:here game-state)
+        current-flags (extract-flags game-state)
+
+        ;; Try to find path with current flags
+        path-result (routing-ns game-state here target-room
+                                :available-flags current-flags)]
+    (if path-result
+      {:reachable? true
+       :distance (:distance path-result)
+       :path (:path path-result)
+       :suggestion (str "Reachable in " (:distance path-result) " moves")}
+      ;; Room not reachable - find what flags might help
+      (let [candidate-flags [:troll-flag :lld-flag :cyclops-flag :magic-flag
+                             :rainbow-flag :dome-flag :low-tide :coffin-cure
+                             :trap-door-open :grate-open :kitchen-window-open]
+            helpful-flags (filter
+                            (fn [flag]
+                              (let [new-flags (conj current-flags flag)]
+                                (routing-ns game-state here target-room
+                                            :available-flags new-flags)))
+                            candidate-flags)]
+        {:reachable? false
+         :missing-flags (set helpful-flags)
+         :suggestion (if (seq helpful-flags)
+                       (str "Requires: " (clojure.string/join ", " (map name helpful-flags)))
+                       "No known path - may be unreachable or require multiple flags")}))))
+
 (defn why-cant-reach?
   "Explain why a location can't be reached.
-   Note: This is a simple check - full pathfinding analysis is in Stage 4."
+   Uses routing engine for pathfinding analysis."
   [game-state room]
-  (explain-goal game-state {:type :at-location :room room}))
+  (let [basic-check (check-goal game-state {:type :at-location :room room})]
+    (if (:satisfied basic-check)
+      {:status :satisfied
+       :goal {:type :at-location :room room}
+       :details "Already at this location"}
+      ;; Use routing analysis for more detail
+      (let [routing-info (analyze-location-reachability game-state room)]
+        {:status (if (:reachable? routing-info) :reachable :unreachable)
+         :goal {:type :at-location :room room}
+         :details (:suggestion routing-info)
+         :routing routing-info}))))
 
 (defn why-not-held?
   "Explain why an object is not held."

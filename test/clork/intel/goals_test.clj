@@ -292,3 +292,38 @@
           root-causes (goals/find-root-causes gs {:type :game-flag :flag :lld-flag})]
       ;; Should return some root causes
       (is (seq root-causes)))))
+
+;;; ---------------------------------------------------------------------------
+;;; ROUTING INTEGRATION TESTS
+;;; ---------------------------------------------------------------------------
+
+(deftest test-analyze-location-reachability-reachable
+  (testing "analyzes reachable location"
+    (let [gs (scenarios/equipped-adventurer :west-of-house)
+          result (goals/analyze-location-reachability gs :north-of-house)]
+      (is (:reachable? result))
+      (is (= 1 (:distance result)))
+      (is (seq (:path result))))))
+
+(deftest test-analyze-location-reachability-unreachable
+  (testing "analyzes unreachable location and suggests flags"
+    (let [gs (scenarios/equipped-adventurer :entrance-to-hades)
+          result (goals/analyze-location-reachability gs :land-of-living-dead)]
+      ;; Should be unreachable without lld-flag
+      (is (not (:reachable? result)))
+      ;; Should suggest lld-flag
+      (is (contains? (:missing-flags result) :lld-flag)))))
+
+(deftest test-why-cant-reach-reachable
+  (testing "why-cant-reach explains reachable location"
+    (let [gs (scenarios/equipped-adventurer :west-of-house)
+          result (goals/why-cant-reach? gs :north-of-house)]
+      (is (= :reachable (:status result)))
+      (is (string? (:details result))))))
+
+(deftest test-why-cant-reach-unreachable
+  (testing "why-cant-reach explains unreachable location"
+    (let [gs (scenarios/equipped-adventurer :entrance-to-hades)
+          result (goals/why-cant-reach? gs :land-of-living-dead)]
+      (is (= :unreachable (:status result)))
+      (is (contains? (get-in result [:routing :missing-flags]) :lld-flag)))))

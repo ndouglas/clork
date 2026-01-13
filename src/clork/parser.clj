@@ -399,7 +399,13 @@
                (assoc-in [:parser :won] false)  ; Reset - will be set true on success
                (assoc-in [:parser :dir] nil)
                (set-ncn 0)
-               (assoc-in [:parser :getflags] 0))
+               (assoc-in [:parser :getflags] 0)
+               ;; Clear parsed objects from previous command
+               ;; Without this, objects like :inflatable-boat persist after
+               ;; being transformed (e.g., inflated into :inflated-boat)
+               (assoc-in [:parser :prso] nil)
+               (assoc-in [:parser :prsi] nil)
+               (assoc-in [:parser :prsa] nil))
 
         ;; === Try Orphan Merge BEFORE Normal Parsing ===
         ;; ZIL: ORPHAN-MERGE is called early, before normal token parsing.
