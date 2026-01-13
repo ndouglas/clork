@@ -24,6 +24,7 @@
             [clork.debug.scenarios :as debug-scenarios]
             [clork.debug.inspect :as debug-inspect]
             [clork.debug.pathfind :as debug-pathfind]
+            [clork.debug.legal :as debug-legal]
             [clork.undo :as undo]))
 
 ;;; ---------------------------------------------------------------------------
@@ -231,6 +232,10 @@
                      "Show all rooms reachable from a location")
   (register-command! :route debug-pathfind/cmd-route
                      "Plan optimal route through multiple rooms")
+  ;; Legal actions command
+  (register-command! :legal debug-legal/cmd-legal
+                     "Show legal actions from affordance registry"
+                     :subcommands debug-legal/subcommands)
 )
 
 ;; Auto-initialize on namespace load

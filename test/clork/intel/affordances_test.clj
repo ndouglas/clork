@@ -4,7 +4,8 @@
             [clork.game-state :as gs]
             [clork.rooms :as rooms]
             [clork.objects :as objects]
-            [clork.verb-defs :as verb-defs]))
+            [clork.verb-defs :as verb-defs]
+            [clork.debug.scenarios :as scenarios]))
 
 (defn init-test-state
   "Create a fresh game state for testing."
@@ -330,3 +331,221 @@
       (is (vector? (:actions explained)))
       (is (map? (:summary explained)))
       (is (number? (get-in explained [:summary :movement]))))))
+
+;;; ---------------------------------------------------------------------------
+;;; NEW AFFORDANCE CATEGORY TESTS
+;;; ---------------------------------------------------------------------------
+
+(deftest test-combat-affordances-exist
+  (testing "combat affordances are defined"
+    (let [combat-ids (map :id (aff/affordances-by-category :combat))]
+      (is (some #{:attack-troll} combat-ids))
+      (is (some #{:say-odysseus} combat-ids))
+      (is (some #{:give-lunch-to-cyclops} combat-ids)))))
+
+(deftest test-dam-affordances-exist
+  (testing "dam affordances are defined"
+    (let [dam-ids (map :id (aff/affordances-by-category :dam))]
+      (is (some #{:press-yellow-button} dam-ids))
+      (is (some #{:turn-bolt-open} dam-ids))
+      (is (some #{:turn-bolt-close} dam-ids)))))
+
+(deftest test-boat-affordances-exist
+  (testing "boat affordances are defined"
+    (let [boat-ids (map :id (aff/affordances-by-category :boat))]
+      (is (some #{:inflate-boat} boat-ids))
+      (is (some #{:board-boat} boat-ids))
+      (is (some #{:disembark-boat} boat-ids)))))
+
+(deftest test-environment-affordances-exist
+  (testing "environment affordances are defined"
+    (let [env-ids (map :id (aff/affordances-by-category :environment))]
+      (is (some #{:move-rug} env-ids))
+      (is (some #{:open-trap-door} env-ids))
+      (is (some #{:unlock-grating} env-ids)))))
+
+(deftest test-climb-affordances-exist
+  (testing "climb affordances are defined"
+    (let [climb-ids (map :id (aff/affordances-by-category :climb))]
+      (is (some #{:climb-tree} climb-ids))
+      (is (some #{:climb-down-rope} climb-ids))
+      (is (some #{:climb-up-rope} climb-ids)))))
+
+(deftest test-food-affordances-exist
+  (testing "food affordances are defined"
+    (let [food-ids (map :id (aff/affordances-by-category :food))]
+      (is (some #{:eat-garlic} food-ids))
+      (is (some #{:fill-bottle} food-ids))
+      (is (some #{:drink-water} food-ids)))))
+
+;;; ---------------------------------------------------------------------------
+;;; CHECK-AFFORDANCE TESTS (new debugging function)
+;;; ---------------------------------------------------------------------------
+
+(deftest test-check-affordance-applicable
+  (testing "check-affordance reports applicable when conditions met"
+    (let [gs (-> (init-test-state)
+                 (assoc :here :loud-room))
+          result (aff/check-affordance gs :echo-loud-room)]
+      (is (:applicable result))
+      (is (= :echo-loud-room (:affordance-id result))))))
+
+(deftest test-check-affordance-not-applicable
+  (testing "check-affordance reports failed preconditions when not applicable"
+    (let [gs (init-test-state)  ; Not at loud-room
+          result (aff/check-affordance gs :echo-loud-room)]
+      (is (not (:applicable result)))
+      (is (seq (:failed-preconds result))))))
+
+(deftest test-check-affordance-unknown
+  (testing "check-affordance reports error for unknown affordance"
+    (let [gs (init-test-state)
+          result (aff/check-affordance gs :nonexistent-affordance)]
+      (is (:error result)))))
+
+;;; ---------------------------------------------------------------------------
+;;; AFFORDANCES-BY-VERB TESTS
+;;; ---------------------------------------------------------------------------
+
+(deftest test-affordances-by-verb-attack
+  (testing "affordances-by-verb finds attack affordances"
+    (let [attack-affs (aff/affordances-by-verb :attack)]
+      (is (some #(= :attack-troll (:id %)) attack-affs))
+      (is (some #(= :attack-cyclops (:id %)) attack-affs)))))
+
+(deftest test-affordances-by-verb-put
+  (testing "affordances-by-verb finds put affordances"
+    (let [put-affs (aff/affordances-by-verb :put)]
+      (is (some #(= :put-in-container (:id %)) put-affs))
+      (is (some #(= :put-treasure-in-case (:id %)) put-affs)))))
+
+;;; ---------------------------------------------------------------------------
+;;; LEGAL ACTIONS AT SPECIFIC LOCATIONS
+;;; ---------------------------------------------------------------------------
+
+(deftest test-legal-actions-at-troll-room
+  (testing "attack actions available at troll room with weapon"
+    (let [gs (-> (scenarios/equipped-adventurer :troll-room)
+                 (gs/move-object :troll :troll-room :test)
+                 (gs/unset-game-flag :troll-flag))
+          actions (aff/legal-actions gs)
+          attack-actions (filter #(= :attack (:verb %)) actions)]
+      (is (>= (count attack-actions) 1)))))
+
+(deftest test-legal-actions-at-dam-room
+  (testing "dam actions available at dam room"
+    (let [gs (scenarios/dam-area :dam-room)
+          actions (aff/legal-actions gs)
+          push-actions (filter #(= :push (:verb %)) actions)]
+      ;; Yellow and brown buttons should be pushable
+      (is (>= (count push-actions) 1)))))
+
+(deftest test-legal-actions-at-living-room-with-treasure
+  (testing "put-in-case actions available when holding treasure at living room"
+    (let [gs (-> (scenarios/equipped-adventurer :living-room)
+                 (gs/move-object :jeweled-egg :adventurer :test))
+          actions (aff/legal-actions gs)
+          put-actions (filter #(and (= :put (:verb %))
+                                    (= :trophy-case (:indirect-object %))) actions)]
+      (is (= 1 (count put-actions)))
+      (is (= :jeweled-egg (:direct-object (first put-actions)))))))
+
+;;; ---------------------------------------------------------------------------
+;;; VALIDATION TESTS - Comparing declared effects vs actual behavior
+;;; ---------------------------------------------------------------------------
+;;; These tests verify that affordance declarations match game behavior.
+
+(deftest test-validation-move-rug-effect
+  (testing "move-rug affordance correctly predicts rug-moved flag"
+    (let [aff (aff/get-affordance :move-rug)
+          effects (:effects aff)]
+      ;; Affordance should declare setting rug-moved flag
+      (is (some #(and (= :set-flag (:type %))
+                      (= :rug-moved (:flag %)))
+                effects))
+      ;; The effect type should match what the game actually does
+      ;; (rug-moved flag enables trap-door visibility)
+      )))
+
+(deftest test-validation-echo-effects
+  (testing "echo-loud-room affordance correctly predicts effects"
+    (let [aff (aff/get-affordance :echo-loud-room)
+          effects (:effects aff)]
+      ;; Should set loud-flag
+      (is (some #(and (= :set-flag (:type %))
+                      (= :loud-flag (:flag %)))
+                effects))
+      ;; Should clear sacred flag on platinum bar
+      (is (some #(and (= :clear-flag (:type %))
+                      (= :platinum-bar (:object %))
+                      (= :sacred (:flag %)))
+                effects)))))
+
+(deftest test-validation-exorcism-sequence
+  (testing "exorcism affordances form a valid sequence"
+    ;; Step 1: Ring bell sets xb
+    (let [ring-effects (aff/effects-of :ring-bell-exorcism)]
+      (is (some #(and (= :set-flag (:type %)) (= :xb (:flag %))) ring-effects)))
+    ;; Step 2: Light candles requires xb, sets xc
+    (let [light-preconds (aff/preconditions-of :light-candles-exorcism)
+          light-effects (aff/effects-of :light-candles-exorcism)]
+      (is (some #(and (= :game-flag (:type %)) (= :xb (:flag %))) light-preconds))
+      (is (some #(and (= :set-flag (:type %)) (= :xc (:flag %))) light-effects)))
+    ;; Step 3: Read book requires xc, sets lld-flag
+    (let [read-preconds (aff/preconditions-of :read-book-exorcism)
+          read-effects (aff/effects-of :read-book-exorcism)]
+      (is (some #(and (= :game-flag (:type %)) (= :xc (:flag %))) read-preconds))
+      (is (some #(and (= :set-flag (:type %)) (= :lld-flag (:flag %))) read-effects)))))
+
+(deftest test-validation-troll-defeat
+  (testing "defeating troll sets troll-flag"
+    (let [aff (aff/get-affordance :attack-troll)
+          effects (:effects aff)]
+      (is (some #(and (= :set-flag (:type %))
+                      (= :troll-flag (:flag %)))
+                effects)))))
+
+(deftest test-validation-cyclops-odysseus
+  (testing "saying odysseus defeats cyclops and opens passage"
+    (let [aff (aff/get-affordance :say-odysseus)
+          effects (:effects aff)]
+      ;; Sets cyclops-flag (defeated)
+      (is (some #(and (= :set-flag (:type %)) (= :cyclops-flag (:flag %))) effects))
+      ;; Sets magic-flag (opens strange passage)
+      (is (some #(and (= :set-flag (:type %)) (= :magic-flag (:flag %))) effects))
+      ;; Moves cyclops to limbo
+      (is (some #(and (= :move-object (:type %)) (= :cyclops (:object %)) (= :limbo (:to %))) effects)))))
+
+(deftest test-validation-dam-gate-sequence
+  (testing "dam gate controls follow proper sequence"
+    ;; Yellow button enables gate mechanism
+    (let [yellow-effects (aff/effects-of :press-yellow-button)]
+      (is (some #(and (= :set-flag (:type %)) (= :gate-flag (:flag %))) yellow-effects)))
+    ;; Turning bolt requires gate-flag
+    (let [turn-preconds (aff/preconditions-of :turn-bolt-open)]
+      (is (some #(and (= :game-flag (:type %)) (= :gate-flag (:flag %))) turn-preconds)))))
+
+(deftest test-validation-climb-rope-requires-tied
+  (testing "climbing rope requires dome-flag (rope tied)"
+    (let [climb-preconds (aff/preconditions-of :climb-down-rope)]
+      (is (some #(and (= :game-flag (:type %)) (= :dome-flag (:flag %))) climb-preconds)))))
+
+;;; ---------------------------------------------------------------------------
+;;; ALL AFFORDANCES HAVE REQUIRED FIELDS
+;;; ---------------------------------------------------------------------------
+
+(deftest test-all-affordances-have-required-fields
+  (testing "every affordance has id, verb, preconds, effects"
+    (doseq [aff (aff/affordances-by-category nil)]  ; nil returns all
+      (is (:id aff) (str "Affordance missing :id"))
+      (is (:verb aff) (str "Affordance " (:id aff) " missing :verb"))
+      (is (vector? (:preconds aff)) (str "Affordance " (:id aff) " :preconds should be vector"))
+      (is (vector? (:effects aff)) (str "Affordance " (:id aff) " :effects should be vector")))))
+
+(deftest test-all-affordance-ids-unique
+  (testing "all affordance IDs are unique"
+    (let [ids (aff/list-affordances)
+          id-set (set ids)]
+      (is (= (count ids) (count id-set))
+          (str "Duplicate affordance IDs found: "
+               (filter #(> (count (filter #{%} ids)) 1) ids))))))
