@@ -191,24 +191,27 @@
    :bell-rang
    {:description "Ring bell at entrance to Hades"
     :location :entrance-to-hades
-    :requires #{:bell :candles :book :troll-flag}
-    :action {:verb :ring :direct-object :bell}
+    ;; Use actual object IDs: brass-bell, black-book (not generic bell, book)
+    :requires #{:brass-bell :candles :black-book :troll-flag}
+    :action {:verb :ring :direct-object :brass-bell}
     :enables #{:xb-started}  ; starts exorcism sequence
     :note "Bell becomes hot and drops; pick up candles"}
 
    :candles-lit
    {:description "Light candles during exorcism"
     :location :entrance-to-hades
-    :requires #{:bell-rang :candles :matches}
-    :action {:verb :light :direct-object :candles :indirect-object :matches}
+    ;; Use actual object ID: matchbook (not generic matches)
+    :requires #{:bell-rang :candles :matchbook}
+    :action {:verb :light :direct-object :candles :indirect-object :matchbook}
     :enables #{:xc-started}
     :time-limit 6}  ; must do within 6 turns of ringing bell
 
    :lld-flag  ; "Land of Living Dead" flag
    {:description "Read book to complete exorcism"
     :location :entrance-to-hades
-    :requires #{:candles-lit :book}
-    :action {:verb :read :direct-object :book}
+    ;; Use actual object ID: black-book (not generic book)
+    :requires #{:candles-lit :black-book}
+    :action {:verb :read :direct-object :black-book}
     :enables #{:land-of-the-dead  ; ghosts banished
                :crystal-skull}    ; can be taken
     :time-limit 3}  ; must do within 3 turns of lighting candles
@@ -351,10 +354,11 @@
    :wrench {:location :maintenance-room :container nil}
    :skeleton-key {:location :maze-5 :container nil}  ; dead thief drops it
    :sceptre {:location :torch-room :container nil :requires #{:dome-flag}}
-   :bell {:location :south-temple :container nil :requires #{:dome-flag}}
-   :book {:location :south-temple :container nil :requires #{:dome-flag}}
+   ;; Exorcism items - use actual object IDs
+   :brass-bell {:location :north-temple :container nil :requires #{:dome-flag}}
+   :black-book {:location :south-temple :container nil :requires #{:dome-flag}}
    :candles {:location :south-temple :container nil :requires #{:dome-flag}}
-   :matches {:location :dam-base :container nil :requires #{:troll-flag}}
+   :matchbook {:location :dam-lobby :container nil :requires #{:troll-flag}}
    :coal {:location :dead-end-coal-mine :container nil :requires #{:troll-flag}}
    :air-pump {:location :maintenance-room :container nil :requires #{:troll-flag}}
    :pile-of-plastic {:location :dam-base :container nil :requires #{:troll-flag}}

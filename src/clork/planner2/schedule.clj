@@ -351,12 +351,18 @@
                   ;; Create collection entries for treasures we pass through
                   ;; Order them by their position in the path
                   ;; path-treasures is {room -> #{treasures}}, so flatten to entries
-                  ;; IMPORTANT: Only opportunistically collect high-priority (vulnerable)
-                  ;; treasures. Safe treasures (in sacred rooms) should be collected at
-                  ;; their scheduled position to ensure vulnerable items are grabbed first.
+                  ;; IMPORTANT: Only opportunistically collect treasures that:
+                  ;; 1. Are high-priority (vulnerable) - not safe treasures
+                  ;; 2. Have all their prep requirements satisfied
+                  ;; This prevents collecting platinum-bar before loud-flag, etc.
                   opportunistic-entries
                   (when (seq path-treasures)
-                    (let [path-index (zipmap path (range))]
+                    (let [path-index (zipmap path (range))
+                          ;; Check if all preps for a treasure are in active-flags
+                          preps-satisfied?
+                          (fn [treasure]
+                            (let [required-preps (deps/preps-for-treasure treasure)]
+                              (every? #(contains? updated-flags %) required-preps)))]
                       (->> path-treasures
                            ;; Sort rooms by path order
                            (sort-by (fn [[room _]] (get path-index room 999)))
@@ -368,7 +374,9 @@
                                           treasures)))
                            ;; Filter out safe treasures - don't collect them early
                            ;; This preserves vulnerability-based ordering
-                           (remove :safe?))))
+                           (remove :safe?)
+                           ;; Filter out treasures whose preps aren't done yet
+                           (filter #(preps-satisfied? (:treasure %))))))
 
                   ;; Track which treasures we're collecting
                   newly-collected (set (map :treasure opportunistic-entries))]
@@ -723,6 +731,8 @@
 
         needs-dam? (some #{:sapphire-bracelet :sapphire :jade-figurine} treasures)
         needs-exorcism? (some #{:crystal-skull} treasures)
+        needs-loud-room? (some #{:platinum-bar} treasures)
+        needs-rainbow? (some #{:pot-of-gold} treasures)
         needs-underground? (seq underground)
 
         ;; Build base schedule with proper sequencing
@@ -740,17 +750,100 @@
               {:type :collect :treasure t :location (route/treasure-location t)
                :fixed? true}))
 
+          ;; Phase 2b: Deposit above-ground treasures (conditionally)
+          ;; IMPORTANT: For full speedruns that include the clockwork canary, we WANT
+          ;; the thief to steal the egg because he opens it, revealing the canary inside.
+          ;; When we kill the thief, he drops both egg and canary.
+          ;; Only deposit immediately if we're NOT planning to kill the thief.
+          (when (and (seq above-ground)
+                     (not (some #{:clockwork-canary :trunk} treasures)))
+            [{:type :deposit-run
+              :location :living-room
+              :reason :thief-protection}])
+
           ;; Phase 3: Underground entry preps (only if we have underground treasures)
           (when needs-underground?
             underground-entry-preps)
 
-          ;; Phase 4: Underground treasure preps (troll, etc.)
+          ;; Phase 4: Troll-flag (must be done first for underground access)
           (when needs-underground?
             (for [action route-plan
                   :when (and (= :prep (:type action))
-                             (not (#{:gates-open :low-tide
-                                     :kitchen-window-open :rug-moved :trap-door-open} (:id action))))]
+                             (= :troll-flag (:id action)))]
               action))
+
+          ;; Phase 4b: Loud room puzzle (IMMEDIATELY after troll)
+          ;; CRITICAL: Must do this early before thief can steal platinum-bar!
+          ;; Only requires troll-flag to access, so we do it before other preps.
+          (when needs-loud-room?
+            [{:type :atomic-sequence
+              :name "loud-room"
+              :steps [{:type :prep :id :loud-flag
+                       :action {:verb :echo}}]
+              :location :loud-room
+              :collect-after :platinum-bar}])
+
+          ;; Phase 4c: Other underground treasure preps (cyclops, dome, etc.)
+          ;; Excludes:
+          ;; - Entry preps (handled in Phase 3)
+          ;; - Dam preps (handled in Phase 5)
+          ;; - Loud room prep (handled in Phase 4b)
+          ;; - Dome-flag (handled in Phase 4d - must collect torch-room treasures immediately)
+          ;; - Rainbow prep (handled in Phase 6b - needs sceptre which requires dome-flag)
+          ;; - Exorcism preps (handled in Phase 8 atomic-sequence)
+          ;; - Troll flag (handled in Phase 4)
+          (when needs-underground?
+            (for [action route-plan
+                  :when (and (= :prep (:type action))
+                             (not (#{;; Entry preps
+                                     :kitchen-window-open :rug-moved :trap-door-open
+                                     ;; Dam preps
+                                     :gates-open :low-tide
+                                     ;; Loud room prep (handled above)
+                                     :loud-flag
+                                     ;; Dome-flag (handled in Phase 4d with immediate torch collection)
+                                     :dome-flag
+                                     ;; Coffin-cure requires south-temple which needs dome-flag
+                                     :coffin-cure
+                                     ;; Rainbow prep (needs sceptre from torch-room which needs dome-flag)
+                                     :rainbow-flag
+                                     ;; Exorcism preps (handled in atomic-sequence)
+                                     :bell-rang :candles-lit :lld-flag
+                                     ;; Troll flag (handled above)
+                                     :troll-flag} (:id action))))]
+              action))
+
+          ;; Phase 4d: Dome puzzle + torch-room treasures (CRITICAL: collect immediately!)
+          ;; The path to egypt-room and other destinations goes THROUGH torch-room.
+          ;; If we set dome-flag and then navigate elsewhere, we visit torch-room
+          ;; which sets TOUCHBIT, allowing the thief to steal ivory-torch and sceptre.
+          ;; Solution: immediately after dome-flag, collect torch-room treasures.
+          ;; NOTE: dome-flag is also needed for gold-coffin (coffin-cure requires south-temple access)
+          (let [needs-dome-treasures? (some #{:ivory-torch :sceptre} treasures)
+                needs-dome-for-coffin? (some #{:gold-coffin} treasures)
+                needs-dome? (or needs-dome-treasures? needs-dome-for-coffin?)]
+            (when needs-dome?
+              (concat
+               ;; Always do dome-flag prep
+               [{:type :atomic-sequence
+                 :name "dome-and-torch"
+                 :steps [{:type :prep :id :dome-flag
+                          :action {:verb :tie :direct-object :rope :indirect-object :railing}}]
+                 :location :dome-room
+                 ;; Only collect ivory-torch if it's in the treasure list
+                 :collect-after (when needs-dome-treasures? :ivory-torch)}]
+               ;; Sceptre is at torch-room too - collect immediately after ivory-torch
+               (when (some #{:sceptre} treasures)
+                 [{:type :collect :treasure :sceptre :location :torch-room
+                   :fixed? true :priority :immediate}]))))
+
+          ;; Phase 4e: Preps that require dome-flag access (south-temple, egypt-room, etc.)
+          ;; These must come AFTER dome-flag is set in Phase 4d.
+          (let [needs-coffin? (some #{:gold-coffin} treasures)]
+            (when needs-coffin?
+              [{:type :prep :id :coffin-cure
+                :location :south-temple
+                :action {:verb :pray}}]))
 
           ;; Phase 5: Dam puzzle with overlapped work
           (when needs-dam?
@@ -765,7 +858,7 @@
                 :duration dam-drain-turns
                 :treasures (:work-during-wait dam-schedule)}]))
 
-          ;; Phase 6: Underground treasures (non-dam, non-exorcism)
+          ;; Phase 6: Underground treasures (non-dam, non-exorcism, non-loud-room, non-rainbow, non-torch)
           ;; Uses vulnerability-prioritized underground list, NOT route-plan order
           ;; This ensures vulnerable treasures (non-sacred rooms) are collected
           ;; before safe ones, reducing thief theft risk.
@@ -773,7 +866,11 @@
           (when needs-underground?
             (for [t underground
                   :when (not (contains? #{:sapphire-bracelet :sapphire
-                                          :jade-figurine :crystal-skull}
+                                          :jade-figurine :crystal-skull
+                                          :platinum-bar   ; Handled in loud-room atomic sequence
+                                          :ivory-torch    ; Handled in dome-and-torch atomic sequence
+                                          :sceptre        ; Handled in dome-and-torch atomic sequence
+                                          :pot-of-gold}   ; Handled in rainbow atomic sequence
                                         t))
                   :let [vuln (treasure-vulnerability game-state t)]]
               {:type :collect
@@ -782,20 +879,53 @@
                :fixed? true  ; Prevent opportunistic reordering
                :safe? (= :safe vuln)}))
 
+          ;; Phase 6b: Rainbow puzzle (after collecting sceptre in Phase 4d)
+          ;; CRITICAL: Must collect sceptre BEFORE we can wave it at the rainbow.
+          ;; Sceptre is collected in Phase 4d (dome-and-torch atomic sequence),
+          ;; so this can happen after Phase 4d completes.
+          (when needs-rainbow?
+            [{:type :atomic-sequence
+              :name "rainbow"
+              :steps [{:type :prep :id :rainbow-flag
+                       :action {:verb :wave :direct-object :sceptre}}]
+              :location :end-of-rainbow
+              :collect-after :pot-of-gold}])
+
           ;; Phase 7: Dam-dependent treasures (after drain)
           (when needs-dam?
             (for [t [:sapphire-bracelet :sapphire :jade-figurine]
                   :when (some #{t} treasures)]
               {:type :collect :treasure t :location (route/treasure-location t)}))
 
+          ;; Phase 7b: Exorcism item collection (before exorcism sequence)
+          ;; The exorcism requires: brass-bell, candles, matchbook, black-book
+          ;; These must be collected before the exorcism atomic sequence runs.
+          (when needs-exorcism?
+            [{:type :prep :id :have-brass-bell
+              :location :north-temple
+              :action {:verb :take :direct-object :brass-bell}}
+             {:type :prep :id :have-candles
+              :location :south-temple
+              :action {:verb :take :direct-object :candles}}
+             {:type :prep :id :have-black-book
+              :location :south-temple
+              :action {:verb :take :direct-object :black-book}}
+             {:type :prep :id :have-matchbook
+              :location :dam-lobby
+              :action {:verb :take :direct-object :matchbook}}])
+
           ;; Phase 8: Exorcism (atomic sequence)
+          ;; IMPORTANT: When bell is rung, candles drop and extinguish!
+          ;; Sequence must: ring bell -> take candles -> light candles -> read book
+          ;; NOTE: Use :lamp-on verb (not :light) for candles
           (when needs-exorcism?
             (let [ex (schedule-exorcism)]
               [{:type :atomic-sequence
                 :name "exorcism"
-                :steps [{:type :prep :id :bell-rang :action (:action (:phase-1 ex))}
-                        {:type :prep :id :candles-lit :action (:action (:phase-2 ex))}
-                        {:type :prep :id :lld-flag :action (:action (:phase-3 ex))}]
+                :steps [{:type :prep :id :bell-rang :action {:verb :ring :direct-object :brass-bell}}
+                        {:type :prep :id :candles-recovered :action {:verb :take :direct-object :candles}}
+                        {:type :prep :id :candles-lit :action {:verb :lamp-on :direct-object :candles :indirect-object :matchbook}}
+                        {:type :prep :id :lld-flag :action {:verb :read :direct-object :black-book}}]
                 :location :entrance-to-hades}
                {:type :collect :treasure :crystal-skull
                 :location :land-of-living-dead}]))

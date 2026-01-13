@@ -83,7 +83,12 @@
 
 (defn make-execution-state
   "Create initial execution state for a speedrun."
-  [game-state treasures & {:keys [debug] :or {debug false}}]
+  [game-state treasures & {:keys [debug seed] :or {debug false}}]
+  ;; Initialize RNG for combat manipulation (use seed if provided)
+  (if seed
+    (rng/init! seed)
+    (when (nil? (:seed (rng/get-seed-info)))
+      (rng/init!)))
   {:game-state game-state
    :treasures treasures
    :schedule (schedule/generate-schedule game-state treasures)
@@ -186,7 +191,7 @@
       ;; Move to a location
       :move
       (let [goal (goals/at-room (:to entry))
-            result (execute-goal exec-state goal 50)]
+            result (execute-goal exec-state goal 100)]
         (if (= :complete (:status (:last-result result)))
           (advance-schedule result)
           (assoc result :status :stuck)))
@@ -194,83 +199,102 @@
       ;; Execute a prep action
       :prep
       (let [prep-id (:id entry)
-            ;; Check for required items from prep registry
-            required-items (when-let [reqs (prep/prep-requires prep-id)]
-                             (filter #(and (keyword? %)
-                                           (not (contains? prep/prep-actions %)))
-                                     reqs))
-            ;; Get any missing items first
-            items-state (reduce
-                         (fn [state item]
-                           (if (obs/has-item? (:game-state state) item)
-                             state
-                             (let [result (execute-goal state (goals/have-item item) 50)]
-                               (if (= :complete (:status (:last-result result)))
-                                 result
-                                 (reduced (assoc result :status :stuck))))))
-                         exec-state
-                         (or required-items []))]
-        (if (= :stuck (:status items-state))
-          items-state
-          (let [;; Get location from entry or prep registry
-                location (or (:location entry) (prep/prep-location prep-id))
-                ;; Navigate to location
-                nav-result (when location
-                             (execute-goal items-state (goals/at-room location) 50))]
-            (if (and nav-result (not= :complete (:status (:last-result nav-result))))
-              (assoc nav-result :status :stuck)
-              (let [;; Use nav-result if we navigated, else items-state
-                    base-state (or nav-result items-state)
-                    game-state (:game-state base-state)
-                    ;; Get action from entry or prep registry
-                    action (or (:action entry) (prep/prep-action prep-id))]
-                (cond
-                  ;; Combat preps use kill-enemy goal with RNG manipulation
-                  (= :combat action)
-                  (let [villain-id (get-in prep/prep-actions [prep-id :target])
-                        ;; Prepare RNG for guaranteed win before combat
-                        combat-prep (combat/ensure-combat-success!
-                                     (:game-state base-state) villain-id)]
-                    (if (:success? combat-prep)
-                      ;; RNG is set for victory - execute combat
-                      (let [goal (goals/kill-enemy villain-id)
-                            result (execute-goal base-state goal 100)]
-                        (if (= :complete (:status (:last-result result)))
-                          (-> result
-                              (update :completed-preps conj prep-id)
-                              advance-schedule)
-                          ;; Combat failed despite RNG manipulation - serious error
-                          (-> result
+            gs (:game-state exec-state)
+            ;; Check if this is a "have-*" prep and we already have the item
+            ;; This handles replanning where we've already acquired the item
+            item-to-acquire (when (and (keyword? prep-id)
+                                       (str/starts-with? (name prep-id) "have-"))
+                              (keyword (subs (name prep-id) 5)))  ; "have-sword" -> :sword
+            already-have-item? (and item-to-acquire
+                                    (obs/has-item? gs item-to-acquire))
+            ;; Check if this flag is already set in game state
+            ;; (handles replanning where flag was set in previous run attempt)
+            flag-already-set? (and (not already-have-item?)  ; Not a have-* prep
+                                   (get gs prep-id))]        ; Check game-state flag
+        (if (or already-have-item? flag-already-set?)
+          ;; Skip - prep already done
+          (-> exec-state
+              (update :completed-preps conj prep-id)
+              advance-schedule)
+          ;; Continue with normal prep execution
+          (let [;; Check for required items from prep registry
+                required-items (when-let [reqs (prep/prep-requires prep-id)]
+                                 (filter #(and (keyword? %)
+                                               (not (contains? prep/prep-actions %)))
+                                         reqs))
+                ;; Get any missing items first
+                items-state (reduce
+                             (fn [state item]
+                               (if (obs/has-item? (:game-state state) item)
+                                 state
+                                 (let [result (execute-goal state (goals/have-item item) 50)]
+                                   (if (= :complete (:status (:last-result result)))
+                                     result
+                                     (reduced (assoc result :status :stuck))))))
+                             exec-state
+                             (or required-items []))]
+            (if (= :stuck (:status items-state))
+              items-state
+              (let [;; Get location from entry or prep registry
+                    location (or (:location entry) (prep/prep-location prep-id))
+                    ;; Navigate to location
+                    nav-result (when location
+                                 (execute-goal items-state (goals/at-room location) 50))]
+                (if (and nav-result (not= :complete (:status (:last-result nav-result))))
+                  (assoc nav-result :status :stuck)
+                  (let [;; Use nav-result if we navigated, else items-state
+                        base-state (or nav-result items-state)
+                        game-state (:game-state base-state)
+                        ;; Get action from entry or prep registry
+                        action (or (:action entry) (prep/prep-action prep-id))]
+                    (cond
+                      ;; Combat preps use kill-enemy goal with RNG manipulation
+                      (= :combat action)
+                      (let [villain-id (get-in prep/prep-actions [prep-id :target])
+                            ;; Prepare RNG for guaranteed win before combat
+                            combat-prep (combat/ensure-combat-success!
+                                         (:game-state base-state) villain-id)]
+                        (if (:success? combat-prep)
+                          ;; RNG is set for victory - execute combat
+                          (let [goal (goals/kill-enemy villain-id)
+                                result (execute-goal base-state goal 100)]
+                            (if (= :complete (:status (:last-result result)))
+                              (-> result
+                                  (update :completed-preps conj prep-id)
+                                  advance-schedule)
+                              ;; Combat failed despite RNG manipulation - serious error
+                              (-> result
+                                  (assoc :status :stuck)
+                                  (assoc-in [:failure-info :combat-prep] combat-prep))))
+                          ;; Couldn't find winning RNG offset
+                          (-> base-state
                               (assoc :status :stuck)
-                              (assoc-in [:failure-info :combat-prep] combat-prep))))
-                      ;; Couldn't find winning RNG offset
+                              (assoc :failure-info {:reason :combat-rng-failed
+                                                    :villain villain-id
+                                                    :combat-prep combat-prep}))))
+
+                      ;; Direct action from entry - execute it immediately
+                      (map? action)
+                      (let [action-result (ml/execute-action game-state action)
+                            new-state (:game-state action-result)]
+                        (-> base-state
+                            (assoc :game-state new-state)
+                            (update :turn-count inc)
+                            (update :completed-preps conj prep-id)
+                            advance-schedule))
+
+                      ;; No action - just advance
+                      :else
                       (-> base-state
-                          (assoc :status :stuck)
-                          (assoc :failure-info {:reason :combat-rng-failed
-                                                :villain villain-id
-                                                :combat-prep combat-prep}))))
-
-                  ;; Direct action from entry - execute it immediately
-                  (map? action)
-                  (let [action-result (ml/execute-action game-state action)
-                        new-state (:game-state action-result)]
-                    (-> base-state
-                        (assoc :game-state new-state)
-                        (update :turn-count inc)
-                        (update :completed-preps conj prep-id)
-                        advance-schedule))
-
-                  ;; No action - just advance
-                  :else
-                  (-> base-state
-                      (update :completed-preps conj prep-id)
-                      advance-schedule)))))))
+                          (update :completed-preps conj prep-id)
+                          advance-schedule)))))))))
 
       ;; Collect a treasure
       :collect
       (let [treasure (:treasure entry)
             goal (goals/have-item treasure)
-            result (execute-goal exec-state goal 50)]
+            ;; 100 turns allows for complex maze navigation
+            result (execute-goal exec-state goal 100)]
         (if (= :complete (:status (:last-result result)))
           (-> result
               (update :collected-treasures conj treasure)
@@ -285,15 +309,18 @@
             (reduce
              (fn [state treasure]
                (let [goal (goals/item-deposited treasure)
-                     result (execute-goal state goal 30)]
+                     result (execute-goal state goal 50)]
                  (if (= :complete (:status (:last-result result)))
                    (update result :deposited-treasures conj treasure)
-                   (reduced result))))
+                   (reduced (assoc result :status :stuck)))))
              exec-state
              to-deposit)]
-        (-> final-state
-            (assoc :collected-treasures #{})
-            advance-schedule))
+        ;; Only advance if all deposits succeeded (no :stuck status)
+        (if (= :stuck (:status final-state))
+          final-state
+          (-> final-state
+              (assoc :collected-treasures #{})
+              advance-schedule)))
 
       ;; Parallel work during a timed effect
       :parallel-work
@@ -315,7 +342,7 @@
       :deposit-run
       (let [to-deposit (:collected-treasures exec-state)
             ;; Navigate to living room
-            nav-result (execute-goal exec-state (goals/at-room :living-room) 50)]
+            nav-result (execute-goal exec-state (goals/at-room :living-room) 100)]
         (if (not= :complete (:status (:last-result nav-result)))
           (assoc nav-result :status :stuck)
           ;; Deposit each treasure
@@ -323,38 +350,85 @@
                 (reduce
                  (fn [state treasure]
                    (let [goal (goals/item-deposited treasure)
-                         result (execute-goal state goal 30)]
+                         result (execute-goal state goal 50)]
                      (if (= :complete (:status (:last-result result)))
                        (update result :deposited-treasures conj treasure)
-                       (reduced result))))
+                       (reduced (assoc result :status :stuck)))))
                  nav-result
                  to-deposit)]
-            (-> final-state
-                (assoc :collected-treasures #{})
-                advance-schedule))))
+            ;; Only advance if all deposits succeeded
+            (if (= :stuck (:status final-state))
+              final-state
+              (-> final-state
+                  (assoc :collected-treasures #{})
+                  advance-schedule)))))
 
-      ;; Atomic sequence (like exorcism)
+      ;; Atomic sequence (like exorcism or loud-room)
       :atomic-sequence
       (let [steps (:steps entry)
             location (:location entry)
-            ;; Navigate to location first
-            nav-result (execute-goal exec-state (goals/at-room location) 50)]
-        (if (not= :complete (:status (:last-result nav-result)))
-          (assoc nav-result :status :stuck)
-          ;; Execute all steps in sequence without interruption
-          (let [final-state
-                (reduce
-                 (fn [state step]
-                   (let [goal (schedule-entry->goal step)
-                         result (execute-goal state goal 10)]
-                     (if (= :complete (:status (:last-result result)))
-                       (update result :completed-preps conj (:id step))
-                       (reduced (assoc result :status :failed)))))
-                 nav-result
-                 steps)]
-            (if (= :failed (:status final-state))
-              final-state
-              (advance-schedule final-state)))))
+            collect-after (:collect-after entry)  ; Treasure to collect immediately after
+            ;; Collect all required items for ALL steps BEFORE navigating
+            ;; This is critical for exorcism: need bell, candles, book, matches
+            all-step-ids (map :id steps)
+            all-required-items
+            (->> all-step-ids
+                 (mapcat #(prep/prep-requires %))
+                 (filter #(and (keyword? %)
+                               (not (contains? prep/prep-actions %))))
+                 distinct)
+            ;; Get any missing items
+            items-state
+            (reduce
+             (fn [state item]
+               (if (obs/has-item? (:game-state state) item)
+                 state
+                 (let [result (execute-goal state (goals/have-item item) 50)]
+                   (if (= :complete (:status (:last-result result)))
+                     result
+                     (reduced (assoc result :status :stuck))))))
+             exec-state
+             all-required-items)]
+        (if (= :stuck (:status items-state))
+          items-state
+          ;; Navigate to location
+          (let [nav-result (execute-goal items-state (goals/at-room location) 100)]
+            (if (not= :complete (:status (:last-result nav-result)))
+              (assoc nav-result :status :stuck)
+              ;; Execute all steps in sequence without interruption
+              ;; IMPORTANT: For atomic sequences, execute actions directly (not via goals)
+              ;; because the goal system doesn't know custom flags like :bell-rang
+              (let [steps-state
+                    (reduce
+                     (fn [state step]
+                       (let [action (:action step)
+                             game-state (:game-state state)]
+                         (if (map? action)
+                           ;; Execute action directly
+                           (let [action-result (ml/execute-action game-state action)
+                                 new-state (:game-state action-result)]
+                             (-> state
+                                 (assoc :game-state new-state)
+                                 (update :turn-count inc)
+                                 (update :completed-preps conj (:id step))))
+                           ;; No action - just mark as complete
+                           (update state :completed-preps conj (:id step)))))
+                     nav-result
+                     steps)
+                    ;; If collect-after is specified, collect that treasure immediately
+                    ;; CRITICAL: This prevents the thief from stealing it!
+                    final-state
+                    (if collect-after
+                      (let [collect-result (execute-goal steps-state
+                                                         (goals/have-item collect-after)
+                                                         20)]
+                        (if (= :complete (:status (:last-result collect-result)))
+                          (update collect-result :collected-treasures conj collect-after)
+                          (assoc collect-result :status :stuck)))
+                      steps-state)]
+                (if (= :stuck (:status final-state))
+                  final-state
+                  (advance-schedule final-state)))))))
 
       ;; Unknown entry type
       (advance-schedule exec-state))))
@@ -419,16 +493,27 @@
   "Generate a new plan from current game state."
   [exec-state]
   (let [gs (:game-state exec-state)
-        ;; Filter out treasures that are deposited or lost (in limbo)
+        deposited (:deposited-treasures exec-state #{})
+        collected (:collected-treasures exec-state #{})
+        ;; Filter out treasures that are deposited or already collected (in inventory)
+        ;; Collected treasures will be deposited in the final deposit-all
         remaining-treasures (remove
                              (fn [t]
-                               (or ((:deposited-treasures exec-state) t)
-                                   ;; Could add check for lost treasures here
-                                   ))
+                               (or (deposited t)
+                                   (collected t)))
                              (:treasures exec-state))
-        new-schedule (schedule/generate-schedule gs remaining-treasures)]
+        ;; Add back collected treasures so they get deposited
+        ;; but prepend them so deposit happens first
+        new-schedule (if (seq collected)
+                       (concat
+                        ;; Deposit collected treasures first
+                        [{:type :deposit-run
+                          :location :living-room
+                          :reason :replan-deposit}]
+                        (schedule/generate-schedule gs remaining-treasures))
+                       (schedule/generate-schedule gs remaining-treasures))]
     (-> exec-state
-        (assoc :schedule new-schedule)
+        (assoc :schedule (vec new-schedule))
         (assoc :schedule-index 0)
         (update :replans inc)
         (assoc :status :running))))

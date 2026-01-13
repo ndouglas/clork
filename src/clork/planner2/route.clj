@@ -117,8 +117,8 @@
    :sapphire-bracelet :gas-room
    :pot-of-gold :end-of-rainbow
    :crystal-skull :land-of-living-dead
-   :trunk :thiefs-lair
-   :clockwork-canary :thiefs-lair  ; thief opens egg
+   :trunk :treasure-room
+   :clockwork-canary :treasure-room  ; thief opens egg
    :gold-coffin :egypt-room
    :huge-diamond :machine-room
    :silver-chalice :maze-7  ; dead thief
