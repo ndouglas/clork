@@ -15,6 +15,7 @@
             [clork.objects :as objects]
             [clork.rooms :as rooms]
             [clork.utils :as utils]
+            [clork.core :as core]
             [clork.utils-test :refer [with-captured-output make-test-state parse-test-input]]))
 
 ;;; ---------------------------------------------------------------------------
@@ -997,6 +998,76 @@
   (testing "restore is registered in vocabulary as a verb"
     (is (= true (parser/wt? "restore" :verb)))
     (is (= :restore (parser/wt? "restore" :verb true)))))
+
+(deftest restore-preserves-daemon-handlers-test
+  (testing "restore preserves daemon handler functions"
+    ;; Use full game state with daemons registered
+    (let [gs (core/init-game)
+          save-file "test-daemon-handlers.sav"]
+      ;; Verify daemon handlers exist before save
+      (is (fn? (get-in gs [:daemons :i-thief :handler])) "thief daemon should have handler before save")
+      (is (fn? (get-in gs [:daemons :i-lantern :handler])) "lantern daemon should have handler before save")
+      ;; Save the game
+      (binding [verbs-health/*read-input-fn* (constantly save-file)]
+        (with-captured-output (verbs-health/v-save gs)))
+      ;; Create a fresh game state for restore (simulates restarting the game)
+      (let [fresh-gs (core/init-game)]
+        ;; Restore from the saved file
+        (binding [verbs-health/*read-input-fn* (constantly save-file)]
+          (let [[_ restored] (with-captured-output (verbs-health/v-restore fresh-gs))]
+            ;; Verify daemon handlers are restored
+            (is (fn? (get-in restored [:daemons :i-thief :handler]))
+                "thief daemon should have handler after restore")
+            (is (fn? (get-in restored [:daemons :i-lantern :handler]))
+                "lantern daemon should have handler after restore")
+            (is (fn? (get-in restored [:daemons :i-candles :handler]))
+                "candles daemon should have handler after restore"))))
+      ;; Clean up
+      (try (io/delete-file save-file) (catch Exception _)))))
+
+(deftest restore-preserves-object-actions-test
+  (testing "restore preserves object :action functions"
+    (let [gs (core/init-game)
+          save-file "test-object-actions.sav"]
+      ;; Verify object actions exist before save
+      (is (fn? (get-in gs [:objects :thief :action])) "thief should have action before save")
+      (is (fn? (get-in gs [:objects :brass-lantern :action])) "lantern should have action before save")
+      ;; Save the game
+      (binding [verbs-health/*read-input-fn* (constantly save-file)]
+        (with-captured-output (verbs-health/v-save gs)))
+      ;; Create fresh game state and restore
+      (let [fresh-gs (core/init-game)]
+        (binding [verbs-health/*read-input-fn* (constantly save-file)]
+          (let [[_ restored] (with-captured-output (verbs-health/v-restore fresh-gs))]
+            ;; Verify object actions are restored
+            (is (fn? (get-in restored [:objects :thief :action]))
+                "thief should have action after restore")
+            (is (fn? (get-in restored [:objects :brass-lantern :action]))
+                "lantern should have action after restore"))))
+      ;; Clean up
+      (try (io/delete-file save-file) (catch Exception _)))))
+
+(deftest restore-preserves-room-actions-test
+  (testing "restore preserves room :action functions"
+    (let [gs (core/init-game)
+          save-file "test-room-actions.sav"]
+      ;; Verify room actions exist before save
+      (is (fn? (get-in gs [:rooms :west-of-house :action])) "west-of-house should have action before save")
+      (is (fn? (get-in gs [:rooms :treasure-room :action])) "treasure-room should have action before save")
+      ;; Save the game
+      (binding [verbs-health/*read-input-fn* (constantly save-file)]
+        (with-captured-output (verbs-health/v-save gs)))
+      ;; Create fresh game state and restore
+      (let [fresh-gs (core/init-game)]
+        (binding [verbs-health/*read-input-fn* (constantly save-file)]
+          (let [[_ restored] (with-captured-output (verbs-health/v-restore fresh-gs))]
+            ;; Verify room actions are restored
+            (is (fn? (get-in restored [:rooms :west-of-house :action]))
+                "west-of-house should have action after restore")
+            (is (fn? (get-in restored [:rooms :treasure-room :action]))
+                "treasure-room should have action after restore"))))
+      ;; Clean up
+      (try (io/delete-file save-file) (catch Exception _)))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; SCRIPT/UNSCRIPT VERB TESTS

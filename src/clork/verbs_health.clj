@@ -386,17 +386,58 @@
         (println (str "Save failed: " (.getMessage e))))
       false)))
 
+(defn- reattach-handlers
+  "Re-attach function handlers from restart-state after restore.
+
+   Functions (like :action handlers on objects/rooms and :handler on daemons)
+   can't be serialized to EDN, so they must be re-attached from the canonical
+   definitions stored in restart-state after loading a saved game."
+  [restored-state restart-state]
+  (-> restored-state
+      ;; Re-attach object :action handlers
+      (update :objects
+              (fn [objects]
+                (reduce-kv
+                 (fn [acc obj-id _obj]
+                   (if-let [action (get-in restart-state [:objects obj-id :action])]
+                     (assoc-in acc [obj-id :action] action)
+                     acc))
+                 objects
+                 objects)))
+      ;; Re-attach room :action handlers
+      (update :rooms
+              (fn [rooms]
+                (reduce-kv
+                 (fn [acc room-id _room]
+                   (if-let [action (get-in restart-state [:rooms room-id :action])]
+                     (assoc-in acc [room-id :action] action)
+                     acc))
+                 rooms
+                 rooms)))
+      ;; Re-attach daemon :handler functions
+      (update :daemons
+              (fn [daemons]
+                (reduce-kv
+                 (fn [acc daemon-id _daemon]
+                   (if-let [handler (get-in restart-state [:daemons daemon-id :handler])]
+                     (assoc-in acc [daemon-id :handler] handler)
+                     acc))
+                 daemons
+                 daemons)))))
+
 (defn- restore-game-from-file
   "Restore game state from file. Returns game-state on success, nil on failure."
   [filename current-state]
   (try
     (when (.exists (io/file filename))
       (let [edn-str (slurp filename)
-            restored (edn/read-string edn-str)]
-        ;; Merge back in the non-saveable state
+            restored (edn/read-string edn-str)
+            restart-state (:restart-state current-state)]
+        ;; Merge back in the non-saveable state and re-attach function handlers
         (-> restored
-            (assoc :restart-state (:restart-state current-state))
-            (assoc :script-config (:script-config current-state)))))
+            (assoc :restart-state restart-state)
+            (assoc :script-config (:script-config current-state))
+            (reattach-handlers restart-state))))
     (catch Exception e
       (binding [*out* *err*]
         (println (str "Restore failed: " (.getMessage e))))

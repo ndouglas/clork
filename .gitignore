@@ -25,3 +25,5 @@ env/
 venv/
 *.egg-info/
 .eggs/
+
+*.sav
