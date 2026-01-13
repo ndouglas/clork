@@ -10,7 +10,8 @@
    - find-root-causes: What are the deepest unmet preconditions?
    - suggest-actions: What actions would help achieve this goal?"
   (:require [clork.game-state :as gs]
-            [clork.intel.affordances :as aff]))
+            [clork.intel.affordances :as aff]
+            [clork.intel.routing :as routing]))
 
 ;;; ---------------------------------------------------------------------------
 ;;; GOAL CHECKING
@@ -24,7 +25,10 @@
 
 (defmethod check-goal :game-flag
   [game-state {:keys [flag] :as goal}]
-  (let [satisfied (gs/game-flag? game-state flag)]
+  ;; Check both stored game flags AND virtual flags (like :boat-ready, :trap-door-open)
+  (let [stored-flag (gs/game-flag? game-state flag)
+        virtual-flags (routing/extract-available-flags game-state)
+        satisfied (or stored-flag (contains? virtual-flags flag))]
     {:satisfied satisfied
      :goal goal
      :details (if satisfied
@@ -33,7 +37,10 @@
 
 (defmethod check-goal :game-not-flag
   [game-state {:keys [flag] :as goal}]
-  (let [satisfied (not (gs/game-flag? game-state flag))]
+  ;; Check both stored game flags AND virtual flags
+  (let [stored-flag (gs/game-flag? game-state flag)
+        virtual-flags (routing/extract-available-flags game-state)
+        satisfied (not (or stored-flag (contains? virtual-flags flag)))]
     {:satisfied satisfied
      :goal goal
      :details (if satisfied
@@ -157,6 +164,135 @@
                   (str "Currently at " (name winner-loc) ", not in boat")
                   "Not in boat - need to inflate and board"))}))
 
+(defmethod check-goal :treasures-collected
+  [game-state {:keys [treasures] :as goal}]
+  ;; Check if all specified treasures are either held or in trophy case
+  (let [inventory (set (gs/get-contents game-state :adventurer))
+        in-case (set (gs/get-contents game-state :trophy-case))
+        collected (clojure.set/union inventory in-case)
+        required (set treasures)
+        have (clojure.set/intersection required collected)
+        missing (clojure.set/difference required have)
+        satisfied (empty? missing)]
+    {:satisfied satisfied
+     :goal goal
+     :details (if satisfied
+                (str "All " (count treasures) " treasures collected")
+                (str "Missing " (count missing) " treasures: "
+                     (clojure.string/join ", " (map name missing))))
+     :collected have
+     :missing missing}))
+
+(defmethod check-goal :score-at-least
+  [game-state {:keys [score] :as goal}]
+  (let [current-score (or (:score game-state) 0)
+        satisfied (>= current-score score)]
+    {:satisfied satisfied
+     :goal goal
+     :details (if satisfied
+                (str "Score " current-score " >= " score)
+                (str "Score " current-score " < " score " (need " (- score current-score) " more)"))
+     :current-score current-score
+     :needed (- score current-score)}))
+
+(defmethod check-goal :light-available
+  [game-state goal]
+  ;; Check if player has access to a working light source
+  (let [inventory (set (gs/get-contents game-state :adventurer))
+        ;; Check brass lantern
+        has-lantern (contains? inventory :brass-lantern)
+        lantern-on (and has-lantern (gs/set-thing-flag? game-state :brass-lantern :on))
+        ;; Check torch
+        has-torch (contains? inventory :ivory-torch)
+        torch-lit (and has-torch (gs/set-thing-flag? game-state :ivory-torch :on))
+        ;; Check candles
+        has-candles (contains? inventory :candles)
+        candles-lit (and has-candles (gs/set-thing-flag? game-state :candles :on))
+        ;; Any working light?
+        satisfied (or lantern-on torch-lit candles-lit)]
+    {:satisfied satisfied
+     :goal goal
+     :details (cond
+                lantern-on "Brass lantern is on"
+                torch-lit "Torch is lit"
+                candles-lit "Candles are lit"
+                has-lantern "Have lantern but it's off"
+                has-torch "Have torch but it's not lit"
+                has-candles "Have candles but they're not lit"
+                :else "No light source available")
+     :light-sources {:lantern {:held has-lantern :on lantern-on}
+                     :torch {:held has-torch :on torch-lit}
+                     :candles {:held has-candles :on candles-lit}}}))
+
+(defmethod check-goal :inventory-has-room
+  [game-state goal]
+  ;; Check if inventory has room for more items
+  (let [inventory (gs/get-contents game-state :adventurer)
+        count-held (count inventory)
+        max-items 7  ; Typical Zork inventory limit
+        satisfied (< count-held max-items)]
+    {:satisfied satisfied
+     :goal goal
+     :details (if satisfied
+                (str "Inventory has room (" count-held "/" max-items ")")
+                (str "Inventory full (" count-held "/" max-items ")"))
+     :items-held count-held
+     :max-items max-items}))
+
+(defmethod check-goal :lamp-has-power
+  [game-state goal]
+  ;; Check if the brass lantern has fuel remaining
+  ;; Lamp has 4 stages (indices 0-3), burns out at stage 3 (ticks=0)
+  ;; Total fuel: 100+70+15 = 185 turns
+  (let [inventory (set (gs/get-contents game-state :adventurer))
+        has-lantern (contains? inventory :brass-lantern)
+        burned-out (gs/set-thing-flag? game-state :brass-lantern :burned-out)
+        ;; Stage index: 0=full, 1=dim, 2=dimmer, 3=nearly out/out
+        stage-idx (get game-state :lamp-stage-index 0)
+        ;; Calculate approximate remaining turns
+        remaining-turns (case stage-idx
+                          0 185  ; Full power
+                          1 85   ; 70+15
+                          2 15   ; Nearly out
+                          3 0    ; Dead
+                          0)     ; Default
+        satisfied (and has-lantern (not burned-out) (pos? remaining-turns))]
+    {:satisfied satisfied
+     :goal goal
+     :details (cond
+                (not has-lantern) "Don't have the brass lantern"
+                burned-out "Lamp has burned out"
+                (zero? remaining-turns) "Lamp has no fuel left"
+                (<= remaining-turns 15) (str "Lamp nearly out (~" remaining-turns " turns)")
+                :else (str "Lamp has fuel (~" remaining-turns " turns)"))
+     :has-lantern has-lantern
+     :burned-out burned-out
+     :stage-index stage-idx
+     :remaining-turns remaining-turns}))
+
+(defmethod check-goal :object-accessible
+  [game-state {:keys [object] :as goal}]
+  ;; Object is accessible if held, in room, or in open container in room
+  (let [here (:here game-state)
+        inventory (set (gs/get-contents game-state :adventurer))
+        room-contents (set (gs/get-contents game-state here))
+        held (contains? inventory object)
+        in-room (contains? room-contents object)
+        ;; Check if in open container in room
+        obj-loc (gs/get-thing-loc-id game-state object)
+        in-container (and obj-loc
+                          (contains? room-contents obj-loc)
+                          (gs/set-thing-flag? game-state obj-loc :open))
+        satisfied (or held in-room in-container)]
+    {:satisfied satisfied
+     :goal goal
+     :details (cond
+                held (str (name object) " is held")
+                in-room (str (name object) " is in room")
+                in-container (str (name object) " is in open container " (name obj-loc))
+                :else (str (name object) " is not accessible (at " (name (or obj-loc :unknown)) ")"))
+     :location obj-loc}))
+
 (defmethod check-goal :default
   [_game-state goal]
   {:satisfied false
@@ -174,6 +310,7 @@
   (case (:type precond)
     :object-visible {:type :object-visible :object (:object precond)}
     :object-held {:type :object-held :object (:object precond)}
+    :object-accessible {:type :object-accessible :object (:object precond)}
     :object-in-room {:type :object-at :object (:object precond) :location :here}
     :object-flag {:type :object-flag :object (:object precond) :flag (:flag precond)}
     :object-not-flag {:type :object-not-flag :object (:object precond) :flag (:flag precond)}
@@ -182,11 +319,15 @@
     :at-location {:type :at-location :room (:room precond)}
     :at-any-location {:type :at-any-location :rooms (:rooms precond)}
     :exit-exists nil  ; Can't easily convert to goal
-    :inventory-capacity nil  ; Can't easily convert to goal
+    :inventory-capacity {:type :inventory-has-room}
     :object-in-container {:type :object-at :object (:object precond) :location (:container precond)}
     :in-vehicle {:type :player-in-vehicle :vehicle (:vehicle precond)}
     :not-in-vehicle {:type :player-not-in-vehicle}
     :boat-ready {:type :boat-ready}
+    :light-available {:type :light-available}
+    :lamp-has-power {:type :lamp-has-power}
+    :treasures-collected {:type :treasures-collected :treasures (:treasures precond)}
+    :score-at-least {:type :score-at-least :score (:score precond)}
     nil))
 
 ;;; ---------------------------------------------------------------------------
