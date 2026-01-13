@@ -25,6 +25,7 @@
             [clork.debug.inspect :as debug-inspect]
             [clork.debug.pathfind :as debug-pathfind]
             [clork.debug.legal :as debug-legal]
+            [clork.debug.why :as debug-why]
             [clork.undo :as undo]))
 
 ;;; ---------------------------------------------------------------------------
@@ -236,6 +237,10 @@
   (register-command! :legal debug-legal/cmd-legal
                      "Show legal actions from affordance registry"
                      :subcommands debug-legal/subcommands)
+  ;; Goal regression / why command
+  (register-command! :why debug-why/cmd-why
+                     "Explain why a goal isn't achievable (causal reasoning)"
+                     :subcommands debug-why/subcommands)
 )
 
 ;; Auto-initialize on namespace load
