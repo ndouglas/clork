@@ -756,12 +756,18 @@
           (utils/crlf))
 
       ;; Success - board the vehicle
+      ;; First, let the object's action handler check for sharp objects, etc.
       :else
-      (-> game-state
-          (utils/tell (str "You are now in the " (gs/thing-name game-state prso) "."))
-          (utils/crlf)
-          ;; Move player into the vehicle
-          (gs/move-object winner prso :board)))))
+      (let [action-fn (:action obj)]
+        (if-let [result (when action-fn (action-fn game-state))]
+          ;; Object handled it (e.g., punctured by sharp object)
+          result
+          ;; Object didn't handle - proceed with boarding
+          (-> game-state
+              (utils/tell (str "You are now in the " (gs/thing-name game-state prso) "."))
+              (utils/crlf)
+              ;; Move player into the vehicle
+              (gs/move-object winner prso :board)))))))
 
 (defn v-disembark
   "Handle DISEMBARK/EXIT verb - exit a vehicle.

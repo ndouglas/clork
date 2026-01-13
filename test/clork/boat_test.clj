@@ -277,10 +277,7 @@
       ;; Player is no longer in boat (in the river room now)
       (is (not= :inflated-boat (gs/get-thing-loc-id (:gs result) :adventurer))))))
 
-;; BUG: v-board doesn't call the object's action handler (rboat-function),
-;; which contains the sharp object puncture check. The check exists in
-;; rboat-function at objects.clj:3350-3360, but v-board bypasses it.
-(deftest ^:pending test-board-with-sharp-object-punctures
+(deftest test-board-with-sharp-object-punctures
   (testing "boarding with sharp object punctures the boat"
     (let [gs (-> (core/init-game)
                  (assoc :here :dam-base)
@@ -289,9 +286,9 @@
           gs-inflated (:gs (run-cmd gs "inflate boat with pump"))
           result (run-cmd gs-inflated "board boat")]
       ;; Sharp object should puncture boat
-      (is (re-find #"puncture|hiss|pop" (:output result)))
-      ;; Boat should be deflated (back to inflatable-boat)
-      (is (= :dam-base (gs/get-thing-loc-id (:gs result) :inflatable-boat))))))
+      (is (re-find #"puncture|hiss" (:output result)))
+      ;; Boat should be punctured (not inflatable-boat, but punctured-boat)
+      (is (= :dam-base (gs/get-thing-loc-id (:gs result) :punctured-boat))))))
 
 (deftest test-launch-not-in-boat-fails
   (testing "cannot launch if not in boat"
