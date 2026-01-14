@@ -733,19 +733,23 @@
     :desc "Say 'echo' to solve loud room puzzle"}
 
    ;; === RAINBOW PUZZLE ===
+   ;; Wave sceptre at Aragain Falls or End of Rainbow to make rainbow solid
+   ;; Note: The sceptre action handler checks for :aragain-falls or :end-of-rainbow
+   ;; NOT :on-the-rainbow (you can only reach on-the-rainbow after rainbow is solid)
    {:id :wave-sceptre-rainbow
     :verb :wave
     :pattern {:object :sceptre}
-    :preconds [{:type :at-location :room :on-the-rainbow}
-               {:type :object-held :object :sceptre}]
+    :preconds [{:type :at-any-location :rooms [:aragain-falls :end-of-rainbow]}
+               {:type :object-held :object :sceptre}
+               {:type :game-not-flag :flag :rainbow-flag}]
     :effects [{:type :set-flag :flag :rainbow-flag}]
     :desc "Wave sceptre to make rainbow solid"}
 
-   ;; Wave sceptre again (unsolid rainbow)
+   ;; Wave sceptre again (unsolid rainbow) - can be done from rainbow or either end
    {:id :wave-sceptre-unsolid
     :verb :wave
     :pattern {:object :sceptre}
-    :preconds [{:type :at-any-location :rooms [:on-the-rainbow :end-of-rainbow]}
+    :preconds [{:type :at-any-location :rooms [:aragain-falls :end-of-rainbow]}
                {:type :object-held :object :sceptre}
                {:type :game-flag :flag :rainbow-flag}]
     :effects [{:type :clear-flag :flag :rainbow-flag}]
@@ -841,12 +845,12 @@
 ;;; ---------------------------------------------------------------------------
 
 (def treasure-objects
-  "Set of objects that are treasures (have :treasure flag in game)."
-  #{:jeweled-egg :clockwork-canary :portrait :platinum-bar :ivory-torch
-    :gold-coffin :jade :sapphire-bracelet :diamond :bag-of-coins
-    :crystal-skull :jewel-encrusted-trident :chalice :trunk-of-jewels
-    :crystal-sphere :torch :pot-of-gold :scarab :bauble :brass-bell
-    :figurine})
+  "Set of objects that are treasures (have :value and/or :tvalue in game).
+   These are the actual object IDs from objects.clj."
+  #{:bag-of-coins :brass-bauble :clockwork-canary :crystal-skull :crystal-trident
+    :egg :gold-coffin :huge-diamond :ivory-torch :jade-figurine :jeweled-scarab
+    :large-emerald :painting :platinum-bar :pot-of-gold :sapphire-bracelet
+    :sceptre :silver-chalice :trunk-of-jewels})
 
 ;;; ---------------------------------------------------------------------------
 ;;; LEGAL ACTIONS FUNCTION

@@ -16,26 +16,26 @@
       (is (contains? (set all) :egg))
       (is (contains? (set all) :clockwork-canary))
       (is (contains? (set all) :pot-of-gold))
-      (is (contains? (set all) :diamond)))))
+      (is (contains? (set all) :huge-diamond)))))
 
 (deftest test-treasure-value
   (testing "treasure values are correct"
     (is (= 5 (treasures/treasure-value :egg)))
     (is (= 6 (treasures/treasure-value :clockwork-canary)))
     (is (= 10 (treasures/treasure-value :pot-of-gold)))
-    (is (= 10 (treasures/treasure-value :diamond)))
+    (is (= 10 (treasures/treasure-value :huge-diamond)))
     (is (= 15 (treasures/treasure-value :trunk-of-jewels)))))
 
 (deftest test-treasure-location
   (testing "treasure locations are correct"
     (is (= :up-a-tree (treasures/treasure-location :egg)))
     (is (= :loud-room (treasures/treasure-location :platinum-bar)))
-    (is (= :gallery (treasures/treasure-location :portrait)))
+    (is (= :gallery (treasures/treasure-location :painting)))
     ;; Container treasures have nil location
     (is (nil? (treasures/treasure-location :clockwork-canary)))
     (is (nil? (treasures/treasure-location :sceptre)))
     ;; Created treasures have nil location
-    (is (nil? (treasures/treasure-location :diamond)))))
+    (is (nil? (treasures/treasure-location :huge-diamond)))))
 
 (deftest test-treasure-requires
   (testing "treasure requirements are correct"
@@ -43,7 +43,7 @@
     (is (= #{:loud-flag} (treasures/treasure-requires :platinum-bar)))
     (is (= #{:lld-flag} (treasures/treasure-requires :crystal-skull)))
     (is (= #{:rainbow-flag} (treasures/treasure-requires :pot-of-gold)))
-    (is (= #{:boat-ready} (treasures/treasure-requires :scarab)))))
+    (is (= #{:boat-ready} (treasures/treasure-requires :jeweled-scarab)))))
 
 (deftest test-treasure-container
   (testing "container relationships are correct"
@@ -94,7 +94,6 @@
 
   (testing "treasures requiring gates-open"
     (let [treasures (set (treasures/treasures-requiring-flag :gates-open))]
-      (is (contains? treasures :jewel-encrusted-trident))
       (is (contains? treasures :crystal-trident)))))
 
 (deftest test-treasures-requiring-puzzle
@@ -105,9 +104,7 @@
 
   (testing "treasures requiring dam-open"
     (let [treasures (set (treasures/treasures-requiring-puzzle :dam-open))]
-      (is (contains? treasures :jewel-encrusted-trident))
-      (is (contains? treasures :crystal-trident))
-      (is (contains? treasures :trunk-of-jewels)))))
+      (is (contains? treasures :crystal-trident)))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; ACCESSIBILITY TESTS
@@ -275,7 +272,7 @@
 (deftest test-treasures-that-fit
   (testing "filters treasures by capacity"
     (let [gs (core/init-game)
-          all-treasures [:egg :portrait :bag-of-coins]
+          all-treasures [:egg :painting :bag-of-coins]
           fitting (treasures/treasures-that-fit gs all-treasures)]
       ;; Should return treasures that fit
       (is (<= (count fitting) (count all-treasures))))))
@@ -283,7 +280,7 @@
 (deftest test-optimal-treasure-set
   (testing "selects optimal treasures"
     (let [gs (core/init-game)
-          available [:egg :portrait :bag-of-coins :platinum-bar]
+          available [:egg :painting :bag-of-coins :platinum-bar]
           result (treasures/optimal-treasure-set gs available)]
       (is (vector? (:treasures result)))
       (is (number? (:total-value result)))

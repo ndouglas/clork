@@ -23,6 +23,12 @@
   "Large number representing infinite distance."
   Integer/MAX_VALUE)
 
+(def hazardous-waypoints
+  "Rooms that should NOT be used as intermediate waypoints in pathfinding.
+   These rooms have special behaviors that interfere with normal traversal:
+   - :bat-room - The bat kidnaps the player and drops them randomly"
+  #{:bat-room})
+
 ;;; ---------------------------------------------------------------------------
 ;;; SPECIAL EDGES (TELEPORTS AND CONDITIONAL PASSAGES)
 ;;; ---------------------------------------------------------------------------
@@ -51,31 +57,32 @@
     :via :pray
     :requires #{}}
 
-   ;; At north-temple, PRAY teleports to treasure-room (and vice versa)
+   ;; At north-temple, TREASURE command teleports to treasure-room (and vice versa)
+   ;; Note: This is v-treasure, NOT v-pray. PRAY only works at south-temple.
    {:from :north-temple
     :to :treasure-room
     :cost 1
-    :via :pray
+    :via :treasure
     :requires #{}}
 
    {:from :treasure-room
     :to :north-temple
     :cost 1
-    :via :pray
+    :via :treasure
     :requires #{}}
 
    ;; === MIRROR TELEPORT ===
-   ;; Looking in the mirror teleports between mirror rooms
+   ;; Rubbing the mirror teleports between mirror rooms
    {:from :mirror-room-1
     :to :mirror-room-2
     :cost 1
-    :via {:verb :look :object :mirror}
+    :via {:verb :rub :direct-object :mirror-1}
     :requires #{}}
 
    {:from :mirror-room-2
     :to :mirror-room-1
     :cost 1
-    :via {:verb :look :object :mirror}
+    :via {:verb :rub :direct-object :mirror-2}
     :requires #{}}
 
    ;; === FRIGID RIVER BOAT SYSTEM ===
@@ -398,10 +405,17 @@
   (first (filter #(and (= (:from %) from) (= (:to %) to))
                  (:edges graph))))
 
+(def ^:private movement-directions
+  "Valid movement directions that can be used with :walk verb."
+  #{:north :south :east :west :up :down
+    :ne :nw :se :sw
+    :in :out :enter :exit :land})
+
 (defn path-to-actions
   "Convert a path of rooms to a sequence of actions.
 
-   Returns sequence of action maps like {:verb :walk :direct-object :north}"
+   Returns sequence of action maps like {:verb :walk :direct-object :north}
+   or {:verb :pray} for special teleport actions."
   [game-state path & {:keys [available-flags] :or {available-flags #{}}}]
   (when (seq path)
     (let [graph (build-navigation-graph game-state :available-flags available-flags)]
@@ -409,9 +423,22 @@
             :let [edge (find-edge graph from to)]
             :when edge]
         (let [via (:via edge)]
-          (if (keyword? via)
+          (cond
+            ;; Normal movement direction
+            (contains? movement-directions via)
             {:verb :walk :direct-object via}
-            via))))))
+
+            ;; Special action keyword (like :pray) - becomes verb
+            (keyword? via)
+            {:verb via}
+
+            ;; Already a complete action map
+            (map? via)
+            via
+
+            ;; Unknown - default to walk
+            :else
+            {:verb :walk :direct-object via}))))))
 
 (defn route-to
   "Generate complete route from current location to destination.
@@ -561,8 +588,8 @@
    :portrait :gallery
    :platinum-bar :loud-room
    :ivory-torch :torch-room
-   :gold-coffin :egyptian-room
-   :jade :bat-room
+   :gold-coffin :egypt-room
+   :jade-figurine :bat-room
    :sapphire-bracelet :gas-room
    :diamond :machine  ; Created from coal
    :bag-of-coins :maze-5
@@ -573,9 +600,11 @@
    :crystal-sphere :top-of-the-world
    :torch :torch-room
    :pot-of-gold :end-of-rainbow
-   :scarab :sandy-beach
+   :jeweled-scarab :sandy-cave
    :bauble :gas-room
-   :figurine :land-of-living-dead})
+   :figurine :land-of-living-dead
+   :large-emerald :buoy
+   :silver-chalice :treasure-room})
 
 (defn plan-treasure-route
   "Plan optimal route to collect specified treasures and return them to trophy case.

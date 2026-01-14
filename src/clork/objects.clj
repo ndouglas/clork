@@ -1695,7 +1695,7 @@ Surely thou shalt repent of thy cunning."})
              ;; ZIL: CANARY-OBJECT - WIND in forest room creates bauble
              (let [prsa (parser-state/get-prsa game-state)
                    here (:here game-state)
-                   forest-rooms #{:forest-1 :forest-2 :forest-3 :path :up-a-tree :clearing :grating-clearing}
+                   forest-rooms #{:forest-1 :forest-2 :forest-3 :forest-path :up-a-tree :clearing :grating-clearing}
                    in-forest? (contains? forest-rooms here)
                    sung? (get game-state :canary-sung false)]
                (cond

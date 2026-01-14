@@ -532,7 +532,7 @@
                          (assoc :prso [direct-object])
 
                          indirect-object
-                         (assoc :prsi indirect-object))
+                         (assoc :prsi [indirect-object]))
 
           ;; Special handling for movement
           final-parser-state

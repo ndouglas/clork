@@ -145,6 +145,7 @@
      {:type :object-accessible :object :candles}
      {:type :object-accessible :object :matchbook}
      {:type :object-accessible :object :black-book}
+     {:type :flag-set :flag :troll-flag}  ; Need to pass troll
      {:type :can-reach :room :entrance-to-hades}
      {:type :flag-not-set :flag :lld-flag}]
 
@@ -201,10 +202,11 @@
 
     :steps
     [;; Attack troll repeatedly until dead
+     ;; NOTE: 50 attempts to handle bad RNG - typical kill is 1-5 attempts
      {:action {:verb :attack :direct-object :troll :indirect-object :sword}
       :description "Attack the troll with the sword"
       :repeat-until {:type :flag-set :flag :troll-flag}
-      :max-attempts 20}]
+      :max-attempts 50}]
 
     :unlocks [:east-west-passage :round-room]}
 
@@ -219,6 +221,7 @@
 
     :preconditions
     [{:type :object-accessible :object :lunch}  ; Contains peppers
+     {:type :flag-set :flag :troll-flag}  ; Need to pass troll first
      {:type :can-reach :room :cyclops-room}
      {:type :flag-not-set :flag :cyclops-flag}]
 
@@ -233,7 +236,7 @@
     :steps
     [{:action {:verb :give :direct-object :lunch :indirect-object :cyclops}
       :description "Give the lunch to the cyclops"}
-     {:action {:verb :say :direct-object :ulysses}
+     {:action {:verb :odysseus}
       :description "Say 'Ulysses' to frighten the cyclops"
       :expect {:flags-set #{:cyclops-flag :magic-flag}}}]
 
@@ -250,14 +253,14 @@
 
     :preconditions
     [{:type :object-held :object :sceptre}
-     {:type :can-reach :room :aragain-falls}
+     {:type :flag-set :flag :troll-flag}  ; Need to pass troll (sceptre is in coffin underground)
      {:type :flag-not-set :flag :rainbow-flag}]
 
     :postconditions
     [{:type :flag-set :flag :rainbow-flag}]
 
-    ;; Wave sceptre at aragain-falls or end-of-rainbow (not on-the-rainbow!)
-    :execution-location :aragain-falls
+    ;; Wave sceptre at end-of-rainbow (reachable via canyon/cliffs, no boat needed)
+    :execution-location :end-of-rainbow
 
     :required-items [:sceptre]
 
@@ -278,7 +281,8 @@
     :description "Quiet the loud room to take the platinum bar"
 
     :preconditions
-    [{:type :can-reach :room :loud-room}
+    [{:type :flag-set :flag :troll-flag}  ; Need to pass troll
+     {:type :can-reach :room :loud-room}
      {:type :flag-not-set :flag :loud-flag}]
 
     :postconditions
@@ -306,6 +310,7 @@
 
     :preconditions
     [{:type :object-held :object :rope}
+     {:type :flag-set :flag :troll-flag}  ; Need to pass troll
      {:type :can-reach :room :dome-room}
      {:type :flag-not-set :flag :dome-flag}]
 
@@ -334,18 +339,25 @@
 
     :preconditions
     [{:type :object-held :object :wrench}
+     {:type :flag-set :flag :troll-flag}  ; Need to pass troll to reach dam
      {:type :can-reach :room :dam-room}
      {:type :flag-not-set :flag :gates-open}]
 
     :postconditions
-    [{:type :flag-set :flag :gates-open}]
+    [{:type :flag-set :flag :gates-open}
+     {:type :flag-set :flag :gate-flag}]
 
     :execution-location :dam-room
 
     :required-items [:wrench]
 
     :steps
-    [{:action {:verb :turn :direct-object :bolt :indirect-object :wrench}
+    [;; First push yellow button to set gate-flag (enables bolt turning)
+     ;; Note: PUSH maps to :move verb in the game
+     {:action {:verb :move :direct-object :yellow-button}
+      :description "Push yellow button to enable gate mechanism"}
+     ;; Now turn the bolt to open gates
+     {:action {:verb :turn :direct-object :bolt :indirect-object :wrench}
       :description "Turn the bolt with the wrench to open gates"}]
 
     :unlocks [:low-tide :trunk-of-jewels]}
@@ -360,20 +372,20 @@
     :description "Unlock the grating to access the underground"
 
     :preconditions
-    [{:type :object-held :object :keys}
+    [{:type :object-held :object :skeleton-key}
      {:type :can-reach :room :grating-clearing}]
 
     :postconditions
-    [{:type :object-flag :object :grating :flag :open}]
+    [{:type :object-flag :object :grate :flag :open}]
 
     :execution-location :grating-clearing
 
-    :required-items [:keys]
+    :required-items [:skeleton-key]
 
     :steps
-    [{:action {:verb :unlock :direct-object :grating :indirect-object :keys}
-      :description "Unlock the grating with the keys"}
-     {:action {:verb :open :direct-object :grating}
+    [{:action {:verb :unlock :direct-object :grate :indirect-object :skeleton-key}
+      :description "Unlock the grating with the skeleton key"}
+     {:action {:verb :open :direct-object :grate}
       :description "Open the grating"}]
 
     :unlocks [:grating-room]}
@@ -445,7 +457,7 @@
     :description "Safely store the coffin (avoid torch extinguishing)"
 
     :preconditions
-    [{:type :object-held :object :coffin}
+    [{:type :object-held :object :gold-coffin}
      {:type :can-reach :room :living-room}]
 
     :postconditions
@@ -453,10 +465,10 @@
 
     :execution-location :living-room
 
-    :required-items [:coffin]
+    :required-items [:gold-coffin]
 
     :steps
-    [{:action {:verb :put :direct-object :coffin :indirect-object :trophy-case}
+    [{:action {:verb :put :direct-object :gold-coffin :indirect-object :trophy-case}
       :description "Put the coffin in the trophy case"}]
 
     :unlocks [:egyptian-treasures]}
@@ -473,6 +485,7 @@
     :preconditions
     [{:type :object-accessible :object :inflatable-boat}
      {:type :object-accessible :object :pump}
+     {:type :flag-set :flag :troll-flag}  ; Need to pass troll to reach dam
      {:type :can-reach :room :dam-base}]
 
     :postconditions
@@ -545,7 +558,7 @@
     :required-items []
 
     :steps
-    [{:action {:verb :look :direct-object :mirror}
+    [{:action {:verb :look :direct-object :mirror-1}
       :description "Look into the mirror to teleport"}]
 
     :unlocks [:mirror-room-2 :short-route-to-treasure-room]}
@@ -554,31 +567,69 @@
    ;;; EGG OPENING
    ;;; =========================================================================
    ;;; The jeweled egg must be opened carefully. Using wrong tools breaks it.
-   ;;; The thief can open it if you give it to him.
+   ;;; The only way to safely open the egg is via the thief. When the thief
+   ;;; dies, he deposits all his loot including the egg, and opens the egg
+   ;;; in the process. This puzzle combines giving the egg to the thief
+   ;;; and killing him.
 
    :egg-opening
    {:id :egg-opening
-    :description "Open the jeweled egg to get the canary"
+    :description "Open the jeweled egg via the thief"
 
     :preconditions
-    [{:type :object-held :object :egg}]
+    [{:type :object-held :object :egg}
+     {:type :object-held :object :sword}  ; Need weapon to kill thief
+     {:type :flag-set :flag :cyclops-flag}  ; Need to pass cyclops to reach treasure room
+     {:type :can-reach :room :treasure-room}]
 
     :postconditions
-    [{:type :object-flag :object :egg :flag :open}
+    [{:type :flag-set :flag :egg-opened}
+     {:type :object-flag :object :egg :flag :open}
      {:type :object-accessible :object :clockwork-canary}]
 
-    ;; Can be done anywhere the thief is
-    :execution-location nil  ; No specific location
+    ;; Must be at treasure room - thief is always there when player enters
+    :execution-location :treasure-room
 
-    :required-items [:egg]
+    :required-items [:egg :sword]
 
-    ;; Opening the egg is complex - thief does it best
-    ;; Giving it to thief and taking it back works
+    ;; Give egg to thief, then kill thief - thief opens egg when he dies
     :steps
-    [{:action {:verb :open :direct-object :egg}
-      :description "Attempt to open the egg (may break it if done wrong)"}]
+    [{:action {:verb :give :direct-object :egg :indirect-object :thief}
+      :description "Give the egg to the thief"}
+     {:action {:verb :attack :direct-object :thief :indirect-object :sword}
+      :description "Attack the thief with the sword"
+      :repeat-until {:type :flag-set :flag :egg-opened}
+      :max-attempts 30}]
 
     :unlocks [:canary :bauble :clockwork-canary]}
+
+   ;;; =========================================================================
+   ;;; WIND CANARY (BAUBLE)
+   ;;; =========================================================================
+   ;;; Wind the clockwork canary in the forest to summon the songbird,
+   ;;; which drops the brass bauble.
+
+   :wind-canary
+   {:id :wind-canary
+    :description "Wind the canary in the forest to get the bauble"
+
+    :preconditions
+    [{:type :object-held :object :clockwork-canary}
+     {:type :flag-not-set :flag :canary-sung}]
+
+    :postconditions
+    [{:type :flag-set :flag :canary-sung}
+     {:type :object-at :object :brass-bauble :room :forest-path}]
+
+    :execution-location :forest-path
+
+    :required-items [:clockwork-canary]
+
+    :steps
+    [{:action {:verb :wind :direct-object :clockwork-canary}
+      :description "Wind the clockwork canary to summon the songbird"}]
+
+    :unlocks [:brass-bauble]}
 
    ;;; =========================================================================
    ;;; KITCHEN WINDOW
@@ -601,7 +652,7 @@
     :required-items []
 
     :steps
-    [{:action {:verb :open :direct-object :window}
+    [{:action {:verb :open :direct-object :kitchen-window}
       :description "Open the kitchen window"}
      {:action {:verb :enter}
       :description "Climb through the window"}]
@@ -623,7 +674,8 @@
      {:type :object-accessible :object :screwdriver}]  ; Need to turn switch
 
     :postconditions
-    [{:type :object-accessible :object :diamond}]
+    [{:type :flag-set :flag :coal-machine-used}
+     {:type :object-accessible :object :huge-diamond}]
 
     :execution-location :machine-room
 
@@ -636,10 +688,10 @@
       :description "Put the coal in the machine"}
      {:action {:verb :close :direct-object :machine}
       :description "Close the machine lid"}
-     {:action {:verb :turn :direct-object :switch :indirect-object :screwdriver}
+     {:action {:verb :turn :direct-object :machine-switch :indirect-object :screwdriver}
       :description "Turn the switch with the screwdriver to activate the machine"}]
 
-    :unlocks [:diamond]}
+    :unlocks [:huge-diamond]}
 
    ;;; =========================================================================
    ;;; RESERVOIR ACCESS (LOW TIDE)
@@ -652,6 +704,7 @@
 
     :preconditions
     [{:type :flag-set :flag :gates-open}  ; Dam must be open first
+     {:type :flag-set :flag :troll-flag}  ; Need to pass troll
      {:type :can-reach :room :reservoir-north}]
 
     :postconditions
@@ -663,10 +716,11 @@
 
     :steps
     [;; Just need to wait - the dam daemon handles draining
+     ;; Dam takes 8 turns to drain, so allow up to 15 waits for safety
      {:action {:verb :wait}
       :description "Wait for water to drain"
       :repeat-until {:type :flag-set :flag :low-tide}
-      :max-attempts 10}]
+      :max-attempts 15}]
 
     :unlocks [:reservoir-bottom :trunk-of-jewels :atlantis-room]}
 

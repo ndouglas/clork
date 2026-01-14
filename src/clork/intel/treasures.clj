@@ -47,14 +47,14 @@
     :puzzle :egg-opening
     :notes "Must open egg without breaking it. Thief can do this safely."}
 
-   :portrait
+   :painting
    {:location :gallery
-    :value 15  ; Painting is quite valuable
+    :value 6   ; TVALUE from ZIL
     :requires #{}
     :container nil
     :created-by nil
     :puzzle nil
-    :notes "Heavy painting, takes inventory space."}
+    :notes "Heavy painting (size 15), takes inventory space."}
 
    :platinum-bar
    {:location :loud-room
@@ -75,7 +75,7 @@
     :notes "Must tie rope at dome to reach torch room."}
 
    :gold-coffin
-   {:location :egyptian-room
+   {:location :egypt-room
     :value 10
     :requires #{}
     :container nil
@@ -92,7 +92,7 @@
     :puzzle nil
     :notes "Open coffin to get. Used to make rainbow solid."}
 
-   :jade
+   :jade-figurine
    {:location :bat-room
     :value 5
     :requires #{}
@@ -110,15 +110,15 @@
     :puzzle nil
     :notes "Gas room - must turn off flame sources before entering."}
 
-   :diamond
-   {:location nil  ; Created by machine
+   :huge-diamond
+   {:location nil  ; Created inside machine by coal-to-diamond puzzle
     :value 10
     :requires #{:coal-machine-used}
-    :container nil
+    :container :machine  ; Created inside the machine, must open to retrieve
     :created-by {:action :turn-machine-switch
                  :precondition :coal-in-machine}
-    :puzzle nil  ; Custom action, not a defined puzzle
-    :notes "Put coal in machine, turn switch. Coal becomes diamond."}
+    :puzzle :coal-to-diamond
+    :notes "Put coal in machine, turn switch. Coal becomes huge diamond. Must open machine to retrieve."}
 
    :bag-of-coins
    {:location :maze-5  ; In the maze with skeleton
@@ -138,23 +138,14 @@
     :puzzle :exorcism
     :notes "Must complete exorcism to access Land of Living Dead."}
 
-   :jewel-encrusted-trident
+   :crystal-trident
    {:location :atlantis-room
-    :value 4
+    :value 11  ; TVALUE from ZIL (trophy case value)
     :requires #{:gates-open}  ; Need dam open for reservoir access
     :container nil
     :created-by nil
     :puzzle :dam-open
     :notes "Atlantis accessible via reservoir when dam gates open."}
-
-   :crystal-trident
-   {:location :atlantis-room
-    :value 11
-    :requires #{:gates-open}
-    :container nil
-    :created-by nil
-    :puzzle :dam-open
-    :notes "Same as jewel-encrusted-trident location."}
 
    :trunk-of-jewels
    {:location :reservoir
@@ -162,7 +153,7 @@
     :requires #{:low-tide}  ; Dam must be open AND time passed
     :container nil
     :created-by nil
-    :puzzle :dam-open
+    :puzzle :reservoir-low-tide
     :notes "Visible only at low tide after dam gates opened."}
 
    :pot-of-gold
@@ -175,32 +166,42 @@
     :notes "Must wave sceptre to make rainbow solid."}
 
    :brass-bauble
-   {:location nil  ; Created when canary sings
+   {:location :forest-path  ; Appears here after wind-canary puzzle
     :value 1
-    :requires #{:egg-opened}  ; Need canary first
+    :requires #{:canary-sung}  ; Need to wind canary first
     :container nil
     :created-by {:action :wind-canary
-                 :precondition :canary-accessible}
-    :puzzle :egg-opening
-    :notes "Wind canary to get bauble. Low value but easy."}
+                 :location :forest-path}
+    :puzzle :wind-canary
+    :notes "Wind canary in forest to summon songbird which drops bauble."}
 
-   :beautiful-painting
-   {:location :gallery
-    :value 4
-    :requires #{}
-    :container nil
-    :created-by nil
-    :puzzle nil
-    :notes "Easy to get, in gallery area."}
 
-   :scarab
-   {:location :sandy-beach
+   :jeweled-scarab
+   {:location :sandy-cave
     :value 5
     :requires #{:boat-ready}  ; Need boat to reach
     :container nil
     :created-by nil
     :puzzle :boat-ready
-    :notes "Must use boat to reach sandy beach via river."}})
+    :notes "Must use boat to reach sandy beach/cave via river."}
+
+   :silver-chalice
+   {:location :treasure-room
+    :value 10
+    :requires #{}  ; Just need to navigate underground
+    :container nil
+    :created-by nil
+    :puzzle nil
+    :notes "In treasure room. Thief may interfere if fighting."}
+
+   :large-emerald
+   {:location nil  ; Inside buoy at river-4
+    :value 5
+    :requires #{:boat-ready}  ; Buoy is in river, needs boat to reach
+    :container :buoy
+    :created-by nil
+    :puzzle :boat-ready
+    :notes "Inside buoy at river-4, must use boat to reach and open buoy."}})
 
 ;;; ---------------------------------------------------------------------------
 ;;; TREASURE QUERY FUNCTIONS
