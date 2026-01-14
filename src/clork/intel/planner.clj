@@ -312,10 +312,11 @@
   (gs/weight game-state :adventurer))
 
 (defn- item-weight
-  "Get weight of a single item."
+  "Get weight of a single item.
+   Uses gs/get-size which defaults to 5 for objects without explicit size,
+   matching the game's actual weight calculation."
   [game-state item-id]
-  (let [obj (gs/get-thing game-state item-id)]
-    (or (:size obj) 0)))
+  (gs/get-size game-state item-id))
 
 (defn- can-take-item?
   "Check if player can take an item given current weight."
@@ -325,8 +326,10 @@
     (<= (+ current-weight new-weight) load-limit)))
 
 (def ^:private essential-items
-  "Items that should never be dropped (always needed)."
-  #{:brass-lantern})
+  "Items that should never be dropped (always needed).
+   - :brass-lantern - light source needed throughout
+   - :sword - needed for thief-expedition (kill thief to open egg)"
+  #{:brass-lantern :sword})
 
 (defn- items-needed-for-puzzle
   "Get items required for a specific puzzle."
@@ -788,13 +791,16 @@
                                    (assoc action
                                           :repeat-until (:repeat-until step)
                                           :max-attempts (:max-attempts step 10))
-                                   action)))]
+                                   action)))
+              ;; No special post-puzzle actions needed
+              ;; (egg is now given to thief in treasure-room instead of dropped here)
+              post-puzzle-actions nil]
           ;; Check if route failed when we need to move
           (if (and location (nil? route) (not= (:here game-state) location))
             {:actions []
              :description (str "Solve " (name puzzle-id))
              :error {:type :unreachable :puzzle puzzle-id :location location}}
-            {:actions (concat (or route []) puzzle-actions)
+            {:actions (concat (or route []) puzzle-actions post-puzzle-actions)
              :description (str "Solve " (name puzzle-id))}))))
 
     :acquire-item
@@ -937,6 +943,49 @@
                              retrieve-actions))
        :description "Boat expedition for river treasures"})
 
+    :thief-expedition
+    ;; Complete thief sequence: give egg to thief, kill thief, get canary, wind for bauble
+    ;; The egg is carried to treasure-room and given to thief (deterministic approach)
+    (let [;; Route to treasure-room (requires cyclops-flag)
+          route-to-treasure (generate-route-to game-state :treasure-room available-flags)
+
+          ;; Give the egg to the thief - he'll take it
+          give-egg {:verb :give :direct-object :egg :indirect-object :thief}
+
+          ;; Kill the thief (repeat attack until egg-opened)
+          ;; Thief opens the egg when he dies with it in his possession
+          attack-actions [{:verb :attack
+                          :direct-object :thief
+                          :indirect-object :sword
+                          :repeat-until {:type :flag-set :flag :egg-opened}
+                          :max-attempts 30}]
+
+          ;; Take the egg (thief deposited it, 5 pts) and canary (inside, 6 pts)
+          take-egg {:verb :take :direct-object :egg}
+          take-canary {:verb :take :direct-object :clockwork-canary}
+
+          ;; Route FROM treasure-room TO forest-path for wind-canary
+          ;; Note: we use routing directly since game-state :here is not treasure-room at plan time
+          forest-path (routing/shortest-path game-state :treasure-room :forest-path
+                                             :available-flags available-flags)
+          route-to-forest (when forest-path
+                            (routing/path-to-actions game-state (:path forest-path)
+                                                     :available-flags available-flags))
+
+          ;; Wind the canary to summon songbird and get bauble
+          wind-canary {:verb :wind :direct-object :clockwork-canary}
+
+          ;; Take the bauble
+          take-bauble {:verb :take :direct-object :brass-bauble}]
+
+      {:actions (vec (concat (or route-to-treasure [])
+                             [give-egg]
+                             attack-actions
+                             [take-egg take-canary]
+                             (or route-to-forest [])
+                             [wind-canary take-bauble]))
+       :description "Thief expedition for egg, canary, and bauble"})
+
     ;; Unknown goal type
     {:actions []
      :description (str "Unknown goal: " (:type goal))}))
@@ -1029,6 +1078,14 @@
                         (apply-move-effect :sandy-beach)
                         (update :inventory into boat-treasures)))
 
+                  :thief-expedition
+                  ;; Thief expedition ends at forest-path, adds egg, canary, and bauble
+                  ;; Also sets egg-opened and canary-sung flags
+                  (-> planning-state
+                      (apply-move-effect :forest-path)
+                      (update :inventory into [:egg :clockwork-canary :brass-bauble])
+                      (update :flags conj :egg-opened :canary-sung))
+
                   planning-state))]
           (recur (rest goals)
                  (conj (vec all-actions) {:phase description :actions actions})
@@ -1058,13 +1115,15 @@
         ;; Partition treasures into boat-dependent and standard
         boat-treasures (set (filter #(contains? (treasures/treasure-requires %) :boat-ready)
                                     all-treasures))
-        non-boat-treasures (remove boat-treasures all-treasures)
 
-        ;; Exclude canary-related treasures (require complex thief timing)
-        ;; The thief must open the egg, which requires multi-turn thief AI interaction
-        ;; TODO: Implement thief timing support for egg-opening
-        thief-excluded #{:clockwork-canary :brass-bauble}
-        standard-treasures (remove thief-excluded non-boat-treasures)
+        ;; Thief treasures need special handling (egg, canary, bauble)
+        ;; The egg is dropped in troll-room for thief to steal, then recovered
+        ;; after killing the thief along with canary. Bauble is created by winding canary.
+        thief-treasures #{:egg :clockwork-canary :brass-bauble}
+
+        ;; Standard treasures = all except boat and thief (handled specially)
+        non-boat-treasures (remove boat-treasures all-treasures)
+        standard-treasures (remove thief-treasures non-boat-treasures)
 
         ;; Filter to accessible treasures (some may be unreachable)
         accessible (filter #(:accessible (treasures/treasure-accessible? game-state %))
@@ -1073,8 +1132,7 @@
         ;; What puzzles do we need for standard treasures?
         treasure-puzzles (compute-required-puzzles standard-treasures)
 
-        ;; Add cyclops puzzle for return to living room
-        ;; (needed to deposit treasures after underground collection)
+        ;; Add cyclops puzzle for return to living room and treasure-room access
         ;; Also add rainbow-solid if we have boat treasures (needed for walk-back path)
         base-puzzles (conj treasure-puzzles :cyclops-puzzle)
         all-puzzles (if (seq boat-treasures)
@@ -1088,10 +1146,10 @@
         ;; Essential items always needed for speedrun:
         ;; - brass-lantern: light source for underground exploration
         ;; - garlic: protects against bat kidnapping in bat-room
+        ;; - egg: needed for thief expedition (drop in troll-room)
         ;; - pump: needed to inflate boat (if boat treasures)
-        essential-items (if (seq boat-treasures)
-                          #{:brass-lantern :garlic :pump}
-                          #{:brass-lantern :garlic})
+        essential-items (cond-> #{:brass-lantern :garlic :egg}
+                          (seq boat-treasures) (conj :pump))
         required-items (clojure.set/union puzzle-items essential-items)
 
         ;; Optimize goal order for standard treasures
@@ -1100,18 +1158,23 @@
                                            standard-treasures
                                            required-items)
 
-        ;; Remove the deposit goal (last item) so we can insert boat expedition before it
+        ;; Remove the deposit goal (last item) so we can insert expeditions before it
         ;; optimize-goal-order always ends with deposit-goal
         goals-without-deposit (vec (butlast ordered-goals))
         deposit (last ordered-goals)
 
+        ;; Add thief expedition goal AFTER cyclops (treasure-room access)
+        ;; This collects egg, canary, and bauble
+        thief-expedition-goal (make-goal :thief-expedition)
+
         ;; Add boat expedition goal if we have boat treasures
-        ;; This goes AFTER rainbow-solid (which is in ordered-goals) and BEFORE deposit
+        ;; This goes AFTER rainbow-solid (which is in ordered-goals) and AFTER thief
         boat-expedition-goals (when (seq boat-treasures)
                                 [(make-goal :boat-expedition :treasures (vec boat-treasures))])
 
-        ;; Recombine: standard goals + boat expedition + deposit + endgame
+        ;; Recombine: standard goals + thief expedition + boat expedition + deposit + endgame
         all-goals (concat goals-without-deposit
+                          [thief-expedition-goal]
                           boat-expedition-goals
                           [deposit]
                           [(endgame-goal)])
@@ -1122,14 +1185,16 @@
         ;; Count total actions
         total-actions (reduce + 0 (map #(count (:actions %)) (:actions plan)))
 
-        ;; Total treasures = standard + boat
-        total-treasures (+ (count standard-treasures) (count boat-treasures))]
+        ;; Total treasures = standard + thief + boat
+        total-treasures (+ (count standard-treasures)
+                           (count thief-treasures)
+                           (count boat-treasures))]
 
     {:goals (vec all-goals)
      :puzzles-required (count all-puzzles)
      :items-required (count required-items)
      :treasures-targeted total-treasures
-     :treasures-excluded {:thief-timing (count thief-excluded)}
+     :treasures-excluded {}  ; No more excluded treasures!
      :plan plan
      :estimated-moves total-actions}))
 

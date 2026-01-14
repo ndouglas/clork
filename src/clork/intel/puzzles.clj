@@ -514,27 +514,27 @@
 
    :thief-battle
    {:id :thief-battle
-    :description "Defeat the thief to recover stolen treasures"
+    :description "Defeat the thief to recover stolen treasures and open the egg"
 
     :preconditions
     [{:type :object-held :object :sword}
-     {:type :can-reach :room :thiefs-den}]
+     {:type :can-reach :room :treasure-room}]  ; Thief's lair is treasure-room
 
     :postconditions
     [{:type :object-accessible :object :stiletto}   ; Thief drops stiletto when dead
-     {:type :object-accessible :object :thiefs-bag}] ; Thief drops stolen items bag
+     {:type :flag-set :flag :egg-opened}]           ; Egg opens when thief dies with it
 
-    :execution-location :thiefs-den
+    :execution-location :treasure-room  ; Thief fights to death here
 
     :required-items [:sword]
 
     :steps
     [{:action {:verb :attack :direct-object :thief :indirect-object :sword}
       :description "Attack the thief with the sword"
-      :repeat-until {:type :object-accessible :object :stiletto}  ; Thief drops stiletto when dead
+      :repeat-until {:type :flag-set :flag :egg-opened}  ; Thief opens egg when he dies
       :max-attempts 30}]  ; Thief is tougher than troll
 
-    :unlocks [:stolen-treasures :stiletto :thiefs-treasure-room]}
+    :unlocks [:clockwork-canary :treasure-room-access]}
 
    ;;; =========================================================================
    ;;; MIRROR TELEPORT

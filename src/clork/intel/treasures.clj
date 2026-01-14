@@ -44,8 +44,8 @@
     :requires #{:egg-opened}
     :container :egg
     :created-by nil
-    :puzzle :egg-opening
-    :notes "Must open egg without breaking it. Thief can do this safely."}
+    :puzzle :thief-expedition  ; Collected as part of thief expedition
+    :notes "Must open egg via thief. Drop egg in troll-room, thief steals it, kill thief in treasure-room."}
 
    :painting
    {:location :gallery

@@ -57,7 +57,7 @@
     (is (= :loud-room-echo (treasures/treasure-puzzle :platinum-bar)))
     (is (= :exorcism (treasures/treasure-puzzle :crystal-skull)))
     (is (= :rainbow-solid (treasures/treasure-puzzle :pot-of-gold)))
-    (is (= :egg-opening (treasures/treasure-puzzle :clockwork-canary)))))
+    (is (= :thief-expedition (treasures/treasure-puzzle :clockwork-canary)))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; CONTAINER QUERY TESTS
