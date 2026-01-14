@@ -443,12 +443,12 @@
 (deftest test-legal-actions-at-living-room-with-treasure
   (testing "put-in-case actions available when holding treasure at living room"
     (let [gs (-> (scenarios/equipped-adventurer :living-room)
-                 (gs/move-object :jeweled-egg :adventurer :test))
+                 (gs/move-object :egg :adventurer :test))  ; Object ID is :egg, not :jeweled-egg
           actions (aff/legal-actions gs)
           put-actions (filter #(and (= :put (:verb %))
                                     (= :trophy-case (:indirect-object %))) actions)]
       (is (= 1 (count put-actions)))
-      (is (= :jeweled-egg (:direct-object (first put-actions)))))))
+      (is (= :egg (:direct-object (first put-actions)))))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; VALIDATION TESTS - Comparing declared effects vs actual behavior

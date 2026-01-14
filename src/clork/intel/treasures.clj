@@ -200,8 +200,8 @@
     :requires #{:boat-ready}  ; Buoy is in river, needs boat to reach
     :container :buoy
     :created-by nil
-    :puzzle :boat-ready
-    :notes "Inside buoy at river-4, must use boat to reach and open buoy."}})
+    :puzzle :buoy-collection  ; Separate puzzle for taking/opening buoy
+    :notes "Inside buoy at river-4, must take buoy while in boat."}})
 
 ;;; ---------------------------------------------------------------------------
 ;;; TREASURE QUERY FUNCTIONS

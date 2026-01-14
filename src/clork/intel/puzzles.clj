@@ -777,6 +777,37 @@
     :unlocks [:shore :aragain-falls]}
 
    ;;; =========================================================================
+   ;;; BUOY COLLECTION
+   ;;; =========================================================================
+   ;;; Take and open the buoy at river-4 to get the emerald.
+   ;;; Must be done while in boat on the river.
+
+   :buoy-collection
+   {:id :buoy-collection
+    :description "Take and open the buoy to get the emerald"
+
+    :preconditions
+    [{:type :flag-set :flag :boat-ready}
+     {:type :at-location :room :river-4}]
+
+    :postconditions
+    [{:type :object-held :object :large-emerald}]
+
+    :execution-location :river-4
+
+    :required-items []
+
+    :steps
+    [{:action {:verb :take :direct-object :buoy}
+      :description "Take the buoy from the water"}
+     {:action {:verb :open :direct-object :buoy}
+      :description "Open the buoy"}
+     {:action {:verb :take :direct-object :large-emerald}
+      :description "Take the emerald from the buoy"}]
+
+    :unlocks [:large-emerald]}
+
+   ;;; =========================================================================
    ;;; GAS ROOM ACCESS
    ;;; =========================================================================
    ;;; Safely access the gas room - must turn off flame sources.

@@ -121,9 +121,10 @@
 ;;; ---------------------------------------------------------------------------
 
 (deftest test-can-solve-puzzle-loud-room
-  (testing "can solve loud-room when at loud-room"
+  (testing "can solve loud-room when at loud-room with troll defeated"
     (let [gs (-> (core/init-game)
-                 (assoc :here :loud-room))]
+                 (assoc :here :loud-room)
+                 (gs/set-game-flag :troll-flag))]
       (is (puzzles/can-solve-puzzle? gs :loud-room-echo)))))
 
 (deftest test-cannot-solve-puzzle-missing-items
@@ -133,9 +134,10 @@
       (is (not (puzzles/can-solve-puzzle? gs :exorcism))))))
 
 (deftest test-can-solve-puzzle-with-items
-  (testing "can solve exorcism with all items at location"
+  (testing "can solve exorcism with all items at location and troll defeated"
     (let [gs (-> (core/init-game)
                  (assoc :here :entrance-to-hades)
+                 (gs/set-game-flag :troll-flag)
                  (gs/move-object :brass-bell :adventurer :test)
                  (gs/move-object :candles :adventurer :test)
                  (gs/move-object :matchbook :adventurer :test)
@@ -159,7 +161,8 @@
 (deftest test-execute-loud-room-puzzle
   (testing "executing loud-room puzzle sets loud-flag"
     (let [gs (-> (core/init-game)
-                 (assoc :here :loud-room))
+                 (assoc :here :loud-room)
+                 (gs/set-game-flag :troll-flag))
           result (puzzles/execute-puzzle gs :loud-room-echo)]
       (is (:success result))
       (is (gs/game-flag? (:game-state result) :loud-flag)))))
@@ -184,6 +187,7 @@
   (testing "executing dome-rope puzzle sets dome-flag"
     (let [gs (-> (core/init-game)
                  (assoc :here :dome-room)
+                 (gs/set-game-flag :troll-flag)
                  (gs/move-object :rope :adventurer :test))
           result (puzzles/execute-puzzle gs :dome-rope)]
       (is (:success result))
@@ -192,7 +196,8 @@
 (deftest test-execute-rainbow-puzzle
   (testing "executing rainbow puzzle sets rainbow-flag"
     (let [gs (-> (core/init-game)
-                 (assoc :here :aragain-falls)
+                 (assoc :here :end-of-rainbow)  ; Must be at execution-location
+                 (gs/set-game-flag :troll-flag)
                  (gs/move-object :sceptre :adventurer :test))
           result (puzzles/execute-puzzle gs :rainbow-solid)]
       (is (:success result))
@@ -206,6 +211,7 @@
   (testing "full exorcism puzzle execution"
     (let [gs (-> (core/init-game)
                  (assoc :here :entrance-to-hades)
+                 (gs/set-game-flag :troll-flag)
                  (gs/move-object :brass-bell :adventurer :test)
                  (gs/move-object :candles :adventurer :test)
                  (gs/move-object :matchbook :adventurer :test)

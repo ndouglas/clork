@@ -63,6 +63,32 @@
   (make-goal :activate-light :object light-id))
 
 ;;; ---------------------------------------------------------------------------
+;;; SHARP WEAPON HANDLING
+;;; ---------------------------------------------------------------------------
+;;; Sharp weapons puncture the inflated boat when boarding while held.
+;;; To safely board: PUT weapons IN boat first, THEN board.
+
+(def sharp-weapons
+  "Objects that puncture the boat when boarding while held."
+  #{:sceptre :knife :sword :rusty-knife :axe :stiletto})
+
+(defn held-sharp-weapons
+  "Get sharp weapons currently in inventory."
+  [game-state]
+  (let [inventory (set (gs/get-contents game-state :adventurer))]
+    (clojure.set/intersection inventory sharp-weapons)))
+
+(defn generate-safe-boarding-actions
+  "Generate actions to safely board the inflated boat.
+   Sharp weapons must be PUT IN boat before boarding."
+  [game-state]
+  (let [sharp-held (held-sharp-weapons game-state)
+        put-actions (for [w sharp-held]
+                      {:verb :put :direct-object w :indirect-object :inflated-boat})
+        board-action {:verb :board :direct-object :inflated-boat}]
+    (concat put-actions [board-action])))
+
+;;; ---------------------------------------------------------------------------
 ;;; PUZZLE REQUIREMENT ANALYSIS
 ;;; ---------------------------------------------------------------------------
 
@@ -853,6 +879,64 @@
       {:actions [lamp-on-action]
        :description (str "Turn on " (name light-id))})
 
+    :boat-expedition
+    ;; Complete boat expedition to collect river treasures
+    ;; Includes: inflate boat, PUT sharp weapons in boat, board, launch,
+    ;; navigate river, collect buoy/emerald, land, get scarab, walk back
+    (let [{:keys [treasures]} goal
+          wants-emerald (some #{:large-emerald} treasures)
+          wants-scarab (some #{:jeweled-scarab} treasures)
+
+          ;; Route to dam-base
+          route-to-dam (generate-route-to game-state :dam-base available-flags)
+
+          ;; Inflate boat first
+          inflate-action {:verb :inflate :direct-object :inflatable-boat :indirect-object :pump}
+
+          ;; PUT sharp weapons IN boat (safe), then board
+          sharp-held (held-sharp-weapons game-state)
+          put-sharp-actions (for [w sharp-held]
+                              {:verb :put :direct-object w :indirect-object :inflated-boat})
+          board-action {:verb :board :direct-object :inflated-boat}
+          launch-action {:verb :launch}
+
+          ;; River flow: daemon moves boat, we wait
+          ;; river-1 → river-2 → river-3 → river-4 (6 waits typical)
+          wait-actions (repeat 6 {:verb :wait})
+
+          ;; At river-4: take buoy if want emerald
+          buoy-actions (when wants-emerald
+                         [{:verb :take :direct-object :buoy}
+                          {:verb :open :direct-object :buoy}
+                          {:verb :take :direct-object :large-emerald}])
+
+          ;; Land at sandy-beach (east from river-4)
+          land-action {:verb :walk :direct-object :east}
+
+          ;; Disembark from boat
+          disembark-action {:verb :disembark}
+
+          ;; If want scarab: sandy-beach → sandy-cave → back
+          scarab-actions (when wants-scarab
+                           [{:verb :walk :direct-object :ne}
+                            {:verb :take :direct-object :jeweled-scarab}
+                            {:verb :walk :direct-object :sw}])
+
+          ;; Retrieve sharp weapons from boat after landing (take them back)
+          retrieve-actions (for [w sharp-held]
+                             {:verb :take :direct-object w})]
+
+      {:actions (vec (concat (or route-to-dam [])
+                             [inflate-action]
+                             put-sharp-actions
+                             [board-action launch-action]
+                             wait-actions
+                             buoy-actions
+                             [land-action disembark-action]
+                             scarab-actions
+                             retrieve-actions))
+       :description "Boat expedition for river treasures"})
+
     ;; Unknown goal type
     {:actions []
      :description (str "Unknown goal: " (:type goal))}))
@@ -938,6 +1022,13 @@
                         ;; Add acquired item to inventory
                         (apply-acquire-effect item)))
 
+                  :boat-expedition
+                  ;; Boat expedition ends at sandy-beach, adds boat treasures to inventory
+                  (let [boat-treasures (:treasures goal)]
+                    (-> planning-state
+                        (apply-move-effect :sandy-beach)
+                        (update :inventory into boat-treasures)))
+
                   planning-state))]
           (recur (rest goals)
                  (conj (vec all-actions) {:phase description :actions actions})
@@ -964,28 +1055,31 @@
   (let [;; Get all treasures
         all-treasures (treasures/all-treasures)
 
-        ;; Exclude boat-dependent treasures for now
-        ;; (boat navigation requires vehicle handling which isn't implemented)
-        ;; TODO: Add proper vehicle support and include these treasures
-        boat-excluded-treasures (remove #(contains? (treasures/treasure-requires %) :boat-ready)
-                                        all-treasures)
+        ;; Partition treasures into boat-dependent and standard
+        boat-treasures (set (filter #(contains? (treasures/treasure-requires %) :boat-ready)
+                                    all-treasures))
+        non-boat-treasures (remove boat-treasures all-treasures)
 
         ;; Exclude canary-related treasures (require complex thief timing)
         ;; The thief must open the egg, which requires multi-turn thief AI interaction
         ;; TODO: Implement thief timing support for egg-opening
-        thief-excluded-treasures (remove #{:clockwork-canary :brass-bauble}
-                                          boat-excluded-treasures)
+        thief-excluded #{:clockwork-canary :brass-bauble}
+        standard-treasures (remove thief-excluded non-boat-treasures)
 
         ;; Filter to accessible treasures (some may be unreachable)
         accessible (filter #(:accessible (treasures/treasure-accessible? game-state %))
-                           thief-excluded-treasures)
+                           standard-treasures)
 
-        ;; What puzzles do we need for treasures?
-        treasure-puzzles (compute-required-puzzles thief-excluded-treasures)
+        ;; What puzzles do we need for standard treasures?
+        treasure-puzzles (compute-required-puzzles standard-treasures)
 
         ;; Add cyclops puzzle for return to living room
         ;; (needed to deposit treasures after underground collection)
-        all-puzzles (conj treasure-puzzles :cyclops-puzzle)
+        ;; Also add rainbow-solid if we have boat treasures (needed for walk-back path)
+        base-puzzles (conj treasure-puzzles :cyclops-puzzle)
+        all-puzzles (if (seq boat-treasures)
+                      (conj base-puzzles :rainbow-solid)
+                      base-puzzles)
         ordered-puzzles (compute-puzzle-dependencies game-state all-puzzles)
 
         ;; What items do we need for puzzles?
@@ -994,31 +1088,48 @@
         ;; Essential items always needed for speedrun:
         ;; - brass-lantern: light source for underground exploration
         ;; - garlic: protects against bat kidnapping in bat-room
-        essential-items #{:brass-lantern :garlic}
+        ;; - pump: needed to inflate boat (if boat treasures)
+        essential-items (if (seq boat-treasures)
+                          #{:brass-lantern :garlic :pump}
+                          #{:brass-lantern :garlic})
         required-items (clojure.set/union puzzle-items essential-items)
 
-        ;; Optimize goal order
+        ;; Optimize goal order for standard treasures
         ordered-goals (optimize-goal-order game-state
                                            ordered-puzzles
-                                           thief-excluded-treasures
+                                           standard-treasures
                                            required-items)
 
-        ;; Add endgame goal (enter barrow after deposits)
-        goals-with-endgame (conj (vec ordered-goals) (endgame-goal))
+        ;; Remove the deposit goal (last item) so we can insert boat expedition before it
+        ;; optimize-goal-order always ends with deposit-goal
+        goals-without-deposit (vec (butlast ordered-goals))
+        deposit (last ordered-goals)
+
+        ;; Add boat expedition goal if we have boat treasures
+        ;; This goes AFTER rainbow-solid (which is in ordered-goals) and BEFORE deposit
+        boat-expedition-goals (when (seq boat-treasures)
+                                [(make-goal :boat-expedition :treasures (vec boat-treasures))])
+
+        ;; Recombine: standard goals + boat expedition + deposit + endgame
+        all-goals (concat goals-without-deposit
+                          boat-expedition-goals
+                          [deposit]
+                          [(endgame-goal)])
 
         ;; Generate plan
-        plan (generate-plan game-state goals-with-endgame)
+        plan (generate-plan game-state (vec all-goals))
 
         ;; Count total actions
-        total-actions (reduce + 0 (map #(count (:actions %)) (:actions plan)))]
+        total-actions (reduce + 0 (map #(count (:actions %)) (:actions plan)))
 
-    {:goals goals-with-endgame
+        ;; Total treasures = standard + boat
+        total-treasures (+ (count standard-treasures) (count boat-treasures))]
+
+    {:goals (vec all-goals)
      :puzzles-required (count all-puzzles)
      :items-required (count required-items)
-     :treasures-targeted (count thief-excluded-treasures)
-     :treasures-excluded {:boat-dependent (count (filter #(contains? (treasures/treasure-requires %) :boat-ready)
-                                                          all-treasures))
-                          :thief-timing 2}  ; clockwork-canary, brass-bauble
+     :treasures-targeted total-treasures
+     :treasures-excluded {:thief-timing (count thief-excluded)}
      :plan plan
      :estimated-moves total-actions}))
 
