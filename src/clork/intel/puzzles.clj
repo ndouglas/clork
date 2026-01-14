@@ -133,8 +133,8 @@
    ;;; EXORCISM PUZZLE
    ;;; =========================================================================
    ;;; The exorcism requires a specific sequence: ring bell (sets xb, drops
-   ;;; candles), pick up candles, light candles (sets xc), read book (sets
-   ;;; lld-flag). Must be done at entrance-to-hades.
+   ;;; candles), pick up candles, light match, light candles with match (sets
+   ;;; xc), read book (sets lld-flag). Must be done at entrance-to-hades.
 
    :exorcism
    {:id :exorcism
@@ -167,7 +167,11 @@
       :description "Pick up the dropped candles"
       :condition {:type :object-not-held :object :candles}}
 
-     ;; Light the candles - sets xc when xb is true
+     ;; Light a match - needed to light candles
+     {:action {:verb :lamp-on :direct-object :matchbook}
+      :description "Light a match to provide flame"}
+
+     ;; Light the candles - sets xc when xb is true (match auto-used as flame)
      {:action {:verb :lamp-on :direct-object :candles}
       :description "Light the candles"
       :expect {:flags-set #{:xc}}}
@@ -405,7 +409,7 @@
 
     :postconditions
     [{:type :flag-set :flag :rug-moved}
-     {:type :flag-set :flag :trap-door-open}]
+     {:type :object-flag :object :trap-door :flag :open}]
 
     :execution-location :living-room
 

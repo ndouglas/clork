@@ -1128,7 +1128,8 @@
         mirror-broken? (get game-state :mirror-mung false)]
     (cond
       ;; RUB verb - magical teleportation
-      (and (= prsa :rub) (not mirror-broken?))
+      ;; Must be in a mirror room to use the mirror (player must be present)
+      (and (= prsa :rub) (not mirror-broken?) (#{:mirror-room-1 :mirror-room-2} here))
       (if (and prsi (not= prsi :hands))
         ;; Rubbing with an object
         (let [obj-desc (:desc (gs/get-thing game-state prsi))]
