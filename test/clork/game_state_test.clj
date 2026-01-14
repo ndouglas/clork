@@ -9,25 +9,21 @@
   (testing "set-flag sets a flag on an object"
     (let [game-state {:objects {:obj1 {}}}
           result (gs/set-flag game-state :objects :obj1 :takeable)]
-      (is (= {:obj1 {:takeable true}} (:objects result)))
-      (is (= [{:type :flag-set :entity :obj1 :flag :takeable}] (:changes result)))))
+      (is (= {:obj1 {:takeable true}} (:objects result)))))
   (testing "set-flag sets a flag on a room"
     (let [game-state {:rooms {:room1 {}}}
           result (gs/set-flag game-state :rooms :room1 :lit)]
-      (is (= {:room1 {:lit true}} (:rooms result)))
-      (is (= [{:type :flag-set :entity :room1 :flag :lit}] (:changes result))))))
+      (is (= {:room1 {:lit true}} (:rooms result))))))
 
 (deftest unset-flag-test
   (testing "unset-flag unsets a flag on an object"
     (let [game-state {:objects {:obj1 {:takeable true}}}
           result (gs/unset-flag game-state :objects :obj1 :takeable)]
-      (is (= {:obj1 {:takeable false}} (:objects result)))
-      (is (= [{:type :flag-cleared :entity :obj1 :flag :takeable}] (:changes result)))))
+      (is (= {:obj1 {:takeable false}} (:objects result)))))
   (testing "unset-flag unsets a flag on a room"
     (let [game-state {:rooms {:room1 {:lit true}}}
           result (gs/unset-flag game-state :rooms :room1 :lit)]
-      (is (= {:room1 {:lit false}} (:rooms result)))
-      (is (= [{:type :flag-cleared :entity :room1 :flag :lit}] (:changes result))))))
+      (is (= {:room1 {:lit false}} (:rooms result))))))
 
 (deftest flag?-test
   (testing "flag? returns true when flag is set as direct key"
@@ -51,13 +47,11 @@
   (testing "set-thing-flag sets a flag on an object"
     (let [game-state {:objects {:lamp {}}}
           result (gs/set-thing-flag game-state :lamp :on)]
-      (is (= {:lamp {:on true}} (:objects result)))
-      (is (= [{:type :flag-set :entity :lamp :flag :on}] (:changes result)))))
+      (is (= {:lamp {:on true}} (:objects result)))))
   (testing "set-thing-flag sets a flag on a room"
     (let [game-state {:rooms {:kitchen {}}}
           result (gs/set-thing-flag game-state :kitchen :visited)]
-      (is (= {:kitchen {:visited true}} (:rooms result)))
-      (is (= [{:type :flag-set :entity :kitchen :flag :visited}] (:changes result)))))
+      (is (= {:kitchen {:visited true}} (:rooms result)))))
   (testing "set-thing-flag throws for unknown thing"
     (let [game-state {:objects {} :rooms {}}]
       (is (thrown? Exception (gs/set-thing-flag game-state :unknown :flag))))))
@@ -66,13 +60,11 @@
   (testing "unset-thing-flag unsets a flag on an object"
     (let [game-state {:objects {:lamp {:on true}}}
           result (gs/unset-thing-flag game-state :lamp :on)]
-      (is (= {:lamp {:on false}} (:objects result)))
-      (is (= [{:type :flag-cleared :entity :lamp :flag :on}] (:changes result)))))
+      (is (= {:lamp {:on false}} (:objects result)))))
   (testing "unset-thing-flag unsets a flag on a room"
     (let [game-state {:rooms {:kitchen {:visited true}}}
           result (gs/unset-thing-flag game-state :kitchen :visited)]
-      (is (= {:kitchen {:visited false}} (:rooms result)))
-      (is (= [{:type :flag-cleared :entity :kitchen :flag :visited}] (:changes result))))))
+      (is (= {:kitchen {:visited false}} (:rooms result))))))
 
 (deftest set-thing-flag?-test
   (testing "set-thing-flag? returns true when flag is set"
@@ -88,15 +80,13 @@
   (testing "set-here-flag sets a flag on the current room"
     (let [game-state {:here :kitchen :rooms {:kitchen {}}}
           result (gs/set-here-flag game-state :touch)]
-      (is (= {:kitchen {:touch true}} (:rooms result)))
-      (is (= [{:type :flag-set :entity :kitchen :flag :touch}] (:changes result))))))
+      (is (= {:kitchen {:touch true}} (:rooms result))))))
 
 (deftest unset-here-flag-test
   (testing "unset-here-flag unsets a flag on the current room"
     (let [game-state {:here :kitchen :rooms {:kitchen {:touch true}}}
           result (gs/unset-here-flag game-state :touch)]
-      (is (= {:kitchen {:touch false}} (:rooms result)))
-      (is (= [{:type :flag-cleared :entity :kitchen :flag :touch}] (:changes result))))))
+      (is (= {:kitchen {:touch false}} (:rooms result))))))
 
 (deftest set-here-flag?-test
   (testing "set-here-flag? returns true when flag is set on current room"

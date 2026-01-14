@@ -88,43 +88,25 @@
 
    tick = -1: Run every turn (continuous)
    tick = 0:  Run this turn, then disable
-   tick > 0:  Countdown to run
-
-   Records daemon-started change if daemon was not enabled."
+   tick > 0:  Countdown to run"
   [game-state daemon-id tick]
-  (let [was-enabled? (daemon-enabled? game-state daemon-id)
-        new-state (-> game-state
-                      (assoc-in [:daemons daemon-id :tick] tick)
-                      (assoc-in [:daemons daemon-id :enabled] true))]
-    (if was-enabled?
-      new-state
-      (gs/record-change new-state {:type :daemon-started :daemon daemon-id}))))
+  (-> game-state
+      (assoc-in [:daemons daemon-id :tick] tick)
+      (assoc-in [:daemons daemon-id :enabled] true)))
 
 (defn enable
   "Enable a daemon.
 
-   ZIL: <ENABLE <INT daemon>>
-
-   Records daemon-started change if daemon was not already enabled."
+   ZIL: <ENABLE <INT daemon>>"
   [game-state daemon-id]
-  (let [was-enabled? (daemon-enabled? game-state daemon-id)
-        new-state (assoc-in game-state [:daemons daemon-id :enabled] true)]
-    (if was-enabled?
-      new-state
-      (gs/record-change new-state {:type :daemon-started :daemon daemon-id}))))
+  (assoc-in game-state [:daemons daemon-id :enabled] true))
 
 (defn disable
   "Disable a daemon.
 
-   ZIL: <DISABLE <INT daemon>>
-
-   Records daemon-stopped change if daemon was enabled."
+   ZIL: <DISABLE <INT daemon>>"
   [game-state daemon-id]
-  (let [was-enabled? (daemon-enabled? game-state daemon-id)
-        new-state (assoc-in game-state [:daemons daemon-id :enabled] false)]
-    (if was-enabled?
-      (gs/record-change new-state {:type :daemon-stopped :daemon daemon-id})
-      new-state)))
+  (assoc-in game-state [:daemons daemon-id :enabled] false))
 
 (defn int-routine
   "Get or create interrupt entry for daemon.

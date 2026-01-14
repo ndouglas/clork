@@ -6,7 +6,6 @@
             [clork.parser :as parser]
             [clork.verb-defs :as verb-defs]
             [clork.daemon :as daemon]
-            [clork.intel.routing :as routing]
             [clork.debug.scenarios :as scenarios]))
 
 ;;; ---------------------------------------------------------------------------
@@ -150,73 +149,6 @@
       ;; Should be at white-cliffs-north and out of boat
       (is (= :white-cliffs-north (:here (:gs result))))
       (is (not= :inflated-boat (gs/get-thing-loc-id (:gs result) :adventurer))))))
-
-;;; ---------------------------------------------------------------------------
-;;; ROUTING INTEGRATION TESTS
-;;; ---------------------------------------------------------------------------
-
-(deftest test-routing-requires-boat-ready
-  (testing "route to shore requires :boat-ready flag"
-    (let [gs (scenarios/equipped-adventurer :dam-base)
-          ;; Without boat-ready, shore is unreachable via river
-          result-no-boat (routing/shortest-path gs :dam-base :shore
-                                                :available-flags #{})
-          ;; With boat-ready, can reach shore
-          result-with-boat (routing/shortest-path gs :dam-base :shore
-                                                  :available-flags #{:boat-ready})]
-      ;; Without boat, can only reach shore via long overland route (if any)
-      ;; With boat, can use river
-      (is (some? result-with-boat))
-      (is (some #{:river-4} (:path result-with-boat))))))
-
-(deftest test-routing-through-complete-river
-  (testing "routing finds path through entire river"
-    (let [gs (scenarios/equipped-adventurer :dam-base)
-          result (routing/shortest-path gs :dam-base :shore
-                                        :available-flags #{:boat-ready})]
-      (is (some? result))
-      ;; Path should go through river rooms
-      (is (some #{:river-1} (:path result)))
-      (is (= :shore (last (:path result)))))))
-
-;;; ---------------------------------------------------------------------------
-;;; RESERVOIR NAVIGATION TESTS
-;;; ---------------------------------------------------------------------------
-
-(deftest test-reservoir-launch-edge-exists
-  (testing "routing includes reservoir launch edges"
-    (let [gs (scenarios/equipped-adventurer :reservoir-north)
-          graph (routing/build-navigation-graph gs :available-flags #{:boat-ready})
-          has-launch? (some #(and (= (:from %) :reservoir-north)
-                                  (= (:to %) :reservoir))
-                            (:edges graph))]
-      (is has-launch? "Should have launch edge from reservoir-north to reservoir"))))
-
-(deftest test-reservoir-route-with-boat
-  (testing "can route from reservoir-north to reservoir with boat"
-    (let [gs (scenarios/equipped-adventurer :reservoir-north)
-          result (routing/shortest-path gs :reservoir-north :reservoir
-                                        :available-flags #{:boat-ready})]
-      (is (some? result))
-      (is (= 1 (:distance result))))))
-
-;;; ---------------------------------------------------------------------------
-;;; BOAT-READY FLAG EXTRACTION TESTS
-;;; ---------------------------------------------------------------------------
-
-(deftest test-boat-ready-when-in-boat
-  (testing "extract-available-flags includes :boat-ready when in boat"
-    (let [gs (-> (scenarios/equipped-adventurer :dam-base)
-                 (gs/move-object :inflated-boat :dam-base :test)
-                 (assoc-in [:objects :adventurer :in] :inflated-boat))
-          flags (routing/extract-available-flags gs)]
-      (is (contains? flags :boat-ready)))))
-
-(deftest test-boat-ready-not-when-on-ground
-  (testing "extract-available-flags excludes :boat-ready when not in boat"
-    (let [gs (scenarios/equipped-adventurer :dam-base)
-          flags (routing/extract-available-flags gs)]
-      (is (not (contains? flags :boat-ready))))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; EDGE CASE TESTS

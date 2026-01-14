@@ -75,7 +75,7 @@
                   ;; Treasures stay invisible until thief dies (:f-dead handler)
                   ;; ZIL lines 1919-1921: When depositing egg, thief opens it
                   (cond-> (= obj-id :egg)
-                    (-> (gs/set-game-flag :egg-opened)  ; Set game flag for planner
+                    (-> (gs/set-game-flag :egg-opened)
                         (assoc :egg-solve true)
                         (gs/set-thing-flag :egg :open)))))
             game-state

@@ -177,14 +177,12 @@
        <SETG SCORE <+ ,SCORE .NUM>>
        ...>
 
-   Records score-changed event for planner infrastructure.
    Returns the updated game-state."
   [game-state amount]
   (if (zero? amount)
     game-state  ; No change
-    (let [old-score (get game-state :score 0)
-          new-base-score (+ (get game-state :base-score 0) amount)
-          new-score (+ old-score amount)
+    (let [new-base-score (+ (get game-state :base-score 0) amount)
+          new-score (+ (get game-state :score 0) amount)
           ;; Check for winning condition (score reaches max)
           score-max (get game-state :score-max 350)
           won? (and (= new-score score-max)
@@ -192,9 +190,7 @@
       (cond-> game-state
         true (assoc :base-score new-base-score)
         true (assoc :score new-score)
-        true (gs/record-change {:type :score-changed :from old-score :to new-score :amount amount})
         won? (assoc :won true)
-        won? (gs/record-change {:type :flag-set :entity :game :flag :won})
         won? (utils/tell "\nAn almost inaudible voice whispers in your ear, \"Look to your treasures for the final secret.\"")))))
 
 (defn score-obj
