@@ -365,9 +365,8 @@
                  (parser-state/parser-success game-state)
                  ;; Take succeeded - take-result is updated game-state
                  (do
-                   ;; Print "(Taken)" with blank line after for proper paragraph separation
+                   ;; Print "(Taken)" - no blank line after, content follows
                    (println "(Taken)")
-                   (println)
                    (parser-state/parser-success take-result))))
 
              ;; Must HAVE but don't - error

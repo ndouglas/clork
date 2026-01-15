@@ -94,12 +94,10 @@
           (utils/tell "This is a large room with a ceiling which cannot be detected from the ground. There is a narrow passage from east to west and a stone stairway leading upward.")
           (cond->
            quiet?
-            (utils/tell " The room is eerie in its quietness.")
+            (utils/tell " The room is eerie in its quietness.\n")
 
             (not quiet?)
-            (utils/tell " The room is deafeningly loud with an undetermined rushing sound. The sound seems to reverberate from all of the walls, making it difficult even to think."))
-          ;; Paragraph break after room description
-          (utils/tell "\n\n")))
+            (utils/tell " The room is deafeningly loud with an undetermined rushing sound. The sound seems to reverberate from all of the walls, making it difficult even to think.\n"))))
 
     ;; M-END: Called at end of turn - check if player should be ejected
     :m-end

@@ -57,7 +57,10 @@
   "Describes the room."
   ([game-state] (describe-room game-state (gs/get-winner-loc game-state) false))
   ([game-state location is-verbose?]
-   (let [is-verbose? (or is-verbose? (gs/verbose? game-state))
+   (let [;; ZIL: Brief mode shows full description on first visit, only brief on return visits
+         ;; Check :touch flag BEFORE we set it later - if not touched, this is first visit
+         first-visit? (not (gs/set-here-flag? game-state :touch))
+         is-verbose? (or is-verbose? (gs/verbose? game-state) first-visit?)
          ;; Check global :lit flag (set by goto based on room + light sources)
          ;; OR the room's native :lit flag
          lit? (or (:lit game-state) (gs/set-here-flag? game-state :lit))
@@ -88,7 +91,7 @@
                       room-name)
              state (-> game-state
                        (cond-> header (utils/tell header))
-                       (cond-> header (utils/tell "\n\n"))
+                       (cond-> header (utils/tell "\n"))
                        (gs/set-here-flag :touch)
                        (cond-> maze? (gs/unset-here-flag :touch))
                        ;; Only show "(You are in the X.)" if NOT beached
@@ -103,13 +106,13 @@
                        (if (gs/use-default? result)
                          (if-let [ldesc (:ldesc here)]
                            ;; Use paragraph break after room description
-                           (-> (gs/clear-use-default result) (utils/tell ldesc) (utils/tell "\n\n"))
+                           (-> (gs/clear-use-default result) (utils/tell ldesc) (utils/tell "\n"))
                            (gs/clear-use-default result))
                          result))
                      ;; Verbose mode without action - use ldesc (guard against nil ldesc)
                      (and is-verbose? (:ldesc here))
                      ;; Use paragraph break after room description
-                     (-> state (utils/tell (:ldesc here)) (utils/tell "\n\n"))
+                     (-> state (utils/tell (:ldesc here)) (utils/tell "\n"))
                      ;; Non-verbose with action - try flash (no ldesc fallback for flash)
                      (some? act)
                      (let [result (act state :flash)]
@@ -172,8 +175,8 @@
   (let [obj (gs/get-thing game-state obj-id)
         desc (:desc obj)
         winner (:winner game-state)
-        ;; Use paragraph break for room floor level (-1 or 0)
-        line-end (if (<= level 0) "\n\n" "\n")]
+        ;; Single newline - all room content is same paragraph
+        line-end "\n"]
     (cond
       ;; Trophy case special message
       (= obj-id :trophy-case)
@@ -251,7 +254,7 @@
             (-> state
                 add-vehicle-suffix
                 ;; Double newline for paragraph separation at room floor level
-                (utils/tell "\n\n")
+                (utils/tell "\n")
                 add-contents))
 
           ;; Level 0, generic description
@@ -265,7 +268,7 @@
                 state (utils/tell state ".")]
             (-> state
                 add-vehicle-suffix
-                (utils/tell "\n\n")
+                (utils/tell "\n")
                 add-contents))
 
           ;; Level 1: first container contents (no indent, paragraph breaks)
@@ -281,7 +284,7 @@
 
                         :else state)]
             (-> state
-                (utils/tell "\n\n")
+                (utils/tell "\n")
                 add-contents))
 
           ;; Nested level 2+ (inside nested containers - indented, single newline)
@@ -343,8 +346,8 @@
                              (let [obj (gs/get-thing game-state id)]
                                (-> st
                                    (utils/tell (:fdesc obj))
-                                   ;; Use paragraph break for room floor level (-1) or ndesc containers (0)
-                                   (utils/tell (if (<= level 0) "\n\n" "\n"))
+                                   ;; Single newline - all room content is same paragraph
+                                   (utils/tell "\n")
                                    ;; Also print contents if visible
                                    ;; Pass 0 for container contents (level 0 gets paragraph breaks in firster)
                                    (cond-> (and (see-inside? st id)

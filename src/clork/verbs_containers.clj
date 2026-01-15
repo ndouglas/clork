@@ -139,8 +139,8 @@
                                         (str "A " (:desc o) suffix)))
                                     visible)]
               (-> game-state
-                  (utils/tell (str "The " desc " contains:\n\n"))
-                  (utils/tell (clojure.string/join "\n\n" content-strs))))))
+                  (utils/tell (str "The " desc " contains:\n"))
+                  (utils/tell (clojure.string/join "\n" content-strs))))))
 
         ;; Closed container
         :else
@@ -254,9 +254,7 @@
                    (and (not touched?) (:fdesc (gs/get-thing state item-id)))))
             (let [item (gs/get-thing state (first visible))]
               (-> state
-                  (utils/tell (str "The " desc " opens."))
-                  ;; Paragraph break before item description
-                  (utils/tell "\n\n")
+                  (utils/tell (str "The " desc " opens.\n"))
                   (utils/tell (:fdesc item))))
 
             ;; Otherwise: "Opening the X reveals Y."

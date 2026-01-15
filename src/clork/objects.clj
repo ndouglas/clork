@@ -1331,10 +1331,7 @@ You are the privileged owner of ZORK I: The Great Underground Empire, a self-con
                      ;; If at end-of-rainbow and pot is there, show extra message
                      (if (and (= here :end-of-rainbow)
                               (= (gs/get-thing-loc-id gs :pot-of-gold) :end-of-rainbow))
-                       (-> gs
-                           ;; Paragraph break before pot of gold message
-                           (utils/tell "\n\n")
-                           (utils/tell "A shimmering pot of gold appears at the end of the rainbow."))
+                       (utils/tell gs "\nA shimmering pot of gold appears at the end of the rainbow.")
                        gs)))
 
                  ;; Default - no special handling
@@ -1812,7 +1809,7 @@ Surely thou shalt repent of thy cunning."})
                       "In the corner of the room on the ceiling is a large vampire bat who is obviously deranged and holding his nose."
                       "A large vampire bat, hanging from the ceiling, swoops down at you!"))
         ;; Paragraph break after bat description
-        (utils/tell "\n\n"))))
+        (utils/tell "\n"))))
 
 (def bat
   {:id :bat
@@ -3068,15 +3065,21 @@ Surely thou shalt repent of thy cunning."})
 ;; But MIT transcript shows faster movement - using speeds that match observed behavior.
 ;; The ZIL speeds may have been from a different version or there's something we're missing.
 (def ^:private river-speeds
-  {:river-1 2   ; Original ZIL: 4
-   :river-2 2   ; Original ZIL: 4
-   :river-3 2   ; Original ZIL: 3
-   :river-4 2   ; Original ZIL: 2
-   :river-5 1}) ; Original ZIL: 1
+  "Turns before the boat moves to the next room.
+   These values match the MIT transcript behavior, not the ZIL source comments.
+   ZIL source says: RIVER-1=4, RIVER-2=4, RIVER-3=3, RIVER-4=2, RIVER-5=1
+   But MIT transcript shows: river-2->3 takes 2 turns, etc."
+  {:river-1 2   ; Not used (initial tick=2 is set in launch)
+   :river-2 2   ; 2 turns in river-2 before moving to river-3
+   :river-3 2   ; 2 turns in river-3 before moving to river-4 (estimate)
+   :river-4 2   ; 2 turns in river-4 before moving to river-5 (estimate)
+   :river-5 1}) ; Quick to waterfall
 
 ;; River flow destinations (where each room leads downstream)
 ;; ZIL: <GLOBAL RIVER-NEXT <LTABLE (PURE) RIVER-1 RIVER-2 RIVER-3 RIVER-4 RIVER-5>>
 (def ^:private river-next
+  "River flow destinations.
+   ZIL: <GLOBAL RIVER-NEXT <LTABLE (PURE) RIVER-1 RIVER-2 RIVER-3 RIVER-4 RIVER-5>>"
   {:river-1 :river-2
    :river-2 :river-3
    :river-3 :river-4
@@ -3085,7 +3088,7 @@ Surely thou shalt repent of thy cunning."})
 
 (defn- describe-river-room
   "Output the room description for being in the boat on the river.
-   Formats as: Room Name, in the magic boat\\n\\nLdesc\\n\\nBoat contents"
+   Formats as: Room Name, in the magic boat Ldesc Boat contents"
   [game-state]
   (let [here (:here game-state)
         room (get-in game-state [:rooms here])
@@ -3105,7 +3108,7 @@ Surely thou shalt repent of thy cunning."})
     (-> game-state
         (utils/tell (str room-name ", in the magic boat"))
         (utils/crlf)
-        (utils/crlf)
+        (utils/crlf)  ; paragraph break before room ldesc
         (utils/tell room-ldesc)
         ;; Show room objects if any
         (#(reduce (fn [s obj-id]
@@ -3120,23 +3123,24 @@ Surely thou shalt repent of thy cunning."})
                                         :else (str "There is a " desc " here."))]
                       (-> s
                           (utils/crlf)
-                          (utils/crlf)
+                          (utils/crlf)  ; paragraph break before object description
                           (utils/tell description))))
                   %
                   room-objects))
         ;; Print boat contents if any
         (cond-> (seq visible-contents)
           (-> (utils/crlf)
+              (utils/crlf)  ; paragraph break before "The magic boat contains:"
+              (utils/tell "The magic boat contains:")
               (utils/crlf)
-              (utils/tell "The magic boat contains:")))
+              (utils/crlf)))
         ;; List each item in boat
         (#(reduce (fn [s obj-id]
                     (let [obj (gs/get-thing s obj-id)
                           desc (:desc obj)]
                       (-> s
-                          (utils/crlf)
-                          (utils/crlf)
-                          (utils/tell (str "A " desc)))))
+                          (utils/tell (str "A " desc))
+                          (utils/crlf))))
                   %
                   visible-contents)))))
 
@@ -3155,11 +3159,11 @@ Surely thou shalt repent of thy cunning."})
         ;; Move downstream
         (let [next-speed (get river-speeds next-room 2)
               gs (-> game-state
-                     (utils/crlf)  ;; Blank line before river message
                      (utils/crlf)
+                     (utils/crlf)  ; paragraph break after "Time passes..."
                      (utils/tell "The flow of the river carries you downstream.")
                      (utils/crlf)
-                     (utils/crlf)
+                     (utils/crlf)  ; paragraph break before room description
                      ;; Move boat and update :here (tracked)
                      (gs/move-object :inflated-boat next-room :river-flow)
                      (gs/set-location next-room :river-flow)
@@ -3208,7 +3212,7 @@ Surely thou shalt repent of thy cunning."})
               (utils/tell "The boat inflates and appears seaworthy.")
               ;; Show label message if not touched before
               (cond-> (not label-touched?)
-                (-> (utils/crlf) (utils/crlf) (utils/tell "A tan label is lying inside the boat.")))
+                (utils/tell " A tan label is lying inside the boat."))
               ;; Swap inflatable for inflated boat
               (gs/move-object :inflatable-boat :limbo :inflate)
               (gs/move-object :inflated-boat (:here game-state) :inflate)
@@ -3317,19 +3321,16 @@ Surely thou shalt repent of thy cunning."})
                                       (keys (:objects gs)))
                 visible-contents (filter #(not (gs/set-thing-flag? gs % :invisible))
                                          boat-contents)]
-            ;; Print formatted output: "(magic boat)\n\nRoom, in the magic boat\n\n..."
+            ;; Print formatted output: "(magic boat) Room, in the magic boat ..."
             (-> gs
                 (utils/tell "(magic boat)")
                 (utils/crlf)
-                (utils/crlf)
                 (utils/tell (str room-name ", in the magic boat"))
-                (utils/crlf)
                 (utils/crlf)
                 (utils/tell room-ldesc)
                 ;; Print boat contents if any
                 (cond-> (seq visible-contents)
                   (-> (utils/crlf)
-                      (utils/crlf)
                       (utils/tell "The magic boat contains:")
                       (utils/crlf)))
                 ;; List each item
@@ -3337,11 +3338,11 @@ Surely thou shalt repent of thy cunning."})
                             (let [obj (gs/get-thing s obj-id)
                                   desc (:desc obj)]
                               (-> s
-                                  (utils/crlf)
-                                  (utils/tell (str "A " desc)))))
+                                  (utils/tell (str "A " desc))
+                                  (utils/crlf))))
                           %
                           visible-contents))
-                ;; Register and start the river daemon (tick=2 means run after next turn)
+                ;; Register and start the river daemon (tick=2 means run after 1 turn delay)
                 (daemon/register-daemon :i-river i-river :tick 2 :enabled true)))
 
           ;; Can't launch here

@@ -295,7 +295,7 @@
                               (cond-> prep
                                 (utils/tell (str (name prep) " ")))
                               (utils/tell (str "the " (game-state/thing-name gs-after obj)))
-                              (utils/tell ")\n\n"))]  ; Double newline for blank line
+                              (utils/tell ")\n"))]  ; Single newline to match MIT formatting
           {:found true
            :object obj
            :game-state gs-with-msg})

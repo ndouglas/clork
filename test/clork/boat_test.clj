@@ -123,7 +123,7 @@
                      (gs/set-thing-flag :brass-lantern :on)
                      (gs/set-thing-flag :brass-lantern :lit))
           gs-ready (run-cmds gs-lit ["inflate boat with pump" "board boat" "launch"])
-          ;; Drift through: river-1 -> river-2 -> river-3
+          ;; Drift through: river-1 -> river-2 -> river-3 (ZIL: RIVER-NEXT)
           gs-river2 (:gs (run-cmd gs-ready "wait"))
           gs-river3 (:gs (run-cmd gs-river2 "wait"))]
       (is (= :river-2 (:here gs-river2)))
@@ -142,7 +142,7 @@
           gs-lit (-> gs
                      (gs/set-thing-flag :brass-lantern :on)
                      (gs/set-thing-flag :brass-lantern :lit))
-          ;; Get to river-3 where we can land at white cliffs
+          ;; Get to river-3 where we can land at white cliffs (ZIL: RIVER-NEXT)
           gs-ready (run-cmds gs-lit ["inflate boat with pump" "board boat" "launch"
                                      "wait" "wait"])
           result (run-cmd gs-ready "land")]

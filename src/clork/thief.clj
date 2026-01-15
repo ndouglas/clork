@@ -225,10 +225,10 @@
               (cond->
                (pos? tvalue)
                 (-> (assoc :thief-engrossed true)
-                    (utils/tell (str "The thief is taken aback by your unexpected generosity, but accepts the " (:desc obj) " and stops to admire its beauty.")))
+                    (utils/tell (str "The thief is taken aback by your unexpected generosity, but accepts the " (:desc obj) " and stops to admire its beauty.\n")))
 
                 (not (pos? tvalue))
-                (utils/tell (str "The thief places the " (:desc obj) " in his bag and thanks you politely.")))))
+                (utils/tell (str "The thief places the " (:desc obj) " in his bag and thanks you politely.\n")))))
 
         ;; TAKE/MOVE thief
         (#{:take :move} prsa)
@@ -411,26 +411,34 @@
 
 (defn thief-in-treasure
   "Handle thief defending treasure room when player enters.
-   ZIL: THIEF-IN-TREASURE (1actions.zil line 2104)
+   ZIL: THIEF-IN-TREASURE (1actions.zil line 2164)
 
+   - Prints 'treasures vanish' message if there are valuables in room
+   - Hides all valuable items in room (except chalice)
    - Moves thief to treasure room
    - Makes him visible
    - Sets thief-here flag
-   - Hides all valuable items in room
    - Sets fight flag"
   [game-state]
   (let [contents (gs/get-contents game-state :treasure-room)
+        ;; Check if there are valuables to hide (ZIL checks if >=2 objects via FIRST?/NEXT?)
+        valuables (filter (fn [obj-id]
+                            (let [obj (gs/get-thing game-state obj-id)
+                                  tvalue (get obj :tvalue 0)]
+                              (and (pos? tvalue)
+                                   (not= obj-id :silver-chalice))))
+                          contents)
+        has-treasures? (seq valuables)
+        ;; Print message if there are treasures (ZIL line 2167-2169)
+        gs (if has-treasures?
+             (utils/tell game-state "The thief gestures mysteriously, and the treasures in the room suddenly vanish.\n\n")
+             game-state)
         ;; Hide all valuables
         gs (reduce
             (fn [state obj-id]
-              (let [obj (gs/get-thing state obj-id)
-                    tvalue (get obj :tvalue 0)]
-                (if (and (pos? tvalue)
-                         (not= obj-id :silver-chalice))  ; Chalice is special in ZIL
-                  (gs/set-thing-flag state obj-id :invisible)
-                  state)))
-            game-state
-            contents)]
+              (gs/set-thing-flag state obj-id :invisible))
+            gs
+            valuables)]
     (-> gs
         ;; Move thief to treasure room
         (gs/move-object :thief :treasure-room :thief-teleport)
@@ -466,12 +474,12 @@
               (thief-in-treasure))
           ;; Thief not here - he rushes to defend
           (-> game-state
-              (utils/tell "You hear a scream of anguish as you violate the robber's hideaway. Using passages unknown to you, he rushes to its defense.\n\n")
+              (utils/tell "You hear a scream of anguish as you violate the robber's hideaway. Using passages unknown to you, he rushes to its defense.\n")
               (thief-in-treasure)))
         game-state))
 
-    ;; Default - no special handling
-    game-state))
+    ;; Default - signal use-default for :look to show ldesc
+    (gs/use-default game-state)))
 
 ;;; ---------------------------------------------------------------------------
 ;;; THIEF-VS-ADVENTURER
@@ -547,7 +555,7 @@
         (and thief-visible? (< (random/rand-int* 100) 30))
         [(-> game-state
              (trace/trace-thief "VS-ADV: Leaving disgusted (nothing to steal)")
-             (utils/tell "The holder of the large bag just left, looking disgusted. Fortunately, he took nothing.")
+             (utils/tell "\n\nThe holder of the large bag just left, looking disgusted. Fortunately, he took nothing.")
              (gs/set-thing-flag :thief :invisible)
              (recover-stiletto))
          true]

@@ -88,8 +88,8 @@
                                (and (gs/set-thing-flag? state obj-id :wear)
                                     (= (:in obj) winner-id)) " (being worn)"
                                :else "")]
-                  (utils/tell state (str "A " obj-name suffix "\n\n"))))
-              (utils/tell game-state "You are carrying:\n\n")
+                  (utils/tell state (str "A " obj-name suffix "\n"))))
+              (utils/tell game-state "You are carrying:\n")
               contents))))
 
 (defn v-wait

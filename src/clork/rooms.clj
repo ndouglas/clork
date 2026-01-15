@@ -435,9 +435,7 @@
                (let [window-open? (gs/set-thing-flag? game-state :kitchen-window :open)
                      window-state (if window-open? "open" "slightly ajar")]
                  (-> game-state
-                     (utils/tell (str "You are in the kitchen of the white house. A table seems to have been used recently for the preparation of food. A passage leads to the west and a dark staircase can be seen leading upward. A dark chimney leads down and to the east is a small window which is " window-state "."))
-                     ;; Paragraph break after room description
-                     (utils/tell "\n\n")))
+                     (utils/tell (str "You are in the kitchen of the white house. A table seems to have been used recently for the preparation of food. A passage leads to the west and a dark staircase can be seen leading upward. A dark chimney leads down and to the east is a small window which is " window-state ".\n"))))
                ;; Default - signal that default handling should be used
                (gs/use-default game-state)))})
 
@@ -1551,7 +1549,8 @@
                    (utils/tell "The ZORK trilogy continues with \"ZORK II: The Wizard of Frobozz\" and is completed in \"ZORK III: The Dungeon Master.\"\n")
                    (assoc :finished true)
                    (assoc :command-handled true))
-               game-state))})
+               ;; Signal to use default handling (ldesc) for :look/:flash
+               (gs/use-default game-state)))})
 
 ;;; ---------------------------------------------------------------------------
 ;;; CANYON / FALLS / RAINBOW AREA
@@ -1741,11 +1740,9 @@
     (let [rainbow-solid? (get game-state :rainbow-flag false)]
       (-> game-state
           (utils/tell "You are at the top of Aragain Falls, an enormous waterfall with a drop of about 450 feet. The only path here is on the north end.")
-          (utils/crlf)
-          (utils/crlf)
           (utils/tell (if rainbow-solid?
-                        "A solid rainbow spans the falls."
-                        "A beautiful rainbow can be seen over the falls and to the west."))
+                        " A solid rainbow spans the falls."
+                        " A beautiful rainbow can be seen over the falls and to the west."))
           (utils/crlf)))
     (gs/use-default game-state)))
 
@@ -2274,13 +2271,9 @@
   (if (= rarg :look)
     (let [rope-tied? (get game-state :dome-flag false)]
       (-> game-state
-          (utils/tell "This is a large room with a prominent doorway leading to a down staircase. Above you is a large dome. Up around the edge of the dome (20 feet up) is a wooden railing. In the center of the room sits a white marble pedestal.")
-          ;; Paragraph break after room description
-          (utils/tell "\n\n")
+          (utils/tell "This is a large room with a prominent doorway leading to a down staircase. Above you is a large dome. Up around the edge of the dome (20 feet up) is a wooden railing. In the center of the room sits a white marble pedestal.\n")
           (cond-> rope-tied?
-            (-> (utils/tell "A piece of rope descends from the railing above, ending some five feet above your head.")
-                ;; Paragraph break before objects
-                (utils/tell "\n\n")))))
+            (utils/tell "A piece of rope descends from the railing above, ending some five feet above your head.\n"))))
     (gs/use-default game-state)))
 
 (def torch-room
@@ -2413,7 +2406,7 @@
 
 The gate is open; through it you can see a desolation, with a pile of mangled bodies in one corner. Thousands of voices, lamenting some hideous fate, can be heard.")
           ;; Paragraph break after room description
-          (utils/tell "\n\n")
+          (utils/tell "\n")
           (cond-> (and (not gate-open?) (not is-dead?))
             (utils/tell "The way through the gate is barred by evil spirits, who jeer at your attempts to pass."))))
 
@@ -2431,7 +2424,7 @@ The gate is open; through it you can see a desolation, with a pile of mangled bo
           (gs/move-object :hot-bell here :bell-appears)
           (utils/tell "The bell suddenly becomes red hot and falls to the ground. The wraiths, as if paralyzed, stop their jeering and slowly turn to face you. On their ashen faces, the expression of a long-forgotten terror takes shape.")
           ;; Paragraph break before candle message
-          (utils/tell "\n\n")
+          (utils/tell "\n")
           ;; If player has candles, drop them
           (cond-> has-candles?
             (-> (utils/tell "In your confusion, the candles drop to the ground (and they are out).")
@@ -2473,7 +2466,7 @@ The gate is open; through it you can see a desolation, with a pile of mangled bo
         (-> game-state
             (gs/set-game-flag :xc)
             ;; Paragraph break before flames message
-            (utils/tell "\n\n")
+            (utils/tell "\n")
             (utils/tell "The flames flicker wildly and appear to dance. The earth beneath your feet trembles, and your legs nearly buckle beneath you. The spirits cower at your unearthly power."))
         game-state))
 
@@ -2560,7 +2553,7 @@ The gate is open; through it you can see a desolation, with a pile of mangled bo
     (-> game-state
         (utils/tell "You are in a small room which has doors only to the east and south.")
         ;; Paragraph break after room description
-        (utils/tell "\n\n"))
+        (utils/tell "\n"))
 
     ;; On entering, if player doesn't have garlic, bat transports them
     (and (= rarg :m-enter)

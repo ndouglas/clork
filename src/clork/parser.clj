@@ -414,7 +414,9 @@
         [gs merged?] (if (get-in gs [:parser :oflag])
                        (if-let [merged-gs (orphan/orphan-merge gs)]
                          [merged-gs true]
-                         [gs false])
+                         ;; Merge failed - clear oflag since we're abandoning orphan
+                         ;; and starting fresh parsing
+                         [(assoc-in gs [:parser :oflag] false) false])
                        [gs false])]
 
     ;; === Main Parsing Loop (skip if already merged) ===

@@ -600,7 +600,7 @@
           (let [message (select-combat-message messages killed "you" weapon-name)]
             (-> gs
                 ;; Paragraph break for proper separation
-                (utils/tell (str "\n\n" message "\n"))
+                (utils/tell message)
                 (winner-result 0 killed orig-def)))
 
           ;; Normal combat
@@ -631,7 +631,7 @@
                           :else def)]
             (-> gs
                 ;; Paragraph break for proper separation
-                (utils/tell (str "\n\n" message "\n"))
+                (utils/tell message)
                 ;; Set player staggered if result was stagger
                 (cond-> (= result stagger)
                   (gs/set-thing-flag winner :staggered))

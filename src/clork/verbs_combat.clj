@@ -108,7 +108,7 @@
 
                               :else def)]
                 (-> gs
-                    (utils/tell message)
+                    (utils/tell (str message "\n"))
                     ;; Set staggered flag if result was stagger
                     (cond-> (= result combat/stagger)
                       (gs/set-thing-flag prso :staggered))

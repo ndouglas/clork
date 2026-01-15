@@ -1536,8 +1536,8 @@
                      ;; Set prso to just this single object for the handler
                      gs-single (assoc-in gs-with-prefix [:parser :prso] [obj])
                      result-gs (perform-single gs-single handler)]
-                 ;; Paragraph break after each object's output
-                 (utils/tell result-gs "\n\n")))
+                 ;; Single newline after each object's output
+                 (utils/tell result-gs "\n")))
              gs
              all-prso)
             ;; Single object (or no object)

@@ -60,17 +60,13 @@
 
 (defn normalize-output
   "Normalize output for comparison.
-   Handles line wrapping differences while preserving paragraph structure."
+   Treats all whitespace sequences (including paragraph breaks) as equivalent
+   to single spaces. This matches how the MIT transcript test normalizes output."
   [s]
   (when s
-    (let [paragraphs (str/split (str/trim s) #"\n\n+")
-          normalized (map (fn [para]
-                            (-> para
-                                str/trim
-                                (str/replace #"\n" " ")
-                                (str/replace #"  +" " ")))
-                          paragraphs)]
-      (str/join "\n\n" normalized))))
+    (-> s
+        str/trim
+        (str/replace #"\s+" " "))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; MOVE COUNTING

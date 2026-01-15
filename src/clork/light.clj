@@ -219,8 +219,7 @@
    - Recalculates room lighting"
   [game-state]
   (let [gs (-> game-state
-               ;; Paragraph break before daemon message
-               (utils/tell "\n\nThe match has gone out.")
+               (utils/tell "\nThe match has gone out.")
                (gs/unset-thing-flag :matchbook :flame)
                (gs/unset-thing-flag :matchbook :on))]
     ;; Recalculate room lighting

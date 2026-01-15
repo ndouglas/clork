@@ -12,9 +12,11 @@
 
 A faithful Clojure port of _Zork I: The Great Underground Empire_.
 
-## Current Status
+## Current Status: Beta
 
-**The game is fully playable from start to finish.** All 19 treasures can be collected and deposited, and the game can be won by entering the Stone Barrow.
+**Clork is winnable!** You can play through the entire game, collect all 19 treasures, deposit them in the trophy case, and enter the Stone Barrow to see the Zork II teaser.
+
+A complete 358-command playthrough is included in `scripts/transcript.txt`.
 
 ### What Works
 
@@ -83,7 +85,7 @@ lein test
 lein test :pending
 ```
 
-The test suite includes 459 tests covering rooms, objects, verbs, combat, and game mechanics.
+The test suite includes 474 tests covering rooms, objects, verbs, combat, and game mechanics.
 
 ## ML Training API
 

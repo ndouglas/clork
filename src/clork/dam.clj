@@ -58,24 +58,24 @@
       (-> game-state
           (utils/tell "You are standing on the top of the Flood Control Dam #3, which was quite a tourist attraction in times far distant. There are paths to the north, south, and west, and a scramble down.")
           ;; Paragraph break between sections
-          (utils/tell "\n\n")
+          (utils/tell "\n")
           ;; Water level description based on state
           (cond->
            (and low-tide? gates-open?)
             (-> (utils/tell "The water level behind the dam is low: The sluice gates have been opened. Water rushes through the dam and downstream.")
-                (utils/tell "\n\n"))
+                (utils/tell "\n"))
 
             (and gates-open? (not low-tide?))
             (-> (utils/tell "The sluice gates are open, and water rushes through the dam. The water level behind the dam is still high.")
-                (utils/tell "\n\n"))
+                (utils/tell "\n"))
 
             (and low-tide? (not gates-open?))
             (-> (utils/tell "The sluice gates are closed. The water level in the reservoir is quite low, but the level is rising quickly.")
-                (utils/tell "\n\n"))
+                (utils/tell "\n"))
 
             (and (not low-tide?) (not gates-open?))
             (-> (utils/tell "The sluice gates on the dam are closed. Behind the dam, there can be seen a wide reservoir. Water is pouring over the top of the now abandoned dam.")
-                (utils/tell "\n\n")))
+                (utils/tell "\n")))
           ;; Control panel description
           (utils/tell "There is a control panel here, on which a large metal bolt is mounted. Directly above the bolt is a small green plastic bubble")
           (cond->
@@ -83,7 +83,7 @@
             (utils/tell " which is glowing serenely"))
           (utils/tell ".")
           ;; Paragraph break after room description
-          (utils/tell "\n\n")))
+          (utils/tell "\n")))
 
     ;; Default - use default handling
     (gs/use-default game-state)))
@@ -110,12 +110,10 @@
 
             (and (not low-tide?) (not gates-open?))
             (utils/tell "You are in a long room on the south shore of a large lake, far too deep and wide for crossing."))
-          ;; Paragraph break between description and exits
-          (utils/tell "\n\n")
+          ;; Single newline before exits description (same paragraph)
+          (utils/tell "\n")
           ;; Exits description
-          (utils/tell "There is a path along the stream to the east or west, a steep pathway climbing southwest along the edge of a chasm, and a path leading into a canyon to the southeast.")
-          ;; Paragraph break after room description
-          (utils/tell "\n\n")))
+          (utils/tell "There is a path along the stream to the east or west, a steep pathway climbing southwest along the edge of a chasm, and a path leading into a canyon to the southeast.\n")))
 
     ;; Default
     (gs/use-default game-state)))
@@ -135,7 +133,7 @@
             (not low-tide?)
             (utils/tell "You are on the lake. Beaches can be seen north and south. Upstream a small stream enters the lake through a narrow cleft in the rocks. The dam can be seen downstream."))
           ;; Paragraph break after room description
-          (utils/tell "\n\n")))
+          (utils/tell "\n")))
 
     ;; M-END: Warning about rising water
     :m-end
@@ -174,10 +172,10 @@
             (and (not low-tide?) (not gates-open?))
             (utils/tell "You are in a large cavernous room, north of a large lake."))
           ;; Paragraph break after main description
-          (utils/tell "\n\n")
+          (utils/tell "\n")
           (utils/tell "There is a slimy stairway leaving the room to the north.")
           ;; Paragraph break after room description
-          (utils/tell "\n\n")))
+          (utils/tell "\n")))
 
     ;; Default
     (gs/use-default game-state)))

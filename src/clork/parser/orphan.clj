@@ -208,7 +208,17 @@
                    (parser-state/set-itbl :nc1 0)   ; Start of noun phrase
                    (parser-state/set-itbl :nc1l lexv-len)  ; End of noun phrase
                    (parser-state/set-ncn 1))]
-        (merge-to-nc1 gs false))
+        ;; Check which slot needs filling - NC2 first (for "kill with" type commands)
+        (cond
+          (= (parser-state/get-otbl gs :nc2) 1)
+          (merge-to-nc2 gs false)
+
+          (= (parser-state/get-otbl gs :nc1) 1)
+          (merge-to-nc1 gs false)
+
+          ;; Default to NC1 for backwards compatibility
+          :else
+          (merge-to-nc1 gs false)))
 
       ;; Can't merge - different verb or incompatible structure
       :else nil)))
