@@ -199,6 +199,23 @@ Another way to think about this, the one I prefer, is that I'm still exploring _
 
 Fortunately, at this point in my life, I have an excellent array of tools in my inventory.
 
+## Code Statistics
+
+| Source | Lines |
+|--------|-------|
+| **ZIL original** | 12,041 |
+| **Clojure (with comments)** | 28,109 |
+| **Clojure (code only)** | 18,405 |
+
+The Clojure version is about **1.5x larger** than the ZIL original (comparing code-only), or **2.3x** including all the ZIL reference comments.
+
+Why the expansion?
+
+- **ZIL is brutally terse** - designed for 8-bit machines with ~80KB of memory. Every byte mattered.
+- **Clork adds features ZIL doesn't have** - debug commands (`$goto`, `$inspect`, `$path`), ML training API, undo/redo, pathfinding, test scenarios.
+- **Clojure is more explicit** - ZIL uses implicit globals and terse macros; idiomatic Clojure threads state explicitly.
+- **~900 lines of ZIL code preserved as comments** - for reference and traceability.
+
 ## License
 
 This is a fan project for educational purposes. Zork is a trademark of Activision.
